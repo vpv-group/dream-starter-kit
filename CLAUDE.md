@@ -208,13 +208,14 @@ Rules that keep extensions modular:
 
 For **content and member engagement** (anything that isn't security-critical
 RLS-client state), add a **Payload collection**, not a Supabase table. The CMS ships
-a full registry across five admin groups — **Content** (posts, videos incl. vertical
+a full registry across six admin groups — **Content** (posts, videos incl. vertical
 shorts, audio/podcast episodes, photos, series/courses + lessons, locations, events,
 categories/tags), **Community** (space-groups → community-spaces → community-posts,
 one threaded `comments` system, a `reports` moderation queue), **People** (users,
 device-tokens, feed-tokens, enrollments, reviews), **Commerce**
-(plans/coupons/subscriptions) and **Marketing** (pages, onboarding, banners,
-notifications, forms). Collections live in the `cms` schema and are governed by
+(plans/coupons/subscriptions), **Marketing** (pages, onboarding, banners,
+notifications, forms) and **System** (the `legal` documents collection —
+rendered under /legal with a TOC sidebar — alongside the settings globals). Collections live in the `cms` schema and are governed by
 **Payload's role-based access-control, not RLS** (`payload/access/index.ts`:
 `isAdmin`/`isStaff`/`publishedOrStaff`/`ownsOrStaff`…; owner-scoped collections force
 the owner on create via `payload/hooks/assign-owner.ts`).

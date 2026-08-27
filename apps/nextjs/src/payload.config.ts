@@ -33,6 +33,7 @@ import { Enrollments } from "./payload/collections/Enrollments";
 import { Events } from "./payload/collections/Events";
 import { FeedTokens } from "./payload/collections/FeedTokens";
 import { KitExtensions } from "./payload/collections/KitExtensions";
+import { LegalPages } from "./payload/collections/LegalPages";
 import { Lessons } from "./payload/collections/Lessons";
 import { Locations } from "./payload/collections/Locations";
 import { Media } from "./payload/collections/Media";
@@ -176,6 +177,8 @@ export default buildConfig({
     Onboarding,
     Banners,
     Notifications,
+    // System
+    LegalPages,
     // Extensions (framework-owned: install registry + CMS-driven menu)
     KitExtensions,
     NavItems,
@@ -352,6 +355,7 @@ export default buildConfig({
         "audio",
         "photos",
         "pages",
+        "legal",
         "events",
         "locations",
         "series",

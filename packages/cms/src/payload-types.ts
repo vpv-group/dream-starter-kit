@@ -93,6 +93,7 @@ export interface Config {
     onboarding: Onboarding;
     banners: Banner;
     notifications: Notification;
+    legal: Legal;
     "kit-extensions": KitExtension;
     "nav-items": NavItem;
     "ext-billing-plans": ExtBillingPlan;
@@ -193,6 +194,7 @@ export interface Config {
     onboarding: OnboardingSelect<false> | OnboardingSelect<true>;
     banners: BannersSelect<false> | BannersSelect<true>;
     notifications: NotificationsSelect<false> | NotificationsSelect<true>;
+    legal: LegalSelect<false> | LegalSelect<true>;
     "kit-extensions": KitExtensionsSelect<false> | KitExtensionsSelect<true>;
     "nav-items": NavItemsSelect<false> | NavItemsSelect<true>;
     "ext-billing-plans":
@@ -2792,6 +2794,47 @@ export interface Notification {
   deletedAt?: string | null;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "legal".
+ */
+export interface Legal {
+  id: number;
+  title: string;
+  slug: string;
+  content: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ("ltr" | "rtl") | null;
+      format: "left" | "start" | "center" | "right" | "end" | "justify" | "";
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Shown under the title as “Effective <date>”.
+   */
+  effectiveDate?: string | null;
+  order?: number | null;
+  meta?: {
+    title?: string | null;
+    description?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (number | null) | Media;
+  };
+  updatedAt: string;
+  createdAt: string;
+  deletedAt?: string | null;
+  _status?: ("draft" | "published") | null;
+}
+/**
  * Installed extensions. Disabling hides an extension's menu items and 404s its pages and API at runtime without uninstalling it.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -4426,6 +4469,28 @@ export interface NotificationsSelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
   deletedAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "legal_select".
+ */
+export interface LegalSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  content?: T;
+  effectiveDate?: T;
+  order?: T;
+  meta?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  deletedAt?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -6064,6 +6129,10 @@ export interface TaskSchedulePublish {
       | ({
           relationTo: "pages";
           value: number | Page;
+        } | null)
+      | ({
+          relationTo: "legal";
+          value: number | Legal;
         } | null);
     global?: string | null;
     user?: (number | null) | User;

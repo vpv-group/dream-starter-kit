@@ -127,8 +127,8 @@ export const SITE_FOOTER_COLUMNS: ChromeFooterColumn[] = [
 ];
 
 export const SITE_FOOTER_POLICIES: ChromeFooterLink[] = [
-  { label: "Terms of Service", url: "/terms" },
-  { label: "Privacy Policy", url: "/privacy" },
+  { label: "Terms of Service", url: "/legal/terms-of-service" },
+  { label: "Privacy Policy", url: "/legal/privacy-policy" },
 ];
 
 export const SITE_SOCIAL = {

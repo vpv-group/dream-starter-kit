@@ -360,13 +360,14 @@ denied. (RLS clients use `public.subscriptions` instead — see `ERD.md`.)
 
 ## Marketing group
 
-### `pages` — block-composed marketing/legal pages
+### `pages` — block-composed marketing pages
 
 Launch UI blocks: **hero | items (features) | logos | stats | cta | faq |
 prose**. **Fields:** `title`\*, `slug`, `layout` (blocks), `showInNav`,
 `publishedAt`. **Access:** read `publishedOrStaff`; write `isStaff`. Drafts +
 live preview (mobile/tablet/desktop breakpoints) · trash. Nested Docs
-hierarchy.
+hierarchy. (Legal documents live in the System-group `legal` collection, not
+here.)
 
 ### `onboarding` — first-run slides
 
@@ -404,6 +405,22 @@ the Payload Local API and the service-role `public` client).
 
 Form Builder plugin: staff author forms (text/textarea/email/select/checkbox/
 number/message fields); submissions are publicly creatable, staff-read.
+
+---
+
+## System group
+
+### `legal` — legal documents (/legal)
+
+Terms of Service, Privacy Policy, DPA, cookie policy, … — plain rich-text
+documents rendered under **`/legal/<slug>`** inside a table-of-contents shell
+(sidebar lists every published document, Upwork-legal-style; `/legal` is the
+index). **Fields:** `title`\*, `slug`, `content`\* (richText),
+`effectiveDate`, `order` (TOC position, asc). **Access:** read
+`publishedOrStaff`; write `isStaff`. Drafts (+ scheduled publish) · live
+preview · trash · SEO plugin. Seeded docs: `terms-of-service`,
+`privacy-policy` (placeholders — replace before launch). The old top-level
+`/terms` + `/privacy` routes 301 to the /legal equivalents (next.config).
 
 ---
 

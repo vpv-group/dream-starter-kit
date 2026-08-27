@@ -804,22 +804,6 @@ export async function seedCmsContent(
               "Questions or feedback? Reach out and we'll get back to you.",
             ],
           },
-          {
-            title: "Terms of Service",
-            slug: "terms",
-            heading: "Terms of Service",
-            body: [
-              "These are placeholder terms. Replace this content with your own from the admin.",
-            ],
-          },
-          {
-            title: "Privacy Policy",
-            slug: "privacy",
-            heading: "Privacy Policy",
-            body: [
-              "This is a placeholder privacy policy. Replace this content with your own from the admin.",
-            ],
-          },
         ];
         for (const page of prose) {
           await payload.create({
@@ -835,6 +819,45 @@ export async function seedCmsContent(
                   content: richText(page.body),
                 },
               ],
+            },
+          });
+        }
+      },
+    },
+    {
+      label: "Legal",
+      run: async () => {
+        // Legal documents live in the `legal` collection (System group), NOT
+        // in `pages`: plain rich-text prose rendered inside the /legal shell
+        // (table-of-contents sidebar). Replace the placeholder text from the
+        // admin before launch.
+        const docs = [
+          {
+            title: "Terms of Service",
+            slug: "terms-of-service",
+            order: 1,
+            body: [
+              "These are placeholder terms. Replace this content with your own from the admin.",
+            ],
+          },
+          {
+            title: "Privacy Policy",
+            slug: "privacy-policy",
+            order: 2,
+            body: [
+              "This is a placeholder privacy policy. Replace this content with your own from the admin.",
+            ],
+          },
+        ];
+        for (const doc of docs) {
+          await payload.create({
+            collection: "legal",
+            data: {
+              title: doc.title,
+              slug: doc.slug,
+              order: doc.order,
+              content: richText(doc.body),
+              _status: "published",
             },
           });
         }

@@ -16,6 +16,8 @@ import * as migration_20260620_212733_image_generation from './20260620_212733_i
 import * as migration_20260624_000100_drop_favorites from './20260624_000100_drop_favorites';
 import * as migration_20260624_151421_image_audit_settings from './20260624_151421_image_audit_settings';
 import * as migration_20260702_173249_authentication_settings from './20260702_173249_authentication_settings';
+import * as migration_20260827_194320_legal_pages from './20260827_194320_legal_pages';
+import * as migration_20260827_194500_move_legal_docs from './20260827_194500_move_legal_docs';
 
 export const migrations = [
   {
@@ -106,6 +108,16 @@ export const migrations = [
   {
     up: migration_20260702_173249_authentication_settings.up,
     down: migration_20260702_173249_authentication_settings.down,
-    name: '20260702_173249_authentication_settings'
+    name: '20260702_173249_authentication_settings',
+  },
+  {
+    up: migration_20260827_194320_legal_pages.up,
+    down: migration_20260827_194320_legal_pages.down,
+    name: '20260827_194320_legal_pages'
+  },
+  {
+    up: migration_20260827_194500_move_legal_docs.up,
+    down: migration_20260827_194500_move_legal_docs.down,
+    name: '20260827_194500_move_legal_docs'
   },
 ];

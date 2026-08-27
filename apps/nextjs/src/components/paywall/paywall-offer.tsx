@@ -44,10 +44,10 @@ export function PaywallOffer({
       <div className="dr-divider" />
       <div className="dr-foot">
         <Link href="/sign-in">Sign In</Link>
-        <Link href="/terms" target="_blank">
+        <Link href="/legal/terms-of-service" target="_blank">
           Terms of Service
         </Link>
-        <Link href="/privacy" target="_blank">
+        <Link href="/legal/privacy-policy" target="_blank">
           Privacy Policy
         </Link>
         {onClose && <button onClick={onClose}>Maybe later</button>}
