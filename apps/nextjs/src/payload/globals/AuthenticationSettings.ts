@@ -154,7 +154,7 @@ export const AuthenticationSettings: GlobalConfig = {
                 {
                   name: "termsUrl",
                   type: "text",
-                  defaultValue: "/terms",
+                  defaultValue: "/legal/terms-of-service",
                   admin: {
                     width: "50%",
                     description: "Terms of Service link in the sign-up footer.",
@@ -163,7 +163,7 @@ export const AuthenticationSettings: GlobalConfig = {
                 {
                   name: "privacyUrl",
                   type: "text",
-                  defaultValue: "/privacy",
+                  defaultValue: "/legal/privacy-policy",
                   admin: {
                     width: "50%",
                     description: "Privacy Policy link in the sign-up footer.",

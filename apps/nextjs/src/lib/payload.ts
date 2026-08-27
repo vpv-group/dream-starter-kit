@@ -7,6 +7,7 @@ import type { AuthSettings } from "@acme/app";
 import type {
   Audio as AudioDoc,
   Event as EventDoc,
+  Legal,
   Location as LocationDoc,
   Page,
   Photo,
@@ -64,6 +65,45 @@ export function getPage(slug: string): Promise<Page | null> {
       draft,
       overrideAccess: draft,
       depth: 2,
+      limit: 1,
+    });
+    return docs[0] ?? null;
+  }, null);
+}
+
+/**
+ * All published legal documents, in table-of-contents order (`order` asc,
+ * ties by title) — drives the /legal sidebar and index. Staff previewing a
+ * draft still see the published list (the TOC is navigation, not content).
+ */
+export function listLegalPages(): Promise<Legal[]> {
+  return safe(async () => {
+    const payload = await client();
+    const { docs } = await payload.find({
+      collection: "legal",
+      where: PUBLISHED,
+      sort: ["order", "title"],
+      depth: 0,
+      limit: 100,
+    });
+    return docs;
+  }, []);
+}
+
+/**
+ * A legal document by slug. Like `getPage`, honors Next.js draft mode
+ * (Payload Live Preview): drafts render for editors, published only otherwise.
+ */
+export function getLegalPage(slug: string): Promise<Legal | null> {
+  return safe(async () => {
+    const { isEnabled: draft } = await draftMode();
+    const payload = await client();
+    const { docs } = await payload.find({
+      collection: "legal",
+      where: draft ? { slug: { equals: slug } } : publishedSlug(slug),
+      draft,
+      overrideAccess: draft,
+      depth: 1,
       limit: 1,
     });
     return docs[0] ?? null;

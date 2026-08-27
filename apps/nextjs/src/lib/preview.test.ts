@@ -11,13 +11,16 @@ describe("docPath", () => {
 
   it("maps other pages to /{slug}", () => {
     expect(docPath("pages", "about")).toBe("/about");
-    expect(docPath("pages", "terms")).toBe("/terms");
+    expect(docPath("pages", "contact")).toBe("/contact");
   });
 
   it("maps other collections to /{collection}/{slug}", () => {
     expect(docPath("posts", "hello-world")).toBe("/posts/hello-world");
     expect(docPath("events", "launch-party")).toBe("/events/launch-party");
     expect(docPath("locations", "hq")).toBe("/locations/hq");
+    expect(docPath("legal", "terms-of-service")).toBe(
+      "/legal/terms-of-service",
+    );
   });
 });
 

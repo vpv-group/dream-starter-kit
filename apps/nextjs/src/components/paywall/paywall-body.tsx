@@ -172,11 +172,19 @@ export function PaywallBody({
           <span>
             Please check this box to indicate that you agree to the terms and
             conditions above, including the{" "}
-            <Link href="/terms" target="_blank" className="underline">
+            <Link
+              href="/legal/terms-of-service"
+              target="_blank"
+              className="underline"
+            >
               Terms of Service
             </Link>{" "}
             and{" "}
-            <Link href="/privacy" target="_blank" className="underline">
+            <Link
+              href="/legal/privacy-policy"
+              target="_blank"
+              className="underline"
+            >
               Privacy Policy
             </Link>
             .

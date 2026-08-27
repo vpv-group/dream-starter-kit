@@ -60,6 +60,20 @@ const config = {
         permanent: true,
       },
       { source: "/x/:path*", destination: "/a/:path*", permanent: true },
+      // Legal docs moved from top-level pages into the `legal` collection
+      // (rendered under /legal with a table-of-contents sidebar). Old links,
+      // stored CMS data (site-settings footer, auth-settings) and bookmarks
+      // keep working.
+      {
+        source: "/terms",
+        destination: "/legal/terms-of-service",
+        permanent: true,
+      },
+      {
+        source: "/privacy",
+        destination: "/legal/privacy-policy",
+        permanent: true,
+      },
     ]),
 
   /**
