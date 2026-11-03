@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import Stripe from "npm:stripe@22";
+import Stripe from "npm:stripe@23";
 
 import {
   mapPrice,

@@ -794,7 +794,8 @@ export const publicRoutes: ExtPublicRouteTable = {
       await stripe.subscriptions.update(current.id, {
         items: [{ id: itemId, price: plan.stripePriceId }],
         proration_behavior: "none",
-        billing_cycle_anchor: "now",
+        // API 2026-09-30.endive+: the anchor is an object ({ type }), not a string.
+        billing_cycle_anchor: { type: "now" },
         ...(plan.stripeIntroCouponId
           ? { discounts: [{ coupon: plan.stripeIntroCouponId }] }
           : { discounts: [] }),
