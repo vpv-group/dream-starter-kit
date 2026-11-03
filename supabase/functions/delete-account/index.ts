@@ -9,7 +9,7 @@
 // SERVICE_ROLE_KEY are injected automatically). Deploy: `supabase functions
 // deploy delete-account`.
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import Stripe from "npm:stripe@22";
+import Stripe from "npm:stripe@23";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
