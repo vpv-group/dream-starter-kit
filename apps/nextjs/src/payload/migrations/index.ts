@@ -18,6 +18,7 @@ import * as migration_20260624_151421_image_audit_settings from './20260624_1514
 import * as migration_20260702_173249_authentication_settings from './20260702_173249_authentication_settings';
 import * as migration_20260827_194320_legal_pages from './20260827_194320_legal_pages';
 import * as migration_20260827_194500_move_legal_docs from './20260827_194500_move_legal_docs';
+import * as migration_20261103_222708_payload_3_92_object_key from './20261103_222708_payload_3_92_object_key';
 
 export const migrations = [
   {
@@ -113,11 +114,16 @@ export const migrations = [
   {
     up: migration_20260827_194320_legal_pages.up,
     down: migration_20260827_194320_legal_pages.down,
-    name: '20260827_194320_legal_pages'
+    name: '20260827_194320_legal_pages',
   },
   {
     up: migration_20260827_194500_move_legal_docs.up,
     down: migration_20260827_194500_move_legal_docs.down,
-    name: '20260827_194500_move_legal_docs'
+    name: '20260827_194500_move_legal_docs',
+  },
+  {
+    up: migration_20261103_222708_payload_3_92_object_key.up,
+    down: migration_20261103_222708_payload_3_92_object_key.down,
+    name: '20261103_222708_payload_3_92_object_key'
   },
 ];

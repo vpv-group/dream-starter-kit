@@ -22,7 +22,9 @@ export const plugins: NonNullable<Config["plugins"]> = [
       process.env.STRIPE_SECRET_KEY ?? "sk_test_unconfigured_placeholder",
     isTestKey: (process.env.STRIPE_SECRET_KEY ?? "").startsWith("sk_test"),
     stripeWebhooksEndpointSecret: process.env.STRIPE_WEBHOOKS_ENDPOINT_SECRET,
-    rest: false,
+    // `rest` is deliberately omitted: since plugin-stripe 3.9x the REST proxy
+    // is opt-in (an `{ allowedMethods }` object) and `undefined` keeps the
+    // /stripe/rest route unregistered. (`rest: false` no longer type-checks.)
     webhooks: {
       "customer.subscription.created": syncSubscriptionFromStripe,
       "customer.subscription.updated": syncSubscriptionFromStripe,

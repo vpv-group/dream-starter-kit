@@ -191,7 +191,7 @@ opts out; sync failures are recorded on the doc, never failing the save).
 signature-verified webhook endpoint at **`/cms-api/stripe/webhooks`** (its own
 `STRIPE_WEBHOOKS_ENDPOINT_SECRET`) that mirrors `customer.subscription.*` events
 into the read-only CMS **`subscriptions`** collection. The plugin's Stripe REST
-proxy stays **off** (`rest: false`) and its declarative sync is unused — it can't
+proxy stays **off** (`rest` omitted) and its declarative sync is unused — it can't
 express price immutability or intro coupons, so the hooks own Payload → Stripe.
 
 The `billing-stripe-webhook` **edge function** (signature-verified, idempotent — a
@@ -509,7 +509,7 @@ is one line and web/native never drift. Update channels:
   (SDK 53+) — test in a dev build ([§4.11](#411-build--ship)).
 - **AI model slugs change.** They live in one place (`DEFAULT_AI_MODEL`); update
   there, don't hardcode elsewhere.
-- **Payload + Next 16 bundler.** Payload v3 required bumping `next` to `^16.2.6`. If
+- **Payload + Next 16 bundler.** Payload v3 requires `next` `>=16.3.3` (since 3.90; the kit is on `^16.4.5`). If
   the admin fails to build/run under Next 16's default Turbopack, fall back to Webpack
   (`next dev --webpack` / `next build --webpack`).
 - **Payload DB connection (two pooler modes).** The kit splits the CMS Postgres

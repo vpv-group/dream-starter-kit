@@ -499,6 +499,7 @@ export interface Media {
    */
   blurDataURL?: string | null;
   tags?: (number | Tag)[] | null;
+  _objectKey?: string | null;
   folder?: (number | null) | FolderInterface;
   updatedAt: string;
   createdAt: string;
@@ -1939,6 +1940,7 @@ export interface Audio {
    */
   imageOgUrl?: string | null;
   prefix?: string | null;
+  _objectKey?: string | null;
   meta?: {
     title?: string | null;
     description?: string | null;
@@ -2433,6 +2435,7 @@ export interface Photo {
   commentsEnabled?: boolean | null;
   publishedAt?: string | null;
   prefix?: string | null;
+  _objectKey?: string | null;
   meta?: {
     title?: string | null;
     description?: string | null;
@@ -3079,9 +3082,6 @@ export interface Form {
       )[]
     | null;
   submitButtonLabel?: string | null;
-  /**
-   * Choose whether to display an on-page message or redirect to a different page after they submit the form.
-   */
   confirmationType?: ("message" | "redirect") | null;
   confirmationMessage?: {
     root: {
@@ -3106,9 +3106,6 @@ export interface Form {
     } | null;
     url?: string | null;
   };
-  /**
-   * Send custom emails when the form submits. Use comma separated lists to send the same email to multiple recipients. To reference a value from this form, wrap that field's name with double curly brackets, i.e. {{firstName}}. You can use a wildcard {{*}} to output all data and {{*:table}} to format it as an HTML table in the email.
-   */
   emails?:
     | {
         emailTo?: string | null;
@@ -3117,9 +3114,6 @@ export interface Form {
         replyTo?: string | null;
         emailFrom?: string | null;
         subject: string;
-        /**
-         * Enter the message that should be sent in this email.
-         */
         message?: {
           root: {
             type: string;
@@ -3505,6 +3499,7 @@ export interface MediaSelect<T extends boolean = true> {
   credit?: T;
   blurDataURL?: T;
   tags?: T;
+  _objectKey?: T;
   folder?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -3706,6 +3701,7 @@ export interface AudioSelect<T extends boolean = true> {
   imageOg?: T;
   imageOgUrl?: T;
   prefix?: T;
+  _objectKey?: T;
   meta?:
     | T
     | {
@@ -3747,6 +3743,7 @@ export interface PhotosSelect<T extends boolean = true> {
   commentsEnabled?: T;
   publishedAt?: T;
   prefix?: T;
+  _objectKey?: T;
   meta?:
     | T
     | {
@@ -6135,7 +6132,10 @@ export interface TaskSchedulePublish {
           value: number | Legal;
         } | null);
     global?: string | null;
-    user?: (number | null) | User;
+    user?: {
+      relationTo: "users";
+      value: number | User;
+    } | null;
   };
   output?: unknown;
 }
