@@ -83,9 +83,7 @@ jobs:
   # RLS isolation regression, and the Playwright critical-path e2e against the
   # web app. This is the security + end-to-end gate.
   integration:
-    # Pinned: ubuntu-latest is now 26.04, which Playwright 1.60 cannot install
-    # Chromium deps on. Bump back once the Playwright version supports it.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
