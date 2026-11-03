@@ -53,7 +53,11 @@ export const baseConfig = defineConfig(
       ...tseslint.configs.stylisticTypeChecked,
     ],
     rules: {
-      ...turboPlugin.configs.recommended.rules,
+      // eslint-plugin-turbo >= 2.6 types `configs` as the generic
+      // `ESLint.Plugin["configs"]` (possibly undefined), so spreading
+      // `configs.recommended.rules` no longer typechecks. This is the full
+      // content of its recommended rule set.
+      "turbo/no-undeclared-env-vars": "error",
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
