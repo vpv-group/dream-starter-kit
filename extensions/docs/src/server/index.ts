@@ -58,7 +58,7 @@ async function fetchPublishedDocs(
     limit: 500,
     depth: 0,
   });
-  return res.docs as unknown as DocRow[];
+  return res.docs;
 }
 
 /** Public: full-text-ish search for the ⌘K palette (no AI, no auth). */

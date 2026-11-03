@@ -273,7 +273,7 @@ export const routes: ExtRouteTable = {
         title: "New chat",
         visibility: "private",
       });
-      titlePromise = generateTitle(message as ChatMessage);
+      titlePromise = generateTitle(message);
     }
 
     let uiMessages: ChatMessage[];
@@ -307,7 +307,7 @@ export const routes: ExtRouteTable = {
           }
           return part;
         }),
-      })) as ChatMessage[];
+      }));
     } else {
       uiMessages = [
         ...convertToUIMessages(messagesFromDb).slice(
@@ -337,9 +337,7 @@ export const routes: ExtRouteTable = {
     // Compose the channel-aware system prompt (universal + channel sub-prompts
     // + routed skill persona + artifacts) and remember the prior skill state
     // so stickiness can be persisted after the turn.
-    const latestUserText = message
-      ? getTextFromMessage(message as ChatMessage)
-      : "";
+    const latestUserText = message ? getTextFromMessage(message) : "";
     const priorSkillState: ThreadSkillState | null = chat
       ? await getThreadSkillState(ctx.supabase, id)
       : null;
@@ -399,7 +397,7 @@ export const routes: ExtRouteTable = {
           .then((usage) => {
             void updateChatLastContextById(ctx.supabase, {
               chatId: id,
-              context: usage as unknown as Json,
+              context: usage,
             });
           })
           .catch(() => {

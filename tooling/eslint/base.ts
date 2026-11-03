@@ -53,7 +53,10 @@ export const baseConfig = defineConfig(
       ...tseslint.configs.stylisticTypeChecked,
     ],
     rules: {
-      ...turboPlugin.configs.recommended.rules,
+      // = turboPlugin.configs["flat/recommended"].rules (its only rule). Spelled
+      // out because the plugin now types `configs` as the generic, possibly-
+      // undefined `ESLint.Plugin["configs"]`.
+      "turbo/no-undeclared-env-vars": "error",
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },

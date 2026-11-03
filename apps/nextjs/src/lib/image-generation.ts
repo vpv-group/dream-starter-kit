@@ -176,7 +176,7 @@ export async function generateAuditedImage({
   let reason: string | undefined;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    let image: GeneratedImage | null = null;
+    let image: GeneratedImage;
     try {
       image = await generateOneImage({ model, systemPrompt, subject, format });
       last = image;
