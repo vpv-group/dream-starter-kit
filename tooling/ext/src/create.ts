@@ -90,7 +90,7 @@ export default defineExtension({
     "prettier": "catalog:",
     "react": "catalog:react19",
     "react-native": "0.88.1",
-    "react-native-css": "3.0.1",
+    "react-native-css": "3.0.7",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
