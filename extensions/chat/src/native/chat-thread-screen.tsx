@@ -64,7 +64,7 @@ export function ChatThreadScreen() {
             <Text className="text-muted-foreground py-2 text-sm">
               Assistant is thinking…
             </Text>
-          ) : null
+          ) : undefined
         }
       />
       <View className="border-border flex-row gap-2 border-t pt-3">

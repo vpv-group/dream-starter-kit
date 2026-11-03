@@ -72,7 +72,7 @@ export default defineExtension({
     "@acme/ui": "workspace:*",
     "@acme/ui-native": "workspace:*",
     "@tanstack/react-query": "catalog:",
-    "expo-router": "~6.0.13",
+    "expo-router": "~58.0.30",
     "server-only": "^0.0.1",
     "zod": "catalog:"
   },
@@ -89,7 +89,7 @@ export default defineExtension({
     "payload": "catalog:",
     "prettier": "catalog:",
     "react": "catalog:react19",
-    "react-native": "~0.81.5",
+    "react-native": "0.88.1",
     "react-native-css": "3.0.1",
     "typescript": "catalog:",
     "vitest": "catalog:"
