@@ -23,7 +23,7 @@ catalog:
   '@tailwindcss/postcss': ^4.1.16
   '@tailwindcss/vite': ^4.1.16
   '@tanstack/react-query': ^5.90.8
-  '@types/node': ^22.18.12
+  '@types/node': ^22.20.5
   '@vitejs/plugin-react': 5.1.0
   ai: ^6.0.194
   eslint: ^9.38.0
@@ -34,7 +34,7 @@ catalog:
   sharp: ^0.34.5
   stripe: ^22.2.0
   tailwindcss: ^4.1.16
-  typescript: ^5.9.3
+  typescript: ~6.0.3
   vite: 7.1.12
   vitest: ^4.1.8
   zod: 4.1.12

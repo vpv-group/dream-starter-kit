@@ -53,7 +53,7 @@ export async function resolveStaffPayloadUser(
   if (doc.deletedAt) return null; // trashed staff are locked out
   const roles = doc.roles ?? [];
   if (!roles.some((r) => MCP_STAFF_ROLES.includes(r))) return null;
-  return { ...doc, collection: "users" } as unknown as TypedUser;
+  return { ...doc, collection: "users" };
 }
 
 // --- Access-enforced data helpers ---------------------------------------------
@@ -127,7 +127,7 @@ export async function createDoc(
 ): Promise<Doc> {
   const doc = await ctx.payload.create({
     collection,
-    data: data as never,
+    data: data,
     overrideAccess: false,
     user: ctx.user,
   });
@@ -143,7 +143,7 @@ export async function updateDoc(
   const doc = await ctx.payload.update({
     collection,
     id,
-    data: data as never,
+    data: data,
     overrideAccess: false,
     user: ctx.user,
   });

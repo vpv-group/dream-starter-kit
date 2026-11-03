@@ -221,7 +221,7 @@ export async function POST() {
             await payload.update({
               collection: c.collectionSlug as CollectionSlug,
               id: c.id,
-              data: data as never,
+              data: data,
               overrideAccess: true,
             });
           }

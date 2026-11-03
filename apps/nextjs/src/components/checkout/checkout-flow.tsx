@@ -20,7 +20,6 @@ import { isAnonymousUser, signOut } from "@acme/app";
 
 import type { PaidResult } from "~/components/checkout/checkout-payment";
 import type { CheckoutTestimonialData } from "~/components/checkout/checkout-testimonial";
-import type { PlanLite } from "~/lib/paywall-copy";
 import { AuthFlow } from "~/components/auth/auth-flow";
 import { CheckoutPayment } from "~/components/checkout/checkout-payment";
 import { CheckoutTestimonial } from "~/components/checkout/checkout-testimonial";
@@ -76,15 +75,10 @@ export function CheckoutFlow({
   const [switchError, setSwitchError] = useState<string | null>(null);
   const subscriptionRef = useRef<string | undefined>(undefined);
 
-  const copy = buildPlanCopy(plan as unknown as PlanLite);
+  const copy = buildPlanCopy(plan);
   const canUpsell = Boolean(annualPlan?.id && annualPlan.id !== planId);
   const upsellCopy =
-    annualPlan && canUpsell
-      ? buildUpsellCopy(
-          annualPlan as unknown as PlanLite,
-          plan as unknown as PlanLite,
-        )
-      : null;
+    annualPlan && canUpsell ? buildUpsellCopy(annualPlan, plan) : null;
 
   const finishToApp = useCallback(() => {
     router.push("/a?checkout=success");
@@ -261,7 +255,7 @@ export function CheckoutFlow({
                 ) : (
                   <CheckoutPayment
                     planId={planId}
-                    plan={plan as unknown as PlanLite}
+                    plan={plan}
                     copy={copy}
                     onPaid={onPaid}
                   />

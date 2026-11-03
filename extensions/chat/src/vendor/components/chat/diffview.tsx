@@ -34,7 +34,7 @@ const diffSchema = new Schema({
         }
         return ["span", { class: className }, 0];
       },
-    } as MarkSpec,
+    },
   }),
 });
 

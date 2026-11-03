@@ -85,7 +85,8 @@ export function collectFieldMeta(fields: unknown): FieldMetaMap {
       if (Array.isArray(f.fields)) walk(f.fields);
     }
   };
-  walk(Array.isArray(fields) ? (fields as unknown as AnyField[]) : []);
+  const list: unknown[] = Array.isArray(fields) ? fields : [];
+  walk(list as AnyField[]);
   return map;
 }
 
