@@ -13,8 +13,7 @@ export const requireCommentsEnabled: CollectionBeforeValidateHook = async ({
 }) => {
   if (operation !== "create") return data;
   const target = data?.target as
-    | { relationTo?: CollectionSlug; value?: unknown }
-    | undefined;
+    { relationTo?: CollectionSlug; value?: unknown } | undefined;
   const targetId =
     typeof target?.value === "object" && target.value !== null
       ? (target.value as { id?: unknown }).id

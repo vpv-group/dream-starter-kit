@@ -165,8 +165,7 @@ export function resilientCmsDelete(
 
     const { payload } = req;
     const collection = payload.collections[collectionSlug as CollectionSlug] as
-      | (typeof payload.collections)[CollectionSlug]
-      | undefined;
+      (typeof payload.collections)[CollectionSlug] | undefined;
     const where = (req.query as { where?: Where }).where;
     // Not a real collection, or no `where`: Payload's handler owns the response
     // (a 404, or its "Missing 'where' query" 400). Nothing was deleted yet, so
