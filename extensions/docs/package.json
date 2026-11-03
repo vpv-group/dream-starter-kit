@@ -27,10 +27,10 @@
     "@payloadcms/richtext-lexical": "catalog:",
     "ai": "catalog:",
     "gray-matter": "^4.0.3",
-    "lucide-react": "^1.17.0",
+    "lucide-react": "^1.67.0",
     "next": "^16.2.9",
     "payload": "catalog:",
-    "radix-ui": "^1.4.3",
+    "radix-ui": "^1.8.1",
     "server-only": "^0.0.1",
     "zod": "catalog:"
   },
