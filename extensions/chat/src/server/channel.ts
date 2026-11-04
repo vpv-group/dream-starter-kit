@@ -222,7 +222,7 @@ export async function handleChannelMessage(
   // 6. Generate (channels are buffered, not streamed).
   const result = await generateText({
     model: DEFAULT_AI_MODEL,
-    system: composed.system,
+    instructions: composed.instructions,
     messages: [...history, { role: "user" as const, content: text }],
     maxOutputTokens: AI_MAX_OUTPUT_TOKENS,
   });
