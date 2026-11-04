@@ -77,7 +77,7 @@ If anything here disagrees with those, **they win.**
 
 ## Prerequisites
 
-- **Node 22** — `.nvmrc` pins `22.21.0`; run `nvm use`.
+- **Node 22** — `.nvmrc` pins `22.23.4`; run `nvm use`.
 - **pnpm 10** — `corepack enable` (or `npm i -g pnpm@10`).
 - **Supabase CLI** + **Docker** — for the local Postgres/Auth/Storage stack.
 - A few **free-tier accounts** (see next section). Local dev needs only Supabase.
@@ -111,7 +111,7 @@ cd dream-starter-kit
 ### 2. Install (Node 22 + pnpm 10)
 
 ```bash
-nvm use            # uses .nvmrc → Node 22.21.0  (or install Node 22)
+nvm use            # uses .nvmrc → Node 22.23.4  (or install Node 22)
 corepack enable    # provides pnpm 10
 pnpm install
 ```
@@ -522,7 +522,7 @@ eas build --profile production    # store builds (auto-increments versions)
 eas submit --profile production
 ```
 
-Profiles are in [`apps/expo/eas.json`](./apps/expo/eas.json) (pinned to Node 22.21.0 /
+Profiles are in [`apps/expo/eas.json`](./apps/expo/eas.json) (pinned to Node 22.23.4 /
 pnpm 10.19.0). Set `EXPO_PUBLIC_*` values as EAS env/secrets.
 
 ## Billing setup (Stripe)

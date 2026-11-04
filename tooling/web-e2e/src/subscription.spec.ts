@@ -181,7 +181,7 @@ test.describe("subscriptions access control", () => {
       baseURL: BASE_URL,
       storageState: FOUNDER_STORAGE_STATE,
     });
-    // rest: false in payload.config.ts — the proxy route must not exist even
+    // `rest` omitted in the billing extension's stripePlugin config — the proxy route must not exist even
     // for authenticated staff (credentials stay server-side).
     const res = await staff.post("/cms-api/stripe/rest", {
       data: { stripeMethod: "customers.list", stripeArgs: [] },
