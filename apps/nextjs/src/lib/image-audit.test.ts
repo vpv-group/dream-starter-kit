@@ -70,7 +70,7 @@ describe("auditGeneratedImage", () => {
     expect(arg.model).toBe(DEFAULT_IMAGE_AUDIT_MODEL);
   });
 
-  it("passes the image as an image message part and honors a model override", async () => {
+  it("passes the image as a file message part and honors a model override", async () => {
     generateObjectMock.mockResolvedValue({
       object: { meetsRequirements: false, reason: "Contains text." },
     });
@@ -85,11 +85,15 @@ describe("auditGeneratedImage", () => {
     expect(verdict.pass).toBe(false);
     const arg = generateObjectMock.mock.calls[0]?.[0] as {
       model: string;
-      messages: { content: { type: string; image?: Buffer }[] }[];
+      messages: {
+        content: { type: string; data?: Buffer; mediaType?: string }[];
+      }[];
     };
     expect(arg.model).toBe("anthropic/claude-opus-4.1");
     const parts = arg.messages[0]?.content ?? [];
     expect(parts.some((p) => p.type === "text")).toBe(true);
-    expect(parts.find((p) => p.type === "image")?.image).toBe(bytes);
+    const file = parts.find((p) => p.type === "file");
+    expect(file?.data).toBe(bytes);
+    expect(file?.mediaType).toBe("image/webp");
   });
 });
