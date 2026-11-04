@@ -1,6 +1,6 @@
 import "server-only";
 
-import { gateway, experimental_generateImage as generateImage } from "ai";
+import { gateway, generateImage } from "ai";
 import sharp from "sharp";
 
 import { DEFAULT_IMAGE_MODEL, DEFAULT_IMAGE_SYSTEM_PROMPT } from "@acme/config";

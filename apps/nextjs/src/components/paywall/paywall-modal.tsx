@@ -520,9 +520,9 @@ export function PaywallModal({
             key={`${deferred.mode}-${deferred.amount ?? 0}`}
             stripe={getStripePromise()}
             options={{
-              mode: deferred.mode,
-              ...(deferred.amount != null ? { amount: deferred.amount } : {}),
-              currency: deferred.currency,
+              // Spread the discriminated union whole so stripe-js narrows `mode`
+              // (v10 types require `amount` for payment/subscription).
+              ...deferred,
               appearance: {
                 theme: "night",
                 labels: "floating",

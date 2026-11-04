@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createOpenAI } from "@ai-sdk/openai";
-import { experimental_transcribe as transcribe } from "ai";
+import { transcribe } from "ai";
 
 /**
  * Voice transcription (ported from the Sendblue concierge). The AI Gateway
