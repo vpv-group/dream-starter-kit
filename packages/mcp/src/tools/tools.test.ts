@@ -57,9 +57,8 @@ function makeFakePayload() {
         totalPages: 1,
       }),
     ),
-    findByID: vi.fn(
-      (): Promise<Record<string, unknown>> =>
-        Promise.resolve({ id: "1", title: "Hello world", slug: "hello" }),
+    findByID: vi.fn((): Promise<Record<string, unknown>> =>
+      Promise.resolve({ id: "1", title: "Hello world", slug: "hello" }),
     ),
     create: vi.fn((args: { data: Record<string, unknown> }) =>
       Promise.resolve({ id: "new", ...args.data }),

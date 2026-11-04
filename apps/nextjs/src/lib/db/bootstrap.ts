@@ -99,12 +99,7 @@ export interface BootstrapDeps {
 export interface BootstrapResult {
   /** Why nothing ran — or `false` when provisioning work was attempted. */
   skipped:
-    | "opt-out"
-    | "build-phase"
-    | "no-url"
-    | "up-to-date"
-    | "error"
-    | false;
+    "opt-out" | "build-phase" | "no-url" | "up-to-date" | "error" | false;
   appliedVersions: string[];
   cmsRoleCreated: boolean;
   /** Whether `migrateCms` ran here (under the lock). When false on a non-error

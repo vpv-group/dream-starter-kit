@@ -185,8 +185,7 @@ export interface Config {
     "tag-groups": TagGroupsSelect<false> | TagGroupsSelect<true>;
     "space-groups": SpaceGroupsSelect<false> | SpaceGroupsSelect<true>;
     "community-spaces":
-      | CommunitySpacesSelect<false>
-      | CommunitySpacesSelect<true>;
+      CommunitySpacesSelect<false> | CommunitySpacesSelect<true>;
     "community-posts": CommunityPostsSelect<false> | CommunityPostsSelect<true>;
     comments: CommentsSelect<false> | CommentsSelect<true>;
     reports: ReportsSelect<false> | ReportsSelect<true>;
@@ -198,11 +197,9 @@ export interface Config {
     "kit-extensions": KitExtensionsSelect<false> | KitExtensionsSelect<true>;
     "nav-items": NavItemsSelect<false> | NavItemsSelect<true>;
     "ext-billing-plans":
-      | ExtBillingPlansSelect<false>
-      | ExtBillingPlansSelect<true>;
+      ExtBillingPlansSelect<false> | ExtBillingPlansSelect<true>;
     "ext-billing-coupons":
-      | ExtBillingCouponsSelect<false>
-      | ExtBillingCouponsSelect<true>;
+      ExtBillingCouponsSelect<false> | ExtBillingCouponsSelect<true>;
     "ext-billing-subscriptions":
       | ExtBillingSubscriptionsSelect<false>
       | ExtBillingSubscriptionsSelect<true>;
@@ -210,20 +207,16 @@ export interface Config {
     "ext-docs-pages": ExtDocsPagesSelect<false> | ExtDocsPagesSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     "form-submissions":
-      | FormSubmissionsSelect<false>
-      | FormSubmissionsSelect<true>;
+      FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
     "payload-kv": PayloadKvSelect<false> | PayloadKvSelect<true>;
     "payload-jobs": PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     "payload-folders": PayloadFoldersSelect<false> | PayloadFoldersSelect<true>;
     "payload-locked-documents":
-      | PayloadLockedDocumentsSelect<false>
-      | PayloadLockedDocumentsSelect<true>;
+      PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     "payload-preferences":
-      | PayloadPreferencesSelect<false>
-      | PayloadPreferencesSelect<true>;
+      PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     "payload-migrations":
-      | PayloadMigrationsSelect<false>
-      | PayloadMigrationsSelect<true>;
+      PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
   };
   db: {
     defaultIDType: number;
@@ -247,17 +240,13 @@ export interface Config {
       | ImageGenerationSettingsSelect<true>;
     "profile-fields": ProfileFieldsSelect<false> | ProfileFieldsSelect<true>;
     "authentication-settings":
-      | AuthenticationSettingsSelect<false>
-      | AuthenticationSettingsSelect<true>;
+      AuthenticationSettingsSelect<false> | AuthenticationSettingsSelect<true>;
     "ext-billing-settings":
-      | ExtBillingSettingsSelect<false>
-      | ExtBillingSettingsSelect<true>;
+      ExtBillingSettingsSelect<false> | ExtBillingSettingsSelect<true>;
     "ext-chat-settings":
-      | ExtChatSettingsSelect<false>
-      | ExtChatSettingsSelect<true>;
+      ExtChatSettingsSelect<false> | ExtChatSettingsSelect<true>;
     "ext-docs-settings":
-      | ExtDocsSettingsSelect<false>
-      | ExtDocsSettingsSelect<true>;
+      ExtDocsSettingsSelect<false> | ExtDocsSettingsSelect<true>;
   };
   locale: null;
   widgets: {
@@ -434,8 +423,7 @@ export interface User {
       )
     | null;
   preferredLanguage?:
-    | ("en" | "es" | "fr" | "de" | "pt" | "it" | "ja" | "ko" | "zh")
-    | null;
+    ("en" | "es" | "fr" | "de" | "pt" | "it" | "ja" | "ko" | "zh") | null;
   /**
    * Optional billing address.
    */
@@ -1150,12 +1138,7 @@ export interface ExtBillingSubscription {
   plan?: (number | null) | ExtBillingPlan;
   coupon?: (number | null) | ExtBillingCoupon;
   status:
-    | "trialing"
-    | "active"
-    | "past_due"
-    | "canceled"
-    | "churned"
-    | "paused";
+    "trialing" | "active" | "past_due" | "canceled" | "churned" | "paused";
   startedAt?: string | null;
   trialEndsAt?: string | null;
   currentPeriodStart?: string | null;
@@ -1542,8 +1525,7 @@ export interface Video {
     | {
         label: string;
         language?:
-          | ("en" | "es" | "fr" | "de" | "pt" | "it" | "ja" | "ko" | "zh")
-          | null;
+          ("en" | "es" | "fr" | "de" | "pt" | "it" | "ja" | "ko" | "zh") | null;
         file?: (number | null) | Media;
         id?: string | null;
       }[]
@@ -3130,13 +3112,7 @@ export interface Form {
             }[];
             direction: ("ltr" | "rtl") | null;
             format:
-              | "left"
-              | "start"
-              | "center"
-              | "right"
-              | "end"
-              | "justify"
-              | "";
+              "left" | "start" | "center" | "right" | "end" | "justify" | "";
             indent: number;
             version: number;
           };
@@ -5423,12 +5399,7 @@ export interface AuthenticationSetting {
   loginMethods?:
     | {
         method:
-          | "password"
-          | "magicLink"
-          | "emailOtp"
-          | "google"
-          | "apple"
-          | "sso";
+          "password" | "magicLink" | "emailOtp" | "google" | "apple" | "sso";
         enabled?: boolean | null;
         id?: string | null;
       }[]

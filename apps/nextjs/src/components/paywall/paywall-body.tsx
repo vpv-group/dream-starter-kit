@@ -242,8 +242,7 @@ export function PaywallBody({
                     email: e.billingDetails?.email,
                     phone: e.billingDetails?.phone,
                     address: e.billingDetails?.address as
-                      | Record<string, unknown>
-                      | undefined,
+                      Record<string, unknown> | undefined,
                   })
                 }
                 options={{

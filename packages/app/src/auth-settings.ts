@@ -13,12 +13,7 @@
  */
 
 export type AuthMethod =
-  | "password"
-  | "magicLink"
-  | "emailOtp"
-  | "google"
-  | "apple"
-  | "sso";
+  "password" | "magicLink" | "emailOtp" | "google" | "apple" | "sso";
 
 /** Canonical method set + the order used to backfill any methods a config omits. */
 export const AUTH_METHOD_ORDER: readonly AuthMethod[] = [
