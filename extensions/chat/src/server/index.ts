@@ -5,8 +5,9 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
   generateText,
-  stepCountIs,
+  isStepCount,
   streamText,
+  toUIMessageStream,
 } from "ai";
 import { z } from "zod/v4";
 
@@ -144,7 +145,7 @@ const legacyBodySchema = z.object({
 async function generateTitle(message: ChatMessage): Promise<string> {
   const { text } = await generateText({
     model: getTitleModel(),
-    system: titlePrompt,
+    instructions: titlePrompt,
     prompt: getTextFromMessage(message),
   });
   return text
@@ -188,7 +189,7 @@ async function legacyStream(
       content: m.content,
     }));
 
-  const { system } = await composeSystemPrompt({
+  const { instructions } = await composeSystemPrompt({
     payload: await ctx.getPayload(),
     supabase: ctx.supabase,
     settings: chatSettings,
@@ -200,7 +201,7 @@ async function legacyStream(
   try {
     const result = await generateText({
       model: DEFAULT_AI_MODEL,
-      system,
+      instructions,
       messages,
       maxOutputTokens: AI_MAX_OUTPUT_TOKENS,
     });
@@ -357,9 +358,9 @@ export const routes: ExtRouteTable = {
       execute: ({ writer: dataStream }) => {
         const result = streamText({
           model: chatModel,
-          system: composed.system,
+          instructions: composed.instructions,
           messages: modelMessages,
-          stopWhen: stepCountIs(5),
+          stopWhen: isStepCount(5),
           maxOutputTokens: AI_MAX_OUTPUT_TOKENS,
           tools: {
             getWeather,
@@ -382,7 +383,9 @@ export const routes: ExtRouteTable = {
           },
         });
 
-        dataStream.merge(result.toUIMessageStream({ sendReasoning: false }));
+        dataStream.merge(
+          toUIMessageStream({ stream: result.stream, sendReasoning: false }),
+        );
 
         if (titlePromise) {
           void titlePromise
@@ -395,7 +398,7 @@ export const routes: ExtRouteTable = {
             });
         }
 
-        void Promise.resolve(result.totalUsage)
+        void Promise.resolve(result.usage)
           .then((usage) => {
             void updateChatLastContextById(ctx.supabase, {
               chatId: id,
@@ -407,7 +410,7 @@ export const routes: ExtRouteTable = {
           });
       },
       generateId: generateUUID,
-      onFinish: async ({ messages: finishedMessages }) => {
+      onEnd: async ({ messages: finishedMessages }) => {
         if (isToolApprovalFlow) {
           for (const finishedMsg of finishedMessages) {
             const existingMsg = uiMessages.find((m) => m.id === finishedMsg.id);
