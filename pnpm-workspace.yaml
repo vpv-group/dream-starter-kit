@@ -25,7 +25,7 @@ catalog:
   '@tanstack/react-query': ^5.90.8
   '@types/node': ^22.18.12
   '@vitejs/plugin-react': 5.1.0
-  ai: ^6.0.194
+  ai: ^7.0.162
   eslint: ^9.38.0
   graphql: ^16.8.1
   payload: 3.85.0
