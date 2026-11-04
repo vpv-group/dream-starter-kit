@@ -113,8 +113,7 @@ export const premiumFieldAccess: FieldAccess = ({ req, doc, siblingData }) => {
   // public content is still returned.)
   if (level === undefined) return false;
   const ctx = req.context as
-    | { isPremium?: boolean; isLoggedIn?: boolean }
-    | undefined;
+    { isPremium?: boolean; isLoggedIn?: boolean } | undefined;
   if (level === "premium") return Boolean(ctx?.isPremium);
   if (level === "members") return Boolean(ctx?.isLoggedIn ?? ctx?.isPremium);
   return true;

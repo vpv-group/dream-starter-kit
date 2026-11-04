@@ -1,6 +1,5 @@
 "use client";
 
-import type { EmailOtpType } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
@@ -53,7 +52,7 @@ export default function ConfirmEmailPage() {
       const tokenHash = query.get("token_hash");
       // Anonymous→permanent conversions (updateUser email) link with
       // `type=email_change`; sign-ups with `type=signup`. Honor whichever.
-      const type = (query.get("type") as EmailOtpType | null) ?? "signup";
+      const type = query.get("type") ?? "signup";
       // Conversions pass `?next=<origin>` to return the buyer to where they
       // started (a paid, now-permanent user). Same-origin relative paths only
       // (open-redirect guard); default to /welcome (routes by role).

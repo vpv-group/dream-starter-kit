@@ -51,9 +51,8 @@ export async function register() {
   // `process.exit(1)` surfaces as a Vercel FUNCTION_INVOCATION_FAILED 500
   // (e.g. the `/welcome` redirect on a fresh deploy). Handles its own errors —
   // never throws.
-  const { runFullBootstrap, warmCms } = await import(
-    "~/lib/db/bootstrap-runner"
-  );
+  const { runFullBootstrap, warmCms } =
+    await import("~/lib/db/bootstrap-runner");
   const result = await runFullBootstrap();
 
   // Fast path: a fully-provisioned, fully-migrated DB skips the lock and the

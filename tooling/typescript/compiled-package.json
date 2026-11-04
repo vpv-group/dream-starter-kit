@@ -7,6 +7,12 @@
     "declarationMap": true,
     "emitDeclarationOnly": true,
     "noEmit": false,
-    "outDir": "${configDir}/dist"
+    "outDir": "${configDir}/dist",
+    /**
+     * TS 6 defaults `rootDir` to the tsconfig's directory instead of
+     * inferring it, which would emit to dist/src/*. Pin it so the
+     * declarations keep landing at dist/* (package.json `types` exports).
+     */
+    "rootDir": "${configDir}/src"
   }
 }

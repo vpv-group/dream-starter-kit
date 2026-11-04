@@ -613,11 +613,7 @@ describe("RLS: MCP OAuth tables are server-only (deny-all)", () => {
   ];
 
   it("anonymous users read no rows", async () => {
-    const anon = createClient(
-      SUPABASE_URL,
-      ANON_KEY,
-      noPersist,
-    ) as unknown as SupabaseClient;
+    const anon = createClient(SUPABASE_URL, ANON_KEY, noPersist);
     for (const table of MCP_TABLES) {
       const { data } = await anon.from(table).select("*");
       expect(data ?? []).toHaveLength(0);

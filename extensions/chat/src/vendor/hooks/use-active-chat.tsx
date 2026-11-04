@@ -278,6 +278,8 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       votes,
       currentModelId,
       showCreditCardAlert,
+      setInput,
+      setShowCreditCardAlert,
     ],
   );
 

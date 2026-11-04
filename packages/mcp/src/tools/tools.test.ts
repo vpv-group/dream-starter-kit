@@ -1,4 +1,4 @@
-import type { Payload, TypedUser } from "payload";
+import type { Payload } from "payload";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -57,9 +57,8 @@ function makeFakePayload() {
         totalPages: 1,
       }),
     ),
-    findByID: vi.fn(
-      (): Promise<Record<string, unknown>> =>
-        Promise.resolve({ id: "1", title: "Hello world", slug: "hello" }),
+    findByID: vi.fn((): Promise<Record<string, unknown>> =>
+      Promise.resolve({ id: "1", title: "Hello world", slug: "hello" }),
     ),
     create: vi.fn((args: { data: Record<string, unknown> }) =>
       Promise.resolve({ id: "new", ...args.data }),
@@ -82,7 +81,7 @@ async function connectClient(
       id: "u1",
       collection: "users",
       roles: ["editor"],
-    } as unknown as TypedUser,
+    },
     origin: "https://app.test",
     generateMedia,
   };

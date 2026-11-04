@@ -127,8 +127,7 @@ export function priceNeedsRecreate(
 export function introCouponDuration(
   plan: PlanSyncInput,
 ):
-  | { duration: "once" }
-  | { duration: "repeating"; duration_in_months: number } {
+  { duration: "once" } | { duration: "repeating"; duration_in_months: number } {
   const periods = Math.max(1, Math.floor(plan.introOffer?.introPeriods ?? 1));
   const unit = plan.introOffer?.introInterval ?? "month";
   const months = unit === "year" ? periods * 12 : periods;

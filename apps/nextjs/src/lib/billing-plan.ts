@@ -21,7 +21,7 @@ export async function getPremiumPlan(): Promise<PlanLite | null> {
       limit: 50,
       depth: 0,
     });
-    return resolvePremiumPlan(docs as unknown as PlanLite[]);
+    return resolvePremiumPlan(docs);
   } catch {
     return null;
   }
