@@ -1,4 +1,3 @@
-import type { Href } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { Stack, useRouter } from "expo-router";
 
@@ -63,7 +62,7 @@ export function HomeScreen() {
           key={item.key}
           title={item.label}
           variant={i === 0 ? "default" : "outline"}
-          onPress={() => router.push(item.href as Href)}
+          onPress={() => router.push(item.href)}
         />
       ))}
     </ScrollView>

@@ -85,6 +85,8 @@ export function ExtensionsView() {
   }, []);
 
   useEffect(() => {
+    // Initial data load; every setState in `refresh` runs after an await.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh();
   }, [refresh]);
 

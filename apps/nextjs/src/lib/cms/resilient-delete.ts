@@ -165,8 +165,7 @@ export function resilientCmsDelete(
 
     const { payload } = req;
     const collection = payload.collections[collectionSlug as CollectionSlug] as
-      | (typeof payload.collections)[CollectionSlug]
-      | undefined;
+      (typeof payload.collections)[CollectionSlug] | undefined;
     const where = (req.query as { where?: Where }).where;
     // Not a real collection, or no `where`: Payload's handler owns the response
     // (a 404, or its "Missing 'where' query" 400). Nothing was deleted yet, so
@@ -183,7 +182,7 @@ export function resilientCmsDelete(
 
     let result: BulkDeleteResult;
     try {
-      result = (await payload.delete({
+      result = await payload.delete({
         collection: collectionSlug as CollectionSlug,
         where,
         depth: query.depth != null ? Number(query.depth) : undefined,
@@ -196,7 +195,7 @@ export function resilientCmsDelete(
         // The fix: no wrapping transaction, so one blocked row can't abort the
         // others (see file header).
         disableTransaction: true,
-      })) as unknown as BulkDeleteResult;
+      });
     } catch {
       // Threw before deleting anything (most likely access denied) — defer to
       // Payload so the access error is formatted exactly as usual.

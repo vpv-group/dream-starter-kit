@@ -106,8 +106,7 @@ export async function syncDocsFromGitHub(
       req,
     });
     const current = existing.docs[0] as
-      | { id: number | string; sourceSha?: string | null }
-      | undefined;
+      { id: number | string; sourceSha?: string | null } | undefined;
 
     if (current?.sourceSha === entry.sha) {
       result.skipped++;

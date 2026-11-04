@@ -22,13 +22,18 @@ export async function updateSession(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet, headers) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value),
           );
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options),
+          );
+          // @supabase/ssr passes no-store cache headers alongside auth-cookie
+          // writes so a CDN never caches (and replays) one user's session.
+          Object.entries(headers).forEach(([key, value]) =>
+            response.headers.set(key, value),
           );
         },
       },

@@ -36,8 +36,7 @@ export const uniquePolymorphic = ({
     const orig = (originalDoc ?? {}) as Record<string, unknown>;
     const ownerId = idOf(row[ownerField] ?? orig[ownerField]);
     const target = (row.target ?? orig.target) as
-      | { relationTo?: string; value?: unknown }
-      | undefined;
+      { relationTo?: string; value?: unknown } | undefined;
     const targetValue = idOf(target?.value);
     if (ownerId == null || !target?.relationTo || targetValue == null) {
       return data;
