@@ -88,7 +88,7 @@ describe("runDispatch", () => {
     const result = await runDispatch({
       payload,
       admin,
-      fetchImpl: fetchImpl,
+      fetchImpl,
     });
 
     expect(result).toEqual({ processed: 1, sent: 1, failed: 0 });
@@ -120,7 +120,7 @@ describe("runDispatch", () => {
     const result = await runDispatch({
       payload,
       admin,
-      fetchImpl: fetchImpl,
+      fetchImpl,
     });
 
     expect(result).toEqual({ processed: 1, sent: 0, failed: 1 });

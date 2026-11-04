@@ -18,7 +18,7 @@ const diffSchema = new Schema({
     diffMark: {
       attrs: { type: { default: "" } },
       toDOM(mark) {
-        let className = "";
+        let className: string;
 
         switch (mark.attrs.type) {
           case DiffType.Inserted:

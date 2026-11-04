@@ -127,7 +127,7 @@ export async function createDoc(
 ): Promise<Doc> {
   const doc = await ctx.payload.create({
     collection,
-    data: data,
+    data,
     overrideAccess: false,
     user: ctx.user,
   });
@@ -143,7 +143,7 @@ export async function updateDoc(
   const doc = await ctx.payload.update({
     collection,
     id,
-    data: data,
+    data,
     overrideAccess: false,
     user: ctx.user,
   });

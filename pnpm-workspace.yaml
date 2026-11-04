@@ -5,7 +5,7 @@ packages:
   - extensions/*
 
 catalog:
-  '@eslint/js': ^9.38.0
+  '@eslint/js': ^10.0.1
   '@hookform/resolvers': ^5.4.0
   '@payloadcms/db-postgres': 3.85.0
   '@payloadcms/live-preview-react': 3.85.0
@@ -18,25 +18,25 @@ catalog:
   '@payloadcms/storage-s3': 3.85.0
   '@payloadcms/ui': 3.85.0
   '@react-native-async-storage/async-storage': ^2.2.0
-  '@supabase/ssr': ^0.10.3
-  '@supabase/supabase-js': ^2.106.2
+  '@supabase/ssr': ^0.12.7
+  '@supabase/supabase-js': ^2.118.0
   '@tailwindcss/postcss': ^4.1.16
   '@tailwindcss/vite': ^4.1.16
-  '@tanstack/react-query': ^5.90.8
+  '@tanstack/react-query': ^5.105.3
   '@types/node': ^22.20.5
   '@vitejs/plugin-react': 5.1.0
   ai: ^7.0.162
-  eslint: ^9.38.0
+  eslint: ^10.14.0
   graphql: ^16.8.1
   payload: 3.85.0
   prettier: ^3.6.2
   react-hook-form: ^7.77.0
-  sharp: ^0.34.5
+  sharp: ^0.35.5
   stripe: ^23.1.0
   tailwindcss: ^4.1.16
   typescript: ~6.0.3
   vite: 7.1.12
-  vitest: ^4.1.8
+  vitest: ^5.1.0
   zod: 4.1.12
 
 catalogs:

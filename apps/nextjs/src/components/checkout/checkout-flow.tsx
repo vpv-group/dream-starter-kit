@@ -100,8 +100,9 @@ export function CheckoutFlow({
     }
   }, [supabase]);
 
+  const annualPlanId = annualPlan?.id;
   const switchToAnnual = useCallback(async () => {
-    if (!annualPlan?.id) return;
+    if (!annualPlanId) return;
     setSwitching(true);
     setSwitchError(null);
     try {
@@ -109,7 +110,7 @@ export function CheckoutFlow({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planId: annualPlan.id,
+          planId: annualPlanId,
           subscriptionId: subscriptionRef.current,
         }),
       });
@@ -127,7 +128,7 @@ export function CheckoutFlow({
       );
       setSwitching(false);
     }
-  }, [annualPlan?.id, finishToApp]);
+  }, [annualPlanId, finishToApp]);
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-10">
