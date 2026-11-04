@@ -400,7 +400,7 @@ export const routes: ExtRouteTable = {
           .then((usage) => {
             void updateChatLastContextById(ctx.supabase, {
               chatId: id,
-              context: usage,
+              context: usage as unknown as Json,
             });
           })
           .catch(() => {
