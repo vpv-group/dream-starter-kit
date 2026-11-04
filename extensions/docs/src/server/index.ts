@@ -1,6 +1,11 @@
 import "server-only";
 
-import { convertToModelMessages, streamText } from "ai";
+import {
+  convertToModelMessages,
+  createUIMessageStreamResponse,
+  streamText,
+  toUIMessageStream,
+} from "ai";
 import { z } from "zod/v4";
 
 import type {
@@ -9,7 +14,11 @@ import type {
   ExtRouteContext,
   ExtRouteTable,
 } from "@acme/ext-kit/server";
-import { DEFAULT_AI_MODEL, isAiGatewayConfigured } from "@acme/config";
+import {
+  AI_MAX_OUTPUT_TOKENS,
+  DEFAULT_AI_MODEL,
+  isAiGatewayConfigured,
+} from "@acme/config";
 
 import type { DocsSettings } from "../payload/settings";
 import { lexicalToPlainText } from "./lexical-text";
@@ -122,18 +131,21 @@ export const routes: ExtRouteTable = {
       )
       .join("\n\n");
 
-    const system = `You answer questions about this product using ONLY the documentation excerpts below. If the answer isn't in them, say so and suggest where to look. Be concise. Cite the doc slugs you used at the end as "Sources: <slug>, <slug>".
+    const instructions = `You answer questions about this product using ONLY the documentation excerpts below. If the answer isn't in them, say so and suggest where to look. Be concise. Cite the doc slugs you used at the end as "Sources: <slug>, <slug>".
 
 ${context || "(no matching docs found)"}`;
 
     const result = streamText({
       model: DEFAULT_AI_MODEL,
-      system,
+      instructions,
       messages: await convertToModelMessages(
         messages as Parameters<typeof convertToModelMessages>[0],
       ),
+      maxOutputTokens: AI_MAX_OUTPUT_TOKENS,
     });
-    return result.toUIMessageStreamResponse();
+    return createUIMessageStreamResponse({
+      stream: toUIMessageStream({ stream: result.stream }),
+    });
   },
 
   // Staff-only manual trigger (CI / webhook) for the GitHub sync.

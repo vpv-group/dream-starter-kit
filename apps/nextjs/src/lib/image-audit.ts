@@ -113,7 +113,7 @@ export async function auditGeneratedImage({
             type: "text",
             text: buildAuditPrompt(subject, format, instructions),
           },
-          { type: "image", image: bytes, mediaType },
+          { type: "file", data: bytes, mediaType },
         ],
       },
     ],

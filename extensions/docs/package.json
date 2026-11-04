@@ -23,7 +23,7 @@
     "@acme/config": "workspace:*",
     "@acme/ext-kit": "workspace:*",
     "@acme/ui": "workspace:*",
-    "@ai-sdk/react": "^3.0.118",
+    "@ai-sdk/react": "^4.0.166",
     "@payloadcms/richtext-lexical": "catalog:",
     "ai": "catalog:",
     "gray-matter": "^4.0.3",

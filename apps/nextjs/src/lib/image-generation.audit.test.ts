@@ -10,7 +10,7 @@ import { generateAuditedImage } from "./image-generation";
 const generateImageMock =
   vi.fn<(args: unknown) => Promise<{ image: { uint8Array: Uint8Array } }>>();
 vi.mock("ai", () => ({
-  experimental_generateImage: (args: unknown) => generateImageMock(args),
+  generateImage: (args: unknown) => generateImageMock(args),
   gateway: { imageModel: (slug: string) => ({ slug }) },
 }));
 
