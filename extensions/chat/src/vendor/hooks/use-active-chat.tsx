@@ -150,9 +150,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       },
     }),
     onData: (dataPart) => {
-      setDataStream((ds) =>
-        ds ? [...ds, dataPart as (typeof ds)[number]] : [],
-      );
+      setDataStream((ds) => (ds ? [...ds, dataPart] : []));
     },
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
