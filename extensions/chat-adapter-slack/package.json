@@ -23,7 +23,7 @@
     "@chat-adapter/state-memory": "^4.44.0",
     "@chat-adapter/state-pg": "^4.44.0",
     "chat": "^4.44.0",
-    "next": "^16.2.9",
+    "next": "^16.4.5",
     "payload": "catalog:",
     "server-only": "^0.0.1",
     "zod": "catalog:"
