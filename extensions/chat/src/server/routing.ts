@@ -77,7 +77,7 @@ async function loadSkills(payload: BasePayload): Promise<SkillsCache> {
   const now = Date.now();
   if (cache && cache.expires > now) return cache;
 
-  let skills: Skill[] = [];
+  let skills: Skill[];
   try {
     const res = await payload.find({
       collection: "ext-chat-skills",

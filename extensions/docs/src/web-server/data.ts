@@ -49,7 +49,7 @@ export async function getDocPage(slug: string): Promise<ExtDocsPage | null> {
     limit: 1,
     depth: 0,
   });
-  return (res.docs[0] as ExtDocsPage | undefined) ?? null;
+  return res.docs[0] ?? null;
 }
 
 /** Flat ordered list of {title, slug} for prev/next navigation. */

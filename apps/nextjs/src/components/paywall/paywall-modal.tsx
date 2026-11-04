@@ -305,9 +305,10 @@ export function PaywallModal({
     }
   }, [supabase, user, onSuccess]);
 
+  const annualPlanId = annualPlan?.id;
   // 1-click switch to annual using the card on file (post-purchase upsell).
   const switchToAnnual = useCallback(async () => {
-    if (!annualPlan?.id) return;
+    if (!annualPlanId) return;
     setSwitching(true);
     setSwitchError(null);
     try {
@@ -315,7 +316,7 @@ export function PaywallModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planId: annualPlan.id,
+          planId: annualPlanId,
           // Lets the route upgrade this exact subscription without depending on
           // the (webhook-written, possibly-not-yet-present) customer mapping.
           subscriptionId: subscriptionRef.current,
@@ -338,7 +339,7 @@ export function PaywallModal({
       );
       setSwitching(false);
     }
-  }, [annualPlan?.id, proceedAfterPay]);
+  }, [annualPlanId, proceedAfterPay]);
 
   // Deferred Elements options (mode + today's charge). Null while the plan is
   // still resolving — virtually never seen because the plan query is prefetched

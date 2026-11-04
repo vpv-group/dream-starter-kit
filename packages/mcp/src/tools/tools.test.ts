@@ -1,4 +1,4 @@
-import type { Payload, TypedUser } from "payload";
+import type { Payload } from "payload";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -82,7 +82,7 @@ async function connectClient(
       id: "u1",
       collection: "users",
       roles: ["editor"],
-    } as unknown as TypedUser,
+    },
     origin: "https://app.test",
     generateMedia,
   };

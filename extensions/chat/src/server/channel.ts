@@ -65,8 +65,6 @@ export interface HandleChannelMessageResult {
 const STOP_WORDS = new Set(["stop", "unsubscribe", "cancel", "end", "quit"]);
 const HELP_WORDS = new Set(["help", "info"]);
 
-type ThreadRow = Database["public"]["Tables"]["ext_chat_threads"]["Row"];
-
 export async function handleChannelMessage(
   params: HandleChannelMessageParams,
   messageHandle?: string,
@@ -149,7 +147,7 @@ export async function handleChannelMessage(
     .eq("channel_thread_key", threadKey)
     .maybeSingle();
 
-  let thread = existing as ThreadRow | null;
+  let thread = existing;
   if (!thread) {
     const title = `${params.displayName ?? contactKey} · ${channel}`.slice(
       0,
