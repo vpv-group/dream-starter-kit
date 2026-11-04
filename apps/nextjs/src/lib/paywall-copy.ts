@@ -120,12 +120,19 @@ function introPeriodLabel(plan: PlanLite): string {
 
 /** Deferred-mode `<Elements>` options so the wallet renders before any server
  *  round-trip (the PaymentIntent/subscription is created at confirm time). */
-export interface DeferredElementsOptions {
-  mode: "payment" | "subscription" | "setup";
-  /** Charge today, in cents — required for payment/subscription, omit for setup. */
-  amount?: number;
-  currency: string;
-}
+export type DeferredElementsOptions =
+  | {
+      mode: "payment" | "subscription";
+      /** Charge today, in cents. */
+      amount: number;
+      currency: string;
+    }
+  | {
+      /** $0 today: collect a payment method only (no amount). */
+      mode: "setup";
+      amount?: undefined;
+      currency: string;
+    };
 
 /** The enabled intro amount (cents) for a recurring plan, else null. */
 function introAmountOf(plan?: PlanLite | null): number | null {
