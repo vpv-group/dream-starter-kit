@@ -52,6 +52,8 @@ interface AnyField {
   admin?: { readOnly?: boolean };
 }
 
+const isFieldList = (v: unknown): v is AnyField[] => Array.isArray(v);
+
 /**
  * Flatten a (sanitized) collection's field list into a map of top-level data
  * key -> metadata. Descends through presentational containers (`row`,
@@ -85,7 +87,7 @@ export function collectFieldMeta(fields: unknown): FieldMetaMap {
       if (Array.isArray(f.fields)) walk(f.fields);
     }
   };
-  walk(Array.isArray(fields) ? (fields as unknown as AnyField[]) : []);
+  walk(isFieldList(fields) ? fields : []);
   return map;
 }
 

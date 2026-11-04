@@ -57,11 +57,7 @@ export async function DocsDetailPage({
 
         {/* prose-lg = 18px GRT body, matching the rest of the site's prose. */}
         <div className="prose prose-lg prose-neutral dark:prose-invert max-w-none">
-          {page.body ? (
-            <RichText
-              data={page.body as React.ComponentProps<typeof RichText>["data"]}
-            />
-          ) : null}
+          {page.body ? <RichText data={page.body} /> : null}
         </div>
 
         <nav className="mt-12 flex items-center justify-between border-t pt-6 text-sm">

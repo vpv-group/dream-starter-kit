@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import type { ExtBillingPlan, Media, Review } from "@acme/cms";
 
 import type { CheckoutTestimonialData } from "~/components/checkout/checkout-testimonial";
-import type { PlanLite } from "~/lib/paywall-copy";
 import { CheckoutFlow } from "~/components/checkout/checkout-flow";
 import { isViewerPremium } from "~/lib/billing-entitlement";
 import { getPayloadClient } from "~/lib/cms/payload-client";
@@ -85,7 +84,7 @@ export default async function CheckoutPage({
           })
           .catch(() => ({ docs: [] as ExtBillingPlan[] }));
         annualPlan = resolveAnnualPlan(
-          all.docs as unknown as PlanLite[],
+          all.docs,
           plan.id,
         ) as unknown as ExtBillingPlan | null;
       }

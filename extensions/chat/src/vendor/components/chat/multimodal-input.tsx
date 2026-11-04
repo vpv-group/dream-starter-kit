@@ -286,7 +286,7 @@ function PureMultimodalInput({
         setUploadQueue([]);
       }
     },
-    [setAttachments, uploadFile],
+    [setAttachments, setUploadQueue, uploadFile],
   );
 
   const handlePaste = useCallback(
@@ -332,7 +332,7 @@ function PureMultimodalInput({
         setUploadQueue([]);
       }
     },
-    [setAttachments, uploadFile],
+    [setAttachments, setUploadQueue, uploadFile],
   );
 
   useEffect(() => {
