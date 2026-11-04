@@ -10,6 +10,12 @@
     "resolveJsonModule": true,
     "moduleDetection": "force",
     "isolatedModules": true,
+    /**
+     * TS 6 defaults `types` to [] (it no longer auto-includes every
+     * node_modules/@types package). Workspaces that need Node globals
+     * (process, node:* modules) opt in with `"types": ["node"]` in their
+     * own tsconfig; browser/RN-only packages keep the empty default.
+     */
 
     /** Keep TSC performant in monorepos */
     "incremental": true,
