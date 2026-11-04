@@ -32,6 +32,9 @@ export function UserTagsManager() {
 
   useEffect(() => {
     const id = docIdFromUrl();
+    // Mount-time read of window.location (unavailable during SSR), so it must
+    // happen in an effect after hydration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDocId(id);
     if (!id) return;
     void fetch(`/api/cms/user-tags?docId=${encodeURIComponent(id)}`)

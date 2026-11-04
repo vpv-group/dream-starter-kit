@@ -23,9 +23,9 @@
     "@acme/api": "workspace:*",
     "@acme/cms": "workspace:*",
     "@acme/config": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@supabase/supabase-js": "catalog:",
-    "jose": "^6.2.3",
+    "jose": "^6.2.15",
     "payload": "catalog:",
     "server-only": "^0.0.1",
     "zod": "catalog:"

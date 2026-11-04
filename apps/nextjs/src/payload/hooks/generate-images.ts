@@ -97,11 +97,11 @@ export async function resolveImageGenerationSettings(
       }
     | undefined;
   try {
-    global = (await payload.findGlobal({
+    global = await payload.findGlobal({
       slug: "image-generation-settings",
       overrideAccess: true,
       ...(req ? { req } : {}),
-    })) as typeof global;
+    });
   } catch {
     global = undefined;
   }
@@ -362,7 +362,7 @@ export function syncImageUrls(
 function extractId(value: unknown): number | string | null {
   if (typeof value === "number" || typeof value === "string") return value;
   if (value && typeof value === "object" && "id" in value) {
-    const id = (value as { id: unknown }).id;
+    const id = value.id;
     if (typeof id === "number" || typeof id === "string") return id;
   }
   return null;

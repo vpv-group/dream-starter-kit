@@ -66,16 +66,14 @@ const addKeysToTokens = (lines: ThemedToken[][]): KeyedLine[] =>
 const TokenSpan = ({ token }: { token: ThemedToken }) => (
   <span
     className="dark:!bg-[var(--shiki-dark-bg)] dark:!text-[var(--shiki-dark)]"
-    style={
-      {
-        backgroundColor: token.bgColor,
-        color: token.color,
-        fontStyle: isItalic(token.fontStyle) ? "italic" : undefined,
-        fontWeight: isBold(token.fontStyle) ? "bold" : undefined,
-        textDecoration: isUnderline(token.fontStyle) ? "underline" : undefined,
-        ...token.htmlStyle,
-      } as CSSProperties
-    }
+    style={{
+      backgroundColor: token.bgColor,
+      color: token.color,
+      fontStyle: isItalic(token.fontStyle) ? "italic" : undefined,
+      fontWeight: isBold(token.fontStyle) ? "bold" : undefined,
+      textDecoration: isUnderline(token.fontStyle) ? "underline" : undefined,
+      ...token.htmlStyle,
+    }}
   >
     {token.content}
   </span>

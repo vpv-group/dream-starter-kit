@@ -1,6 +1,7 @@
 {
   "extends": ["@acme/tsconfig/base.json"],
   "compilerOptions": {
+    "types": ["node"],
     "jsx": "react-native",
     "checkJs": false,
     "moduleSuffixes": [".ios", ".android", ".native", ""],
