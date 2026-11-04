@@ -17,7 +17,7 @@ const generateImageMock =
 const imageModelMock = vi.fn<(slug: string) => { slug: string }>();
 
 vi.mock("ai", () => ({
-  experimental_generateImage: (args: unknown) => generateImageMock(args),
+  generateImage: (args: unknown) => generateImageMock(args),
   gateway: { imageModel: (slug: string) => imageModelMock(slug) },
 }));
 

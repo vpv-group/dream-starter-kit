@@ -24,7 +24,7 @@ import { selectSkill } from "./routing";
  * on the thread.
  */
 export interface ComposedPrompt {
-  system: string;
+  instructions: string;
   skillSlug: string | null;
 }
 
@@ -69,7 +69,7 @@ export async function composeSystemPrompt(params: {
 
   parts.push(artifactsPrompt);
 
-  return { system: parts.join("\n\n"), skillSlug: selection.slug };
+  return { instructions: parts.join("\n\n"), skillSlug: selection.slug };
 }
 
 /** Persist skill stickiness after a turn (web/native streaming path). */

@@ -41,7 +41,7 @@ function createBot(dailyQuota: number) {
       author: { isMe: boolean; userId: string; fullName: string };
       attachments?: {
         type: string;
-        fetchData?: () => Promise<Buffer>;
+        fetchData?: () => Promise<ArrayBuffer | Buffer>;
       }[];
     },
   ) => {
