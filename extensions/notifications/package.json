@@ -22,7 +22,7 @@
     "@acme/ui": "workspace:*",
     "@acme/ui-native": "workspace:*",
     "@supabase/supabase-js": "catalog:",
-    "@tabler/icons-react": "^3.44.0",
+    "@tabler/icons-react": "^3.50.0",
     "@tanstack/react-query": "catalog:",
     "expo-device": "~58.0.5",
     "expo-notifications": "~58.1.8",
