@@ -18,8 +18,8 @@ catalog:
   '@payloadcms/storage-s3': 3.85.0
   '@payloadcms/ui': 3.85.0
   '@react-native-async-storage/async-storage': ^2.2.0
-  '@supabase/ssr': ^0.10.3
-  '@supabase/supabase-js': ^2.106.2
+  '@supabase/ssr': ^0.12.7
+  '@supabase/supabase-js': ^2.118.0
   '@tailwindcss/postcss': ^4.1.16
   '@tailwindcss/vite': ^4.1.16
   '@tanstack/react-query': ^5.105.3
@@ -36,7 +36,7 @@ catalog:
   tailwindcss: ^4.1.16
   typescript: ^5.9.3
   vite: 7.1.12
-  vitest: ^4.1.8
+  vitest: ^5.1.0
   zod: 4.1.12
 
 catalogs:
