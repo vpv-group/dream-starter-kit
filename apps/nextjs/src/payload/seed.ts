@@ -335,7 +335,7 @@ export async function seedCmsContent(
                   {
                     question: "What if I need a feature that isn't included?",
                     answer:
-                      "Features install as self-contained “extensions” — add, update or remove them cleanly without breaking the rest of your app. The kit ships with several (payments, AI chat, notifications, reminders, a dashboard) and you can build or install more.",
+                      "Features install as self-contained modules — add, update or remove them cleanly without breaking the rest of your app. The kit ships with several (payments, AI chat, notifications, reminders, a dashboard) and you can build or install more.",
                   },
                   {
                     question: "What happens when I outgrow building it myself?",
@@ -507,7 +507,7 @@ export async function seedCmsContent(
                   {
                     title: "Coupons & intro offers",
                     description:
-                      "Run promos like “$1.99 first month, then $39.99” with no codes to share.",
+                      "Run promos like “$1 first month, then $19” with no codes to share.",
                     tooltip:
                       "Intro offers become auto-applied Stripe coupons (once or repeating duration).",
                     icon: "Star",
@@ -721,11 +721,11 @@ export async function seedCmsContent(
                     icon: "Cloud",
                   },
                   {
-                    title: "Add features as extensions",
+                    title: "Add features as modules",
                     description:
                       "Bolt on new capabilities cleanly — add, update or remove without breakage.",
                     tooltip:
-                      "Self-contained extension packages with their own tables, screens, routes, settings and migrations.",
+                      "Self-contained module packages with their own tables, screens, routes, settings and migrations.",
                     icon: "Layers",
                   },
                   {

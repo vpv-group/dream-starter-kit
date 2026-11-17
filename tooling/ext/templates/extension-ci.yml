@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # TODO(eject): pin your kit repo + the kitCompat bounds you support.
-      KIT_REPO: vytenapps/dream-starter-kit
+      KIT_REPO: vpv-group/dream-starter-kit
     steps:
       - uses: actions/checkout@v4
         with:

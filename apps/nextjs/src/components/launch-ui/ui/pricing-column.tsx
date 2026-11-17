@@ -13,7 +13,7 @@ export interface PricingColumnProps {
   cadence?: string;
   /** Crossed-out standard price shown when an intro offer is active. */
   originalPriceLabel?: string;
-  /** Sub-line under the price, e.g. "then $39.99/mo" or "7-day free trial". */
+  /** Sub-line under the price, e.g. "then $19/mo" or "7-day free trial". */
   note?: string;
   features?: string[];
   badge?: string;

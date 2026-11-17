@@ -20,7 +20,7 @@ export const NavItems: CollectionConfig = {
   labels: { singular: "Nav Item", plural: "Nav Items" },
   orderable: true,
   admin: {
-    group: "Extensions",
+    group: "Modules",
     useAsTitle: "label",
     defaultColumns: ["label", "href", "platforms", "enabled"],
     description:

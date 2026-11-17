@@ -129,5 +129,5 @@ export const SITE_FOOTER_POLICIES: ChromeFooterLink[] = [
 
 export const SITE_SOCIAL = {
   twitter: "dreamstarterkit",
-  github: "vytenapps",
+  github: "vpv-group",
 };

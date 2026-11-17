@@ -23,7 +23,7 @@ import { anyone, isStaff } from "../access";
 
 /** Where the inline admin notes link for per-method Supabase prerequisites. */
 const DOCS_AUTH =
-  "https://github.com/vytenapps/dream-starter-kit/blob/main/docs/AUTH.md";
+  "https://github.com/vpv-group/dream-starter-kit/blob/main/docs/AUTH.md";
 
 export const AuthenticationSettings: GlobalConfig = {
   slug: "authentication-settings",

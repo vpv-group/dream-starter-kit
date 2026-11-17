@@ -1,5 +1,9 @@
 # Extension Framework for the Dream Starter Kit — Design Plan
 
+> Design record, kept as written. Since 2026-11 the kit's docs and admin call
+> these **modules** (the code keeps the name *extension*); see
+> [EXTENSIONS.md → Naming](./EXTENSIONS.md).
+
 > **Status: implementation in progress** on `feat/extensions-framework`.
 > This document is the source of truth for the build. Progress is tracked by
 > the phase checklist in

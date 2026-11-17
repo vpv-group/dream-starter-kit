@@ -145,7 +145,7 @@ export function ExtensionsView() {
   if (!registry) {
     return (
       <div className="gutter--left gutter--right" style={{ paddingTop: 40 }}>
-        <h1>Extensions</h1>
+        <h1>Modules</h1>
         <p>Loading…</p>
       </div>
     );
@@ -158,7 +158,7 @@ export function ExtensionsView() {
       className="gutter--left gutter--right"
       style={{ paddingTop: 40, paddingBottom: 80, maxWidth: 900 }}
     >
-      <h1>Extensions</h1>
+      <h1>Modules</h1>
       {!registry.opsConfigured && (
         <p style={{ opacity: 0.8 }}>
           Read-only: set <code>GITHUB_OPS_TOKEN</code> (and{" "}
@@ -180,7 +180,7 @@ export function ExtensionsView() {
       <table cellPadding={6} style={{ width: "100%", textAlign: "left" }}>
         <thead>
           <tr>
-            <th>Extension</th>
+            <th>Module</th>
             <th>Version</th>
             <th>Origin</th>
             <th></th>

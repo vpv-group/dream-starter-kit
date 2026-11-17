@@ -68,16 +68,17 @@ export const seed: ExtSeedStep[] = [
           ]),
         },
         {
-          title: "Extensions",
+          title: "Modules",
           slug: "extensions",
           category: "Guides",
           order: 1,
-          excerpt: "How features ship as vendored extension packages.",
+          excerpt: "How features ship as vendored module packages.",
           body: body([
-            heading("Extensions"),
+            heading("Modules"),
             para(
-              "Features are extensions under extensions/<slug>. Use pnpm ext " +
-                "create to scaffold one, and pnpm ext sync after changes.",
+              "Features are modules, which live under extensions/<slug> in " +
+                "code. Use pnpm ext create to scaffold one, and pnpm ext sync " +
+                "after changes.",
             ),
           ]),
         },

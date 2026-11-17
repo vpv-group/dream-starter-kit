@@ -5,7 +5,7 @@ import { buttonVariants } from "~/components/ui/button";
 import { isSupabaseConfigured } from "~/lib/supabase/config";
 
 const SETUP_GUIDE_URL =
-  "https://github.com/vytenapps/dream-starter-kit#fastest-path--vercel-one-click--the-supabase-integration";
+  "https://github.com/vpv-group/dream-starter-kit#fastest-path--vercel-one-click--the-supabase-integration";
 
 /**
  * First-deploy setup nudge, shown above the landing-page hero (and below the

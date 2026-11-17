@@ -64,7 +64,7 @@ export async function generateMetadata(): Promise<Metadata> {
       "Vercel AI",
       "Row-Level Security",
     ],
-    authors: [{ name: "Vyten LLC" }],
+    authors: [{ name: "VPV Group, LLC" }],
     icons,
     manifest: "/site.webmanifest",
     openGraph: {

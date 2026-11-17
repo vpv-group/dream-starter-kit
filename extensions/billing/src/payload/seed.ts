@@ -78,7 +78,7 @@ export const seed: ExtSeedStep[] = [
           ],
         },
       });
-      // Inactive demo of an introductory offer ($1.99 first month → $39.99/mo)
+      // Inactive demo of an introductory offer ($1 first month → $19/mo)
       // so the capability is visible out of the box without affecting pricing.
       await payload.create({
         collection: "ext-billing-plans",
@@ -86,14 +86,14 @@ export const seed: ExtSeedStep[] = [
         data: {
           name: "Example intro offer",
           slug: "dream-pro-intro-demo",
-          description: "$1.99 for the first month, then $39.99/month.",
+          description: "$1 for the first month, then $19/month.",
           pricingType: "recurring",
           interval: "month",
-          unitAmount: 3999,
+          unitAmount: 1900,
           currency: "usd",
           active: false,
           displayOrder: 99,
-          introOffer: { enabled: true, introAmount: 199 },
+          introOffer: { enabled: true, introAmount: 100 },
           features: [{ text: "Example intro pricing" }],
         },
       });
