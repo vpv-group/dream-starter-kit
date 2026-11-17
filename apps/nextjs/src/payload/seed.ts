@@ -13,7 +13,6 @@
 import type { Payload } from "payload";
 import { getPayload } from "payload";
 
-import { extSeedSteps } from "../ext/registry.payload.generated";
 import {
   SITE_FOOTER_COLUMNS,
   SITE_FOOTER_POLICIES,
@@ -21,6 +20,7 @@ import {
   SITE_HEADER_ACTIONS,
   SITE_SOCIAL,
 } from "../lib/site-chrome";
+import { modSeedSteps } from "../mod/registry.payload.generated";
 import config from "../payload.config";
 
 /** Reports seed progress: `done`/`total` steps complete, with the step label. */
@@ -335,7 +335,7 @@ export async function seedCmsContent(
                   {
                     question: "What if I need a feature that isn't included?",
                     answer:
-                      "Features install as self-contained “extensions” — add, update or remove them cleanly without breaking the rest of your app. The kit ships with several (payments, AI chat, notifications, reminders, a dashboard) and you can build or install more.",
+                      "Features install as self-contained “modules” — add, update or remove them cleanly without breaking the rest of your app. The kit ships with several (payments, AI chat, notifications, reminders, a dashboard) and you can build or install more.",
                   },
                   {
                     question: "What happens when I outgrow building it myself?",
@@ -721,11 +721,11 @@ export async function seedCmsContent(
                     icon: "Cloud",
                   },
                   {
-                    title: "Add features as extensions",
+                    title: "Add features as modules",
                     description:
                       "Bolt on new capabilities cleanly — add, update or remove without breakage.",
                     tooltip:
-                      "Self-contained extension packages with their own tables, screens, routes, settings and migrations.",
+                      "Self-contained module packages with their own tables, screens, routes, settings and migrations.",
                     icon: "Layers",
                   },
                   {
@@ -921,7 +921,7 @@ export async function seedCmsContent(
               "A premium post — the body is gated behind the paywall for non-subscribers.",
             accessLevel: "premium",
             body: richText([
-              "This is premium content. Signed-out and free visitors see the first lines blurred behind the paywall dock; subscribers (an active row in public.ext_billing_subscriptions) see the full post.",
+              "This is premium content. Signed-out and free visitors see the first lines blurred behind the paywall dock; subscribers (an active row in public.mod_billing_subscriptions) see the full post.",
               "Use it to test the paywall: open it as a logged-out visitor, pay with Stripe's 4242 test card, watch the confetti, then confirm the emailed link to convert your anonymous checkout into a permanent account — and optionally accept the 1-click annual upgrade.",
               "Everything below this point is the gated payload you are paying to unlock. Swap this copy for your real members-only material.",
             ]),
@@ -993,20 +993,20 @@ export async function seedCmsContent(
     },
   ];
 
-  // Framework step: populate the extension registry + CMS-driven menu from
+  // Framework step: populate the module registry + CMS-driven menu from
   // the generated defaults (same reconcile the server runs at every boot).
   steps.push({
     label: "Navigation menu",
     run: async () => {
-      const { reconcileExtensions } = await import("../lib/ext/reconcile-nav");
-      await reconcileExtensions(payload);
+      const { reconcileModules } = await import("../lib/mod/reconcile-nav");
+      await reconcileModules(payload);
     },
   });
 
-  // Seed steps contributed by installed extensions (generated registry) —
+  // Seed steps contributed by installed modules (generated registry) —
   // they ride the same idempotent progress flow as the core steps.
-  for (const extStep of extSeedSteps) {
-    steps.push({ label: extStep.label, run: () => extStep.run(payload) });
+  for (const modStep of modSeedSteps) {
+    steps.push({ label: modStep.label, run: () => modStep.run(payload) });
   }
 
   const total = steps.length;

@@ -3,14 +3,14 @@ import type { CollectionConfig } from "payload";
 import { anyone, isStaff } from "../access";
 
 /**
- * The CMS-driven app menu (docs/EXTENSIONS-PLAN.md §2.5) — one row per menu
+ * The CMS-driven app menu (docs/MODULES-PLAN.md §2.5) — one row per menu
  * entry, core entries included, so staff rename / drag-reorder / re-icon /
  * toggle the WHOLE menu uniformly from /admin without a deploy.
  *
  * Rows are created/deleted only by the boot-time reconcile
- * (lib/ext/reconcile-nav.ts) from the manifest nav defaults; label/icon/
+ * (lib/mod/reconcile-nav.ts) from the manifest nav defaults; label/icon/
  * platforms/enabled/order are staff-owned after creation and never
- * overwritten by reconcile or extension updates.
+ * overwritten by reconcile or module updates.
  *
  * Public read: the native app renders its menu from this collection over
  * /cms-api REST (`useNavMenu()` in @acme/app).
@@ -20,11 +20,11 @@ export const NavItems: CollectionConfig = {
   labels: { singular: "Nav Item", plural: "Nav Items" },
   orderable: true,
   admin: {
-    group: "Extensions",
+    group: "Modules",
     useAsTitle: "label",
     defaultColumns: ["label", "href", "platforms", "enabled"],
     description:
-      "The app menu (web sidebar + native home). Drag to reorder; rename, change icons, or toggle items. New extensions add their entries here automatically on install.",
+      "The app menu (web sidebar + native home). Drag to reorder; rename, change icons, or toggle items. New modules add their entries here automatically on install.",
   },
   access: {
     read: anyone,
@@ -42,9 +42,9 @@ export const NavItems: CollectionConfig = {
       admin: { readOnly: true, hidden: true },
     },
     {
-      name: "extension",
+      name: "module",
       type: "relationship",
-      relationTo: "kit-extensions",
+      relationTo: "kit-modules",
       admin: {
         readOnly: true,
         position: "sidebar",

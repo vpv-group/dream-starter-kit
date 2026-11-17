@@ -24,7 +24,7 @@
  *      fast (CmsUnavailableError) for {@link CMS_FAILURE_COOLDOWN_MS} instead
  *      of re-hammering the pooler once per render. Callers already treat any
  *      throw as "CMS unavailable" and degrade (lib/payload.ts `safe()`, the
- *      nav/extension fallbacks), so the only observable change is calm.
+ *      nav/module fallbacks), so the only observable change is calm.
  *   3. Crash guard: attaches one 'error' listener to the adapter's pg pool —
  *      an idle pooled client killed by a server-side FATAL (pooler restart,
  *      failover) otherwise emits an unhandled 'error' event that takes the

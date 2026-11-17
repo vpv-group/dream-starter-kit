@@ -129,7 +129,7 @@ export async function GET() {
   if (!user.is_anonymous && user.email) {
     try {
       const { data: customer } = await supabase
-        .from("ext_billing_customers")
+        .from("mod_billing_customers")
         .select("user_id")
         .eq("user_id", user.id)
         .maybeSingle();

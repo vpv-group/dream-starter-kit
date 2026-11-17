@@ -79,7 +79,7 @@ describe("runDispatch", () => {
       [{ id: 10, supabaseUserId: "uuid-A" }],
     );
     const { admin, inserts } = makeAdmin({
-      ext_notifications_push_tokens: [{ token: "ExpoTok1" }],
+      mod_notifications_push_tokens: [{ token: "ExpoTok1" }],
     });
     const fetchImpl = vi.fn(() =>
       Promise.resolve(new Response("{}", { status: 200 })),
@@ -100,7 +100,7 @@ describe("runDispatch", () => {
     // Expo called with the targeted token.
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     // In-app row inserted for the resolved Supabase user id.
-    const inApp = inserts.find((i) => i.table === "ext_notifications");
+    const inApp = inserts.find((i) => i.table === "mod_notifications");
     expect(inApp?.rows[0]?.user_id).toBe("uuid-A");
     expect(raw.find).toHaveBeenCalledWith(
       expect.objectContaining({ collection: "users" }),
@@ -113,7 +113,7 @@ describe("runDispatch", () => {
       [],
     );
     const { admin } = makeAdmin({
-      ext_notifications_push_tokens: [{ token: "T" }],
+      mod_notifications_push_tokens: [{ token: "T" }],
     });
     const fetchImpl = vi.fn(() => Promise.reject(new Error("expo down")));
 

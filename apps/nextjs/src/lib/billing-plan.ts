@@ -15,7 +15,7 @@ export async function getPremiumPlan(): Promise<PlanLite | null> {
   try {
     const payload = await getPayloadClient();
     const { docs } = await payload.find({
-      collection: "ext-billing-plans",
+      collection: "mod-billing-plans",
       where: { active: { equals: true } },
       sort: "displayOrder",
       limit: 50,

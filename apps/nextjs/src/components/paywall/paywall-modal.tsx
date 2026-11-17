@@ -1,7 +1,7 @@
 "use client";
 
 // Two-state paywall (offer → terms → paid) wired to REAL Stripe via the billing
-// extension's express-intent route.
+// module's express-intent route.
 //
 // DEFERRED Elements: <Elements> mounts immediately with {mode, amount, currency}
 // — no server round-trip — so the Apple/Google Pay button renders instantly (no
@@ -87,7 +87,7 @@ export interface PaywallModalProps {
   initialMethod?: PayMethod;
   onClose: () => void;
   onSuccess: () => void;
-  // --- Optional extension points (default = the generic single-plan paywall) ---
+  // --- Optional module points (default = the generic single-plan paywall) ---
   // These let a product surface reuse this exact modal — and so inherit every
   // upstream fix — by injecting flow-specific copy / pricing / purchase routes,
   // instead of forking the component. All optional; when unset the modal behaves
@@ -219,7 +219,7 @@ export function PaywallModal({
     if (!user) {
       let loginToken: string | undefined;
       try {
-        const res = await fetch("/api/ext/billing/guest-account", {
+        const res = await fetch("/api/mod/billing/guest-account", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -312,7 +312,7 @@ export function PaywallModal({
     setSwitching(true);
     setSwitchError(null);
     try {
-      const res = await fetch("/api/ext/billing/upgrade-annual", {
+      const res = await fetch("/api/mod/billing/upgrade-annual", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -364,7 +364,7 @@ export function PaywallModal({
       } finally {
         resetCaptcha();
       }
-      const res = await fetch("/api/ext/billing/express-intent", {
+      const res = await fetch("/api/mod/billing/express-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

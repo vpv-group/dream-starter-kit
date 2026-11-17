@@ -10,14 +10,14 @@ access is enforced at the database.
 > as a **single baseline migration** (`20260609000001_initial.sql`); extend it with
 > **new** migrations only — never edit the shipped baseline.
 
-> **Extension refactor (2026-06):** the feature tables documented below now ship
-> as **extensions** (see `docs/EXTENSIONS.md`) and are prefixed accordingly:
-> `reminders` → `ext_reminders`, `notifications` → `ext_notifications`,
-> `push_tokens` → `ext_notifications_push_tokens`, `chat_threads`/`chat_messages`
-> → `ext_chat_*`, and `customers`/`products`/`prices`/`subscriptions` →
-> `ext_billing_*`. Their DDL lives in `extensions/<slug>/supabase/migrations/`
+> **Module refactor (2026-06):** the feature tables documented below now ship
+> as **modules** (see `docs/MODULES.md`) and are prefixed accordingly:
+> `reminders` → `mod_reminders`, `notifications` → `mod_notifications`,
+> `push_tokens` → `mod_notifications_push_tokens`, `chat_threads`/`chat_messages`
+> → `mod_chat_*`, and `customers`/`products`/`prices`/`subscriptions` →
+> `mod_billing_*`. Their DDL lives in `modules/<slug>/supabase/migrations/`
 > (version-pinned and materialized into `supabase/migrations/` by
-> `pnpm ext sync`); the baseline migration now contains CORE tables only
+> `pnpm mod sync`); the baseline migration now contains CORE tables only
 > (identity, orgs, files, tags). RLS patterns are unchanged. Mentions of the
 > old names below read with the prefix applied.
 

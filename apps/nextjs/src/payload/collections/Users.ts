@@ -388,11 +388,11 @@ export const Users: CollectionConfig = {
       ],
     },
     {
-      // Billing (system extension) coupling — delete this join if you remove
-      // the billing extension.
+      // Billing (system module) coupling — delete this join if you remove
+      // the billing module.
       name: "subscriptions",
       type: "join",
-      collection: "ext-billing-subscriptions",
+      collection: "mod-billing-subscriptions",
       on: "user",
     },
     {

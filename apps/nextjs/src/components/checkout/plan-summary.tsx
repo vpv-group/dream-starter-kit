@@ -4,14 +4,14 @@
 // plan via the shared `paywall-copy` composer, the bullets from `plan.features`.
 import { Check } from "lucide-react";
 
-import type { ExtBillingPlan } from "@acme/cms";
+import type { ModBillingPlan } from "@acme/cms";
 
 import type { PlanLite } from "~/lib/paywall-copy";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
 import { buildPlanCopy, cadence, formatPrice } from "~/lib/paywall-copy";
 
-export function PlanSummary({ plan }: { plan: ExtBillingPlan }) {
+export function PlanSummary({ plan }: { plan: ModBillingPlan }) {
   const lite = plan as unknown as PlanLite;
   const copy = buildPlanCopy(lite);
   const currency = plan.currency ?? "usd";

@@ -1,9 +1,9 @@
 import { Pressable, Text } from "react-native";
 import { Stack, useRouter } from "expo-router";
 
-import { ExtWidgetsProvider } from "@acme/ext-kit/react";
+import { ModWidgetsProvider } from "@acme/mod-kit/react";
 
-import { extWidgets, hasExtension } from "~/ext/registry.generated";
+import { hasModule, modWidgets } from "~/mod/registry.generated";
 
 function HeaderBell() {
   const router = useRouter();
@@ -19,13 +19,13 @@ function HeaderBell() {
 }
 
 export default function AppLayout() {
-  // The bell is the notifications extension's surface — hidden when the
-  // extension isn't installed (EXTENSIONS-PLAN.md §2.5).
-  const showBell = hasExtension("notifications");
+  // The bell is the notifications module's surface — hidden when the
+  // module isn't installed (MODULES-PLAN.md §2.5).
+  const showBell = hasModule("notifications");
   return (
     // Home-screen widgets from the generated registry (all installed; the
-    // runtime kit-extensions disable toggle gates native at the menu level).
-    <ExtWidgetsProvider widgets={extWidgets}>
+    // runtime kit-modules disable toggle gates native at the menu level).
+    <ModWidgetsProvider widgets={modWidgets}>
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: "#c03484" },
@@ -33,6 +33,6 @@ export default function AppLayout() {
           ...(showBell ? { headerRight: () => <HeaderBell /> } : {}),
         }}
       />
-    </ExtWidgetsProvider>
+    </ModWidgetsProvider>
   );
 }

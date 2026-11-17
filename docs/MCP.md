@@ -5,9 +5,9 @@ admin connects an MCP client (Claude, ChatGPT, Cursor, or anything that speaks M
 manages **Payload CMS content** and **push notifications** in natural language — search,
 read, create, update, delete content, and author/schedule notifications.
 
-It is **core infrastructure, not an extension** (MCP clients fetch auth metadata from
-domain-root `/.well-known/oauth-*` and connect to `/mcp`, which the extension mount
-point `/api/ext/<slug>` can't serve). All logic lives in the server-only package
+It is **core infrastructure, not a module** (MCP clients fetch auth metadata from
+domain-root `/.well-known/oauth-*` and connect to `/mcp`, which the module mount
+point `/api/mod/<slug>` can't serve). All logic lives in the server-only package
 **`@acme/mcp` (`packages/mcp`)**; thin Next.js route handlers wire it in and **inject**
 Payload + the service-role Supabase client, so the package is framework-agnostic,
 unit-testable, and never enters the Expo bundle.
@@ -173,7 +173,7 @@ global (kill switch / model / art-direction prompt).
 The tools operate over an allowlist defined in `packages/mcp/src/tools/registry.ts`
 (`MCP_COLLECTIONS`) — editorial, community, and marketing content plus `notifications`.
 **Auth/PII-management collections (`users`, `device-tokens`, `feed-tokens`) and internal
-ones (`media`, `nav-items`, `kit-extensions`) are intentionally excluded.** Per-operation
+ones (`media`, `nav-items`, `kit-modules`) are intentionally excluded.** Per-operation
 authorization is still Payload's job; the allowlist just bounds the surface.
 
 **To expose another collection,** add an entry (slug, label, group, `titleField`,
@@ -199,8 +199,8 @@ double-send), resolves the audience —
 - `users` → `targetUsers` mapped via `cms.users.supabaseUserId`,
 - `segment` → a minimal `{ tags: ["…"] }` filter against `public.user_tags`,
 
-— then fans out **Expo push** (batched ≤100) to `public.ext_notifications_push_tokens`
-and inserts **in-app feed** rows into `public.ext_notifications`, and finally writes back
+— then fans out **Expo push** (batched ≤100) to `public.mod_notifications_push_tokens`
+and inserts **in-app feed** rows into `public.mod_notifications`, and finally writes back
 `sentAt`/`sentCount`/`status` (`sent`, or `failed` on error).
 
 It runs **in-app** (not an edge function) because it's the one place with both the Payload
@@ -240,7 +240,7 @@ Backend-dependent (need `supabase start` + `.env`):
   `tools/call` with the MCP SDK client over Streamable HTTP (Playwright / `tooling/web-e2e`).
 - Dispatch: seed a due `scheduled` notification, `POST /api/cms/notifications/dispatch`
   with `Authorization: Bearer $CRON_SECRET`, and assert the row flips to `sent` and an
-  `ext_notifications` row was inserted.
+  `mod_notifications` row was inserted.
 
 ---
 

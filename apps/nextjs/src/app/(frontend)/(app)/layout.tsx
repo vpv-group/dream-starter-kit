@@ -2,13 +2,13 @@ import { redirect } from "next/navigation";
 
 import { AppSidebar } from "~/components/app-sidebar";
 import { BrandingProvider } from "~/components/branding-provider";
-import { AppExtWidgetsProvider } from "~/components/ext-widgets-provider";
+import { AppModWidgetsProvider } from "~/components/mod-widgets-provider";
 import { ReloadOnBfcacheRestore } from "~/components/reload-on-bfcache-restore";
 import { SiteHeader } from "~/components/site-header";
 import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
 import { ensureCmsUser, ensureFreeTag } from "~/lib/cms/mirror-user";
-import { disabledExtensionSlugs } from "~/lib/ext/enabled";
-import { getWebNavItems } from "~/lib/ext/nav";
+import { disabledModuleSlugs } from "~/lib/mod/enabled";
+import { getWebNavItems } from "~/lib/mod/nav";
 import { getBranding } from "~/lib/payload";
 import { createClient } from "~/lib/supabase/server";
 
@@ -37,7 +37,7 @@ export default async function AppLayout({
     // CMS-driven menu (nav-items collection) — staff edits in /admin show up
     // without a redeploy; degrades to the generated defaults if the CMS is down.
     getWebNavItems(),
-    disabledExtensionSlugs(),
+    disabledModuleSlugs(),
     // Staff/admin flag gates the header's CMS settings shortcut (RLS read-own).
     supabase.from("profiles").select("is_staff").eq("id", user.id).single(),
     // Universal backstop for the cms.users mirror: guest-checkout buyers (and
@@ -78,9 +78,9 @@ export default async function AppLayout({
         <AppSidebar variant="inset" navItems={navItems} />
         <SidebarInset>
           <SiteHeader isStaff={isStaff} navItems={navItems} />
-          <AppExtWidgetsProvider disabledSlugs={disabledSlugs}>
+          <AppModWidgetsProvider disabledSlugs={disabledSlugs}>
             {children}
-          </AppExtWidgetsProvider>
+          </AppModWidgetsProvider>
         </SidebarInset>
       </SidebarProvider>
     </BrandingProvider>

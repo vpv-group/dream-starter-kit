@@ -3,7 +3,7 @@
  *
  * `runFullBootstrap` assembles the Payload-aware pieces the bootstrap itself
  * must stay free of — the CMS warm-up (`getPayload()` runs `prodMigrations` on
- * first connect, then the extension/nav reconcile) and the bundled Payload
+ * first connect, then the module/nav reconcile) and the bundled Payload
  * migration names — and runs the bootstrap single-flight per process. It's
  * what instrumentation.ts used to assemble inline at boot.
  *
@@ -33,8 +33,8 @@ export const PROVISION_RETRY_COOLDOWN_MS = 30_000;
 
 /**
  * Initialize Payload (first `getPayload()` runs the committed `prodMigrations`)
- * and reconcile the extension registry + CMS-driven menu from the bundled
- * generated defaults — insert rows for newly installed extensions, drop removed
+ * and reconcile the module registry + CMS-driven menu from the bundled
+ * generated defaults — insert rows for newly installed modules, drop removed
  * ones, never touch staff edits. Runs under the bootstrap's advisory lock when
  * invoked as its `migrateCms`. Everything is imported dynamically so DB-less
  * boots (and unit tests) never load Payload.
@@ -45,8 +45,8 @@ export async function warmCms(): Promise<void> {
     import("payload"),
   ]);
   const payload = await getPayload({ config });
-  const { reconcileExtensions } = await import("../ext/reconcile-nav");
-  await reconcileExtensions(payload);
+  const { reconcileModules } = await import("../mod/reconcile-nav");
+  await reconcileModules(payload);
 }
 
 /**
@@ -57,11 +57,11 @@ export async function warmCms(): Promise<void> {
  */
 async function resolveCmsMigrationNames(): Promise<string[] | undefined> {
   try {
-    const [{ migrations }, { extPayloadMigrations }] = await Promise.all([
+    const [{ migrations }, { modPayloadMigrations }] = await Promise.all([
       import("../../payload/migrations"),
-      import("../../ext/registry.payload.generated"),
+      import("../../mod/registry.payload.generated"),
     ]);
-    return [...migrations, ...extPayloadMigrations].map((m) => m.name);
+    return [...migrations, ...modPayloadMigrations].map((m) => m.name);
   } catch {
     return undefined;
   }

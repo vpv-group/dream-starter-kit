@@ -101,12 +101,12 @@ export async function grantActiveSubscription(userId: string): Promise<void> {
     "content-type": "application/json",
     Prefer: "resolution=merge-duplicates",
   };
-  await fetch(`${SUPABASE_URL}/rest/v1/ext_billing_products`, {
+  await fetch(`${SUPABASE_URL}/rest/v1/mod_billing_products`, {
     method: "POST",
     headers,
     body: JSON.stringify({ id: "prod_e2e_paywall", name: "E2E Paywall" }),
   });
-  await fetch(`${SUPABASE_URL}/rest/v1/ext_billing_prices`, {
+  await fetch(`${SUPABASE_URL}/rest/v1/mod_billing_prices`, {
     method: "POST",
     headers,
     body: JSON.stringify({
@@ -119,7 +119,7 @@ export async function grantActiveSubscription(userId: string): Promise<void> {
       interval: "month",
     }),
   });
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/ext_billing_subscriptions`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/mod_billing_subscriptions`, {
     method: "POST",
     headers,
     body: JSON.stringify({

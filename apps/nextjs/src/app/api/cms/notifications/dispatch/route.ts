@@ -12,12 +12,12 @@ import { createAdminClient } from "~/lib/supabase/admin";
  * notifications — Expo push + in-app feed rows — and writes back
  * sentAt/sentCount. Runs in-app (not an edge function) because it needs BOTH
  * the Payload Local API (cms schema) and the service-role Supabase client
- * (public schema: device tokens + ext_notifications); see packages/mcp dispatch.
+ * (public schema: device tokens + mod_notifications); see packages/mcp dispatch.
  *
  * Triggered by Vercel Cron every minute (apps/nextjs/vercel.json). Vercel adds
  * `Authorization: Bearer ${CRON_SECRET}` to cron requests; pg_cron / manual
  * callers must send the same header. Modeled on supabase/functions/
- * reminders-process (which dispatches ext_reminders the same way).
+ * reminders-process (which dispatches mod_reminders the same way).
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

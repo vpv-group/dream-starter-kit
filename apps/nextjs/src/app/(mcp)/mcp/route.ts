@@ -33,7 +33,7 @@ const getPayloadLazy = async () => {
 // rate-limited). The intended client is an autonomous LLM loop, and tools like
 // generate_media hit the AI Gateway, so an unbounded token could burn spend with
 // only function-duration as a brake. In-memory per instance, same trade-off as
-// the extension dispatcher — swap for Redis/Upstash in prod for a global limit.
+// the module dispatcher — swap for Redis/Upstash in prod for a global limit.
 const MCP_RATE_LIMIT = 60;
 const MCP_RATE_WINDOW_MS = 60_000;
 const mcpHitsByUser = new Map<string, number[]>();

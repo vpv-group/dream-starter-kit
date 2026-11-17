@@ -1,4 +1,4 @@
-// GENERATED copy (`pnpm ext sync`) of extensions/chat-adapter-sendblue/src/payload/migrations/20260613_025129_ext_chat_adapter_sendblue_initial.ts
+// GENERATED copy (`pnpm mod sync`) of modules/chat-adapter-sendblue/src/payload/migrations/20260613_025129_ext_chat_adapter_sendblue_initial.ts
 // so the local `payload migrate` CLI applies it — do not edit.
 import { MigrateDownArgs, MigrateUpArgs, sql } from "@payloadcms/db-postgres";
 

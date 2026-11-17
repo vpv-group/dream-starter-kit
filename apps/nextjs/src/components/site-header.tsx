@@ -4,13 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { IconSettings } from "@tabler/icons-react";
 
-import { NotificationBell } from "@acme/ext-notifications/web";
+import { NotificationBell } from "@acme/mod-notifications/web";
 import { Button } from "@acme/ui/button";
 
-import type { NavMenuItem } from "~/lib/ext/nav-types";
+import type { NavMenuItem } from "~/lib/mod/nav-types";
 import { Separator } from "~/components/ui/separator";
 import { SidebarTrigger } from "~/components/ui/sidebar";
-import { hasExtension } from "~/ext/registry.client.generated";
+import { hasModule } from "~/mod/registry.client.generated";
 
 /** Authenticated pages that aren't menu entries (so can't be titled from nav). */
 const FALLBACK_TITLES: Record<string, string> = {
@@ -45,10 +45,10 @@ export function SiteHeader({
         />
         <h1 className="text-base font-medium">{title}</h1>
         <div className="ml-auto flex items-center gap-2">
-          {/* The bell is the notifications extension's surface. If you remove
-              that extension (not just disable it), delete this gated block —
-              app-shell chrome is the one host edit `ext remove` can't do. */}
-          {hasExtension("notifications") && <NotificationBell />}
+          {/* The bell is the notifications module's surface. If you remove
+              that module (not just disable it), delete this gated block —
+              app-shell chrome is the one host edit `mod remove` can't do. */}
+          {hasModule("notifications") && <NotificationBell />}
           {/* Staff/admin shortcut into the Payload CMS admin. */}
           {isStaff && (
             <Button

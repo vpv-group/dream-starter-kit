@@ -207,7 +207,7 @@ async function sendPush(
   audience: Audience,
   notif: NotificationDoc,
 ): Promise<number> {
-  let query = admin.from("ext_notifications_push_tokens").select("token");
+  let query = admin.from("mod_notifications_push_tokens").select("token");
   if (!audience.all) {
     if (audience.userIds.length === 0) return 0;
     query = query.in("user_id", audience.userIds);
@@ -256,7 +256,7 @@ async function insertInApp(
     data: { ...(notif.data ?? {}), deepLink: notif.deepLink ?? null },
   }));
   for (const batch of chunk(rows, 500)) {
-    await admin.from("ext_notifications").insert(batch);
+    await admin.from("mod_notifications").insert(batch);
   }
   return userIds.length;
 }

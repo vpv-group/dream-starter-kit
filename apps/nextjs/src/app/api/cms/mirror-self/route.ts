@@ -7,7 +7,7 @@ import { createClient } from "~/lib/supabase/server";
 
 // Per-user budget: each call runs a Payload find + up to three service-role tag
 // queries, so an unbounded caller could hammer the small serverless pool. In
-// memory per instance, same trade-off as the extension dispatcher.
+// memory per instance, same trade-off as the module dispatcher.
 const RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 60_000;
 const hitsByUser = new Map<string, number[]>();
@@ -31,7 +31,7 @@ function rateLimit(userId: string): boolean {
  * Why this exists: `ensureCmsUser` otherwise only runs on the two server auth
  * navigations (`/welcome`, `/auth/callback`). Several flows establish a session
  * CLIENT-SIDE and never hit either — most notably the paywall guest checkout
- * (paywall-modal.tsx): it creates the account via /api/ext/billing/guest-account,
+ * (paywall-modal.tsx): it creates the account via /api/mod/billing/guest-account,
  * receives a one-time login token, calls `verifyOtp` to sign the buyer in, then
  * unlocks inline with `onSuccess()`. Without this endpoint those buyers (members,
  * not staff — so the SSO bridge never provisions them either) would be missing

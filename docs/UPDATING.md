@@ -1,7 +1,7 @@
 # Staying up to date with the kit
 
 > You forked or cloned the **Dream Starter Kit** and made it yours. The kit keeps
-> evolving — bug fixes, new extensions, security hardening — and you want those
+> evolving — bug fixes, new modules, security hardening — and you want those
 > changes without throwing away your own work. This is the **tested workflow** for
 > pulling upstream into a downstream repo and keeping the relationship healthy so
 > every future update is a routine three-way merge.

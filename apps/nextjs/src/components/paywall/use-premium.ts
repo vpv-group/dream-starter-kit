@@ -8,9 +8,9 @@ const ACTIVE_STATUSES = ["active", "trialing"];
 
 /**
  * Premium gating for content. Reads the user's billing subscription
- * (RLS: read-own) — the same source the billing extension's `usePremium`
- * service uses — without importing `@acme/ext-billing` from host code (the
- * CLAUDE.md extension-boundary rule). The Stripe webhook is the only writer of
+ * (RLS: read-own) — the same source the billing module's `usePremium`
+ * service uses — without importing `@acme/mod-billing` from host code (the
+ * CLAUDE.md module-boundary rule). The Stripe webhook is the only writer of
  * the subscriptions table. Anonymous visitors are never premium (the gate shows
  * the paywall; checkout supports guest/anon purchase + post-pay account
  * conversion).
@@ -24,7 +24,7 @@ export function usePremium() {
     enabled: !!user,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("ext_billing_subscriptions")
+        .from("mod_billing_subscriptions")
         .select("status, price_id, current_period_end")
         .in("status", ACTIVE_STATUSES)
         .order("current_period_end", { ascending: false })

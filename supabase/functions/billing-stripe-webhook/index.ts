@@ -81,13 +81,13 @@ async function ensurePlanTag(
 ): Promise<void> {
   if (!priceId) return;
   const { data: price } = await admin
-    .from("ext_billing_prices")
+    .from("mod_billing_prices")
     .select("product_id")
     .eq("id", priceId)
     .maybeSingle();
   if (!price?.product_id) return;
   const { data: product } = await admin
-    .from("ext_billing_products")
+    .from("mod_billing_products")
     .select("name")
     .eq("id", price.product_id)
     .maybeSingle();
@@ -126,19 +126,19 @@ async function convertOrMergeAnon(
   if (existingId && existingId !== anonId) {
     // Merge billing into the existing account, then delete the anon user.
     await admin
-      .from("ext_billing_subscriptions")
+      .from("mod_billing_subscriptions")
       .update({ user_id: existingId })
       .eq("user_id", anonId);
     const { data: realCust } = await admin
-      .from("ext_billing_customers")
+      .from("mod_billing_customers")
       .select("user_id")
       .eq("user_id", existingId)
       .maybeSingle();
     if (realCust) {
-      await admin.from("ext_billing_customers").delete().eq("user_id", anonId);
+      await admin.from("mod_billing_customers").delete().eq("user_id", anonId);
     } else {
       await admin
-        .from("ext_billing_customers")
+        .from("mod_billing_customers")
         .update({ user_id: existingId })
         .eq("user_id", anonId);
     }
@@ -252,14 +252,14 @@ Deno.serve(async (req) => {
       case "product.created":
       case "product.updated": {
         await admin
-          .from("ext_billing_products")
+          .from("mod_billing_products")
           .upsert(mapProduct(event.data.object as Stripe.Product));
         break;
       }
       case "price.created":
       case "price.updated": {
         await admin
-          .from("ext_billing_prices")
+          .from("mod_billing_prices")
           .upsert(mapPrice(event.data.object as Stripe.Price));
         break;
       }
@@ -296,7 +296,7 @@ Deno.serve(async (req) => {
 
         if (userId && customerId) {
           await admin
-            .from("ext_billing_customers")
+            .from("mod_billing_customers")
             .upsert(
               { user_id: userId, stripe_customer_id: customerId },
               { onConflict: "user_id" },
@@ -312,7 +312,7 @@ Deno.serve(async (req) => {
           );
           const priceId = items.data[0]?.price?.id ?? null;
           if (priceId) {
-            await admin.from("ext_billing_subscriptions").upsert({
+            await admin.from("mod_billing_subscriptions").upsert({
               id: session.id,
               user_id: userId,
               price_id: priceId,
@@ -335,7 +335,7 @@ Deno.serve(async (req) => {
               : session.subscription.id;
           const sub = await stripe.subscriptions.retrieve(subId);
           await admin
-            .from("ext_billing_subscriptions")
+            .from("mod_billing_subscriptions")
             .upsert(mapSubscription(sub, userId));
           if (sub.status === "active" || sub.status === "trialing") {
             await ensurePlanTag(
@@ -355,7 +355,7 @@ Deno.serve(async (req) => {
         let userId = subscriptionUserIdFromMetadata(sub);
         if (!userId) {
           const { data } = await admin
-            .from("ext_billing_customers")
+            .from("mod_billing_customers")
             .select("user_id")
             .eq("stripe_customer_id", customerId)
             .maybeSingle();
@@ -365,7 +365,7 @@ Deno.serve(async (req) => {
         // session: no metadata user, no mapping yet. Match the customer's email
         // to an account (or create one + email an invite), same as guest
         // Checkout. Not for the deleted event (don't resurrect accounts). The
-        // host's /api/ext/billing/guest-account route is the primary, synchronous
+        // host's /api/mod/billing/guest-account route is the primary, synchronous
         // path (it runs at "Continue"/"Maybe later"); this is the idempotent
         // backstop for when that call didn't run or didn't land.
         //
@@ -373,7 +373,7 @@ Deno.serve(async (req) => {
         // creates the Stripe customer with an arbitrary, unverified client email
         // and an unpaid `default_incomplete` subscription; without the paid gate,
         // that unpaid event would match a victim's account by email and overwrite
-        // their ext_billing_customers mapping to the attacker's Stripe customer
+        // their mod_billing_customers mapping to the attacker's Stripe customer
         // (cross-account invoice/PII leak) — all with no payment.
         const paidSub = sub.status === "active" || sub.status === "trialing";
         if (
@@ -394,13 +394,13 @@ Deno.serve(async (req) => {
           // Persist the customer mapping so later portal/upgrade calls resolve
           // it (checkout.session.completed isn't fired by the embedded flow).
           await admin
-            .from("ext_billing_customers")
+            .from("mod_billing_customers")
             .upsert(
               { user_id: userId, stripe_customer_id: customerId },
               { onConflict: "user_id" },
             );
           await admin
-            .from("ext_billing_subscriptions")
+            .from("mod_billing_subscriptions")
             .upsert(mapSubscription(sub, userId));
           if (sub.status === "active" || sub.status === "trialing") {
             await ensurePlanTag(

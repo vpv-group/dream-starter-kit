@@ -38,7 +38,7 @@ export const SpaceGroups: CollectionConfig = {
     {
       name: "requiredPlans",
       type: "relationship",
-      relationTo: "ext-billing-plans",
+      relationTo: "mod-billing-plans",
       hasMany: true,
       admin: {
         position: "sidebar",

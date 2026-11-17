@@ -19,7 +19,7 @@ export default defineConfig({
     // code is exercised by typecheck + Playwright, not unit tests.
     include: [
       "src/lib/**/*.test.ts",
-      "src/ext/**/*.test.ts",
+      "src/mod/**/*.test.ts",
       "src/payload/**/*.test.ts",
     ],
   },

@@ -189,10 +189,10 @@ jobs:
       - name: RLS isolation regression
         run: pnpm test:rls
 
-      # Bundle-safety backstop for the extension framework (EXTENSIONS-PLAN.md
+      # Bundle-safety backstop for the module framework (MODULES-PLAN.md
       # §1.6): bundling the native app fails if any server-only import (the
       # `server-only` / payload poison pills) leaks into the Metro graph —
-      # e.g. via a bad import in a third-party extension's client barrel.
+      # e.g. via a bad import in a third-party module's client barrel.
       - name: Expo export smoke check (native graph stays server-free)
         run: pnpm -F @acme/expo smoke:export
 

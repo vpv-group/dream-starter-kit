@@ -5,18 +5,18 @@ import { reactConfig } from "@acme/eslint-config/react";
 
 export default defineConfig(
   {
-    // Generated ext registries + route stubs are machine-owned (`pnpm ext sync`).
+    // Generated mod registries + route stubs are machine-owned (`pnpm mod sync`).
     ignores: [
       ".expo/**",
       "expo-plugins/**",
-      "src/ext/*.generated.ts",
+      "src/mod/*.generated.ts",
       "src/app/(app)/x/**",
     ],
   },
   baseConfig,
   reactConfig,
   {
-    // Bundle safety (EXTENSIONS-PLAN.md §1.3): server/Payload/web extension
+    // Bundle safety (MODULES-PLAN.md §1.3): server/Payload/web module
     // entries must never enter the Metro graph — only the client barrel (`.`)
     // and `./native` are RN-safe. The `server-only` + payload poison pills
     // back this up at compile time; the `expo export` CI smoke check is the
@@ -28,13 +28,13 @@ export default defineConfig(
           patterns: [
             {
               group: [
-                "@acme/ext-*/server",
-                "@acme/ext-*/payload",
-                "@acme/ext-*/web",
-                "@acme/ext-*/web-server",
+                "@acme/mod-*/server",
+                "@acme/mod-*/payload",
+                "@acme/mod-*/web",
+                "@acme/mod-*/web-server",
               ],
               message:
-                "Only an extension's client barrel and /native entry are allowed in the native app.",
+                "Only a module's client barrel and /native entry are allowed in the native app.",
             },
             {
               group: ["react-dom", "next", "next/*"],
