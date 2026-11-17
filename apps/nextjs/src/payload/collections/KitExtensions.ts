@@ -3,7 +3,8 @@ import type { CollectionConfig } from "payload";
 import { anyone, isAdmin } from "../access";
 
 /**
- * Framework-owned registry of installed extensions (docs/EXTENSIONS-PLAN.md
+ * Framework-owned registry of installed modules — "extensions" in code, see
+ * docs/EXTENSIONS.md → Naming (docs/EXTENSIONS-PLAN.md
  * §2.5) — one row per extension, created/updated ONLY by the boot-time
  * reconcile (lib/ext/reconcile-nav.ts, Local API with overrideAccess). Staff
  * use it for the runtime Enable/Disable toggle; `pnpm ext remove` is the real
@@ -15,13 +16,13 @@ import { anyone, isAdmin } from "../access";
  */
 export const KitExtensions: CollectionConfig = {
   slug: "kit-extensions",
-  labels: { singular: "Extension", plural: "Extensions" },
+  labels: { singular: "Module", plural: "Modules" },
   admin: {
-    group: "Extensions",
+    group: "Modules",
     useAsTitle: "name",
     defaultColumns: ["name", "slug", "version", "enabled"],
     description:
-      "Installed extensions. Disabling hides an extension's menu items and 404s its pages and API at runtime without uninstalling it.",
+      "Installed modules. Disabling hides a module's menu items and 404s its pages and API at runtime without uninstalling it.",
   },
   access: {
     read: anyone,
@@ -54,7 +55,7 @@ export const KitExtensions: CollectionConfig = {
       defaultValue: true,
       admin: {
         description:
-          "Uncheck to hide this extension from menus and block its pages/API. Code stays deployed; re-enable any time.",
+          "Uncheck to hide this module from menus and block its pages/API. Code stays deployed; re-enable any time.",
       },
     },
     {
@@ -64,7 +65,7 @@ export const KitExtensions: CollectionConfig = {
       admin: {
         readOnly: true,
         description:
-          "The app shell depends on this extension's mounts (e.g. the home screen) — disabling it will break core navigation.",
+          "The app shell depends on this module's mounts (e.g. the home screen) — disabling it will break core navigation.",
       },
     },
   ],

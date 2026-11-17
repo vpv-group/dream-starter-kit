@@ -409,8 +409,8 @@ The web app hosts a **remote Model Context Protocol server** so a workspace admi
 connect any MCP client (Claude, ChatGPT, Cursor, …) and manage CMS content + push
 notifications in natural language. Full reference: **[`docs/MCP.md`](./MCP.md)**.
 
-- **Core, not an extension.** MCP clients discover auth at domain-root paths
-  (`/.well-known/oauth-*`) and connect to `/mcp`, which extensions (mounted under
+- **Core, not an module.** MCP clients discover auth at domain-root paths
+  (`/.well-known/oauth-*`) and connect to `/mcp`, which modules (mounted under
   `/api/ext/<slug>`) can't serve. Logic lives in the server-only package
   **`packages/mcp`**; thin Next.js route handlers inject Payload + the service-role
   client, so the package stays framework-agnostic, unit-testable, and out of the

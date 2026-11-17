@@ -1,8 +1,8 @@
-# Chat channels — adding an adapter
+# Chat channels — adding a connector
 
-The chat extension exposes a channel framework so the AI bot brain (universal
+The chat module exposes a channel framework so the AI bot brain (universal
 prompt + channel sub-prompts + skill routing) can answer on any chat platform,
-not just the in-app `/a/chat`. Each platform is its own extension:
+not just the in-app `/a/chat`. Each platform is its own module:
 `ext-chat-adapter-<channel>` (see `extensions/chat-adapter-slack` and
 `extensions/chat-adapter-sendblue` for the two shipped examples).
 
@@ -17,7 +17,7 @@ webhooks have no user session.
 
 ## Recipe for a new channel (chat-sdk.dev/adapters)
 
-1. `pnpm ext create chat-adapter-<channel>` and trim to a server-only extension
+1. `pnpm ext create chat-adapter-<channel>` and trim to a server-only module
    (no web/native routes; `server.publicRoutes: true`; `requires: ["chat"]`).
 2. Add the platform's `@chat-adapter/*` package (or implement the webhook
    verify/normalize/send by hand, as the Slack + Sendblue adapters do).

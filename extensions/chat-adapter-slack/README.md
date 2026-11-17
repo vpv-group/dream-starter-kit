@@ -1,6 +1,6 @@
 # @acme/ext-chat-adapter-slack
 
-Answers in Slack with the AI Chat bot brain (`@acme/ext-chat`). A
+The Slack connector: answers in Slack with the AI Chat bot brain (`@acme/ext-chat`). A
 signature-verified Events-API webhook normalizes mentions + DMs, runs them
 through `handleChannelMessage()` (universal prompt + channel sub-prompts + skill
 routing), and replies via `chat.postMessage`.
@@ -18,7 +18,7 @@ routing), and replies via `chat.postMessage`.
    - **Request URL:** `https://<your-host>/api/ext/chat-adapter-slack/webhook`.
 2. Install the app to your workspace and copy the Bot User OAuth token.
 3. Set env: `SLACK_BOT_TOKEN` (xoxb-…) and `SLACK_SIGNING_SECRET`.
-4. The adapter is enabled by default — toggle it under **Extensions → Slack
+4. The adapter is enabled by default — toggle it under **Modules → Slack
    Adapter Settings** in `/admin`.
 
 ## Channel sub-prompts

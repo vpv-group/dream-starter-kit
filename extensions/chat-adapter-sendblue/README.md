@@ -1,8 +1,8 @@
 # @acme/ext-chat-adapter-sendblue
 
-Answers over iMessage/SMS with the AI Chat bot brain (`@acme/ext-chat`). A
+The Sendblue connector: answers over iMessage/SMS with the AI Chat bot brain (`@acme/ext-chat`). A
 secret-verified webhook normalizes inbound messages (transcribing voice memos
-via the chat extension's Whisper integration when `OPENAI_API_KEY` is set),
+via the chat module's Whisper integration when `OPENAI_API_KEY` is set),
 runs them through `handleChannelMessage()` (which applies STOP/HELP compliance
 
 - a daily outbound quota), and replies via the Sendblue send API.
@@ -14,7 +14,7 @@ runs them through `handleChannelMessage()` (which applies STOP/HELP compliance
 2. Set env: `SENDBLUE_API_KEY`, `SENDBLUE_API_SECRET`, `SENDBLUE_FROM_NUMBER`
    (E.164), and optionally `SENDBLUE_WEBHOOK_SECRET` (recommended — sent as the
    `sb-signing-secret` header) and `SENDBLUE_STATUS_CALLBACK_URL`.
-3. Toggle the adapter + set the daily outbound quota under **Extensions →
+3. Toggle the adapter + set the daily outbound quota under **Modules →
    Sendblue Adapter Settings** in `/admin`.
 
 ## Compliance + quotas

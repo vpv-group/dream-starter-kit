@@ -80,7 +80,7 @@ export interface ExtensionSettingsOptions {
    */
   publicRead?: boolean;
   /**
-   * Admin nav group for the settings screen. Defaults to "Extensions"; a
+   * Admin nav group for the settings screen. Defaults to "Modules"; a
    * feature with several admin entries (e.g. AI Chat: settings + skills +
    * adapter tabs) can cluster them under its own group.
    */
@@ -150,7 +150,7 @@ export function defineExtensionSettings(
     global: {
       slug: globalSlug,
       label: `${opts.name} Settings`,
-      admin: { group: opts.group ?? "Extensions" },
+      admin: { group: opts.group ?? "Modules" },
       access: {
         read: opts.publicRead ? anyoneRead : staffRead,
         update: adminUpdate,
