@@ -12,7 +12,7 @@ import {
 const base = {
   name: "Demo",
   version: "1.0.0",
-  kitCompat: ">=1.0.0 <2",
+  kitCompat: ">=2.0.0 <3",
 };
 
 describe("naming helpers", () => {

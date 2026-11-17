@@ -13,7 +13,7 @@ export const modulesLock = {
   "modules": {
     "billing": {
       "version": "1.0.0",
-      "kitCompat": ">=1.0.0 <2",
+      "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
@@ -30,7 +30,7 @@ export const modulesLock = {
     },
     "chat": {
       "version": "1.0.0",
-      "kitCompat": ">=1.0.0 <2",
+      "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
@@ -46,7 +46,7 @@ export const modulesLock = {
     },
     "chat-adapter-sendblue": {
       "version": "1.0.0",
-      "kitCompat": ">=1.0.0 <2",
+      "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
@@ -56,7 +56,7 @@ export const modulesLock = {
     },
     "chat-adapter-slack": {
       "version": "1.0.0",
-      "kitCompat": ">=1.0.0 <2",
+      "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
@@ -66,7 +66,7 @@ export const modulesLock = {
     },
     "dashboard": {
       "version": "1.0.0",
-      "kitCompat": ">=1.0.0 <2",
+      "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
@@ -78,7 +78,7 @@ export const modulesLock = {
     },
     "docs": {
       "version": "1.0.0",
-      "kitCompat": ">=1.0.0 <2",
+      "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
@@ -91,7 +91,7 @@ export const modulesLock = {
     },
     "notifications": {
       "version": "1.0.0",
-      "kitCompat": ">=1.0.0 <2",
+      "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
@@ -103,7 +103,7 @@ export const modulesLock = {
     },
     "reminders": {
       "version": "1.0.0",
-      "kitCompat": ">=1.0.0 <2",
+      "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [

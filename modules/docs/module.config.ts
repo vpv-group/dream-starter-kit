@@ -13,7 +13,7 @@ export default defineModule({
   slug: "docs",
   name: "Docs",
   version: "1.0.0",
-  kitCompat: ">=1.0.0 <2",
+  kitCompat: ">=2.0.0 <3",
   description: "Public developer docs with GitHub sync + Ask-AI.",
   nav: {},
   routes: {

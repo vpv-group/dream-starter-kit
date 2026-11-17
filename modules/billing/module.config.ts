@@ -17,7 +17,7 @@ export default defineModule({
   slug: "billing",
   name: "Billing",
   version: "1.0.0",
-  kitCompat: ">=1.0.0 <2",
+  kitCompat: ">=2.0.0 <3",
   description: "Stripe subscriptions: checkout, portal, webhook mirror.",
   nav: {
     web: [

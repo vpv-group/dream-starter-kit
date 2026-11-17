@@ -210,9 +210,10 @@ running until updated.
 
 ## Upgrading from extensions
 
-Modules used to be called "extensions": the folder was `extensions/`, packages
-were `@acme/ext-<slug>`, tables `ext_<slug>_*`, and the CLI `pnpm ext`. A
-project created before the rename upgrades like this.
+Kit 2.0 renamed extensions to modules. On kit 1.x the folder was
+`extensions/`, packages were `@acme/ext-<slug>`, tables `ext_<slug>_*`, and the
+CLI `pnpm ext`. A 1.x project upgrades like this (merge the kit as described
+in `docs/UPDATING.md`, then deploy).
 
 **Automatic (on the next deploy, or `pnpm db:reset` locally):**
 
@@ -222,8 +223,8 @@ project created before the rename upgrades like this.
   grants and foreign keys are kept.
 - A Payload migration (`20261117_200000_rename_extensions_to_modules`) renames
   the CMS side: every installed module's `ext-<slug>-*` collections and
-  globals become `mod-<slug>-*`, `kit-extensions` becomes `kit-modules`, and nav-items' `extension` field
-  becomes `module`. Staff edits to menus, saved admin preferences and document
+  globals become `mod-<slug>-*`, `kit-extensions` becomes `kit-modules`, and
+  nav-items' `extension` field becomes `module`. Staff edits to menus, saved admin preferences and document
   locks carry over.
 - A new private `module-uploads` bucket replaces `extension-uploads` for admin
   zip uploads. Storage won't let a migration delete buckets, so the old one
@@ -246,7 +247,9 @@ project created before the rename upgrades like this.
 rename before they build again: move the folder to `modules/<slug>`, rename the
 package to `@acme/mod-<slug>`, `extension.config.ts` to `module.config.ts` and
 `defineExtension` to `defineModule` (likewise the other `Extension`/`Ext` names
-from `@acme/mod-kit`), declare tables as `mod_<slug>_*` and add a rename
-migration (copy one of the kit's `*_rename_to_mod_prefix.sql` files), then run
-`pnpm mod sync`. Leave already-synced migrations as they are: the SQL lint
+from `@acme/mod-kit`), declare tables as `mod_<slug>_*`, add a rename
+migration (copy one of the kit's `*_rename_to_mod_prefix.sql` files) and widen
+`kitCompat` to include 2.x (for example `">=2.0.0 <3"`), then run
+`pnpm mod sync` (sync refuses a module whose `kitCompat` excludes the kit
+version). Leave already-synced migrations as they are: the SQL lint
 treats a legacy `ext_<slug>_*` name as the module's own `mod_<slug>_*` table.

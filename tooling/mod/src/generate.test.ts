@@ -34,7 +34,7 @@ const chat = loaded({
   slug: "chat",
   name: "AI Chat",
   version: "1.0.0",
-  kitCompat: ">=1.0.0 <2",
+  kitCompat: ">=2.0.0 <3",
   nav: {
     web: [
       { title: "Chat", href: "/a/chat", icon: "IconMessageCircle", order: 20 },
@@ -56,7 +56,7 @@ const billing = loaded({
   slug: "billing",
   name: "Billing",
   version: "1.0.0",
-  kitCompat: ">=1.0.0 <2",
+  kitCompat: ">=2.0.0 <3",
   routes: {
     web: [
       { path: "", component: "BillingPage", mount: "/billing" },

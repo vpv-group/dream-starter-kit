@@ -8,7 +8,7 @@
       "category": "productivity",
       "repo": "https://github.com/your-org/dream-mod-example",
       "latest": "1.0.0",
-      "kitCompat": ">=1.0.0 <2"
+      "kitCompat": ">=2.0.0 <3"
     }
   ]
 }

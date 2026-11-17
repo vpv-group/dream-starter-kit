@@ -12,7 +12,7 @@ export default defineModule({
   slug: "dashboard",
   name: "Dashboard",
   version: "1.0.0",
-  kitCompat: ">=1.0.0 <2",
+  kitCompat: ">=2.0.0 <3",
   description: "The extensible home screen: quick links + module widgets.",
   nav: {
     web: [{ title: "Dashboard", href: "/a", icon: "IconDashboard", order: 10 }],

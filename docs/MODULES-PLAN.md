@@ -96,7 +96,7 @@ Three layers keep Metro/native safe: (1) the generated Expo registry only ever i
 ```ts
 defineModule({
   slug: "chat", name: "AI Chat", version: "1.0.0",     // semver, = git tag, = package.json
-  kitCompat: ">=1.0.0 <2",
+  kitCompat: ">=2.0.0 <3",
   requires: ["notifications"],                          // cross-mod dependency (DML + service imports)
   // nav entries are DEFAULTS — seeded into the CMS-driven menu on install (§2.5),
   // where staff rename/reorder/re-icon/toggle them at runtime
@@ -173,7 +173,8 @@ New tooling package `tooling/mod` (`@acme/mod-tools`), root scripts `mod` / `mod
 
 1. **Discover + validate** all `modules/*/module.config.ts` (zod, uniqueness, prefixes, mounts vs reserved list, `requires`, package.json name/version match, SQL ownership lint).
 2. **Write generated registries** (committed, headed "GENERATED — do not edit", in `.prettierignore`):
-   - `apps/nextjs/src/mod/registry.client.generated.ts` — **nav defaults** (manifest entries, consumed by the CMS reconcile in §2.5 — not rendered directly), `modWidgets` (widget component imports), `hasModule()`, the icon-name → component map
+   - `apps/nextjs/src/mod/registry.data.generated.ts` — plain data with no imports: `modInstalled`, **nav defaults** (manifest entries, consumed by the CMS reconcile in §2.5 — not rendered directly), `hasModule()`; safe for server code and CLIs (the seed)
+   - `apps/nextjs/src/mod/registry.client.generated.ts` — re-exports the data registry plus `modWidgets` (widget component imports) and the icon-name → component map
    - `apps/nextjs/src/mod/registry.server.generated.ts` — slug → `ModRouteTable` (static imports of `@acme/mod-*/server`)
    - `apps/nextjs/src/mod/registry.payload.generated.ts` — `modCollections`, `modGlobals` (incl. each module's settings global, §1.7), `modPlugins`, `modPayloadMigrations`, `modSeedSteps`
    - `apps/nextjs/src/mod/env.generated.ts` — merged zod shapes from `@acme/mod-*/env`

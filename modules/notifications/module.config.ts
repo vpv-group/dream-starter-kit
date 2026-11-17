@@ -10,7 +10,7 @@ export default defineModule({
   slug: "notifications",
   name: "Notifications",
   version: "1.0.0",
-  kitCompat: ">=1.0.0 <2",
+  kitCompat: ">=2.0.0 <3",
   description:
     "In-app notification feed and Expo push delivery — the shared service other modules build on.",
   nav: {

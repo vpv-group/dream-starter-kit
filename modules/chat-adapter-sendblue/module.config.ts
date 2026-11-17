@@ -15,7 +15,7 @@ export default defineModule({
   slug: "chat-adapter-sendblue",
   name: "Sendblue Adapter",
   version: "1.0.0",
-  kitCompat: ">=1.0.0 <2",
+  kitCompat: ">=2.0.0 <3",
   description: "Answer over iMessage/SMS with the AI chat bot brain.",
   requires: ["chat"],
   nav: {},

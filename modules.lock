@@ -3,7 +3,7 @@
   "modules": {
     "billing": {
       "version": "1.0.0",
-      "kitCompat": ">=1.0.0 <2",
+      "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
@@ -20,7 +20,7 @@
     },
     "chat": {
       "version": "1.0.0",
-      "kitCompat": ">=1.0.0 <2",
+      "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
@@ -36,7 +36,7 @@
     },
     "chat-adapter-sendblue": {
       "version": "1.0.0",
-      "kitCompat": ">=1.0.0 <2",
+      "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
@@ -46,7 +46,7 @@
     },
     "chat-adapter-slack": {
       "version": "1.0.0",
-      "kitCompat": ">=1.0.0 <2",
+      "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
@@ -56,7 +56,7 @@
     },
     "dashboard": {
       "version": "1.0.0",
-      "kitCompat": ">=1.0.0 <2",
+      "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
@@ -68,7 +68,7 @@
     },
     "docs": {
       "version": "1.0.0",
-      "kitCompat": ">=1.0.0 <2",
+      "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
@@ -81,7 +81,7 @@
     },
     "notifications": {
       "version": "1.0.0",
-      "kitCompat": ">=1.0.0 <2",
+      "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
@@ -93,7 +93,7 @@
     },
     "reminders": {
       "version": "1.0.0",
-      "kitCompat": ">=1.0.0 <2",
+      "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [

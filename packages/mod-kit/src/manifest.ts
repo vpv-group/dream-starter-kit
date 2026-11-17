@@ -50,7 +50,7 @@ export const moduleManifestSchema = z.object({
   slug: z.string().regex(SLUG_RE, "slug must match ^[a-z][a-z0-9-]{1,30}$"),
   name: z.string().min(1),
   version: z.string().regex(SEMVER_RE, "version must be plain semver"),
-  /** Semver range of kit versions this module supports (e.g. ">=1.0.0 <2"). */
+  /** Semver range of kit versions this module supports (e.g. ">=2.0.0 <3"). */
   kitCompat: z.string().min(1),
   description: z.string().optional(),
   /** Slugs of modules this one depends on (service imports + DML access). */

@@ -30,7 +30,7 @@ export default defineModule({
   slug: "${slug}",
   name: "${title}",
   version: "1.0.0",
-  kitCompat: ">=1.0.0 <2",
+  kitCompat: ">=2.0.0 <3",
   description: "TODO: describe ${title}.",
   nav: {
     web: [{ title: "${title}", href: "/a/${slug}", order: 100 }],
