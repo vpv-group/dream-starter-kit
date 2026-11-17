@@ -8,6 +8,7 @@ import {
   buildAllGeneratedFiles,
   buildEnvExampleBlock,
   buildNextClientRegistry,
+  buildNextDataRegistry,
   buildNextServerRegistry,
   buildStubs,
   buildTranspileJson,
@@ -66,8 +67,10 @@ const billing = loaded({
 
 describe("generated registries", () => {
   it("emits an inert empty state", () => {
+    const data = buildNextDataRegistry([]);
+    expect(data).toContain("export const modInstalled: ModInstalled[] = []");
     const client = buildNextClientRegistry([]);
-    expect(client).toContain("export const modInstalled: ModInstalled[] = []");
+    expect(client).toContain('export * from "./registry.data.generated";');
     expect(client).not.toContain("@tabler/icons-react");
     const server = buildNextServerRegistry([]);
     expect(server).toContain('import "server-only"');
@@ -82,8 +85,15 @@ describe("generated registries", () => {
     expect(out).toContain(
       'import { ChatWidget as widget_chat } from "@acme/mod-chat/web";',
     );
-    expect(out).toContain('key: "mod:chat:0"');
-    expect(out).toContain('icon: "IconMessageCircle"');
+    const data = buildNextDataRegistry([chat]);
+    expect(data).toContain('key: "mod:chat:0"');
+    expect(data).toContain('icon: "IconMessageCircle"');
+  });
+
+  it("keeps the data registry free of imports (safe for server code and CLIs)", () => {
+    const data = buildNextDataRegistry([chat, billing]);
+    expect(data).not.toMatch(/^import /m);
+    expect(data).toContain("export function hasModule");
   });
 
   it("is deterministic", () => {

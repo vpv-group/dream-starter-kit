@@ -9,54 +9,9 @@ import { ChatWidget as widget_chat } from "@acme/mod-chat/web";
 import { NotificationsWidget as widget_notifications } from "@acme/mod-notifications/web";
 import { RemindersWidget as widget_reminders } from "@acme/mod-reminders/web";
 
-export interface ModInstalled {
-  slug: string;
-  name: string;
-  version: string;
-  /** True when the app shell depends on this module's mounts (e.g. the home screen). */
-  system: boolean;
-}
-
-export interface ModNavDefault {
-  key: string;
-  module: string;
-  title: string;
-  href: string;
-  icon?: string;
-  order: number;
-}
-
-/** Every installed module (from the vendored manifests). */
-export const modInstalled: ModInstalled[] = [
-  { slug: "billing", name: "Billing", version: "1.0.0", system: true },
-  { slug: "chat", name: "AI Chat", version: "1.0.0", system: false },
-  { slug: "chat-adapter-sendblue", name: "Sendblue Adapter", version: "1.0.0", system: false },
-  { slug: "chat-adapter-slack", name: "Slack Adapter", version: "1.0.0", system: false },
-  { slug: "dashboard", name: "Dashboard", version: "1.0.0", system: true },
-  { slug: "docs", name: "Docs", version: "1.0.0", system: true },
-  { slug: "notifications", name: "Notifications", version: "1.0.0", system: false },
-  { slug: "reminders", name: "Reminders", version: "1.0.0", system: false },
-];
-
-/**
- * Manifest nav DEFAULTS — seeded into the CMS-driven menu by the boot
- * reconcile (lib/mod/reconcile-nav.ts), never rendered directly.
- */
-export const modNavDefaults: { web: ModNavDefault[]; native: ModNavDefault[] } = {
-  web: [
-    { key: "mod:billing:0", module: "billing", title: "Billing", href: "/billing", icon: "IconCreditCard", order: 50 },
-    { key: "mod:chat:0", module: "chat", title: "Chat", href: "/a/chat", icon: "IconMessageCircle", order: 20 },
-    { key: "mod:dashboard:0", module: "dashboard", title: "Dashboard", href: "/a", icon: "IconDashboard", order: 10 },
-    { key: "mod:notifications:0", module: "notifications", title: "Notifications", href: "/a/notifications", icon: "IconBell", order: 40 },
-    { key: "mod:reminders:0", module: "reminders", title: "Reminders", href: "/a/reminders", icon: "IconClock", order: 30 },
-  ],
-  native: [
-    { key: "mod:billing:0", module: "billing", title: "Pricing", href: "/a/billing", order: 55 },
-    { key: "mod:chat:0", module: "chat", title: "Chat", href: "/a/chat", icon: "IconMessageCircle", order: 20 },
-    { key: "mod:notifications:0", module: "notifications", title: "Notifications", href: "/a/notifications", icon: "IconBell", order: 40 },
-    { key: "mod:reminders:0", module: "reminders", title: "Reminders", href: "/a/reminders", icon: "IconClock", order: 30 },
-  ],
-};
+// Plain data (installed set, nav defaults, hasModule) lives in the data
+// registry so server code can import it without the web UI below.
+export * from "./registry.data.generated";
 
 /** Dashboard widgets declared by installed modules (web components). */
 export const modWidgets: { slug: string; Widget: React.ComponentType }[] = [
@@ -74,7 +29,3 @@ export const modIcons: Record<string, React.ComponentType<{ className?: string }
   IconDashboard: IconDashboard,
   IconMessageCircle: IconMessageCircle,
 };
-
-export function hasModule(slug: string): boolean {
-  return modInstalled.some((e) => e.slug === slug);
-}

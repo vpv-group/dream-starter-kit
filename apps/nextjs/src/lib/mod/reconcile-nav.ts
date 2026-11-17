@@ -1,6 +1,6 @@
 import type { Payload } from "payload";
 
-import { modInstalled, modNavDefaults } from "~/mod/registry.client.generated";
+import { modInstalled, modNavDefaults } from "~/mod/registry.data.generated";
 import { CORE_NAV_ITEMS } from "./core-nav";
 
 /**

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { hasModule } from "~/mod/registry.client.generated";
+import { hasModule } from "~/mod/registry.data.generated";
 
 /**
  * Runtime enable/disable gate (docs/MODULES-PLAN.md §2.5). A module is

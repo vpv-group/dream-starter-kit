@@ -101,6 +101,32 @@ export interface ModNavDefault {
 }
 `;
 
+/**
+ * apps/nextjs/src/mod/registry.data.generated.ts — plain data only (no React,
+ * no module imports), so server code and CLIs (the boot/seed nav reconcile,
+ * the enablement gate) can read the installed set without pulling every
+ * module's web UI into their import graph.
+ */
+export function buildNextDataRegistry(mods: LoadedModule[]): string {
+  return `${ESLINT_OFF}${HEADER}${SHARED_TYPES}
+/** Every installed module (from the vendored manifests). */
+export const modInstalled: ModInstalled[] = ${renderInstalled(mods)};
+
+/**
+ * Manifest nav DEFAULTS — seeded into the CMS-driven menu by the boot
+ * reconcile (lib/mod/reconcile-nav.ts), never rendered directly.
+ */
+export const modNavDefaults: { web: ModNavDefault[]; native: ModNavDefault[] } = {
+  web: ${renderNav(navLiterals(mods, "web"), "  ")},
+  native: ${renderNav(navLiterals(mods, "native"), "  ")},
+};
+
+export function hasModule(slug: string): boolean {
+  return modInstalled.some((e) => e.slug === slug);
+}
+`;
+}
+
 /** apps/nextjs/src/mod/registry.client.generated.ts */
 export function buildNextClientRegistry(mods: LoadedModule[]): string {
   const webMods = mods.filter((e) => e.manifest.platforms.web);
@@ -142,28 +168,15 @@ export function buildNextClientRegistry(mods: LoadedModule[]): string {
 
   return `${ESLINT_OFF}${HEADER}${imports.join("\n")}
 
-${SHARED_TYPES}
-/** Every installed module (from the vendored manifests). */
-export const modInstalled: ModInstalled[] = ${renderInstalled(mods)};
-
-/**
- * Manifest nav DEFAULTS — seeded into the CMS-driven menu by the boot
- * reconcile (lib/mod/reconcile-nav.ts), never rendered directly.
- */
-export const modNavDefaults: { web: ModNavDefault[]; native: ModNavDefault[] } = {
-  web: ${renderNav(navLiterals(mods, "web"), "  ")},
-  native: ${renderNav(navLiterals(mods, "native"), "  ")},
-};
+// Plain data (installed set, nav defaults, hasModule) lives in the data
+// registry so server code can import it without the web UI below.
+export * from "./registry.data.generated";
 
 /** Dashboard widgets declared by installed modules (web components). */
 export const modWidgets: { slug: string; Widget: React.ComponentType }[] = ${widgets};
 
 /** Icon names referenced by module nav defaults → components. */
 export const modIcons: Record<string, React.ComponentType<{ className?: string }>> = ${icons};
-
-export function hasModule(slug: string): boolean {
-  return modInstalled.some((e) => e.slug === slug);
-}
 `;
 }
 
@@ -565,6 +578,10 @@ export function buildPayloadMigrationCopies(
 /** Everything the drift test compares (registries + env + stubs + transpile list). */
 export function buildAllGeneratedFiles(mods: LoadedModule[]): GeneratedFile[] {
   return [
+    {
+      path: MOD_PATHS.nextDataRegistry,
+      content: buildNextDataRegistry(mods),
+    },
     {
       path: MOD_PATHS.nextClientRegistry,
       content: buildNextClientRegistry(mods),

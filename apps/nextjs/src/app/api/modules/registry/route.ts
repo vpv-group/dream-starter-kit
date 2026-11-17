@@ -1,7 +1,7 @@
 import { env } from "~/env";
 import { opsConfigured, requireAdmin } from "~/lib/mod/admin-ops";
 import { modulesLock } from "~/mod/lock.generated";
-import { modInstalled } from "~/mod/registry.client.generated";
+import { modInstalled } from "~/mod/registry.data.generated";
 
 /**
  * Install state for the /admin/modules page: the BUNDLED lock (readable on

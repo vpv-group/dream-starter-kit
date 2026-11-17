@@ -28,6 +28,7 @@ export const MOD_PATHS = {
   supabaseFunctionsDir: "supabase/functions",
   envExample: ".env.example",
   // Generated registries (committed; drift fails `pnpm test`).
+  nextDataRegistry: "apps/nextjs/src/mod/registry.data.generated.ts",
   nextClientRegistry: "apps/nextjs/src/mod/registry.client.generated.ts",
   nextServerRegistry: "apps/nextjs/src/mod/registry.server.generated.ts",
   nextPayloadRegistry: "apps/nextjs/src/mod/registry.payload.generated.ts",
