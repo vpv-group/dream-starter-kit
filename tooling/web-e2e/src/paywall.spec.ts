@@ -125,7 +125,7 @@ async function ensureMonthlyPlanSynced(): Promise<string | number> {
     storageState: FOUNDER_STORAGE_STATE,
   });
   const list = await staff.get(
-    "/cms-api/ext-billing-plans?where[slug][equals]=dream-monthly&depth=0",
+    "/cms-api/mod-billing-plans?where[slug][equals]=dream-monthly&depth=0",
   );
   const { docs } = (await list.json()) as {
     docs: { id: string | number; stripePriceId?: string }[];
@@ -133,12 +133,12 @@ async function ensureMonthlyPlanSynced(): Promise<string | number> {
   const plan = docs[0];
   if (!plan) throw new Error("dream-monthly plan not seeded");
   if (!plan.stripePriceId) {
-    await staff.patch(`/cms-api/ext-billing-plans/${plan.id}`, { data: {} });
+    await staff.patch(`/cms-api/mod-billing-plans/${plan.id}`, { data: {} });
     await expect
       .poll(
         async () => {
           const res = await staff.get(
-            `/cms-api/ext-billing-plans/${plan.id}?depth=0`,
+            `/cms-api/mod-billing-plans/${plan.id}?depth=0`,
           );
           const doc = (await res.json()) as {
             stripePriceId?: string;
@@ -231,7 +231,7 @@ test("the billing express-intent route creates a Stripe subscription intent (pai
   // / anonymous buyers additionally get supabase_user_id stamped (covered by the
   // unit + RLS suites); here we assert the route returns a usable client secret.
   const ctx = await request.newContext({ baseURL: BASE_URL });
-  const res = await ctx.post("/api/ext/billing/express-intent", {
+  const res = await ctx.post("/api/mod/billing/express-intent", {
     data: { planId },
   });
   expect(res.ok()).toBeTruthy();

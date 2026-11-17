@@ -7,9 +7,9 @@ import { SupabaseProvider, useSession } from "@acme/api";
 import { supabase } from "~/lib/supabase";
 
 import "../styles.css";
-// Side-effect: installed extensions register their native boot handlers
+// Side-effect: installed modules register their native boot handlers
 // (e.g. notifications' foreground handler) via the generated registry.
-import "~/ext/registry.generated";
+import "~/mod/registry.generated";
 
 /**
  * Redirects between the (auth) and (app) route groups based on session state.

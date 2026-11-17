@@ -1,4 +1,4 @@
-// GENERATED copy (`pnpm ext sync`) of extensions/billing/src/payload/migrations/20260612_023534_ext_billing.ts
+// GENERATED copy (`pnpm mod sync`) of modules/billing/src/payload/migrations/20260612_023534_ext_billing.ts
 // so the local `payload migrate` CLI applies it — do not edit.
 import { MigrateDownArgs, MigrateUpArgs, sql } from "@payloadcms/db-postgres";
 

@@ -94,13 +94,13 @@ export interface Config {
     banners: Banner;
     notifications: Notification;
     legal: Legal;
-    "kit-extensions": KitExtension;
+    "kit-modules": KitModule;
     "nav-items": NavItem;
-    "ext-billing-plans": ExtBillingPlan;
-    "ext-billing-coupons": ExtBillingCoupon;
-    "ext-billing-subscriptions": ExtBillingSubscription;
-    "ext-chat-skills": ExtChatSkill;
-    "ext-docs-pages": ExtDocsPage;
+    "mod-billing-plans": ModBillingPlan;
+    "mod-billing-coupons": ModBillingCoupon;
+    "mod-billing-subscriptions": ModBillingSubscription;
+    "mod-chat-skills": ModChatSkill;
+    "mod-docs-pages": ModDocsPage;
     forms: Form;
     "form-submissions": FormSubmission;
     "payload-kv": PayloadKv;
@@ -112,7 +112,7 @@ export interface Config {
   };
   collectionsJoins: {
     users: {
-      subscriptions: "ext-billing-subscriptions";
+      subscriptions: "mod-billing-subscriptions";
       enrollments: "enrollments";
       devices: "device-tokens";
     };
@@ -144,9 +144,9 @@ export interface Config {
     comments: {
       replies: "comments";
     };
-    "ext-billing-plans": {
-      subscriptions: "ext-billing-subscriptions";
-      coupons: "ext-billing-coupons";
+    "mod-billing-plans": {
+      subscriptions: "mod-billing-subscriptions";
+      coupons: "mod-billing-coupons";
     };
     forms: {
       submissions: "form-submissions";
@@ -194,17 +194,17 @@ export interface Config {
     banners: BannersSelect<false> | BannersSelect<true>;
     notifications: NotificationsSelect<false> | NotificationsSelect<true>;
     legal: LegalSelect<false> | LegalSelect<true>;
-    "kit-extensions": KitExtensionsSelect<false> | KitExtensionsSelect<true>;
+    "kit-modules": KitModulesSelect<false> | KitModulesSelect<true>;
     "nav-items": NavItemsSelect<false> | NavItemsSelect<true>;
-    "ext-billing-plans":
-      ExtBillingPlansSelect<false> | ExtBillingPlansSelect<true>;
-    "ext-billing-coupons":
-      ExtBillingCouponsSelect<false> | ExtBillingCouponsSelect<true>;
-    "ext-billing-subscriptions":
-      | ExtBillingSubscriptionsSelect<false>
-      | ExtBillingSubscriptionsSelect<true>;
-    "ext-chat-skills": ExtChatSkillsSelect<false> | ExtChatSkillsSelect<true>;
-    "ext-docs-pages": ExtDocsPagesSelect<false> | ExtDocsPagesSelect<true>;
+    "mod-billing-plans":
+      ModBillingPlansSelect<false> | ModBillingPlansSelect<true>;
+    "mod-billing-coupons":
+      ModBillingCouponsSelect<false> | ModBillingCouponsSelect<true>;
+    "mod-billing-subscriptions":
+      | ModBillingSubscriptionsSelect<false>
+      | ModBillingSubscriptionsSelect<true>;
+    "mod-chat-skills": ModChatSkillsSelect<false> | ModChatSkillsSelect<true>;
+    "mod-docs-pages": ModDocsPagesSelect<false> | ModDocsPagesSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     "form-submissions":
       FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -228,9 +228,9 @@ export interface Config {
     "image-generation-settings": ImageGenerationSetting;
     "profile-fields": ProfileField;
     "authentication-settings": AuthenticationSetting;
-    "ext-billing-settings": ExtBillingSetting;
-    "ext-chat-settings": ExtChatSetting;
-    "ext-docs-settings": ExtDocsSetting;
+    "mod-billing-settings": ModBillingSetting;
+    "mod-chat-settings": ModChatSetting;
+    "mod-docs-settings": ModDocsSetting;
   };
   globalsSelect: {
     "site-settings": SiteSettingsSelect<false> | SiteSettingsSelect<true>;
@@ -241,12 +241,12 @@ export interface Config {
     "profile-fields": ProfileFieldsSelect<false> | ProfileFieldsSelect<true>;
     "authentication-settings":
       AuthenticationSettingsSelect<false> | AuthenticationSettingsSelect<true>;
-    "ext-billing-settings":
-      ExtBillingSettingsSelect<false> | ExtBillingSettingsSelect<true>;
-    "ext-chat-settings":
-      ExtChatSettingsSelect<false> | ExtChatSettingsSelect<true>;
-    "ext-docs-settings":
-      ExtDocsSettingsSelect<false> | ExtDocsSettingsSelect<true>;
+    "mod-billing-settings":
+      ModBillingSettingsSelect<false> | ModBillingSettingsSelect<true>;
+    "mod-chat-settings":
+      ModChatSettingsSelect<false> | ModChatSettingsSelect<true>;
+    "mod-docs-settings":
+      ModDocsSettingsSelect<false> | ModDocsSettingsSelect<true>;
   };
   locale: null;
   widgets: {
@@ -454,7 +454,7 @@ export interface User {
   lastActiveAt?: string | null;
   stripeCustomerID?: string | null;
   subscriptions?: {
-    docs?: (number | ExtBillingSubscription)[];
+    docs?: (number | ModBillingSubscription)[];
     hasNextPage?: boolean;
     totalDocs?: number;
   };
@@ -977,7 +977,7 @@ export interface CommunitySpace {
   /**
    * Plans that unlock a premium space.
    */
-  requiredPlans?: (number | ExtBillingPlan)[] | null;
+  requiredPlans?: (number | ModBillingPlan)[] | null;
   postingPolicy: "members" | "moderators" | "admins";
   moderators?: (number | User)[] | null;
   /**
@@ -1013,7 +1013,7 @@ export interface SpaceGroup {
   /**
    * Plans that unlock this group.
    */
-  requiredPlans?: (number | ExtBillingPlan)[] | null;
+  requiredPlans?: (number | ModBillingPlan)[] | null;
   /**
    * Sidebar order within the parent.
    */
@@ -1040,9 +1040,9 @@ export interface SpaceGroup {
  * Plans sync to Stripe automatically on save. Stripe prices are immutable, so changing the amount creates a new price and archives the old one.
  *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ext-billing-plans".
+ * via the `definition` "mod-billing-plans".
  */
-export interface ExtBillingPlan {
+export interface ModBillingPlan {
   id: number;
   name: string;
   active?: boolean | null;
@@ -1112,7 +1112,7 @@ export interface ExtBillingPlan {
   syncError?: string | null;
   lastSyncedAt?: string | null;
   subscriptions?: {
-    docs?: (number | ExtBillingSubscription)[];
+    docs?: (number | ModBillingSubscription)[];
     hasNextPage?: boolean;
     totalDocs?: number;
   };
@@ -1120,7 +1120,7 @@ export interface ExtBillingPlan {
    * Coupons restricted to this plan.
    */
   coupons?: {
-    docs?: (number | ExtBillingCoupon)[];
+    docs?: (number | ModBillingCoupon)[];
     hasNextPage?: boolean;
     totalDocs?: number;
   };
@@ -1131,13 +1131,13 @@ export interface ExtBillingPlan {
  * Read-only mirror written by the Stripe webhook. Manage billing in Stripe; author the catalog under Plans.
  *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ext-billing-subscriptions".
+ * via the `definition` "mod-billing-subscriptions".
  */
-export interface ExtBillingSubscription {
+export interface ModBillingSubscription {
   id: number;
   user?: (number | null) | User;
-  plan?: (number | null) | ExtBillingPlan;
-  coupon?: (number | null) | ExtBillingCoupon;
+  plan?: (number | null) | ModBillingPlan;
+  coupon?: (number | null) | ModBillingCoupon;
   status:
     "trialing" | "active" | "past_due" | "canceled" | "churned" | "paused";
   startedAt?: string | null;
@@ -1160,9 +1160,9 @@ export interface ExtBillingSubscription {
  * Discounts synced to Stripe on save. Changing amount/duration creates a new Stripe coupon (they're immutable) and archives the old one.
  *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ext-billing-coupons".
+ * via the `definition` "mod-billing-coupons".
  */
-export interface ExtBillingCoupon {
+export interface ModBillingCoupon {
   id: number;
   name: string;
   discountType: "percent_off" | "amount_off";
@@ -1197,7 +1197,7 @@ export interface ExtBillingCoupon {
   /**
    * Restrict to specific plans (empty = applies to all).
    */
-  appliesTo?: (number | ExtBillingPlan)[] | null;
+  appliesTo?: (number | ModBillingPlan)[] | null;
   /**
    * Optional customer-facing code (e.g. LAUNCH20). Created as a Stripe promotion code on sync. Leave blank for a code-less coupon.
    */
@@ -1636,7 +1636,7 @@ export interface Series {
   /**
    * Plans that unlock this show/course (premium gating).
    */
-  requiredPlans?: (number | ExtBillingPlan)[] | null;
+  requiredPlans?: (number | ModBillingPlan)[] | null;
   displayOrder?: number | null;
   featured?: boolean | null;
   podcast?: {
@@ -2483,7 +2483,7 @@ export interface Enrollment {
   /**
    * When access comes from a plan.
    */
-  subscription?: (number | null) | ExtBillingSubscription;
+  subscription?: (number | null) | ModBillingSubscription;
   progress?:
     | {
         lesson: number | Lesson;
@@ -2823,14 +2823,14 @@ export interface Legal {
  * Installed modules. Disabling hides a module's menu items and 404s its pages and API at runtime without uninstalling it.
  *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "kit-extensions".
+ * via the `definition` "kit-modules".
  */
-export interface KitExtension {
+export interface KitModule {
   id: number;
   slug: string;
   name: string;
   /**
-   * Mirrored from the bundled extensions.lock at boot.
+   * Mirrored from the bundled modules.lock at boot.
    */
   version: string;
   /**
@@ -2845,7 +2845,7 @@ export interface KitExtension {
   createdAt: string;
 }
 /**
- * The app menu (web sidebar + native home). Drag to reorder; rename, change icons, or toggle items. New extensions add their entries here automatically on install.
+ * The app menu (web sidebar + native home). Drag to reorder; rename, change icons, or toggle items. New modules add their entries here automatically on install.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "nav-items".
@@ -2857,7 +2857,7 @@ export interface NavItem {
   /**
    * Empty for core entries.
    */
-  extension?: (number | null) | KitExtension;
+  module?: (number | null) | KitModule;
   label: string;
   href: string;
   /**
@@ -2873,9 +2873,9 @@ export interface NavItem {
  * Routable assistant personas. When a user's message matches a skill's triggers (or the LLM fallback picks it), its persona prompt is layered onto the universal prompt for that turn.
  *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ext-chat-skills".
+ * via the `definition` "mod-chat-skills".
  */
-export interface ExtChatSkill {
+export interface ModChatSkill {
   id: number;
   name: string;
   isEnabled?: boolean | null;
@@ -2912,9 +2912,9 @@ export interface ExtChatSkill {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ext-docs-pages".
+ * via the `definition` "mod-docs-pages".
  */
-export interface ExtDocsPage {
+export interface ModDocsPage {
   id: number;
   title: string;
   slug: string;
@@ -4467,9 +4467,9 @@ export interface LegalSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "kit-extensions_select".
+ * via the `definition` "kit-modules_select".
  */
-export interface KitExtensionsSelect<T extends boolean = true> {
+export interface KitModulesSelect<T extends boolean = true> {
   slug?: T;
   name?: T;
   version?: T;
@@ -4485,7 +4485,7 @@ export interface KitExtensionsSelect<T extends boolean = true> {
 export interface NavItemsSelect<T extends boolean = true> {
   _order?: T;
   key?: T;
-  extension?: T;
+  module?: T;
   label?: T;
   href?: T;
   icon?: T;
@@ -4496,9 +4496,9 @@ export interface NavItemsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ext-billing-plans_select".
+ * via the `definition` "mod-billing-plans_select".
  */
-export interface ExtBillingPlansSelect<T extends boolean = true> {
+export interface ModBillingPlansSelect<T extends boolean = true> {
   name?: T;
   active?: T;
   slug?: T;
@@ -4542,9 +4542,9 @@ export interface ExtBillingPlansSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ext-billing-coupons_select".
+ * via the `definition` "mod-billing-coupons_select".
  */
-export interface ExtBillingCouponsSelect<T extends boolean = true> {
+export interface ModBillingCouponsSelect<T extends boolean = true> {
   name?: T;
   discountType?: T;
   value?: T;
@@ -4571,9 +4571,9 @@ export interface ExtBillingCouponsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ext-billing-subscriptions_select".
+ * via the `definition` "mod-billing-subscriptions_select".
  */
-export interface ExtBillingSubscriptionsSelect<T extends boolean = true> {
+export interface ModBillingSubscriptionsSelect<T extends boolean = true> {
   user?: T;
   plan?: T;
   coupon?: T;
@@ -4593,9 +4593,9 @@ export interface ExtBillingSubscriptionsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ext-chat-skills_select".
+ * via the `definition` "mod-chat-skills_select".
  */
-export interface ExtChatSkillsSelect<T extends boolean = true> {
+export interface ModChatSkillsSelect<T extends boolean = true> {
   name?: T;
   isEnabled?: T;
   slug?: T;
@@ -4616,9 +4616,9 @@ export interface ExtChatSkillsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ext-docs-pages_select".
+ * via the `definition` "mod-docs-pages_select".
  */
-export interface ExtDocsPagesSelect<T extends boolean = true> {
+export interface ModDocsPagesSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
   excerpt?: T;
@@ -5474,9 +5474,9 @@ export interface AuthenticationSetting {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ext-billing-settings".
+ * via the `definition` "mod-billing-settings".
  */
-export interface ExtBillingSetting {
+export interface ModBillingSetting {
   id: number;
   heading?: string | null;
   showFreeTier?: boolean | null;
@@ -5488,7 +5488,7 @@ export interface ExtBillingSetting {
   /**
    * Pick up to three paid plans to feature, in display order. Empty = all active plans by display order.
    */
-  featuredPlans?: (number | ExtBillingPlan)[] | null;
+  featuredPlans?: (number | ModBillingPlan)[] | null;
   freeTier?: {
     name?: string | null;
     description?: string | null;
@@ -5550,9 +5550,9 @@ export interface ExtBillingSetting {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ext-chat-settings".
+ * via the `definition` "mod-chat-settings".
  */
-export interface ExtChatSetting {
+export interface ModChatSetting {
   id: number;
   /**
    * How many prior messages of a thread are sent to the model.
@@ -5591,7 +5591,7 @@ export interface ExtChatSetting {
       }[]
     | null;
   /**
-   * When on, each message is routed to a matching skill persona (manage them under Extensions → Chat Skills).
+   * When on, each message is routed to a matching skill persona (manage them under Modules → Chat Skills).
    */
   skillsFeatureEnabled?: boolean | null;
   /**
@@ -5643,9 +5643,9 @@ export interface ExtChatSetting {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ext-docs-settings".
+ * via the `definition` "mod-docs-settings".
  */
-export interface ExtDocsSetting {
+export interface ModDocsSetting {
   id: number;
   /**
    * Public repo as owner/name (e.g. vercel/next.js).
@@ -5943,9 +5943,9 @@ export interface AuthenticationSettingsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ext-billing-settings_select".
+ * via the `definition` "mod-billing-settings_select".
  */
-export interface ExtBillingSettingsSelect<T extends boolean = true> {
+export interface ModBillingSettingsSelect<T extends boolean = true> {
   heading?: T;
   showFreeTier?: T;
   subheading?: T;
@@ -6000,9 +6000,9 @@ export interface ExtBillingSettingsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ext-chat-settings_select".
+ * via the `definition` "mod-chat-settings_select".
  */
-export interface ExtChatSettingsSelect<T extends boolean = true> {
+export interface ModChatSettingsSelect<T extends boolean = true> {
   maxHistoryMessages?: T;
   universalPrompt?: T;
   channelPrompts?:
@@ -6038,9 +6038,9 @@ export interface ExtChatSettingsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ext-docs-settings_select".
+ * via the `definition` "mod-docs-settings_select".
  */
-export interface ExtDocsSettingsSelect<T extends boolean = true> {
+export interface ModDocsSettingsSelect<T extends boolean = true> {
   githubRepo?: T;
   githubBranch?: T;
   githubPath?: T;

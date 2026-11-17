@@ -18,7 +18,7 @@ import type { CollectionConfig, GlobalConfig } from "payload";
  * Document locking is a collaborative-editing nicety, not core to the kit, so
  * disabling it CMS-wide keeps every save/delete single-connection. Map it over
  * the `collections` and `globals` arrays in `payload.config.ts` so it also
- * covers extensions' collections/globals.
+ * covers modules' collections/globals.
  */
 export function noDocumentLock<T extends CollectionConfig | GlobalConfig>(
   entity: T,

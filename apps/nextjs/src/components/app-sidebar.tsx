@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { useSession } from "@acme/api";
 
-import type { NavMenuItem } from "~/lib/ext/nav-types";
+import type { NavMenuItem } from "~/lib/mod/nav-types";
 import { useBranding } from "~/components/branding-provider";
 import { resolveNavIcon } from "~/components/nav-icons";
 import { NavMain } from "~/components/nav-main";

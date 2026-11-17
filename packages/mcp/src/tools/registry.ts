@@ -3,7 +3,7 @@
  * metadata (human title field, free-text search fields, and a public URL
  * builder for ChatGPT search/fetch results). Editorial + community + marketing
  * content only — auth/PII-management collections (users, device-tokens,
- * feed-tokens) and internal ones (media, nav-items, kit-extensions) are
+ * feed-tokens) and internal ones (media, nav-items, kit-modules) are
  * intentionally excluded. Per-operation authorization is still Payload's job;
  * this list just bounds the surface.
  */

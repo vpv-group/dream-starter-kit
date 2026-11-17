@@ -4,7 +4,7 @@ Guidance for Claude Code (and humans) extending the **Dream Starter Kit**.
 Read this first, then `docs/ARCHITECTURE.md` and `docs/ERD.md` — those two are the
 **source of truth**. If anything here conflicts with them, they win.
 (`docs/CMS.md` is the per-collection CMS reference — keep it in sync when you
-touch Payload collections; `docs/EXTENSIONS.md` is the extension framework
+touch Payload collections; `docs/MODULES.md` is the module framework
 reference; `docs/MCP.md` is the remote MCP server reference.)
 
 ## What this is
@@ -100,10 +100,10 @@ pnpm db:gen-migrations  # re-inline supabase/migrations into the web bundle for 
                         #   runtime DB bootstrap — run after adding a migration and
                         #   commit the JSON (drift fails `pnpm test`)
 
-# Extensions (see docs/EXTENSIONS.md)
-pnpm ext sync           # regenerate registries/stubs/migrations from extensions/*
-pnpm ext create <slug>  # scaffold a new extension (then: install, db:reset, gen-types)
-pnpm ext add|update|remove|status  # lifecycle (vendored + lock + snapshot refs)
+# Modules (see docs/MODULES.md)
+pnpm mod sync           # regenerate registries/stubs/migrations from modules/*
+pnpm mod create <slug>  # scaffold a new module (then: install, db:reset, gen-types)
+pnpm mod add|update|remove|status  # lifecycle (vendored + lock + snapshot refs)
 
 # Tests
 pnpm test               # vitest (unit/integration) — no backend needed
@@ -124,7 +124,8 @@ typecheck · unit · license, plus an `integration` job that boots Supabase and 
 Cloud session containers start bare: no Docker daemon, no Supabase CLI, no `.env`.
 The **SessionStart hook** (`.claude/hooks/session-start.sh`, registered in
 `.claude/settings.json`, cloud-only via `$CLAUDE_CODE_REMOTE`) bootstraps the full
-local stack automatically: it starts `dockerd`, installs the Supabase CLI,
+local stack automatically: it starts `dockerd`, installs the Supabase CLI (the
+version CI pins in `.github/workflows/ci.yml`),
 `pnpm install`s, boots Supabase, writes `.env` from `.env.example` with the local
 keys + a generated `PAYLOAD_SECRET`, runs `pnpm db:reset`, and installs
 **Playwright's Chromium** (`playwright install chromium`, cached in
@@ -166,36 +167,30 @@ app with the pre-installed Playwright Chromium instead: write a throwaway script
 package resolves), navigate, `page.screenshot(...)`, and **send the screenshots to
 the user** so they can see each step. Clean up throwaway scripts before committing.
 
-## How to add a feature: build an extension
+## How to add a feature: build a module
 
-> **Naming in copy:** what people read (admin labels, site copy, docs prose) says
-> **module**; a link to another company's service (Slack, Sendblue) is a
-> **connector**. Code keeps *extension* (`extensions/`, `defineExtension`,
-> `pnpm ext`, `kit-extensions`) so forks and migrations don't break. See
-> `docs/EXTENSIONS.md` → Naming.
-
-Features are **extensions** (docs/EXTENSIONS.md is the working reference;
-docs/EXTENSIONS-PLAN.md the design). An extension is a vendored workspace
-package at `extensions/<slug>/` that owns its tables (`ext_<slug>_*`, RLS
+Features are **modules** (docs/MODULES.md is the working reference;
+docs/MODULES-PLAN.md the design). A module is a vendored workspace
+package at `modules/<slug>/` that owns its tables (`mod_<slug>_*`, RLS
 required), validators + hooks (client barrel, shared web + native), screens
 (`./web`, `./native` — RSC pages in `./web-server`), API routes (`./server`,
-served authed + rate-limited at `/api/ext/<slug>/…`), Payload
+served authed + rate-limited at `/api/mod/<slug>/…`), Payload
 collections/settings (`./payload`), edge functions, and tests. The in-repo
-reference is **`extensions/reminders`**; the five first-party features
+reference is **`modules/reminders`**; the five first-party modules
 (dashboard, notifications, reminders, chat, billing) are all built this way.
 
 ```bash
-pnpm ext create <slug>   # working scaffold: table+RLS, hooks, both screens,
+pnpm mod create <slug>   # working scaffold: table+RLS, hooks, both screens,
                          #   widget, settings screen, authed ping route, tests
-pnpm ext sync            # after ANY change under extensions/ — regenerates
+pnpm mod sync            # after ANY change under modules/ — regenerates
                          #   registries/stubs/migrations; drift fails pnpm test
-pnpm ext add|update|remove|status|eject|payload-migrate   # lifecycle (§docs)
+pnpm mod add|update|remove|status|eject|payload-migrate   # lifecycle (§docs)
 ```
 
-Rules that keep extensions modular:
+Rules that keep modules modular:
 
-- **The host consumes extensions only through generated files** — never import
-  `@acme/ext-*` from host code outside the generated registries (the two
+- **The host consumes modules only through generated files** — never import
+  `@acme/mod-*` from host code outside the generated registries (the two
   documented exceptions, the header bells, carry delete-on-removal comments).
 - **Bundle safety:** the client barrel (`.`) and `./native` are the only
   entries Metro may see; `./web` must stay client-safe (widgets are imported
@@ -203,11 +198,11 @@ Rules that keep extensions modular:
   `./payload` / `./web-server`. ESLint + the CI `expo export` smoke check
   enforce this.
 - **Migrations:** local sequence numbers (`001_initial.sql`) inside the
-  extension; `ext sync` pins versions and materializes copies — never edit a
+  module; `mod sync` pins versions and materializes copies — never edit a
   synced migration, add a new one. Ship a `drop.sql` for clean removal.
 - **Nav is CMS-driven:** manifest `nav` entries are defaults seeded into the
   `nav-items` collection; staff own the menu in /admin afterwards.
-- **Cross-extension access** is declared: `requires: [...]` + `database.dml`
+- **Cross-module access** is declared: `requires: [...]` + `database.dml`
   whitelists; services are plain typed package exports (`notify()`,
   `usePremium()`).
 - After schema/CMS changes: `pnpm db:reset && pnpm db:gen-types`
@@ -361,9 +356,9 @@ Payload **Users** page — which now mirrors **all** Supabase users (see `lib/cm
 
 The web app hosts a **remote MCP server** so a workspace admin can connect an MCP client
 (Claude, ChatGPT, Cursor, …) and manage CMS content + push notifications in natural
-language. It's **core, not an extension** — MCP clients discover auth at domain-root paths
-(`/.well-known/oauth-*`) and connect to `/mcp`, which extensions (mounted under
-`/api/ext/<slug>`) can't serve. All logic lives in the server-only package **`packages/mcp`
+language. It's **core, not a module** — MCP clients discover auth at domain-root paths
+(`/.well-known/oauth-*`) and connect to `/mcp`, which modules (mounted under
+`/api/mod/<slug>`) can't serve. All logic lives in the server-only package **`packages/mcp`
 (`@acme/mcp`)**; thin Next.js route handlers wire it in and **inject** Payload + the
 service-role client, so the package stays framework-agnostic and unit-testable (and never
 enters the Expo bundle). It's **gated by `MCP_JWT_SECRET`** (`isMcpConfigured`/`isMcpEnabled`,
@@ -511,17 +506,17 @@ with the kit, so the cardinal rule is: keep the merge commits, never squash them
 
 ## Status
 
-The kit is **feature-complete and ready to clone** — and is now an **extension
-host** (docs/EXTENSIONS.md): auth, the CMS registry, theming, the app shell, and
+The kit is **feature-complete and ready to clone** — and is now a **module
+host** (docs/MODULES.md): auth, the CMS registry, theming, the app shell, and
 the **remote MCP server** (`@acme/mcp`, docs/MCP.md) are core; dashboard,
 notifications, reminders, chat and billing ship as
-pre-installed extensions under `extensions/` with the full lifecycle
-(create/add/update/remove, CMS-driven menus, per-extension settings screens,
-the /admin/extensions panel + extension-ops workflow). The test/CI suite is
+pre-installed modules under `modules/` with the full lifecycle
+(create/add/update/remove, CMS-driven menus, per-module settings screens,
+the /admin/modules panel + module-ops workflow). The test/CI suite is
 green end to end. Known follow-ups: opening the CMS API bridge to member
-sessions; publishing the five first-party extensions to their own repos +
-the official catalog repo (`pnpm ext eject`); per-extension RLS test
+sessions; publishing the five first-party modules to their own repos +
+the official catalog repo (`pnpm mod eject`); per-module RLS test
 relocation (the central suite still covers all tables). Extend the kit with
-`pnpm ext create`, keep every checkpoint green
+`pnpm mod create`, keep every checkpoint green
 (`pnpm typecheck && pnpm lint && pnpm test`), and update this file when
 conventions change.

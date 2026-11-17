@@ -5,25 +5,25 @@ import { signUpAndConfirm } from "./helpers/mailpit";
 /**
  * Enforcement boundaries the happy-path specs don't assert directly:
  *
- * 1. Extension API routes are authed (golden rule #6) — the dispatcher
- *    (/api/ext/[ext]/...) rejects anonymous calls with 401 before any
- *    extension handler runs; chat's stream route is the canonical case.
+ * 1. Module API routes are authed (golden rule #6) — the dispatcher
+ *    (/api/mod/[mod]/...) rejects anonymous calls with 401 before any
+ *    module handler runs; chat's stream route is the canonical case.
  * 2. Payload admin is default-deny — a signed-in NON-staff user is bounced from
  *    /admin back into the app. admin-login.spec.ts covers the staff allow-path;
  *    this is the deny-path (proxy.ts redirects non-staff to /a).
  */
 
-test("POST /api/ext/chat/stream without a token is rejected (401)", async ({
+test("POST /api/mod/chat/stream without a token is rejected (401)", async ({
   request,
 }) => {
-  const res = await request.post("/api/ext/chat/stream", {
+  const res = await request.post("/api/mod/chat/stream", {
     data: { threadId: "00000000-0000-0000-0000-000000000000", text: "hi" },
   });
   expect(res.status()).toBe(401);
 });
 
-test("an unknown extension API 404s", async ({ request }) => {
-  const res = await request.post("/api/ext/nope/anything");
+test("an unknown module API 404s", async ({ request }) => {
+  const res = await request.post("/api/mod/nope/anything");
   expect(res.status()).toBe(404);
 });
 

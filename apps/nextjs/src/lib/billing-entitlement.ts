@@ -9,7 +9,7 @@ const ACTIVE_STATUSES = ["active", "trialing"];
 /**
  * Server-side mirror of `usePremium`: whether the current viewer (resolved from
  * their Supabase session cookie) holds an active/trialing subscription —
- * read-own via RLS on `ext_billing_subscriptions`.
+ * read-own via RLS on `mod_billing_subscriptions`.
  *
  * Used to gate premium content in RSC *before* it reaches the client, so locked
  * content is never shipped to non-entitled viewers (the client paywall is
@@ -41,7 +41,7 @@ export const getViewerEntitlement = cache(
       if (!user || user.is_anonymous)
         return { isPremium: false, isLoggedIn: false, email: null };
       const { data } = await supabase
-        .from("ext_billing_subscriptions")
+        .from("mod_billing_subscriptions")
         .select("id")
         .in("status", ACTIVE_STATUSES)
         .limit(1);

@@ -2,7 +2,7 @@
 
 // Step 2 of the Bloomberg-style checkout: the Stripe payment form, rendered
 // INLINE on the page (not in the paywall modal chrome). It reuses the billing
-// extension's deferred-Elements flow exactly as the paywall does — Express
+// module's deferred-Elements flow exactly as the paywall does — Express
 // Checkout (Apple/Google Pay) + Payment Element (card + Link), with the
 // PaymentIntent/subscription created at confirm time via /express-intent — but
 // the surrounding UI is plain shadcn so it matches the rest of the page.
@@ -74,7 +74,7 @@ function PaymentInner({
     } finally {
       resetCaptcha();
     }
-    const res = await fetch("/api/ext/billing/express-intent", {
+    const res = await fetch("/api/mod/billing/express-intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

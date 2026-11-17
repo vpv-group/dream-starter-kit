@@ -14,7 +14,7 @@ import { useRouter } from "next/navigation";
 import { Check, Pencil } from "lucide-react";
 
 import type { AuthSettings } from "@acme/app";
-import type { ExtBillingPlan } from "@acme/cms";
+import type { ModBillingPlan } from "@acme/cms";
 import { useSession, useSupabase } from "@acme/api";
 import { isAnonymousUser, signOut } from "@acme/app";
 
@@ -51,8 +51,8 @@ export function CheckoutFlow({
   testimonial,
 }: {
   planId: string | number;
-  plan: ExtBillingPlan;
-  annualPlan?: ExtBillingPlan | null;
+  plan: ModBillingPlan;
+  annualPlan?: ModBillingPlan | null;
   authSettings: AuthSettings;
   appName: string;
   testimonial?: CheckoutTestimonialData | null;
@@ -106,7 +106,7 @@ export function CheckoutFlow({
     setSwitching(true);
     setSwitchError(null);
     try {
-      const res = await fetch("/api/ext/billing/upgrade-annual", {
+      const res = await fetch("/api/mod/billing/upgrade-annual", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -6,13 +6,13 @@
 export const APP_NAME = "Dream";
 
 /**
- * Kit version — the extension framework's compatibility anchor. Extension
+ * Kit version — the module framework's compatibility anchor. Module
  * manifests declare a `kitCompat` semver range checked against this at
  * add/update/sync time. MUST match the root package.json `version` (a unit
  * test in this package asserts it). Bump the major for breaking changes to
- * the extension API surface (@acme/ext-kit contracts, registry shapes).
+ * the module API surface (@acme/mod-kit contracts, registry shapes).
  */
-export const KIT_VERSION = "1.0.0";
+export const KIT_VERSION = "2.0.0";
 
 /**
  * Default AI model — a Vercel AI Gateway "provider/model" slug.
@@ -35,8 +35,8 @@ export const AI_MAX_OUTPUT_TOKENS = 2048;
 
 /**
  * Curated chat-model catalog for the /a/chat model selector (gateway slugs —
- * golden rule #5: model ids live ONLY here). The chat extension serves this
- * via GET /api/ext/chat/models; the default is DEFAULT_AI_MODEL.
+ * golden rule #5: model ids live ONLY here). The chat module serves this
+ * via GET /api/mod/chat/models; the default is DEFAULT_AI_MODEL.
  */
 export const CHAT_MODELS = [
   {
@@ -75,7 +75,7 @@ export const DEFAULT_TRANSCRIPTION_MODEL = "openai/whisper-1";
 /**
  * Chat channels the assistant can speak through. "web"/"native" are the
  * in-app surfaces; the rest map to Chat SDK adapters (chat-sdk.dev/adapters)
- * wired up as ext-chat-adapter-<channel> extensions. Channel-scoped
+ * wired up as mod-chat-adapter-<channel> modules. Channel-scoped
  * sub-prompts in the chat settings target these slugs.
  */
 export const CHAT_CHANNELS = [

@@ -10,17 +10,17 @@ import { buildConfig } from "payload";
 import sharp from "sharp";
 
 import type { S3ConfigSource } from "./lib/s3-config";
-import {
-  extCollections,
-  extGlobals,
-  extPayloadMigrations,
-  extPlugins,
-} from "./ext/registry.payload.generated";
 import { resolveCmsCredentials } from "./lib/cms/derived-credentials";
 import { generateMediaFileURL } from "./lib/cms/media-url";
 import { noDocumentLock } from "./lib/cms/no-document-lock";
 import { pgConnectionOptions } from "./lib/db/bootstrap-core";
 import { resolveS3Config } from "./lib/s3-config";
+import {
+  modCollections,
+  modGlobals,
+  modPayloadMigrations,
+  modPlugins,
+} from "./mod/registry.payload.generated";
 import { isStaff } from "./payload/access";
 import { Audio } from "./payload/collections/Audio";
 import { Banners } from "./payload/collections/Banners";
@@ -32,7 +32,7 @@ import { DeviceTokens } from "./payload/collections/DeviceTokens";
 import { Enrollments } from "./payload/collections/Enrollments";
 import { Events } from "./payload/collections/Events";
 import { FeedTokens } from "./payload/collections/FeedTokens";
-import { KitExtensions } from "./payload/collections/KitExtensions";
+import { KitModules } from "./payload/collections/KitModules";
 import { LegalPages } from "./payload/collections/LegalPages";
 import { Lessons } from "./payload/collections/Lessons";
 import { Locations } from "./payload/collections/Locations";
@@ -129,13 +129,13 @@ export default buildConfig({
       // default logout can't end the session. Replace it with one that signs out
       // of Supabase and returns to the host root. See payload/components/LogoutButton.tsx.
       logout: { Button: "~/payload/components/LogoutButton#LogoutButton" },
-      // /admin/extensions — install/update/remove extensions (catalog, GitHub
-      // URL, zip upload) by dispatching the extension-ops workflow. See
-      // payload/components/ExtensionsView.tsx (EXTENSIONS-PLAN.md §6).
+      // /admin/modules — install/update/remove modules (catalog, GitHub
+      // URL, zip upload) by dispatching the module-ops workflow. See
+      // payload/components/ModulesView.tsx (MODULES-PLAN.md §6).
       views: {
-        extensions: {
-          Component: "~/payload/components/ExtensionsView#ExtensionsView",
-          path: "/extensions",
+        modules: {
+          Component: "~/payload/components/ModulesView#ModulesView",
+          path: "/modules",
         },
       },
     },
@@ -179,11 +179,11 @@ export default buildConfig({
     Notifications,
     // System
     LegalPages,
-    // Extensions (framework-owned: install registry + CMS-driven menu)
-    KitExtensions,
+    // Modules (framework-owned: install registry + CMS-driven menu)
+    KitModules,
     NavItems,
-    // Installed extensions' collections (generated registry — `pnpm ext sync`)
-    ...extCollections,
+    // Installed modules' collections (generated registry — `pnpm mod sync`)
+    ...modCollections,
   ].map(noDocumentLock),
   globals: [
     SiteSettings,
@@ -191,8 +191,8 @@ export default buildConfig({
     ImageGenerationSettings,
     ProfileFields,
     AuthenticationSettings,
-    // Installed extensions' globals incl. their settings screens (§1.7)
-    ...extGlobals,
+    // Installed modules' globals incl. their settings screens (§1.7)
+    ...modGlobals,
   ].map(noDocumentLock),
   // One shared, cross-collection folder tree ("Browse by Folder") for the
   // collections that enable `folders: true`.
@@ -279,7 +279,7 @@ export default buildConfig({
     // the cms.payload_migrations ledger). After changing a collection, regenerate
     // with `pnpm cms:migrate:create` and commit the new file in payload/migrations.
     push: process.env.NODE_ENV !== "production",
-    // Core + extension migrations merged by timestamp prefix; Payload's
+    // Core + module migrations merged by timestamp prefix; Payload's
     // cms.payload_migrations ledger keys by name, so boot runs stay idempotent.
     //
     // NOT registered during `next build`. In production mode the adapter runs
@@ -298,7 +298,7 @@ export default buildConfig({
     // gate holds there too.
     prodMigrations: buildPhase
       ? undefined
-      : [...migrations, ...extPayloadMigrations].sort((a, b) =>
+      : [...migrations, ...modPayloadMigrations].sort((a, b) =>
           a.name.localeCompare(b.name),
         ),
     migrationDir: path.resolve(dirname, "payload/migrations"),
@@ -405,9 +405,9 @@ export default buildConfig({
         access: { read: isStaff, delete: isStaff },
       },
     }),
-    // Plugins registered by installed extensions (generated registry). A
-    // plugin can mutate the whole Payload config — the widest extension
-    // power; install PRs flag it prominently (EXTENSIONS-PLAN.md §3.2).
-    ...extPlugins,
+    // Plugins registered by installed modules (generated registry). A
+    // plugin can mutate the whole Payload config — the widest module
+    // power; install PRs flag it prominently (MODULES-PLAN.md §3.2).
+    ...modPlugins,
   ],
 });

@@ -2,14 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import type { KitExtension, NavItem } from "@acme/cms";
+import type { KitModule, NavItem } from "@acme/cms";
 
 /**
  * The CMS-driven app menu (nav-items collection — staff rename/reorder/
- * re-icon/toggle entries in /admin, docs/EXTENSIONS-PLAN.md §2.5), read over
+ * re-icon/toggle entries in /admin, docs/MODULES-PLAN.md §2.5), read over
  * the public /cms-api REST endpoint and filtered to enabled items of enabled
- * extensions. Used by the native home/menu; the web sidebar reads the same
- * collection server-side via the Payload Local API (apps/nextjs/src/lib/ext/nav.ts).
+ * modules. Used by the native home/menu; the web sidebar reads the same
+ * collection server-side via the Payload Local API (apps/nextjs/src/lib/mod/nav.ts).
  *
  * Callers render a static fallback while loading/offline (react-query keeps
  * the last-known-good response cached).
@@ -42,21 +42,20 @@ export function useNavMenu(platform: "web" | "native" = "native") {
     queryKey: ["nav-menu", platform],
     staleTime: 60_000,
     queryFn: async (): Promise<NavMenuEntry[]> => {
-      const [nav, disabledExts] = await Promise.all([
+      const [nav, disabledMods] = await Promise.all([
         fetchJson<Paginated<NavItem>>(
           `nav-items?limit=200&sort=_order&depth=1&where[enabled][equals]=true`,
         ),
-        fetchJson<Paginated<KitExtension>>(
-          `kit-extensions?limit=200&where[enabled][equals]=false`,
+        fetchJson<Paginated<KitModule>>(
+          `kit-modules?limit=200&where[enabled][equals]=false`,
         ),
       ]);
-      const disabled = new Set(disabledExts.docs.map((d) => d.slug));
+      const disabled = new Set(disabledMods.docs.map((d) => d.slug));
       return nav.docs
         .filter((d) => (d.platforms ?? []).includes(platform))
         .filter((d) => {
-          const ext =
-            typeof d.extension === "object" ? d.extension?.slug : undefined;
-          return !ext || !disabled.has(ext);
+          const mod = typeof d.module === "object" ? d.module?.slug : undefined;
+          return !mod || !disabled.has(mod);
         })
         .map((d) => ({
           key: d.key,

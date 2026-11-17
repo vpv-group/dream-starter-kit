@@ -1,0 +1,10 @@
+[
+  "@acme/mod-billing",
+  "@acme/mod-chat",
+  "@acme/mod-chat-adapter-sendblue",
+  "@acme/mod-chat-adapter-slack",
+  "@acme/mod-dashboard",
+  "@acme/mod-docs",
+  "@acme/mod-notifications",
+  "@acme/mod-reminders"
+]

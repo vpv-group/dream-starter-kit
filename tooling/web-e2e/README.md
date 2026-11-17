@@ -96,5 +96,5 @@ which wouldn't match a derived one).
   RLS regression (`pnpm test:rls`); add a `chat.spec.ts` with a mocked or
   test-keyed model when you want full coverage.
 
-These are intentional extension points, not bugs — the security-critical paths
+These are intentional module points, not bugs — the security-critical paths
 (auth, route protection, RLS isolation, CRUD) all run in CI on every PR.

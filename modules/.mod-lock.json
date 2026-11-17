@@ -1,0 +1,69 @@
+{
+  "pins": {
+    "billing/001_initial.sql": {
+      "version": "20260612011538",
+      "sha256": "1e242bd90723dc6b86175100f961323acf478544a906c313bf39949590625fb2",
+      "target": "20260612011538_ext_billing_001_initial.sql"
+    },
+    "billing/002_rename_to_mod_prefix.sql": {
+      "version": "20261117192627",
+      "sha256": "3e9f8398b12d2f818eaf417a6a3ff20bcd5d866afbe821a68f2057853d5cca38",
+      "target": "20261117192627_mod_billing_002_rename_to_mod_prefix.sql"
+    },
+    "chat/001_initial.sql": {
+      "version": "20260612011539",
+      "sha256": "5d8de93e3dd24dbcca2955629de0b89a791e6cd44c1944e4fa3cae5d7cae2d65",
+      "target": "20260612011539_ext_chat_001_initial.sql"
+    },
+    "chat/002_chat_sdk.sql": {
+      "version": "20260613012847",
+      "sha256": "9e5bc437bb64d07dd2c59d8cca03a35ef2569d906727e726f5170633dbad8a7f",
+      "target": "20260613012847_ext_chat_002_chat_sdk.sql"
+    },
+    "chat/003_bot_brain.sql": {
+      "version": "20260613021557",
+      "sha256": "940e137c30f20a83bf407344baf2bea9b49b37f9015a2ff18e86bf79879bd7d0",
+      "target": "20260613021557_ext_chat_003_bot_brain.sql"
+    },
+    "chat/004_channels.sql": {
+      "version": "20260613025042",
+      "sha256": "f3343b5ead9884c8560fa5f8ece836fceda6ab82e19de0c8fda3c9948a5078aa",
+      "target": "20260613025042_ext_chat_004_channels.sql"
+    },
+    "chat/005_unified_channel_threads.sql": {
+      "version": "20260613033328",
+      "sha256": "7240b5fb595f58d03393530d4ae1a8cbdae0352957de32755a3dc5070aea7a57",
+      "target": "20260613033328_ext_chat_005_unified_channel_threads.sql"
+    },
+    "chat/006_rename_to_mod_prefix.sql": {
+      "version": "20261117192628",
+      "sha256": "f8047e3fd2a4cecf60314d921c6007ca3357880dea917bcc17fc06d58471faa4",
+      "target": "20261117192628_mod_chat_006_rename_to_mod_prefix.sql"
+    },
+    "demo/001_initial.sql": {
+      "version": "20260612100001",
+      "sha256": "3d92502cfbf0b105901f6b6beb517f30f6ace3c7f2d3a304d923a0bd2e2bed7e",
+      "target": "20260612100001_ext_demo_001_initial.sql"
+    },
+    "notifications/001_initial.sql": {
+      "version": "20260612011540",
+      "sha256": "99010f69124c6d4b6ec8a303848d41501a74e5a3866d06bac399c30774ddebc0",
+      "target": "20260612011540_ext_notifications_001_initial.sql"
+    },
+    "notifications/002_rename_to_mod_prefix.sql": {
+      "version": "20261117192629",
+      "sha256": "e1a28f3f46759981a162497cffb9602e40403d4fb54d0fb7971537a298071bb6",
+      "target": "20261117192629_mod_notifications_002_rename_to_mod_prefix.sql"
+    },
+    "reminders/001_initial.sql": {
+      "version": "20260612011541",
+      "sha256": "2d8177544d43067d8cc08517c690cd70e835b3bcbfddfe1570675e1741296459",
+      "target": "20260612011541_ext_reminders_001_initial.sql"
+    },
+    "reminders/002_rename_to_mod_prefix.sql": {
+      "version": "20261117192630",
+      "sha256": "7a0679321ea8cd5f2a256b761f793954423ac7b0ef57d1b72fa1c0055d603b1c",
+      "target": "20261117192630_mod_reminders_002_rename_to_mod_prefix.sql"
+    }
+  }
+}

@@ -1,10 +1,10 @@
 import { Pressable, Text } from "react-native";
 import { Stack, useRouter } from "expo-router";
 
-import { ExtWidgetsProvider } from "@acme/ext-kit/react";
+import { ModWidgetsProvider } from "@acme/mod-kit/react";
 
-import { extWidgets, hasExtension } from "~/ext/registry.generated";
 import { useBrandColors } from "~/lib/brand";
+import { hasModule, modWidgets } from "~/mod/registry.generated";
 
 function HeaderBell({ color }: { color: string }) {
   const router = useRouter();
@@ -20,14 +20,14 @@ function HeaderBell({ color }: { color: string }) {
 }
 
 export default function AppLayout() {
-  // The bell is the notifications extension's surface — hidden when the
-  // extension isn't installed (EXTENSIONS-PLAN.md §2.5).
-  const showBell = hasExtension("notifications");
+  // The bell is the notifications module's surface — hidden when the
+  // module isn't installed (MODULES-PLAN.md §2.5).
+  const showBell = hasModule("notifications");
   const colors = useBrandColors();
   return (
     // Home-screen widgets from the generated registry (all installed; the
-    // runtime kit-extensions disable toggle gates native at the menu level).
-    <ExtWidgetsProvider widgets={extWidgets}>
+    // runtime kit-modules disable toggle gates native at the menu level).
+    <ModWidgetsProvider widgets={modWidgets}>
       <Stack
         screenOptions={{
           // Dream's reserved volume inside the app: plain ground, ink titles.
@@ -39,6 +39,6 @@ export default function AppLayout() {
             : {}),
         }}
       />
-    </ExtWidgetsProvider>
+    </ModWidgetsProvider>
   );
 }

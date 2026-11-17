@@ -69,11 +69,11 @@ export const Enrollments: CollectionConfig = {
       ],
     },
     {
-      // Billing (system extension) coupling — delete this field if you remove
-      // the billing extension.
+      // Billing (system module) coupling — delete this field if you remove
+      // the billing module.
       name: "subscription",
       type: "relationship",
-      relationTo: "ext-billing-subscriptions",
+      relationTo: "mod-billing-subscriptions",
       admin: {
         condition: (data) => data.source === "subscription",
         description: "When access comes from a plan.",

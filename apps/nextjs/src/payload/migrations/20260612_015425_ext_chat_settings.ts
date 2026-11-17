@@ -1,4 +1,4 @@
-// GENERATED copy (`pnpm ext sync`) of extensions/chat/src/payload/migrations/20260612_015425_ext_chat_settings.ts
+// GENERATED copy (`pnpm mod sync`) of modules/chat/src/payload/migrations/20260612_015425_ext_chat_settings.ts
 // so the local `payload migrate` CLI applies it — do not edit.
 import { MigrateDownArgs, MigrateUpArgs, sql } from "@payloadcms/db-postgres";
 

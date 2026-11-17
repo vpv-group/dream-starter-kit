@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import type { ExtBillingPlan, Media, Review } from "@acme/cms";
+import type { Media, ModBillingPlan, Review } from "@acme/cms";
 
 import type { CheckoutTestimonialData } from "~/components/checkout/checkout-testimonial";
 import { CheckoutFlow } from "~/components/checkout/checkout-flow";
@@ -57,15 +57,15 @@ export default async function CheckoutPage({
   const { plan: planParam } = await searchParams;
   if (!planParam) redirect("/pricing");
 
-  let plan: ExtBillingPlan | null = null;
-  let annualPlan: ExtBillingPlan | null = null;
+  let plan: ModBillingPlan | null = null;
+  let annualPlan: ModBillingPlan | null = null;
   let testimonial: CheckoutTestimonialData | null = null;
 
   try {
     const payload = await getPayloadClient();
 
     plan = await payload
-      .findByID({ collection: "ext-billing-plans", id: planParam, depth: 0 })
+      .findByID({ collection: "mod-billing-plans", id: planParam, depth: 0 })
       .catch(() => null);
 
     if (plan && plan.active !== false) {
@@ -77,22 +77,22 @@ export default async function CheckoutPage({
       if (plan.pricingType === "recurring" && plan.interval !== "year") {
         const all = await payload
           .find({
-            collection: "ext-billing-plans",
+            collection: "mod-billing-plans",
             where: { active: { equals: true } },
             depth: 0,
             limit: 100,
           })
-          .catch(() => ({ docs: [] as ExtBillingPlan[] }));
+          .catch(() => ({ docs: [] as ModBillingPlan[] }));
         annualPlan = resolveAnnualPlan(
           all.docs,
           plan.id,
-        ) as unknown as ExtBillingPlan | null;
+        ) as unknown as ModBillingPlan | null;
       }
 
       // Curated checkout testimonial: read the featured review id from settings,
       // then fetch it populated (author + avatar).
       const billing = await payload
-        .findGlobal({ slug: "ext-billing-settings", depth: 0 })
+        .findGlobal({ slug: "mod-billing-settings", depth: 0 })
         .catch(() => null);
       const featured = billing?.featuredReview;
       const reviewId = typeof featured === "object" ? featured?.id : featured;

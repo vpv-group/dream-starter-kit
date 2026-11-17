@@ -71,8 +71,8 @@ dream-starter-kit/
 │  ├─ migrations/            # SQL schema + RLS policies (implements ERD.md) — ships as ONE baseline migration
 │  ├─ payload/               # 00_cms_role.sql — provisions the `cms` schema + payload_cms role
 │  ├─ functions/             # edge functions: billing-stripe-webhook, delete-account, reminders-process
-│  ─ (extensions/<slug>/ vendor their own supabase/ + src/; `pnpm ext sync`
-│     materializes migrations/functions here — see docs/EXTENSIONS.md)
+│  ─ (modules/<slug>/ vendor their own supabase/ + src/; `pnpm mod sync`
+│     materializes migrations/functions here — see docs/MODULES.md)
 │  ├─ seed.sql               # ships EMPTY (first signup becomes the founder); add your own demo rows
 │  └─ config.toml            # local stack + auth configuration
 ├─ tooling/                  # eslint, prettier, tailwind, tsconfig, rls-tests, web-e2e, CI setup, scripts
@@ -409,9 +409,9 @@ The web app hosts a **remote Model Context Protocol server** so a workspace admi
 connect any MCP client (Claude, ChatGPT, Cursor, …) and manage CMS content + push
 notifications in natural language. Full reference: **[`docs/MCP.md`](./MCP.md)**.
 
-- **Core, not an module.** MCP clients discover auth at domain-root paths
+- **Core, not a module.** MCP clients discover auth at domain-root paths
   (`/.well-known/oauth-*`) and connect to `/mcp`, which modules (mounted under
-  `/api/ext/<slug>`) can't serve. Logic lives in the server-only package
+  `/api/mod/<slug>`) can't serve. Logic lives in the server-only package
   **`packages/mcp`**; thin Next.js route handlers inject Payload + the service-role
   client, so the package stays framework-agnostic, unit-testable, and out of the
   Expo bundle. Gated by `MCP_JWT_SECRET` — the surface 404s until set.

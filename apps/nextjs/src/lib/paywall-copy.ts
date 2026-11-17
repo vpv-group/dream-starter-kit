@@ -23,7 +23,7 @@ export interface BuyerDetails {
   address?: Record<string, unknown> | null;
 }
 
-/** The subset of a Payload `ext-billing-plans` doc the paywall copy needs. */
+/** The subset of a Payload `mod-billing-plans` doc the paywall copy needs. */
 export interface PlanLite {
   id: string | number;
   name?: string | null;

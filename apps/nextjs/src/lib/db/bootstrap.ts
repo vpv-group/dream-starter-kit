@@ -18,7 +18,7 @@
  *      unset — see lib/cms/derived-credentials);
  *   3. backfills `public.profiles` for accounts created before the trigger
  *      existed, flagging the earliest signup as the founder;
- *   4. runs Payload's `prodMigrations` + extension reconcile via the injected
+ *   4. runs Payload's `prodMigrations` + module reconcile via the injected
  *      `migrateCms` callback — STILL HOLDING THE LOCK, so the CMS migration is
  *      serialized across cold-starting instances and never runs at request
  *      time (a failed Payload migration calls `process.exit(1)`, which a
@@ -80,7 +80,7 @@ export interface BootstrapDeps {
   cmsMigrationNames?: string[];
   /**
    * Warms Payload — `getPayload()` runs its `prodMigrations` on first connect —
-   * and reconciles the extension registry/menu. Invoked once, INSIDE the
+   * and reconciles the module registry/menu. Invoked once, INSIDE the
    * bootstrap's cross-instance advisory lock (on the reliable session
    * connection), so the first-boot CMS migration is serialized across cold-
    * starting instances and never runs at request time. That matters because a
@@ -441,7 +441,7 @@ async function runBootstrap(deps: BootstrapDeps): Promise<BootstrapResult> {
       log.error("[db-bootstrap] profile backfill failed", error);
     }
 
-    // Run Payload's migrations (+ extension reconcile) HERE, still holding the
+    // Run Payload's migrations (+ module reconcile) HERE, still holding the
     // advisory lock, so the first-boot CMS migration is serialized across
     // instances and never runs at request time. A concurrent cold start blocks
     // on the lock above, then finds the ledger complete and no-ops — so a

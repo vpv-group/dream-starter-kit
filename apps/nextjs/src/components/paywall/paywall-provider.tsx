@@ -69,7 +69,7 @@ function useResolvedPlan(initialPlan?: PlanLite | null) {
     queryKey: ["billing-premium-plan"],
     queryFn: async () => {
       const res = await fetch(
-        "/cms-api/ext-billing-plans?where[active][equals]=true&sort=displayOrder&limit=50&depth=0",
+        "/cms-api/mod-billing-plans?where[active][equals]=true&sort=displayOrder&limit=50&depth=0",
       );
       if (!res.ok) return { plan: null, annualPlan: null };
       const data = (await res.json()) as { docs: PlanLite[] };

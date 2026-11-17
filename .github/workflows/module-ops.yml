@@ -1,0 +1,169 @@
+# Module operations (docs/MODULES-PLAN.md §6): the admin panel (and a
+# daily schedule) dispatch this workflow; it runs the SAME `pnpm mod` CLI a
+# developer would, pushes a branch and opens a labeled PR. Everything an
+# module ships is therefore visible as a reviewable diff and gated by the
+# full CI before it can run — zip installs included, never a direct commit.
+#
+# Auth: a fine-grained PAT in the `MOD_OPS_TOKEN` repo secret (contents:write,
+# pull-requests:write, workflows:read). Pushes by the default GITHUB_TOKEN
+# would not trigger the `pull_request` CI run.
+name: Module ops
+
+on:
+  workflow_dispatch:
+    inputs:
+      op:
+        description: add | update | remove
+        required: true
+        type: choice
+        options: [add, update, remove]
+      source:
+        description: "add: GitHub url[#vX.Y.Z] or signed zip URL"
+        required: false
+        type: string
+      slug:
+        description: "update/remove: module slug"
+        required: false
+        type: string
+      version:
+        description: "update: target version (vX.Y.Z; empty = latest)"
+        required: false
+        type: string
+      keep_data:
+        description: "remove: keep tables (skip the drop migration)"
+        required: false
+        default: "false"
+        type: string
+      sha256:
+        description: "zip installs: hash the runner re-verifies"
+        required: false
+        type: string
+  schedule:
+    # Daily update check (MOD_AUTO_UPDATE=off repo variable disables it).
+    - cron: "23 6 * * *"
+
+concurrency:
+  group: module-ops
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  op:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MOD_OPS_TOKEN }}
+          fetch-depth: 0
+      - name: Fetch pristine-base refs
+        # refs/ext-base/* = snapshots from before modules were renamed;
+        # the CLI falls back to them and re-roots them under modules/.
+        run: |
+          git fetch origin '+refs/mod-base/*:refs/mod-base/*' || true
+          git fetch origin '+refs/ext-base/*:refs/ext-base/*' || true
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Download zip (verified)
+        if: inputs.op == 'add' && startsWith(inputs.source, 'http') && contains(inputs.source, 'module-uploads')
+        id: zip
+        run: |
+          curl -sSfL "${{ inputs.source }}" -o /tmp/mod.zip
+          echo "${{ inputs.sha256 }}  /tmp/mod.zip" | sha256sum -c -
+          echo "path=/tmp/mod.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Run the CLI
+        id: cli
+        run: |
+          set -euo pipefail
+          case "${{ inputs.op }}" in
+            add)
+              SRC="${{ steps.zip.outputs.path || inputs.source }}"
+              pnpm mod add "$SRC" | tee /tmp/mod-op.log
+              ;;
+            update)
+              ARGS=()
+              [ -n "${{ inputs.version }}" ] && ARGS+=(--to "${{ inputs.version }}")
+              pnpm mod update "${{ inputs.slug }}" "${ARGS[@]}" | tee /tmp/mod-op.log || echo "conflicts=true" >> "$GITHUB_OUTPUT"
+              ;;
+            remove)
+              ARGS=()
+              [ "${{ inputs.keep_data }}" = "true" ] && ARGS+=(--keep-data)
+              pnpm mod remove "${{ inputs.slug }}" "${ARGS[@]}" | tee /tmp/mod-op.log
+              ;;
+          esac
+          pnpm db:gen-types || true
+          pnpm cms:gen-types || true
+          pnpm typecheck
+
+      - name: Path confinement check
+        run: |
+          # The op may only touch modules/**, the known sync outputs and
+          # lockfiles — a module can't smuggle a modified proxy.ts or
+          # workflow into the PR (MODULES-PLAN.md §7).
+          git add -A
+          BAD=$(git diff --cached --name-only | grep -vE '^(modules/|modules\.lock|pnpm-lock\.yaml|\.env\.example|supabase/(migrations|functions)/|apps/nextjs/(mod-packages\.generated\.json|src/(mod/|payload/migrations/|app/\(frontend\)/.*x/|app/\(frontend\)/\(app\)/(a|billing)/|app/\(frontend\)/\(public\)/pricing/))|apps/expo/src/(mod/|app/\(app\)/)|packages/(api|cms)/src/)' || true)
+          if [ -n "$BAD" ]; then
+            echo "Files outside the allowlist were modified:"; echo "$BAD"; exit 1
+          fi
+
+      - name: Push branch + open PR
+        env:
+          GH_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
+        run: |
+          BRANCH="mod/${{ inputs.op }}-${{ inputs.slug || 'new' }}-${{ github.run_id }}"
+          git config user.name "module-ops"
+          git config user.email "module-ops@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git commit -m "chore(mod): ${{ inputs.op }} ${{ inputs.slug || inputs.source }}"
+          git push -u origin "$BRANCH"
+          git push origin 'refs/mod-base/*:refs/mod-base/*' || true
+          LABEL="module-op"
+          # `gh pr create --label` fails if the label doesn't exist yet.
+          gh label create "$LABEL" --color 5319e7 --description "Automated pnpm mod operation" 2>/dev/null || true
+          BODY="Automated \`pnpm mod ${{ inputs.op }}\` run. Review the full diff — installed module code runs server-side with env access (see docs/MODULES-PLAN.md §7)."
+          if [ "${{ inputs.op }}" = "remove" ]; then
+            BODY="$BODY"$'\n\n'"⚠️ DATA LOSS: this PR includes a drop migration for the module's tables (unless --keep-data). It never auto-merges."
+          fi
+          if grep -q "registers a Payload plugin\|hasPlugins: true" modules/*/module.config.ts 2>/dev/null; then
+            BODY="$BODY"$'\n\n'"Note: an installed module registers a Payload plugin (the widest module power)."
+          fi
+          PR_URL=$(gh pr create --title "mod: ${{ inputs.op }} ${{ inputs.slug || inputs.source }}" --body "$BODY" --label "$LABEL" || true)
+          # Auto-merge installs/updates when allowed (never removals).
+          if [ "${{ inputs.op }}" != "remove" ] && [ "${{ vars.MOD_AUTO_MERGE || 'on' }}" = "on" ] && [ -n "$PR_URL" ]; then
+            gh pr merge --squash --auto "$PR_URL" || true
+          fi
+
+  schedule:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MOD_OPS_TOKEN }}
+          fetch-depth: 0
+      - name: Skip when auto-update is off
+        if: vars.MOD_AUTO_UPDATE == 'off'
+        run: echo "MOD_AUTO_UPDATE=off — skipping" && exit 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Dispatch updates for outdated modules
+        env:
+          GH_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
+        run: |
+          pnpm --silent mod status --json > /tmp/status.json || exit 0
+          for slug in $(jq -r '.[] | select(.updateAvailable) | .slug' /tmp/status.json); do
+            gh workflow run module-ops.yml -f op=update -f slug="$slug"
+          done

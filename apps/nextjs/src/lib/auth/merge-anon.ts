@@ -40,14 +40,14 @@ export async function mergeAnonUser(
 ): Promise<void> {
   // Subscriptions: PK is the Stripe id, so repointing user_id never collides.
   await admin
-    .from("ext_billing_subscriptions")
+    .from("mod_billing_subscriptions")
     .update({ user_id: realId })
     .eq("user_id", anonId);
 
   // Customer mapping (user_id is UNIQUE): move it unless the target already has
   // one, in which case drop the anon's (it would cascade-delete anyway).
   const { data: realCustomer } = await admin
-    .from("ext_billing_customers")
+    .from("mod_billing_customers")
     .select("user_id")
     .eq("user_id", realId)
     .maybeSingle();
@@ -55,10 +55,10 @@ export async function mergeAnonUser(
     console.warn(
       `[merge-anon] ${realId} already has a Stripe customer; dropping anon ${anonId}'s mapping (manual review may be needed).`,
     );
-    await admin.from("ext_billing_customers").delete().eq("user_id", anonId);
+    await admin.from("mod_billing_customers").delete().eq("user_id", anonId);
   } else {
     await admin
-      .from("ext_billing_customers")
+      .from("mod_billing_customers")
       .update({ user_id: realId })
       .eq("user_id", anonId);
   }
@@ -78,7 +78,7 @@ export async function mergeAnonUser(
 
   // Best-effort for the rest (none are premium-critical).
   await admin
-    .from("ext_reminders")
+    .from("mod_reminders")
     .update({ user_id: realId })
     .eq("user_id", anonId)
     .then(undefined, () => undefined);
@@ -92,13 +92,13 @@ export async function mergeAnonUser(
 async function anonHasBilling(admin: Admin, anonId: string): Promise<boolean> {
   const [{ data: sub }, { data: cust }] = await Promise.all([
     admin
-      .from("ext_billing_subscriptions")
+      .from("mod_billing_subscriptions")
       .select("id")
       .eq("user_id", anonId)
       .limit(1)
       .maybeSingle(),
     admin
-      .from("ext_billing_customers")
+      .from("mod_billing_customers")
       .select("user_id")
       .eq("user_id", anonId)
       .maybeSingle(),

@@ -1,0 +1,16 @@
+{
+  "extends": "@acme/tsconfig/base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "lib": ["ES2022", "dom", "dom.iterable"],
+    "jsx": "preserve",
+    "moduleSuffixes": [".ios", ".android", ".native", ""]
+  },
+  "include": [
+    "src",
+    "module.config.ts",
+    "nativewind-env.d.ts",
+    "payload-config.d.ts"
+  ],
+  "exclude": ["node_modules", "supabase"]
+}

@@ -9,9 +9,9 @@ src/app/(payload)/admin/importMap.js
 # don't hold them to Prettier's style.
 src/payload/migrations/
 
-# Extension framework outputs, regenerated wholesale by `pnpm ext sync` —
+# Module framework outputs, regenerated wholesale by `pnpm mod sync` —
 # machine-owned, byte-compared by the registry drift test, never hand-edited.
-src/ext/*.generated.ts
-ext-packages.generated.json
+src/mod/*.generated.ts
+mod-packages.generated.json
 src/app/(frontend)/(app)/x/
 src/app/(frontend)/(public)/x/

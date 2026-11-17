@@ -395,7 +395,7 @@ sent by the dispatch worker at `POST /api/cms/notifications/dispatch`
 (`CRON_SECRET`-guarded, Vercel Cron every minute — `apps/nextjs/vercel.json`).
 It resolves the audience (all / `targetUsers` via `cms.users.supabaseUserId` /
 `segment` `{ tags: [...] }`) to Supabase user ids, fans out Expo push and inserts
-in-app feed rows (`public.ext_notifications`), then writes back
+in-app feed rows (`public.mod_notifications`), then writes back
 `sentAt`/`sentCount`/`status`. The worker core lives in `@acme/mcp`
 (`dispatch/run-dispatch.ts`); staff can author/schedule these from the MCP too
 (`notify_schedule`). Edge-function delivery is not used (the worker needs both

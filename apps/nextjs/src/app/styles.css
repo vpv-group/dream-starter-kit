@@ -4,8 +4,8 @@
 @import "./launch-ui.css";
 
 @source "../../../../packages/ui/src/*.{ts,tsx}";
-/* Extension web screens (static glob — no per-extension codegen). */
-@source "../../../../extensions";
+/* Module web screens (static glob — no per-module codegen). */
+@source "../../../../modules";
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant light (&:where(.light, .light *));

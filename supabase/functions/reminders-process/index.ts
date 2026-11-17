@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
   const nowIso = new Date().toISOString();
 
   const { data: due, error } = await admin
-    .from("ext_reminders")
+    .from("mod_reminders")
     .select("id, user_id, channel")
     .eq("status", "pending")
     .lte("due_at", nowIso);
@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
 
   let processed = 0;
   for (const reminder of due ?? []) {
-    await admin.from("ext_notifications").insert({
+    await admin.from("mod_notifications").insert({
       user_id: reminder.user_id,
       type: "reminder",
       title: "Reminder",
@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
 
     if (reminder.channel === "push") {
       const { data: tokens } = await admin
-        .from("ext_notifications_push_tokens")
+        .from("mod_notifications_push_tokens")
         .select("token")
         .eq("user_id", reminder.user_id);
       if (tokens && tokens.length > 0) {
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     }
 
     await admin
-      .from("ext_reminders")
+      .from("mod_reminders")
       .update({ status: "sent" })
       .eq("id", reminder.id);
     processed++;

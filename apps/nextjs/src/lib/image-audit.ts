@@ -101,7 +101,7 @@ export async function auditGeneratedImage({
 }: AuditGeneratedImageArgs): Promise<ImageAuditVerdict> {
   const { object } = await generateObject({
     // Bare gateway slug passed straight to the AI SDK (it reads
-    // AI_GATEWAY_API_KEY), matching the chat extension's model resolution.
+    // AI_GATEWAY_API_KEY), matching the chat module's model resolution.
     model,
     schema: auditSchema,
     maxOutputTokens: 512,
