@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import {
   Geist,
   Geist_Mono,
+  Instrument_Serif,
   Inter,
   JetBrains_Mono,
   Lora,
@@ -21,7 +22,7 @@ import { getSiteUrl } from "~/lib/site-url";
 import "~/app/styles.css";
 
 const description =
-  "Universal web + mobile starter — Next.js & Expo on one Supabase backend, with Row-Level Security, Stripe billing and AI built in.";
+  "Dream Starter Kit: a free, open-source starter for your website and iPhone and Android apps, on one Supabase backend.";
 
 const siteUrl = getSiteUrl();
 
@@ -81,8 +82,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "white" },
-    { media: "(prefers-color-scheme: dark)", color: "black" },
+    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
+    { media: "(prefers-color-scheme: dark)", color: "#090C14" },
   ],
 };
 
@@ -106,10 +107,18 @@ const merriweather = Merriweather({
   variable: "--font-merriweather",
 });
 const lora = Lora({ subsets: ["latin"], variable: "--font-lora" });
+// Dream's serif: italic only, and only for the customer's own words.
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-instrument-serif",
+});
 
 const fontVariables = cn(
   geistSans.variable,
   geistMono.variable,
+  instrumentSerif.variable,
   inter.variable,
   jetbrainsMono.variable,
   merriweather.variable,

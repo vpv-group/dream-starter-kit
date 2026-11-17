@@ -1,4 +1,13 @@
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="apps/nextjs/public/brand/dream-starter-kit-logo-reversed.svg">
+    <img src="apps/nextjs/public/brand/dream-starter-kit-logo-color.svg" alt="Dream Starter Kit" height="40">
+  </picture>
+</p>
+
 # Dream Starter Kit
+
+**Free forever. Open source.**
 
 A clone-and-ship starter: one **Turborepo** monorepo shipping a **Next.js web app**
 and an **Expo (iOS + Android) app** that share **one Supabase backend**
@@ -51,6 +60,7 @@ backend are wired in. Clone it, rename a few things, and extend it into a real p
 - **[`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)** — stack, structure, security model, and dependency policy.
 - **[`docs/ERD.md`](./docs/ERD.md)** — data model + the canonical RLS pattern every table follows.
 - **[`docs/CMS.md`](./docs/CMS.md)** — the Payload CMS reference: every collection, global, field & access rule.
+- **[`docs/BRAND.md`](./docs/BRAND.md)** — the Dream brand the kit ships with: logo, colour, type, voice, and how to swap in your own.
 - **[`docs/MCP.md`](./docs/MCP.md)** — the remote MCP server: enabling it, connecting clients, OAuth, tools & security.
 - **[`docs/UPDATING.md`](./docs/UPDATING.md)** — how to pull upstream kit updates into your fork without losing your changes.
 - **[`CLAUDE.md`](./CLAUDE.md)** — working agreement, the golden security rules, and the "how to add a feature" recipe.
@@ -262,9 +272,10 @@ hook → web & native UI → tests).
 
 ## Make it yours
 
-This repo ships **neutral placeholders** so it stays a clean template. Forking it
-for a real app is mostly swapping identity + secrets — and almost all the secrets
-are env vars, so the source-level edits are small.
+This repo ships in the **Dream** brand, with placeholder identifiers (bundle id,
+scheme, package scope) so it stays a clean template. Forking it for a real app is
+mostly swapping identity + secrets — and almost all the secrets are env vars, so the
+source-level edits are small.
 
 **Identity (source):**
 
@@ -272,6 +283,10 @@ are env vars, so the source-level edits are small.
       titles/OG in `apps/nextjs/src/app/(frontend)/layout.tsx` and
       `(frontend)/opengraph-image.tsx`. (There's no top-level `app/layout.tsx` — the app
       lives in the `(frontend)` route group and Payload's admin in `(payload)`.)
+- [ ] **Logo, icons and colours** — the kit ships with the Dream logo, icons and
+      design tokens. Swap the files listed in [`docs/BRAND.md`](./docs/BRAND.md#use-your-own-brand)
+      (favicons, `public/brand/`, the Expo icons) and set your colours, fonts, name and
+      logo in `/admin` → Theme, or change the defaults in `tooling/tailwind/theme.css`.
 - [ ] **Bundle id** — `apps/expo/app.config.ts` (`ios.bundleIdentifier` + `android.package`),
       shipped as the placeholder `com.example.dreamstarter`.
 - [ ] **Deep-link scheme** — set `EXPO_PUBLIC_AUTH_SCHEME` (default `dreamstarter` in

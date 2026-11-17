@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { GalleryVerticalEnd } from "lucide-react";
 
 import { resendSignUpEmail, verifySignUpCode } from "@acme/app";
 import { cn } from "@acme/ui";
@@ -106,7 +105,9 @@ export function CheckEmailForm({
       <FieldGroup>
         <div className="flex flex-col items-center gap-2 text-center">
           <div className="flex size-8 items-center justify-center rounded-md">
-            <GalleryVerticalEnd className="size-6" />
+            {/* Brand mark from the favicon set (auto light/dark). */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/favicon.svg" alt="" aria-hidden className="size-6" />
           </div>
           {view === "email" ? (
             <h1 className="text-xl font-bold">What’s your email address?</h1>

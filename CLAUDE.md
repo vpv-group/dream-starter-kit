@@ -311,7 +311,7 @@ The billing catalog is **authored in Payload**, not the Stripe dashboard. `Plans
 `Coupons` and the read-only `Subscriptions` mirror live under the **Commerce** admin nav
 group (`apps/nextjs/src/payload/collections/`), and `PricingSettings` (a global) curates
 the public `/pricing` page (which ≤3 plans to feature + a Free tier). The default three
-plans (Dream Monthly/Annual/Lifetime) + a welcome coupon are seeded by `seedCmsContent()`.
+example plans (Monthly/Annual/Lifetime) + a welcome coupon are seeded by `seedCmsContent()`.
 
 - **Payload → Stripe is automatic**: saving a plan/coupon runs an `afterChange` hook
   (`payload/hooks/sync-plan-to-stripe.ts` / `sync-coupon-to-stripe.ts` →
@@ -440,7 +440,9 @@ Media upload fields. Read access is `publishedOrStaff` (anonymous visitors get t
 theme; staff see drafts); update + `readVersions` are staff-only. Pure color math lives in
 `lib/theme/color.ts` (consumed by `serialize.ts`). **Branding** (app name, favicon, sidebar logo)
 is read server-side by `getBranding()` (lib/payload.ts) and surfaced via `BrandingProvider`.
-Serif fonts (Merriweather/Lora) are loaded on `<html>` alongside the sans/mono set.
+Serif fonts (Instrument Serif, the default, plus Merriweather/Lora) are loaded on `<html>` alongside
+the sans/mono set. The default theme is the Dream brand; see `docs/BRAND.md` for its tokens,
+fonts, logo files and how to swap in your own brand.
 
 ## Conventions
 

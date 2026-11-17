@@ -1,5 +1,9 @@
 import type { FooterColumnProps } from "~/components/launch-ui/sections/footer";
 import FooterSection from "~/components/launch-ui/sections/footer";
+import {
+  StarterKitLogo,
+  usesStarterKitLogo,
+} from "~/components/starter-kit-logo";
 import { getBranding, getSiteSettings } from "~/lib/payload";
 import { SITE_FOOTER_COLUMNS, SITE_FOOTER_POLICIES } from "~/lib/site-chrome";
 
@@ -51,14 +55,21 @@ export async function SiteFooter() {
     // CMS not configured/reachable — keep the default columns + policies.
   }
 
+  const kitLogo = usesStarterKitLogo(branding);
+
   return (
     <FooterSection
       logo={
-        // Brand mark from the favicon set (auto light/dark via favicon.svg).
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src="/favicon.svg" alt="" aria-hidden className="size-6" />
+        kitLogo ? (
+          <StarterKitLogo />
+        ) : (
+          // Brand mark from the favicon set (auto light/dark via favicon.svg).
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src="/favicon.svg" alt="" aria-hidden className="size-6" />
+        )
       }
       name={branding.appName}
+      showName={!kitLogo}
       homeUrl={branding.brandLink.url}
       homeNewTab={branding.brandLink.newTab}
       columns={columns}

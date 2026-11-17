@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { GalleryVerticalEnd } from "lucide-react";
 
 import type { AuthSettings, ChooserEntry } from "@acme/app";
 import {
@@ -373,7 +372,9 @@ export function AuthFlow({
   const Logo = (
     <div className="flex flex-col items-center gap-2 text-center">
       <div className="flex size-8 items-center justify-center rounded-md">
-        <GalleryVerticalEnd className="size-6" />
+        {/* Brand mark from the favicon set (auto light/dark). */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/favicon.svg" alt="" aria-hidden className="size-6" />
       </div>
       <span className="sr-only">{appName}</span>
       <h1 className="text-xl font-bold">{heading}</h1>

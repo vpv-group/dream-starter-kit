@@ -305,7 +305,7 @@ Do these in order. Test mode throughout.
    endpoints in production.
 3. **Run the app**, sign up (the **first** signup becomes the founder/admin), and let
    it route you through `/cms-setup`, which **seeds the CMS** (creates the default
-   **Dream Monthly / Annual / Lifetime** plans + a welcome coupon).
+   **Example Monthly / Annual / Lifetime** plans + a welcome coupon).
 4. **Push the plans to Stripe:** open `/admin` → **Commerce → Plans**, open a plan and
    click **Save**. The `afterChange` hook creates the Stripe product + price. (Seeded
    plans stay `unsynced` until first saved — this is the step that syncs them.) Check

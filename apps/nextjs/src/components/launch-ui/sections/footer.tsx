@@ -33,6 +33,11 @@ export interface FooterProps {
   copyright?: string;
   policies?: FooterLink[];
   showModeToggle?: boolean;
+  /**
+   * Render `name` beside the logo. Turn off when `logo` already carries the
+   * drawn wordmark (the name is then kept for screen readers only).
+   */
+  showName?: boolean;
   className?: string;
 }
 
@@ -45,6 +50,7 @@ export default function FooterSection({
   copyright,
   policies = [],
   showModeToggle = true,
+  showName = true,
   className,
 }: FooterProps) {
   return (
@@ -57,7 +63,12 @@ export default function FooterSection({
                 const brand = (
                   <>
                     {logo}
-                    <h3 className="font-[family-name:var(--font-geist-sans)] text-xl font-bold">
+                    <h3
+                      className={cn(
+                        "font-[family-name:var(--font-geist-sans)] text-xl font-bold",
+                        !showName && "sr-only",
+                      )}
+                    >
                       {name}
                     </h3>
                   </>
