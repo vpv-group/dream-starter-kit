@@ -1,6 +1,22 @@
-# Extensions
+# Modules
 
-The kit is a host for **installable extensions**: vendored pnpm workspace
+## Naming
+
+A module is something you add to your app, such as Billing or Notifications; in
+code it is a folder in `extensions/`, and the code says extension
+(`defineExtension`, `ext sync`, `/api/extensions`) so existing projects keep
+working. A feature is one thing a module does, such as a pricing screen or a
+coupon. A connector is a module's link to another company's service, such as
+Slack or Stripe.
+
+In this kit, `chat-adapter-slack` is the Slack connector and
+`chat-adapter-sendblue` is the Sendblue connector: both let the AI Chat module
+answer outside the app. The admin panel still labels its nav group
+**Extensions**, matching the code.
+
+## Overview
+
+The kit is a host for **installable modules**: vendored pnpm workspace
 packages under `extensions/<slug>/` that own their tables, screens, API routes,
 CMS collections and settings — installable with one command (or one click in
 `/admin`), updatable from upstream even after local edits, and removable
@@ -9,16 +25,16 @@ without touching unrelated code. Design rationale lives in
 
 **The governing constraint:** Next.js and Expo are statically bundled and
 serverless has a read-only filesystem. There is no runtime plugin loading —
-*installing an extension means code lands in the git repo, CI gates it, the
+*installing a module means code lands in the git repo, CI gates it, the
 deploy rolls, and the boot-time bootstrap applies migrations.* The framework
 makes that pipeline feel like one click.
 
 ## The model in one paragraph
 
-An extension is a workspace package with a typed manifest
+A module is a workspace package with a typed manifest
 (`extension.config.ts`, `defineExtension()` from `@acme/ext-kit`) and a strict
 exports split that keeps server/Payload code out of the native bundle. The
-host consumes extensions **only** through committed generated files produced by
+host consumes modules **only** through committed generated files produced by
 `pnpm ext sync` (registries, route stubs, materialized migrations) — static
 imports, no runtime discovery. Forgetting sync fails `pnpm test` via the
 registry drift test. Provenance lives in `extensions.lock` + hidden
@@ -53,14 +69,14 @@ extensions/<slug>/
 | `.` (barrel)   | zod, react-query, `@acme/api`, `@acme/config`, `@acme/cms` types | RN-safe by construction; expo lint bans the rest |
 | `./web`        | `@acme/ui`, next/* — **client-safe only**                 | the client registry imports it for widgets — server imports here leak into client chunks |
 | `./web-server` | payload Local API, node — RSC pages (`rsc: true` routes)  | never imported client-side |
-| `./native`     | `@acme/ui-native`, expo-*                                 | the only extension code Metro ever sees (plus `.`) |
+| `./native`     | `@acme/ui-native`, expo-*                                 | the only module code Metro ever sees (plus `.`) |
 | `./server`     | anything server-side; first line `import "server-only"`   | poison pill + dispatcher-only imports |
 | `./payload`    | `payload`, `@acme/ext-kit/payload`                        | unreachable from clients |
 
 The CI `expo export` smoke check is the backstop: a server import leaking into
 the native graph fails the PR.
 
-## Naming (collisions hard-fail `ext sync`)
+## Namespacing (collisions hard-fail `ext sync`)
 
 | Thing | Rule | Example |
 |---|---|---|
@@ -75,7 +91,7 @@ the native graph fails the PR.
 A best-effort SQL lint verifies migrations only DDL tables the manifest
 declares and never touch `auth.*`/`storage.*`/role/grant DDL.
 
-## How the host consumes extensions
+## How the host consumes modules
 
 `pnpm ext sync` (drift-tested, so commit its outputs):
 
@@ -84,8 +100,8 @@ declares and never touch `auth.*`/`storage.*`/role/grant DDL.
   route tables, Payload collections/globals/plugins/migrations/seeds/settings,
   merged env shapes, the bundled lock;
 - **route stubs**: two-line `page.tsx`/screen files under `/a/<slug>` (or the
-  mount override), plus a per-extension `layout.tsx` that 404s when disabled;
-- **migrations**: extension SQL is version-pinned (`extensions/.ext-lock.json`)
+  mount override), plus a per-module `layout.tsx` that 404s when disabled;
+- **migrations**: module SQL is version-pinned (`extensions/.ext-lock.json`)
   and copied into `supabase/migrations/`; Payload migrations are copied into
   the host migrationDir (local CLI) *and* merged into `prodMigrations` (prod);
 - **app deps**: `@acme/ext-<slug>` entries in both apps' package.json;
@@ -94,29 +110,29 @@ declares and never touch `auth.*`/`storage.*`/role/grant DDL.
 **Server API**: one dispatcher (`/api/ext/[ext]/[[...route]]`) authenticates
 every call (session cookie on web, `Authorization: Bearer` on native), applies
 the shared rate limit and the enablement gate, then matches `"METHOD /path"` in
-the extension's `routes` table — golden rule #6 holds for every extension
-endpoint with zero per-extension auth code. `publicRoutes` (manifest
+the module's `routes` table — golden rule #6 holds for every module
+endpoint with zero per-module auth code. `publicRoutes` (manifest
 `server.publicRoutes`) skips the session requirement for genuinely anonymous
 flows (billing's guest checkout) but stays rate-limited; signature-verified
 endpoints (Stripe webhooks) belong in edge functions or Payload plugin
 endpoints instead.
 
 **Menus are CMS-driven** (`kit-extensions` + `nav-items` collections,
-Extensions admin group): manifest nav entries are *defaults*, seeded by the
+**Extensions** admin group): manifest nav entries are *defaults*, seeded by the
 boot reconcile (`lib/ext/reconcile-nav.ts`); staff rename/drag-reorder/re-icon/
 toggle in `/admin` and the web sidebar + native `useNavMenu()` follow without a
-redeploy. Disabling an extension in `kit-extensions` hides its menu items,
+redeploy. Disabling a module in `kit-extensions` hides its menu items,
 404s its pages and API, and removes its dashboard widgets — without
 uninstalling.
 
-**Settings screens** (§ per-extension config): export `settings =
+**Settings screens** (§ per-module config): export `settings =
 defineExtensionSettings({ slug, name, fields })` from `./payload` and set
-`cms.hasSettings: true`. The screen appears under the Extensions admin group
+`cms.hasSettings: true`. The screen appears under the **Extensions** admin group
 (versioned, staff-read/admin-update; `publicRead` for client-consumed toggles).
 Server code reads it with `getExtensionSettings(payload, settings)` — defaults
 apply before the screen is ever saved. Secrets stay in the zod env schema.
 
-**Services** (cross-extension): declare `requires: ["notifications"]` and
+**Services** (cross-module): declare `requires: ["notifications"]` and
 import the provider's exported APIs directly — e.g.
 `notify()` from `@acme/ext-notifications/server`, `usePremium()` from
 `@acme/ext-billing`. `database.dml` whitelists DML on a dependency's tables
@@ -125,7 +141,7 @@ follow the SQL contract.
 
 **Widgets**: declare `widgets: { web, native }` (export names). The host wires
 its generated widget registry through `@acme/ext-kit/react`'s
-`ExtWidgetsProvider`; the dashboard extension renders `useExtWidgets()`.
+`ExtWidgetsProvider`; the dashboard module renders `useExtWidgets()`.
 
 ## Lifecycle
 
@@ -144,13 +160,13 @@ pnpm ext sync                     # after ANY change under extensions/
 Updates are a three-way merge (base = `refs/ext-base/<slug>` pinned in the
 lock, ours = your possibly-modified copy, theirs = upstream) — local edits
 survive clean updates; conflicts get standard markers + `--continue`.
-`remove` refuses while another installed extension `requires` the target,
+`remove` refuses while another installed module `requires` the target,
 generates the drop migrations (Supabase + a best-effort cms scaffold), and
 tombstones the lock (pinned migration versions are never reused).
 
 ## Admin panel + automatic updates
 
-`/admin/extensions` lists installed extensions (from the **bundled** lock — an
+`/admin/extensions` lists installed modules (from the **bundled** lock — an
 honest "this deploy contains it" signal), the curated catalog
 (`EXT_CATALOG_URL`, format: `docs/extension-catalog.example.json`),
 install-from-GitHub and verified zip-upload forms, and live operations. Every
@@ -159,7 +175,7 @@ CLI on a runner, enforces **path confinement** (the op may only write
 `extensions/<slug>/**` + known sync outputs), and opens a labeled PR. A daily
 schedule opens update PRs with auto-merge — CI green ⇒ merged ⇒ deployed ⇒
 migrations at boot. Brakes: `EXT_AUTO_UPDATE=off` / `EXT_AUTO_MERGE=off`
-(repo variables), per-extension `pinned` in the lock; removals never
+(repo variables), per-module `pinned` in the lock; removals never
 auto-merge.
 
 **Founder setup:** create a fine-grained PAT (contents:write,
@@ -169,21 +185,21 @@ Vercel); enable “Allow auto-merge” in the repo settings.
 
 ## Trust model (read before installing)
 
-Installing an extension = trusting its author like an npm dependency: vendored
+Installing a module = trusting its author like an npm dependency: vendored
 code runs server-side with env access and its SQL runs as the privileged
 bootstrap role. No sandbox is claimed. The mitigations are review surface and
 hygiene: everything is a PR (zip installs included), pre-PR validation
 (manifest schema, namespacing, mounts, SQL lint, path confinement,
 Payload-plugin flagging, the license gate, pnpm's install-script blocking),
 the full CI on every PR, and documented GitHub hardening (branch protection +
-fine-grained PAT). With auto-update on, extension authors can effectively ship
+fine-grained PAT). With auto-update on, module authors can effectively ship
 code to your server gated only by your CI — pinning and review mode are the
 brakes.
 
 ## Versioning
 
 `KIT_VERSION` (`@acme/config`, = root package.json version, unit-tested)
-anchors `kitCompat` ranges, checked at add/update/sync. Extension version =
-git tag = package.json (the template extension CI enforces it). Incompatible
+anchors `kitCompat` ranges, checked at add/update/sync. Module version =
+git tag = package.json (the template module CI enforces it). Incompatible
 after a kit upgrade = a warning state, not a kill switch — vendored code keeps
 running until updated.
