@@ -121,7 +121,8 @@ typecheck · unit · license, plus an `integration` job that boots Supabase and 
 Cloud session containers start bare: no Docker daemon, no Supabase CLI, no `.env`.
 The **SessionStart hook** (`.claude/hooks/session-start.sh`, registered in
 `.claude/settings.json`, cloud-only via `$CLAUDE_CODE_REMOTE`) bootstraps the full
-local stack automatically: it starts `dockerd`, installs the Supabase CLI,
+local stack automatically: it starts `dockerd`, installs the Supabase CLI (the
+version CI pins in `.github/workflows/ci.yml`),
 `pnpm install`s, boots Supabase, writes `.env` from `.env.example` with the local
 keys + a generated `PAYLOAD_SECRET`, runs `pnpm db:reset`, and installs
 **Playwright's Chromium** (`playwright install chromium`, cached in
