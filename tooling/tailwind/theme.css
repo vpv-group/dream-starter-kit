@@ -1,113 +1,164 @@
+/*
+ * Dream design tokens — the kit's default theme (see docs/BRAND.md).
+ *
+ * Neutrals, ink, type, radius and shadows are shared with the Future.dev
+ * system; the emerald family is Dream's own. Every text colour meets 4.5:1 on
+ * the grounds it is meant for, in both themes. The shadcn tokens below are
+ * mirrored in apps/nextjs/src/lib/theme/defaults.ts (COLOR_TOKENS) and can be
+ * overridden at runtime from the theme-settings CMS global. The "Dream
+ * extended palette" further down is static (not editable from the CMS).
+ */
 :root {
-  --background: oklch(0.9875 0.0045 314.8053);
-  --foreground: oklch(0.2277 0.0105 312.0161);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.2 0.03 268);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2277 0.0105 312.0161);
+  --card-foreground: oklch(0.2 0.03 268);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2277 0.0105 312.0161);
-  --primary: oklch(0.533 0.236 264.19);
+  --popover-foreground: oklch(0.2 0.03 268);
+  /* Action green (#008246): buttons and active states. White on it is 4.9:1. */
+  --primary: oklch(0.53 0.14 155);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.967 0.0106 316.4921);
-  --secondary-foreground: oklch(0.4536 0.0226 309.5036);
-  --muted: oklch(0.967 0.0106 316.4921);
-  --muted-foreground: oklch(0.5653 0.021 306.4429);
-  --accent: oklch(0.967 0.0106 316.4921);
-  --accent-foreground: oklch(0.533 0.236 264.19);
-  --destructive: oklch(0.6368 0.2078 25.3313);
+  --secondary: oklch(0.965 0.008 264);
+  --secondary-foreground: oklch(0.2 0.03 268);
+  --muted: oklch(0.985 0.004 264);
+  --muted-foreground: oklch(0.52 0.02 264);
+  --accent: oklch(0.97 0.025 155);
+  --accent-foreground: oklch(0.2 0.03 268);
+  --destructive: oklch(0.55 0.21 25);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.9419 0.016 310.0997);
-  --input: oklch(1 0 0);
-  --ring: oklch(0.533 0.236 264.19);
-  --chart-1: oklch(0.533 0.236 264.19);
-  --chart-2: oklch(0.6747 0.1492 264.19);
-  --chart-3: oklch(0.7729 0.1045 264.19);
-  --chart-4: oklch(0.8625 0.0636 264.19);
-  --chart-5: oklch(0.9411 0.0261 264.19);
-  --sidebar: oklch(0.967 0.0106 316.4921);
-  --sidebar-foreground: oklch(0.4536 0.0226 309.5036);
-  --sidebar-primary: oklch(0.533 0.236 264.19);
+  --border: oklch(0.925 0.008 264);
+  --input: oklch(0.66 0.015 264);
+  --ring: oklch(0.53 0.14 155);
+  --chart-1: oklch(0.6 0.16 155);
+  --chart-2: oklch(0.8 0.13 155);
+  --chart-3: oklch(0.53 0.24 264);
+  --chart-4: oklch(0.56 0.16 45);
+  --chart-5: oklch(0.45 0.03 266);
+  --sidebar: oklch(0.985 0.004 264);
+  --sidebar-foreground: oklch(0.2 0.03 268);
+  --sidebar-primary: oklch(0.53 0.14 155);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.9419 0.016 310.0997);
-  --sidebar-accent-foreground: oklch(0.533 0.236 264.19);
-  --sidebar-border: oklch(0.9155 0.0235 310.6964);
-  --sidebar-ring: oklch(0.533 0.236 264.19);
-  /* Brand accent — the two endpoints Launch UI uses for glows + gradient text
-     (bg-brand, text-brand-foreground, from-brand/to-brand-foreground). */
-  --brand: oklch(0.533 0.236 264.19);
-  --brand-foreground: oklch(0.7039 0.1825 264.19);
-  --radius: 0.75rem;
-  --shadow-2xs: 0px 2px 10px 0px hsl(0 0% 0% / 0.03);
-  --shadow-xs: 0px 2px 10px 0px hsl(0 0% 0% / 0.03);
-  --shadow-sm:
-    0px 2px 10px 0px hsl(0 0% 0% / 0.05), 0px 1px 2px -1px hsl(0 0% 0% / 0.05);
-  --shadow:
-    0px 2px 10px 0px hsl(0 0% 0% / 0.05), 0px 1px 2px -1px hsl(0 0% 0% / 0.05);
-  --shadow-md:
-    0px 2px 10px 0px hsl(0 0% 0% / 0.05), 0px 2px 4px -1px hsl(0 0% 0% / 0.05);
-  --shadow-lg:
-    0px 2px 10px 0px hsl(0 0% 0% / 0.05), 0px 4px 6px -1px hsl(0 0% 0% / 0.05);
-  --shadow-xl:
-    0px 2px 10px 0px hsl(0 0% 0% / 0.05), 0px 8px 10px -1px hsl(0 0% 0% / 0.05);
-  --shadow-2xl: 0px 2px 10px 0px hsl(0 0% 0% / 0.13);
+  --sidebar-accent: oklch(0.965 0.008 264);
+  --sidebar-accent-foreground: oklch(0.2 0.03 268);
+  --sidebar-border: oklch(0.925 0.008 264);
+  --sidebar-ring: oklch(0.53 0.14 155);
+  /* Dream emerald (#009B53): the icon, finished states, large fills. White on
+     it is only 3.6:1, so small text never sits on it — use primary instead.
+     Launch UI uses brand + brand-foreground as its glow/gradient endpoints, so
+     brand-foreground here is the light emerald, not a text-on-brand colour. */
+  --brand: oklch(0.6 0.16 155);
+  --brand-foreground: oklch(0.78 0.17 155);
+  --radius: 0.625rem;
+  --shadow-2xs: 0px 4px 16px 0px oklch(0.2 0.03 268 / 0.03);
+  --shadow-xs: 0px 4px 16px 0px oklch(0.2 0.03 268 / 0.03);
+  --shadow-sm: 0px 4px 16px 0px oklch(0.2 0.03 268 / 0.06);
+  --shadow: 0px 4px 16px 0px oklch(0.2 0.03 268 / 0.06);
+  --shadow-md: 0px 4px 18px 0px oklch(0.2 0.03 268 / 0.06);
+  --shadow-lg: 0px 4px 20px 0px oklch(0.2 0.03 268 / 0.06);
+  --shadow-xl: 0px 4px 24px 0px oklch(0.2 0.03 268 / 0.06);
+  --shadow-2xl: 0px 4px 24px 0px oklch(0.2 0.03 268 / 0.15);
   --tracking-normal: 0rem;
   --spacing: 0.25rem;
 
+  /* Dream extended palette (static). */
+  --surface: oklch(0.985 0.004 264);
+  --surface-raised: oklch(0.965 0.008 264);
+  --body: oklch(0.4 0.025 266);
+  --subtle: oklch(0.66 0.015 264);
+  --border-strong: oklch(0.8 0.015 264);
+  --primary-hover: oklch(0.46 0.125 155);
+  --primary-deep: oklch(0.32 0.08 155);
+  --primary-subtle: oklch(0.97 0.025 155);
+  --primary-tint: oklch(0.92 0.06 155);
+  --link: oklch(0.5 0.135 155);
+  --ink: oklch(0.18 0.035 268);
+  --ink-raised: oklch(0.235 0.035 268);
+  --ink-border: oklch(0.32 0.035 268);
+  --on-ink: oklch(0.97 0.005 264);
+  --on-ink-muted: oklch(0.78 0.02 264);
+  --primary-on-ink: oklch(0.78 0.17 155);
+  --info: oklch(0.53 0.24 264);
+  --info-subtle: oklch(0.96 0.022 264);
+  --success: oklch(0.52 0.13 155);
+  --success-subtle: oklch(0.955 0.035 155);
+  --warning: oklch(0.53 0.115 65);
+  --warning-subtle: oklch(0.96 0.04 85);
+  --destructive-subtle: oklch(0.96 0.025 20);
+  --signal: oklch(0.72 0.17 155);
+
   /* Font families indirect through these so the runtime theme (theme-settings
      global → injected <style>) can swap them by overriding the :root var. The
-     `@theme inline` block below references THESE, not the raw next/font vars. */
+     `@theme inline` block below references THESE, not the raw next/font vars.
+     Geist is the voice; Geist Mono is for values and step counters; Instrument
+     Serif italic is reserved for the customer's own words. */
   --font-sans: var(--font-geist-sans);
-  --font-serif: var(--font-merriweather);
+  --font-serif: var(--font-instrument-serif);
   --font-mono: var(--font-geist-mono);
 
   @variant dark {
-    --background: oklch(0.1836 0.0111 311.9111);
-    --foreground: oklch(0.9788 0.0057 308.3962);
-    --card: oklch(0.1836 0.0111 311.9111);
-    --card-foreground: oklch(0.9788 0.0057 308.3962);
-    --popover: oklch(0.1836 0.0111 311.9111);
-    --popover-foreground: oklch(0.9788 0.0057 308.3962);
-    --primary: oklch(0.533 0.236 264.19);
-    --primary-foreground: oklch(1 0 0);
-    --secondary: oklch(0.2551 0.0142 310.7968);
-    --secondary-foreground: oklch(0.721 0.0184 308.1777);
-    --muted: oklch(0.2551 0.0142 310.7968);
-    --muted-foreground: oklch(0.6288 0.0177 309.9946);
-    --accent: oklch(0.2551 0.0142 310.7968);
-    --accent-foreground: oklch(0.6747 0.1492 264.19);
-    --destructive: oklch(0.3958 0.1331 25.723);
-    --destructive-foreground: oklch(1 0 0);
-    --border: oklch(0.2941 0.0175 310.1142);
-    --input: oklch(0.2551 0.0142 310.7968);
-    --ring: oklch(0.533 0.236 264.19);
-    --chart-1: oklch(0.6747 0.1492 264.19);
-    --chart-2: oklch(0.5605 0.1911 264.19);
-    --chart-3: oklch(0.4988 0.1668 264.19);
-    --chart-4: oklch(0.4373 0.1428 264.19);
-    --chart-5: oklch(0.3738 0.1177 264.19);
-    --sidebar: oklch(0.2103 0.0107 311.9806);
-    --sidebar-foreground: oklch(0.721 0.0184 308.1777);
-    --sidebar-primary: oklch(0.533 0.236 264.19);
-    --sidebar-primary-foreground: oklch(1 0 0);
-    --sidebar-accent: oklch(0.2551 0.0142 310.7968);
-    --sidebar-accent-foreground: oklch(0.6747 0.1492 264.19);
-    --sidebar-border: oklch(0.2941 0.0175 310.1142);
-    --sidebar-ring: oklch(0.533 0.236 264.19);
-    --brand: oklch(0.6747 0.1492 264.19);
-    --brand-foreground: oklch(0.8 0.12 264.19);
-    --radius: 0.75rem;
-    --shadow-2xs: 0px 2px 10px 0px hsl(0 0% 0% / 0.1);
-    --shadow-xs: 0px 2px 10px 0px hsl(0 0% 0% / 0.1);
-    --shadow-sm:
-      0px 2px 10px 0px hsl(0 0% 0% / 0.2), 0px 1px 2px -1px hsl(0 0% 0% / 0.2);
-    --shadow:
-      0px 2px 10px 0px hsl(0 0% 0% / 0.2), 0px 1px 2px -1px hsl(0 0% 0% / 0.2);
-    --shadow-md:
-      0px 2px 10px 0px hsl(0 0% 0% / 0.2), 0px 2px 4px -1px hsl(0 0% 0% / 0.2);
-    --shadow-lg:
-      0px 2px 10px 0px hsl(0 0% 0% / 0.2), 0px 4px 6px -1px hsl(0 0% 0% / 0.2);
-    --shadow-xl:
-      0px 2px 10px 0px hsl(0 0% 0% / 0.2), 0px 8px 10px -1px hsl(0 0% 0% / 0.2);
-    --shadow-2xl: 0px 2px 10px 0px hsl(0 0% 0% / 0.5);
+    --background: oklch(0.155 0.018 268);
+    --foreground: oklch(0.965 0.005 264);
+    --card: oklch(0.205 0.021 268);
+    --card-foreground: oklch(0.965 0.005 264);
+    --popover: oklch(0.205 0.021 268);
+    --popover-foreground: oklch(0.965 0.005 264);
+    /* In dark the primary button is light green with ink text (10.5:1). */
+    --primary: oklch(0.78 0.17 155);
+    --primary-foreground: oklch(0.155 0.018 268);
+    --secondary: oklch(0.225 0.022 268);
+    --secondary-foreground: oklch(0.965 0.005 264);
+    --muted: oklch(0.19 0.02 268);
+    --muted-foreground: oklch(0.7 0.015 264);
+    --accent: oklch(0.25 0.05 155);
+    --accent-foreground: oklch(0.965 0.005 264);
+    --destructive: oklch(0.7 0.18 22);
+    --destructive-foreground: oklch(0.155 0.018 268);
+    --border: oklch(0.3 0.02 268);
+    --input: oklch(0.5 0.02 268);
+    --ring: oklch(0.78 0.17 155);
+    --chart-1: oklch(0.7 0.17 155);
+    --chart-2: oklch(0.86 0.1 155);
+    --chart-3: oklch(0.66 0.19 264);
+    --chart-4: oklch(0.76 0.14 55);
+    --chart-5: oklch(0.72 0.02 264);
+    --sidebar: oklch(0.19 0.02 268);
+    --sidebar-foreground: oklch(0.965 0.005 264);
+    --sidebar-primary: oklch(0.78 0.17 155);
+    --sidebar-primary-foreground: oklch(0.155 0.018 268);
+    --sidebar-accent: oklch(0.225 0.022 268);
+    --sidebar-accent-foreground: oklch(0.965 0.005 264);
+    --sidebar-border: oklch(0.3 0.02 268);
+    --sidebar-ring: oklch(0.78 0.17 155);
+    --brand: oklch(0.6 0.16 155);
+    --brand-foreground: oklch(0.78 0.17 155);
+    --radius: 0.625rem;
+    --shadow-2xs: 0px 1px 2px 0px oklch(0 0 0 / 0.4);
+    --shadow-xs: 0px 1px 2px 0px oklch(0 0 0 / 0.4);
+    --shadow-sm: 0px 1px 2px 0px oklch(0 0 0 / 0.4);
+    --shadow: 0px 1px 2px 0px oklch(0 0 0 / 0.4);
+    --shadow-md: 0px 4px 12px 0px oklch(0 0 0 / 0.45);
+    --shadow-lg: 0px 16px 40px 0px oklch(0 0 0 / 0.5);
+    --shadow-xl: 0px 16px 40px 0px oklch(0 0 0 / 0.5);
+    --shadow-2xl: 0px 24px 64px 0px oklch(0 0 0 / 0.6);
+
+    --surface: oklch(0.19 0.02 268);
+    --surface-raised: oklch(0.225 0.022 268);
+    --body: oklch(0.84 0.012 264);
+    --subtle: oklch(0.55 0.015 264);
+    --border-strong: oklch(0.45 0.022 268);
+    --primary-hover: oklch(0.84 0.15 155);
+    --primary-deep: oklch(0.32 0.08 155);
+    --primary-subtle: oklch(0.25 0.05 155);
+    --primary-tint: oklch(0.34 0.08 155);
+    --link: oklch(0.8 0.15 155);
+    --info: oklch(0.76 0.13 264);
+    --info-subtle: oklch(0.27 0.07 266);
+    --success: oklch(0.74 0.15 155);
+    --success-subtle: oklch(0.27 0.05 155);
+    --warning: oklch(0.8 0.14 75);
+    --warning-subtle: oklch(0.29 0.05 75);
+    --destructive-subtle: oklch(0.28 0.06 22);
+    --signal: oklch(0.78 0.17 155);
   }
 }
 
@@ -146,6 +197,31 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
+
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-body: var(--body);
+  --color-subtle: var(--subtle);
+  --color-border-strong: var(--border-strong);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-deep: var(--primary-deep);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-primary-tint: var(--primary-tint);
+  --color-link: var(--link);
+  --color-ink: var(--ink);
+  --color-ink-raised: var(--ink-raised);
+  --color-ink-border: var(--ink-border);
+  --color-on-ink: var(--on-ink);
+  --color-on-ink-muted: var(--on-ink-muted);
+  --color-primary-on-ink: var(--primary-on-ink);
+  --color-info: var(--info);
+  --color-info-subtle: var(--info-subtle);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-destructive-subtle: var(--destructive-subtle);
+  --color-signal: var(--signal);
 
   --font-sans: var(--font-sans);
   --font-serif: var(--font-serif);

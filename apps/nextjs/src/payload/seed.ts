@@ -330,7 +330,7 @@ export async function seedCmsContent(
                   {
                     question: "Can I make it look like my brand?",
                     answer:
-                      "Completely. Set your app name, logo, favicon, colors and fonts from the admin dashboard and they apply across web and mobile instantly. Light and dark modes are included, and you can preview changes before publishing.",
+                      "Yes. Set your app name, logo, favicon, colors and fonts from the admin dashboard. They apply across your website when you publish, and you can save a draft to check them first. Light and dark modes are included.",
                   },
                   {
                     question: "What if I need a feature that isn't included?",
@@ -340,12 +340,12 @@ export async function seedCmsContent(
                   {
                     question: "What happens when I outgrow building it myself?",
                     answer:
-                      "Nothing breaks. It's built on the same production stack used to launch 100+ apps, so it scales with you — and because you own the code, you can bring on a developer or a done-for-you team to take over the exact same codebase, with no rewrite.",
+                      "Nothing breaks. It runs on production services that grow with you, and because you own the code, a developer or a team can take over the same codebase with no rewrite.",
                   },
                   {
-                    question: "Is there a free version of the kit?",
+                    question: "Is the kit free?",
                     answer:
-                      "The starter kit is open and yours to clone. Have a look at the Features page for the full tour, then create an account to get started.",
+                      "Yes. Dream Starter Kit is free forever and open source. The Features page has the full tour; create an account to try it.",
                   },
                 ],
               },
@@ -489,7 +489,7 @@ export async function seedCmsContent(
                 title: "Payments & subscriptions",
                 items: [
                   {
-                    title: "Checkout that just works",
+                    title: "Hosted checkout",
                     description:
                       "Sell subscriptions or one-time purchases through a secure, hosted payment page.",
                     tooltip:
@@ -669,7 +669,7 @@ export async function seedCmsContent(
                   {
                     title: "Your colors & fonts",
                     description:
-                      "Pick your brand colors and fonts; they apply across web and mobile instantly.",
+                      "Pick your brand colors and fonts in the admin; they apply across your website when you publish.",
                     tooltip:
                       "Editable shadcn theme (OKLCH tokens) plus curated next/font sets, versioned draft → publish.",
                     icon: "Palette",
@@ -923,7 +923,7 @@ export async function seedCmsContent(
             body: richText([
               "This is premium content. Signed-out and free visitors see the first lines blurred behind the paywall dock; subscribers (an active row in public.ext_billing_subscriptions) see the full post.",
               "Use it to test the paywall: open it as a logged-out visitor, pay with Stripe's 4242 test card, watch the confetti, then confirm the emailed link to convert your anonymous checkout into a permanent account — and optionally accept the 1-click annual upgrade.",
-              "Everything below this point is the gated payload you are paying to unlock. Swap this copy for your real members-only material.",
+              "Everything below this point is the members-only part of the post. Swap this copy for your real members-only material.",
             ]),
             author: authorId,
             publishedAt: "2026-01-03T00:00:00.000Z",

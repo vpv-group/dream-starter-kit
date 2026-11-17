@@ -29,7 +29,7 @@ export default function Stats({ items = false, className }: StatsProps) {
                   </div>
                 )}
                 <div className="flex items-baseline gap-2">
-                  <div className="from-foreground to-foreground dark:to-brand bg-linear-to-r bg-clip-text text-4xl font-medium text-transparent drop-shadow-[2px_1px_24px_var(--brand-foreground)] transition-all duration-300 sm:text-5xl md:text-6xl">
+                  <div className="text-foreground text-4xl font-medium tabular-nums sm:text-5xl md:text-6xl">
                     {item.value}
                   </div>
                   {item.suffix && (

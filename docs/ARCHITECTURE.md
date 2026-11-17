@@ -199,7 +199,7 @@ separate Stripe endpoint with `STRIPE_WEBHOOK_SECRET`) keeps mirroring the
 product/price catalog and subscription status into the RLS-governed `public.*`
 tables for app clients. So: **Payload → Stripe** via hooks; **Stripe → CMS
 `subscriptions`** via the Payload webhook; **Stripe → `public.*`** via the edge
-function. Defaults: Dream Monthly ($9.99/mo), Annual ($99.99/yr, 7-day trial)
+function. Defaults: Example Monthly ($9.99/mo), Annual ($99.99/yr, 7-day trial)
 and Lifetime ($399 one-time).
 
 Subscriptions are sold on the **web** with Stripe Checkout (plan-driven, with

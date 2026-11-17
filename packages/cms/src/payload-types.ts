@@ -5252,7 +5252,7 @@ export interface ThemeSetting {
   /**
    * Serif font (--font-serif)
    */
-  fontSerif?: ("merriweather" | "lora" | "system") | null;
+  fontSerif?: ("instrument-serif" | "merriweather" | "lora" | "system") | null;
   /**
    * Monospace font (--font-mono)
    */

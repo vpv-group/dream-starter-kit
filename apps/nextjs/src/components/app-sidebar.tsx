@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { IconInnerShadowTop } from "@tabler/icons-react";
 
 import { useSession } from "@acme/api";
 
@@ -70,7 +69,14 @@ export function AppSidebar({
                   </>
                 ) : (
                   <>
-                    <IconInnerShadowTop className="size-5!" />
+                    {/* Brand mark from the favicon set (auto light/dark). */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/favicon.svg"
+                      alt=""
+                      aria-hidden
+                      className="size-5"
+                    />
                     <span className="text-base font-semibold">
                       {branding.appName}
                     </span>

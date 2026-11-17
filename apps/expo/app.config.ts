@@ -7,7 +7,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: process.env.EXPO_PUBLIC_AUTH_SCHEME ?? "dreamstarter",
   version: "0.1.0",
   orientation: "portrait",
-  icon: "./assets/icon-light.png",
+  // Dream app icon: a white D with an emerald check on an emerald tile. Full
+  // bleed, because iOS and Android apply their own corner masks.
+  icon: "./assets/icon.png",
   userInterfaceStyle: "automatic",
   updates: {
     fallbackToCacheTimeout: 0,
@@ -16,16 +18,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     bundleIdentifier: "com.example.dreamstarter",
     supportsTablet: true,
-    icon: {
-      light: "./assets/icon-light.png",
-      dark: "./assets/icon-dark.png",
-    },
   },
   android: {
     package: "com.example.dreamstarter",
     adaptiveIcon: {
-      foregroundImage: "./assets/icon-light.png",
-      backgroundColor: "#1F104A",
+      // White mark inside the launcher safe zone, on Dream emerald.
+      foregroundImage: "./assets/adaptive-icon.png",
+      backgroundColor: "#009B53",
     },
   },
   extra: {
@@ -47,11 +46,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-splash-screen",
       {
-        backgroundColor: "#E4E4E7",
-        image: "./assets/icon-light.png",
+        backgroundColor: "#FFFFFF",
+        image: "./assets/splash-icon.png",
         dark: {
-          backgroundColor: "#18181B",
-          image: "./assets/icon-dark.png",
+          backgroundColor: "#090C14",
+          image: "./assets/splash-icon.png",
         },
       },
     ],

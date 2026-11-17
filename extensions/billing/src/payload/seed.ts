@@ -22,7 +22,7 @@ export const seed: ExtSeedStep[] = [
         collection: "ext-billing-plans",
         context: { skipStripeSync },
         data: {
-          name: "Dream Monthly Plan",
+          name: "Example Monthly Plan",
           slug: "dream-monthly",
           description: "Full access, billed monthly.",
           pricingType: "recurring",
@@ -41,7 +41,7 @@ export const seed: ExtSeedStep[] = [
         collection: "ext-billing-plans",
         context: { skipStripeSync },
         data: {
-          name: "Dream Annual Plan",
+          name: "Example Annual Plan",
           slug: "dream-annual",
           description:
             "Full access, billed yearly. Includes a 7-day free trial.",
@@ -64,7 +64,7 @@ export const seed: ExtSeedStep[] = [
         collection: "ext-billing-plans",
         context: { skipStripeSync },
         data: {
-          name: "Dream Lifetime Plan",
+          name: "Example Lifetime Plan",
           slug: "dream-lifetime",
           description: "One payment, lifetime access.",
           pricingType: "one_time",
@@ -84,7 +84,7 @@ export const seed: ExtSeedStep[] = [
         collection: "ext-billing-plans",
         context: { skipStripeSync },
         data: {
-          name: "Dream Pro (intro demo)",
+          name: "Example intro offer",
           slug: "dream-pro-intro-demo",
           description: "$1.99 for the first month, then $39.99/month.",
           pricingType: "recurring",

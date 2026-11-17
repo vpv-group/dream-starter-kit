@@ -22,12 +22,12 @@ export default async function HomePage() {
       ) : (
         // Fallback when the CMS has no `home` page (e.g. a placeholder-env build).
         <main className="container mx-auto flex max-w-3xl flex-col items-center gap-6 px-4 py-24 text-center">
-          <h1 className="text-5xl font-extrabold tracking-tight sm:text-6xl">
-            <span className="text-primary">{APP_NAME}</span> Starter Kit
+          <h1 className="text-4xl font-semibold tracking-tight sm:text-6xl">
+            {APP_NAME} Starter Kit
           </h1>
           <p className="text-muted-foreground max-w-xl text-lg">
-            Universal starter kit — Next.js (web) + Expo (iOS/Android) sharing
-            one Supabase backend.
+            Free forever. Open source. Your website and iPhone and Android apps,
+            on one Supabase backend.
           </p>
           <div className="flex gap-3">
             <Link href="/sign-up" className={launchButtonVariants()}>
