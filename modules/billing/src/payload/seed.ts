@@ -22,7 +22,7 @@ export const seed: ModSeedStep[] = [
         collection: "mod-billing-plans",
         context: { skipStripeSync },
         data: {
-          name: "Dream Monthly Plan",
+          name: "Example Monthly Plan",
           slug: "dream-monthly",
           description: "Full access, billed monthly.",
           pricingType: "recurring",
@@ -41,7 +41,7 @@ export const seed: ModSeedStep[] = [
         collection: "mod-billing-plans",
         context: { skipStripeSync },
         data: {
-          name: "Dream Annual Plan",
+          name: "Example Annual Plan",
           slug: "dream-annual",
           description:
             "Full access, billed yearly. Includes a 7-day free trial.",
@@ -64,7 +64,7 @@ export const seed: ModSeedStep[] = [
         collection: "mod-billing-plans",
         context: { skipStripeSync },
         data: {
-          name: "Dream Lifetime Plan",
+          name: "Example Lifetime Plan",
           slug: "dream-lifetime",
           description: "One payment, lifetime access.",
           pricingType: "one_time",
@@ -78,22 +78,22 @@ export const seed: ModSeedStep[] = [
           ],
         },
       });
-      // Inactive demo of an introductory offer ($1.99 first month → $39.99/mo)
+      // Inactive demo of an introductory offer ($1 first month → $19/mo)
       // so the capability is visible out of the box without affecting pricing.
       await payload.create({
         collection: "mod-billing-plans",
         context: { skipStripeSync },
         data: {
-          name: "Dream Pro (intro demo)",
+          name: "Example intro offer",
           slug: "dream-pro-intro-demo",
-          description: "$1.99 for the first month, then $39.99/month.",
+          description: "$1 for the first month, then $19/month.",
           pricingType: "recurring",
           interval: "month",
-          unitAmount: 3999,
+          unitAmount: 1900,
           currency: "usd",
           active: false,
           displayOrder: 99,
-          introOffer: { enabled: true, introAmount: 199 },
+          introOffer: { enabled: true, introAmount: 100 },
           features: [{ text: "Example intro pricing" }],
         },
       });

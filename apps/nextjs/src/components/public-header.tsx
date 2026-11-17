@@ -2,6 +2,10 @@ import type { NavbarActionProps } from "~/components/launch-ui/sections/navbar";
 import type { NavItem } from "~/components/launch-ui/ui/navigation";
 import Navbar from "~/components/launch-ui/sections/navbar";
 import { PublicHeaderUser } from "~/components/public-header-user";
+import {
+  StarterKitLogo,
+  usesStarterKitLogo,
+} from "~/components/starter-kit-logo";
 import { getBranding, getSiteSettings } from "~/lib/payload";
 import { SITE_HEADER, SITE_HEADER_ACTIONS } from "~/lib/site-chrome";
 
@@ -71,6 +75,7 @@ export async function PublicHeader() {
     ...(item.submenu ?? []).map((sub) => ({ text: sub.title, href: sub.href })),
   ]);
 
+  const kitLogo = usesStarterKitLogo(branding);
   const logo = branding.logoLightUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -78,6 +83,10 @@ export async function PublicHeader() {
       alt={branding.appName}
       className="h-6 w-auto"
     />
+  ) : kitLogo ? (
+    // The drawn Dream Starter Kit lockup (icon only on phones); the app name
+    // stays for screen readers.
+    <StarterKitLogo compact />
   ) : (
     // Brand mark from the favicon set (auto light/dark via favicon.svg's own
     // prefers-color-scheme styles). Decorative — the adjacent app name labels it.
@@ -89,6 +98,7 @@ export async function PublicHeader() {
     <Navbar
       logo={logo}
       name={branding.appName}
+      showName={!kitLogo}
       homeUrl={branding.brandLink.url}
       homeNewTab={branding.brandLink.newTab}
       items={items}

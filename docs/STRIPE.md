@@ -33,6 +33,22 @@ So the whole job is really just three things:
 
 Everything is **test mode** first (no real money). You flip to live mode at the end.
 
+### App Store and Google Play payment rules
+
+The kit sells on the **web** with Stripe, and the iPhone and Android apps unlock paid
+content by reading what was bought there. They never take a payment themselves (no
+In-App Purchase, no Play Billing). That keeps one billing system, but it can affect
+store review:
+
+- Apple's App Review Guidelines (section 3.1) generally require **In-App Purchase**
+  for digital content or features unlocked inside an iOS app. The rules for linking
+  out to a web checkout differ by country and change over time.
+- Google Play has a similar payments policy for digital goods.
+
+If your mobile app unlocks paid content, read the current Apple and Google guidelines
+for the countries you publish in before you submit. An In-App Purchase module is not
+part of the kit yet.
+
 ### What each environment variable is for
 
 | Variable                                       | Secrecy        | What it is                                                                                                                                              | Where it's used                        |
@@ -305,7 +321,7 @@ Do these in order. Test mode throughout.
    endpoints in production.
 3. **Run the app**, sign up (the **first** signup becomes the founder/admin), and let
    it route you through `/cms-setup`, which **seeds the CMS** (creates the default
-   **Dream Monthly / Annual / Lifetime** plans + a welcome coupon).
+   **Example Monthly / Annual / Lifetime** plans + a welcome coupon).
 4. **Push the plans to Stripe:** open `/admin` → **Commerce → Plans**, open a plan and
    click **Save**. The `afterChange` hook creates the Stripe product + price. (Seeded
    plans stay `unsynced` until first saved — this is the step that syncs them.) Check

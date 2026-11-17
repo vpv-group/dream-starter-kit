@@ -21,7 +21,7 @@ Your fork has GitHub's built-in "upstream" relationship, but the CLI merge flow
 needs a **named git remote** pointing at the kit:
 
 ```bash
-git remote add upstream https://github.com/vytenapps/dream-starter-kit.git
+git remote add upstream https://github.com/vpv-group/dream-starter-kit.git
 git fetch upstream
 ```
 

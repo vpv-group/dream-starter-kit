@@ -1,6 +1,6 @@
 # @acme/mod-chat-adapter-sendblue
 
-Answers over iMessage/SMS with the AI Chat bot brain (`@acme/mod-chat`). A
+The Sendblue connector: answers over iMessage/SMS with the AI Chat bot brain (`@acme/mod-chat`). A
 secret-verified webhook normalizes inbound messages (transcribing voice memos
 via the chat module's Whisper integration when `OPENAI_API_KEY` is set),
 runs them through `handleChannelMessage()` (which applies STOP/HELP compliance

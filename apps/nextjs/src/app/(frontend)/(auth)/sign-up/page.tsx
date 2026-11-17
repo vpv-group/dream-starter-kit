@@ -2,13 +2,13 @@ import { Suspense } from "react";
 import Link from "next/link";
 
 import { SignupForm } from "~/components/signup-form";
-import { getAuthSettings } from "~/lib/payload";
-
-// Brand name shown on the auth screens (kept as the template's "Acme Inc").
-const APP_NAME = "Acme Inc";
+import { getAuthSettings, getBranding } from "~/lib/payload";
 
 export default async function SignUpPage() {
-  const settings = await getAuthSettings();
+  const [settings, { appName }] = await Promise.all([
+    getAuthSettings(),
+    getBranding(),
+  ]);
 
   // Invite-only: public sign-up is gated off. (For hard server enforcement also
   // set enable_signup = false in Supabase — see docs/AUTH.md.)
@@ -29,7 +29,7 @@ export default async function SignUpPage() {
 
   return (
     <Suspense>
-      <SignupForm settings={settings} appName={APP_NAME} />
+      <SignupForm settings={settings} appName={appName} />
     </Suspense>
   );
 }

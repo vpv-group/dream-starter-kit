@@ -189,7 +189,7 @@ export function buildPlanCopy(plan?: PlanLite | null): PaywallCopy {
       ? plan.trialDays
       : 0;
 
-  // --- Intro-offer plan (e.g. $1.99 first month, then $39.99/mo) ---
+  // --- Intro-offer plan (e.g. $1 first month, then $19/mo) ---
   const introAmount = introAmountOf(plan);
   if (plan && introAmount != null) {
     const introPrice = formatPrice(introAmount, currency);

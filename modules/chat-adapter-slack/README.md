@@ -1,6 +1,6 @@
 # @acme/mod-chat-adapter-slack
 
-Answers in Slack with the AI Chat bot brain (`@acme/mod-chat`). A
+The Slack connector: answers in Slack with the AI Chat bot brain (`@acme/mod-chat`). A
 signature-verified Events-API webhook normalizes mentions + DMs, runs them
 through `handleChannelMessage()` (universal prompt + channel sub-prompts + skill
 routing), and replies via `chat.postMessage`.

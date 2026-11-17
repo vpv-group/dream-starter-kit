@@ -49,19 +49,19 @@ function databaseNotReadyResponse(): NextResponse {
     <style>
       body { font: 16px/1.6 system-ui, sans-serif; margin: 0; min-height: 100vh;
              display: flex; align-items: center; justify-content: center;
-             background: #fafafa; color: #171717; }
+             background: #ffffff; color: #101524; }
       main { max-width: 26rem; padding: 2rem; text-align: center; }
       h1 { font-size: 1.25rem; margin: 0 0 .5rem; }
-      p { margin: .5rem 0; color: #525252; }
+      p { margin: .5rem 0; color: #414856; }
       .spin { width: 1.5rem; height: 1.5rem; margin: 0 auto 1rem;
-              border: 2px solid #d4d4d4; border-top-color: #171717;
+              border: 2px solid #e3e6ec; border-top-color: #101524;
               border-radius: 50%; animation: s 1s linear infinite; }
       @keyframes s { to { transform: rotate(360deg); } }
       a { color: inherit; }
       @media (prefers-color-scheme: dark) {
-        body { background: #0a0a0a; color: #fafafa; }
-        p { color: #a3a3a3; }
-        .spin { border-color: #404040; border-top-color: #fafafa; }
+        body { background: #090c14; color: #f2f3f7; }
+        p { color: #c6cbd3; }
+        .spin { border-color: #292e38; border-top-color: #f2f3f7; }
       }
     </style>
   </head>

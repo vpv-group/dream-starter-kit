@@ -25,7 +25,7 @@ export default function Logos({
       <div className="max-w-container mx-auto flex flex-col items-center gap-8 text-center">
         <div className="flex flex-col items-center gap-6">
           {badgeText && (
-            <Badge variant="outline" className="border-brand/30 text-brand">
+            <Badge variant="outline" className="border-brand/30 text-primary">
               {badgeText}
             </Badge>
           )}

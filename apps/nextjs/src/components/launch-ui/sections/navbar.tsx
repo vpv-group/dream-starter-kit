@@ -53,6 +53,11 @@ export interface NavbarProps {
    */
   actionsSlot?: ReactNode;
   showNavigation?: boolean;
+  /**
+   * Render `name` beside the logo. Turn off when `logo` already carries the
+   * drawn wordmark (the name is then kept for screen readers only).
+   */
+  showName?: boolean;
   className?: string;
 }
 
@@ -66,6 +71,7 @@ export default function Navbar({
   actions = [],
   actionsSlot,
   showNavigation = true,
+  showName = true,
   className,
 }: NavbarProps) {
   return (
@@ -84,7 +90,12 @@ export default function Navbar({
               {logo}
               {/* Wordmark pinned to Geist so the brand name stays consistent
                   regardless of the theme's selected body font. */}
-              <span className="font-[family-name:var(--font-geist-sans)] whitespace-nowrap">
+              <span
+                className={cn(
+                  "font-[family-name:var(--font-geist-sans)] whitespace-nowrap",
+                  !showName && "sr-only",
+                )}
+              >
                 {name}
               </span>
             </a>
@@ -139,7 +150,7 @@ export default function Navbar({
                     href={homeUrl}
                     className="flex items-center gap-2 text-xl font-bold"
                   >
-                    <span>{name}</span>
+                    {showName ? <span>{name}</span> : logo}
                   </a>
                   {mobileLinks.map((link) => (
                     <a

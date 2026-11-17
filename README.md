@@ -1,4 +1,13 @@
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="apps/nextjs/public/brand/dream-starter-kit-logo-reversed.svg">
+    <img src="apps/nextjs/public/brand/dream-starter-kit-logo-color.svg" alt="Dream Starter Kit" height="40">
+  </picture>
+</p>
+
 # Dream Starter Kit
+
+**Free forever. Open source.**
 
 A clone-and-ship starter: one **Turborepo** monorepo shipping a **Next.js web app**
 and an **Expo (iOS + Android) app** that share **one Supabase backend**
@@ -6,7 +15,7 @@ and an **Expo (iOS + Android) app** that share **one Supabase backend**
 a Vercel-AI-Gateway assistant, Expo push notifications, and a **Payload CMS** content
 backend are wired in. Clone it, rename a few things, and extend it into a real product.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvytenapps%2Fdream-starter-kit&root-directory=apps%2Fnextjs&project-name=dream-starter-kit&repository-name=dream-starter-kit)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvpv-group%2Fdream-starter-kit&root-directory=apps%2Fnextjs&project-name=dream-starter-kit&repository-name=dream-starter-kit)
 
 > Deploys the **web app** to Vercel with no env required — it builds with placeholder
 > Supabase config, so the deploy **succeeds**. To make it actually work, connect the
@@ -18,6 +27,8 @@ backend are wired in. Clone it, rename a few things, and extend it into a real p
 > **Not an engineer?** You can still use this. Setup is copy-paste (below), and the
 > kit is structured so an AI coding assistant like [Claude Code](https://claude.com/claude-code)
 > can extend it feature-by-feature — see [`CLAUDE.md`](./CLAUDE.md) for the recipe it follows.
+> Want it built for you instead? [Future.dev](https://future.dev) builds custom software
+> and apps.
 
 ### What you get out of the box
 
@@ -33,7 +44,8 @@ backend are wired in. Clone it, rename a few things, and extend it into a real p
   outside RLS (see [Architecture → Content](./docs/ARCHITECTURE.md#410-content--payload-cms)).
 - **Billing** — Stripe Checkout + customer portal + a signature-verified, idempotent
   webhook. A single **Pro** plan (Monthly **$9.99** / Yearly **$99**). Mobile unlocks
-  premium by reading the `subscriptions` table (no IAP).
+  premium by reading the `subscriptions` table (no IAP — see
+  [App Store and Google Play payment rules](./docs/STRIPE.md#app-store-and-google-play-payment-rules)).
 - **AI assistant** — Vercel AI SDK v6 → Claude through the AI Gateway, behind an
   authed, rate-limited, token-capped server route; conversations persist.
 - **Engagement** — in-app notifications, reminders, and Expo push (with a scheduled
@@ -51,6 +63,7 @@ backend are wired in. Clone it, rename a few things, and extend it into a real p
 - **[`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)** — stack, structure, security model, and dependency policy.
 - **[`docs/ERD.md`](./docs/ERD.md)** — data model + the canonical RLS pattern every table follows.
 - **[`docs/CMS.md`](./docs/CMS.md)** — the Payload CMS reference: every collection, global, field & access rule.
+- **[`docs/BRAND.md`](./docs/BRAND.md)** — the Dream brand the kit ships with: logo, colour, type, voice, and how to swap in your own.
 - **[`docs/MCP.md`](./docs/MCP.md)** — the remote MCP server: enabling it, connecting clients, OAuth, tools & security.
 - **[`docs/UPDATING.md`](./docs/UPDATING.md)** — how to pull upstream kit updates into your fork without losing your changes.
 - **[`CLAUDE.md`](./CLAUDE.md)** — working agreement, the golden security rules, and the "how to add a feature" recipe.
@@ -262,9 +275,10 @@ hook → web & native UI → tests).
 
 ## Make it yours
 
-This repo ships **neutral placeholders** so it stays a clean template. Forking it
-for a real app is mostly swapping identity + secrets — and almost all the secrets
-are env vars, so the source-level edits are small.
+This repo ships in the **Dream** brand, with placeholder identifiers (bundle id,
+scheme, package scope) so it stays a clean template. Forking it for a real app is
+mostly swapping identity + secrets — and almost all the secrets are env vars, so the
+source-level edits are small.
 
 **Identity (source):**
 
@@ -272,6 +286,10 @@ are env vars, so the source-level edits are small.
       titles/OG in `apps/nextjs/src/app/(frontend)/layout.tsx` and
       `(frontend)/opengraph-image.tsx`. (There's no top-level `app/layout.tsx` — the app
       lives in the `(frontend)` route group and Payload's admin in `(payload)`.)
+- [ ] **Logo, icons and colours** — the kit ships with the Dream logo, icons and
+      design tokens. Swap the files listed in [`docs/BRAND.md`](./docs/BRAND.md#use-your-own-brand)
+      (favicons, `public/brand/`, the Expo icons) and set your colours, fonts, name and
+      logo in `/admin` → Theme, or change the defaults in `tooling/tailwind/theme.css`.
 - [ ] **Bundle id** — `apps/expo/app.config.ts` (`ios.bundleIdentifier` + `android.package`),
       shipped as the placeholder `com.example.dreamstarter`.
 - [ ] **Deep-link scheme** — set `EXPO_PUBLIC_AUTH_SCHEME` (default `dreamstarter` in
@@ -515,6 +533,18 @@ automatically on Vercel). Add a Stripe webhook endpoint pointing at the deployed
 
 ### Mobile (EAS)
 
+Before your first store submission you need two developer accounts:
+
+- an **Apple Developer Program** membership, for the App Store and TestFlight;
+- a **Google Play Console** developer account, for Google Play.
+
+To publish under a company name rather than your own, both ask for the company's
+**D-U-N-S number**, and the company's legal name has to match on every form. The
+account holder verifies their identity with Apple and Google and pays the fees to
+them directly. If your app sells paid content, read
+[App Store and Google Play payment rules](./docs/STRIPE.md#app-store-and-google-play-payment-rules)
+before you submit.
+
 ```bash
 eas build --profile development   # dev client (push, debugging)
 eas build --profile preview       # internal distribution / simulator
@@ -660,7 +690,7 @@ tab) or email the maintainers, and allow time for a fix before public disclosure
 
 ## License
 
-**Apache License 2.0** — see [`LICENSE`](./LICENSE). Copyright © 2026 Vyten LLC.
+**Apache License 2.0** — see [`LICENSE`](./LICENSE). Copyright © 2026 VPV Group, LLC.
 
 This repository incorporates third-party open-source software; required attributions
 (the **MIT** create-t3-turbo base with its pinned upstream commit SHA, and the

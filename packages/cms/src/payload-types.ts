@@ -1067,12 +1067,12 @@ export interface ModBillingPlan {
    */
   trialDays?: number | null;
   /**
-   * Discount the first billing period only (e.g. $1.99 first month, then the standard price recurs). Implemented as a Stripe coupon with duration=once, applied automatically at checkout.
+   * Discount the first billing period only (e.g. $1 for the first month, then the standard price recurs). Implemented as a Stripe coupon with duration=once, applied automatically at checkout.
    */
   introOffer?: {
     enabled?: boolean | null;
     /**
-     * Intro-period price, e.g. 199 = $1.99.
+     * Intro-period price, e.g. 100 = $1.00.
      */
     introAmount?: number | null;
     introInterval?: ("month" | "year") | null;
@@ -5252,7 +5252,7 @@ export interface ThemeSetting {
   /**
    * Serif font (--font-serif)
    */
-  fontSerif?: ("merriweather" | "lora" | "system") | null;
+  fontSerif?: ("instrument-serif" | "merriweather" | "lora" | "system") | null;
   /**
    * Monospace font (--font-mono)
    */
@@ -5383,7 +5383,7 @@ export interface ProfileField {
   createdAt?: string | null;
 }
 /**
- * Choose the default sign-in method and which methods the auth screens offer, plus sign-up access rules and copy. This controls the UI and client logic only — each method must also be enabled in Supabase. Setup guide: https://github.com/vytenapps/dream-starter-kit/blob/main/docs/AUTH.md
+ * Choose the default sign-in method and which methods the auth screens offer, plus sign-up access rules and copy. This controls the UI and client logic only — each method must also be enabled in Supabase. Setup guide: https://github.com/vpv-group/dream-starter-kit/blob/main/docs/AUTH.md
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "authentication-settings".
@@ -5402,7 +5402,7 @@ export interface AuthenticationSetting {
       }[]
     | null;
   /**
-   * When off, public sign-up is hidden and the sign-up route is blocked (invite-only). For hard server enforcement also set enable_signup = false in Supabase — see https://github.com/vytenapps/dream-starter-kit/blob/main/docs/AUTH.md#invite-only.
+   * When off, public sign-up is hidden and the sign-up route is blocked (invite-only). For hard server enforcement also set enable_signup = false in Supabase — see https://github.com/vpv-group/dream-starter-kit/blob/main/docs/AUTH.md#invite-only.
    */
   allowSignups?: boolean | null;
   /**
@@ -5439,11 +5439,11 @@ export interface AuthenticationSetting {
    */
   postSignupRedirect?: string | null;
   /**
-   * Minimum password length enforced in the UI. Must be ≥ Supabase's server-side minimum_password_length to be enforced end-to-end — see https://github.com/vytenapps/dream-starter-kit/blob/main/docs/AUTH.md#passwords.
+   * Minimum password length enforced in the UI. Must be ≥ Supabase's server-side minimum_password_length to be enforced end-to-end — see https://github.com/vpv-group/dream-starter-kit/blob/main/docs/AUTH.md#passwords.
    */
   minPasswordLength?: number | null;
   /**
-   * Require a Turnstile token on auth actions. Needs the site key configured and Supabase [auth.captcha] enabled — see https://github.com/vytenapps/dream-starter-kit/blob/main/docs/AUTH.md#captcha and docs/TURNSTILE.md.
+   * Require a Turnstile token on auth actions. Needs the site key configured and Supabase [auth.captcha] enabled — see https://github.com/vpv-group/dream-starter-kit/blob/main/docs/AUTH.md#captcha and docs/TURNSTILE.md.
    */
   requireCaptcha?: boolean | null;
   /**

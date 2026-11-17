@@ -60,14 +60,9 @@ export const SITE_HEADER: ChromeNavItem[] = [
     url: "/posts",
     submenu: [
       {
-        label: "10,000+ app ideas",
+        label: "App ideas",
         url: "https://meetdream.com/",
-        description: "Vetted, scored startup ideas on Meet Dream.",
-      },
-      {
-        label: "Future.dev",
-        url: "https://future.dev/",
-        description: "Done-for-you software development.",
+        description: "The idea library on Meet Dream.",
       },
       {
         label: "Posts",
@@ -108,7 +103,8 @@ export const SITE_FOOTER_COLUMNS: ChromeFooterColumn[] = [
   {
     title: "Resources",
     links: [
-      { label: "10,000+ app ideas", url: "https://meetdream.com/" },
+      { label: "App ideas", url: "https://meetdream.com/" },
+      // Dream mentions Future.dev once per screen at most: here, not the header.
       { label: "Future.dev", url: "https://future.dev/" },
       { label: "Docs", url: "/docs" },
       { label: "Posts", url: "/posts" },
@@ -133,5 +129,5 @@ export const SITE_FOOTER_POLICIES: ChromeFooterLink[] = [
 
 export const SITE_SOCIAL = {
   twitter: "dreamstarterkit",
-  github: "vytenapps",
+  github: "vpv-group",
 };

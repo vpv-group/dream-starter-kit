@@ -12,14 +12,16 @@ const badgeVariants = cva(
       variant: {
         default:
           "bg-primary text-primary-foreground border-transparent dark:border-transparent dark:shadow-sm",
+        // Small text never sits on emerald (--brand is 3.6:1 with white), so
+        // the brand badges use the action green and its tint.
         brand:
-          "bg-brand text-primary-foreground border-transparent dark:border-transparent dark:shadow-sm",
+          "bg-primary text-primary-foreground border-transparent dark:border-transparent dark:shadow-sm",
         "brand-secondary":
-          "bg-brand-foreground/20 text-brand border-transparent dark:border-transparent",
+          "bg-accent text-primary border-transparent dark:border-transparent",
         secondary:
           "bg-secondary text-secondary-foreground border-transparent dark:border-transparent dark:shadow-sm",
         destructive:
-          "bg-destructive/30 text-destructive-foreground border-transparent dark:border-transparent dark:shadow-sm",
+          "bg-destructive-subtle text-destructive border-transparent dark:border-transparent dark:shadow-sm",
         outline: "text-foreground",
       },
       size: {

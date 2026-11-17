@@ -10,10 +10,11 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // Flat action green: a faded gradient drops white text below 4.5:1.
         default:
-          "text-primary-foreground dark:hover:from-primary/80 hover:from-primary/70 dark:hover:to-primary/70 hover:to-primary/90 from-primary/60 to-primary/100 dark:from-primary/100 dark:to-primary/70 border-t-primary bg-linear-to-b shadow-sm",
+          "bg-primary text-primary-foreground hover:bg-primary-hover shadow-xs",
         destructive:
-          "bg-destructive/30 text-destructive-foreground hover:bg-destructive/90 shadow-xs",
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-xs",
         outline:
           "border-input bg-background hover:bg-accent hover:text-accent-foreground border shadow-xs",
         glow: "glass-4 hover:glass-5 shadow-md",

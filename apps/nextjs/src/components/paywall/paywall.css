@@ -1,6 +1,7 @@
 /* Paywall modal + on-page dock styles. A self-contained dark surface (the
- * checkout sheet is intentionally dark regardless of the site theme); only the
- * accent + primary-foreground + background tokens come from the shadcn theme.
+ * checkout sheet is intentionally dark regardless of the site theme). It sits on
+ * Dream's ink band, so it uses the ink tokens (--ink, --primary-on-ink) from
+ * theme.css, plus --background for the fade into the page.
  * Ported/generalized from the meet-dream paywall (the dr-/co- prefixes are
  * distinctive enough to live in the global scope). */
 
@@ -17,7 +18,7 @@
 .dr-scrim.co-full {
   align-items: stretch;
   justify-content: stretch;
-  background: #0c0e16;
+  background: var(--ink);
 }
 @keyframes paywall-fade {
   from {
@@ -31,7 +32,7 @@
   position: relative;
   width: 100%;
   max-width: 560px;
-  background: #0c0e16;
+  background: var(--ink);
   color: #fff;
   border-radius: 22px 22px 0 0;
   padding: 30px 34px 26px;
@@ -52,7 +53,7 @@
   position: relative;
   width: 100%;
   min-height: 100vh;
-  background: #0c0e16;
+  background: var(--ink);
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -143,7 +144,7 @@
   justify-content: center;
   gap: 10px;
   background: #fff;
-  color: #0c0e16;
+  color: var(--ink);
   font-weight: 600;
   font-size: 16px;
   border-radius: 13px;
@@ -287,15 +288,15 @@
   height: 18px;
   margin-top: 1px;
   flex-shrink: 0;
-  accent-color: var(--accent);
+  accent-color: var(--primary-on-ink);
 }
 /* When the user tries to pay without agreeing, the consent text turns red. */
 .dr-consent-error,
 .dr-consent-error a {
-  color: #f87171;
+  color: oklch(0.7 0.18 22);
 }
 .dr-consent-error input {
-  outline: 2px solid #f87171;
+  outline: 2px solid oklch(0.7 0.18 22);
   outline-offset: 1px;
   border-radius: 3px;
 }
@@ -325,8 +326,8 @@
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: var(--accent);
-  color: var(--primary-foreground);
+  background: var(--primary-on-ink);
+  color: var(--ink);
   font-size: 30px;
   display: flex;
   align-items: center;
@@ -363,7 +364,7 @@
   display: inline-block;
   font-size: 13px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--primary-on-ink);
   margin: 0 0 16px;
 }
 .dr-upsell-list {
@@ -386,7 +387,7 @@
   position: absolute;
   left: 0;
   top: 0;
-  color: var(--accent);
+  color: var(--primary-on-ink);
   font-weight: 700;
 }
 
@@ -397,7 +398,7 @@
   right: 0;
   bottom: 0;
   z-index: 90;
-  background: #0c0e16;
+  background: var(--ink);
   color: #fff;
   padding: 24px 24px 22px;
   box-shadow: 0 -16px 50px -16px rgba(0, 0, 0, 0.5);

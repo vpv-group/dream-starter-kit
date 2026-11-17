@@ -71,7 +71,10 @@ clarity beat cleverness.
    - everything else = server-only.
      The app must fail loudly if a required var is missing.
 4. **Stripe is web-only.** No StoreKit / Play Billing / IAP. Mobile unlocks
-   premium by reading the `subscriptions` table (RLS read-own).
+   premium by reading the `subscriptions` table (RLS read-own). This can matter
+   for App Store and Google Play review; see `docs/STRIPE.md` → App Store and
+   Google Play payment rules. An In-App Purchase module is a team decision, not
+   something to add on your own.
 5. **AI model id is centralized & swappable.** Use `DEFAULT_AI_MODEL` from
    `packages/config`; don't hardcode slugs elsewhere. Resolve available models
    at runtime where practical.
@@ -304,7 +307,7 @@ provider here also requires it enabled in Supabase. The shared shape/helpers liv
 in `@acme/app` (`auth-settings.ts`); the web login-05 UI is `AuthFlow`
 (`components/auth/auth-flow.tsx`), read server-side via `getAuthSettings()` and on
 mobile via `GET /api/auth/config` (`useAuthConfig`). Full guide:
-[docs/AUTH.md](https://github.com/vytenapps/dream-starter-kit/blob/main/docs/AUTH.md).
+[docs/AUTH.md](https://github.com/vpv-group/dream-starter-kit/blob/main/docs/AUTH.md).
 
 ## Payments (Payload ⇄ Stripe via @payloadcms/plugin-stripe)
 
@@ -312,7 +315,7 @@ The billing catalog is **authored in Payload**, not the Stripe dashboard. `Plans
 `Coupons` and the read-only `Subscriptions` mirror live under the **Commerce** admin nav
 group (`apps/nextjs/src/payload/collections/`), and `PricingSettings` (a global) curates
 the public `/pricing` page (which ≤3 plans to feature + a Free tier). The default three
-plans (Dream Monthly/Annual/Lifetime) + a welcome coupon are seeded by `seedCmsContent()`.
+example plans (Monthly/Annual/Lifetime) + a welcome coupon are seeded by `seedCmsContent()`.
 
 - **Payload → Stripe is automatic**: saving a plan/coupon runs an `afterChange` hook
   (`payload/hooks/sync-plan-to-stripe.ts` / `sync-coupon-to-stripe.ts` →
@@ -331,7 +334,7 @@ plans (Dream Monthly/Annual/Lifetime) + a welcome coupon are seeded by `seedCmsC
   immutability/intro coupons). The **edge-function webhook** (separate Stripe endpoint,
   `STRIPE_WEBHOOK_SECRET`) keeps mirroring products/prices/subscriptions into `public.*`
   for RLS clients — unchanged.
-- **Intro offers** ("$1.99 first month, then $39.99") = a coupon auto-applied at checkout
+- **Intro offers** ("$1 first month, then $19") = a coupon auto-applied at checkout
   (`once` for one intro period, `repeating` for several; years × 12 → Stripe
   `duration_in_months`). **Repeating** coupons take N months _or_ N years the same way.
 - **Checkout is plan-driven** (`/api/stripe/checkout` takes a Payload `planId`) and supports
@@ -441,7 +444,9 @@ Media upload fields. Read access is `publishedOrStaff` (anonymous visitors get t
 theme; staff see drafts); update + `readVersions` are staff-only. Pure color math lives in
 `lib/theme/color.ts` (consumed by `serialize.ts`). **Branding** (app name, favicon, sidebar logo)
 is read server-side by `getBranding()` (lib/payload.ts) and surfaced via `BrandingProvider`.
-Serif fonts (Merriweather/Lora) are loaded on `<html>` alongside the sans/mono set.
+Serif fonts (Instrument Serif, the default, plus Merriweather/Lora) are loaded on `<html>` alongside
+the sans/mono set. The default theme is the Dream brand; see `docs/BRAND.md` for its tokens,
+fonts, logo files and how to swap in your own brand.
 
 ## Conventions
 
@@ -467,7 +472,7 @@ upstream", "pull in kit updates", or "merge upstream", run the tested routine
 with the kit, so the cardinal rule is: keep the merge commits, never squash them.
 
 - **Remote.** The named remote is `upstream`
-  (`git remote add upstream https://github.com/vytenapps/dream-starter-kit.git`);
+  (`git remote add upstream https://github.com/vpv-group/dream-starter-kit.git`);
   add it if missing, then `git fetch upstream`.
 - **Detect the starting situation:** `git merge-base <yourmain> upstream/main`.
   Resolves → shared history (GitHub "Fork"), merge normally. Empty/non-zero →

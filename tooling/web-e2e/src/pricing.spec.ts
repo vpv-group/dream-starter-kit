@@ -15,9 +15,9 @@ test.describe("pricing", () => {
     await expect(page.getByRole("heading", { name: /pricing/i })).toBeVisible();
 
     // The three default plans are seeded and featured.
-    await expect(page.getByText(/dream monthly plan/i)).toBeVisible();
-    await expect(page.getByText(/dream annual plan/i)).toBeVisible();
-    await expect(page.getByText(/dream lifetime plan/i)).toBeVisible();
+    await expect(page.getByText(/example monthly plan/i)).toBeVisible();
+    await expect(page.getByText(/example annual plan/i)).toBeVisible();
+    await expect(page.getByText(/example lifetime plan/i)).toBeVisible();
   });
 
   test("the free tier links to sign-up", async ({ page }) => {

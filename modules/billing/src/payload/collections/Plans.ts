@@ -150,7 +150,7 @@ export const Plans: CollectionConfig = {
       label: "Introductory offer",
       admin: {
         description:
-          "Discount the first billing period only (e.g. $1.99 first month, " +
+          "Discount the first billing period only (e.g. $1 for the first month, " +
           "then the standard price recurs). Implemented as a Stripe coupon with " +
           "duration=once, applied automatically at checkout.",
         condition: (data) => data.pricingType === "recurring",
@@ -163,7 +163,7 @@ export const Plans: CollectionConfig = {
           min: 0,
           label: "Intro price (in cents)",
           admin: {
-            description: "Intro-period price, e.g. 199 = $1.99.",
+            description: "Intro-period price, e.g. 100 = $1.00.",
             condition: (_data, sibling) => Boolean(sibling.enabled),
           },
         },

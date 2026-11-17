@@ -1,4 +1,4 @@
-# Chat channels — adding an adapter
+# Chat channels — adding a connector
 
 The chat module exposes a channel framework so the AI bot brain (universal
 prompt + channel sub-prompts + skill routing) can answer on any chat platform,

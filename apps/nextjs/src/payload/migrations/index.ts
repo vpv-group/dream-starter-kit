@@ -20,6 +20,9 @@ import * as migration_20260827_194320_legal_pages from './20260827_194320_legal_
 import * as migration_20260827_194500_move_legal_docs from './20260827_194500_move_legal_docs';
 import * as migration_20261103_222708_payload_3_92_object_key from './20261103_222708_payload_3_92_object_key';
 import * as migration_20261117_200000_rename_extensions_to_modules from './20261117_200000_rename_extensions_to_modules';
+import * as migration_20261117_212656_dream_brand_theme_defaults from './20261117_212656_dream_brand_theme_defaults';
+import * as migration_20261117_212755_dream_brand_serif_default from './20261117_212755_dream_brand_serif_default';
+import * as migration_20261117_222758_sync_snapshot_after_module_rename from './20261117_222758_sync_snapshot_after_module_rename';
 
 export const migrations = [
   {
@@ -130,6 +133,21 @@ export const migrations = [
   {
     up: migration_20261117_200000_rename_extensions_to_modules.up,
     down: migration_20261117_200000_rename_extensions_to_modules.down,
-    name: '20261117_200000_rename_extensions_to_modules'
+    name: '20261117_200000_rename_extensions_to_modules',
+  },
+  {
+    up: migration_20261117_212656_dream_brand_theme_defaults.up,
+    down: migration_20261117_212656_dream_brand_theme_defaults.down,
+    name: '20261117_212656_dream_brand_theme_defaults',
+  },
+  {
+    up: migration_20261117_212755_dream_brand_serif_default.up,
+    down: migration_20261117_212755_dream_brand_serif_default.down,
+    name: '20261117_212755_dream_brand_serif_default',
+  },
+  {
+    up: migration_20261117_222758_sync_snapshot_after_module_rename.up,
+    down: migration_20261117_222758_sync_snapshot_after_module_rename.down,
+    name: '20261117_222758_sync_snapshot_after_module_rename'
   },
 ];
