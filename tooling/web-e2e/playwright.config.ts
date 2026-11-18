@@ -34,8 +34,17 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: /founder\.setup\.ts/,
+      testIgnore: [/founder\.setup\.ts/, /workspace-.*\.spec\.ts/],
       dependencies: ["setup"],
+    },
+    // Workspace (B2B) specs flip the site-wide account model to Teams, which
+    // would reroute every consumer sign-up running in parallel — so they run
+    // after the main suite finishes, and restore Individuals when done.
+    {
+      name: "workspaces",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /workspace-.*\.spec\.ts/,
+      dependencies: ["chromium"],
     },
   ],
   // Playwright starts the web app (reused locally if already running). The CI
