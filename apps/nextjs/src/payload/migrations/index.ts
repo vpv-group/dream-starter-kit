@@ -23,6 +23,7 @@ import * as migration_20261117_200000_rename_extensions_to_modules from './20261
 import * as migration_20261117_212656_dream_brand_theme_defaults from './20261117_212656_dream_brand_theme_defaults';
 import * as migration_20261117_212755_dream_brand_serif_default from './20261117_212755_dream_brand_serif_default';
 import * as migration_20261117_222758_sync_snapshot_after_module_rename from './20261117_222758_sync_snapshot_after_module_rename';
+import * as migration_20261118_231216_workspaces_account_model from './20261118_231216_workspaces_account_model';
 
 export const migrations = [
   {
@@ -148,6 +149,11 @@ export const migrations = [
   {
     up: migration_20261117_222758_sync_snapshot_after_module_rename.up,
     down: migration_20261117_222758_sync_snapshot_after_module_rename.down,
-    name: '20261117_222758_sync_snapshot_after_module_rename'
+    name: '20261117_222758_sync_snapshot_after_module_rename',
+  },
+  {
+    up: migration_20261118_231216_workspaces_account_model.up,
+    down: migration_20261118_231216_workspaces_account_model.down,
+    name: '20261118_231216_workspaces_account_model'
   },
 ];
