@@ -37,17 +37,26 @@ export function SettingUp({
   const [slow, setSlow] = useState(false);
   const started = useRef(false);
 
+  // Cosmetic timers: safe to re-run (React may mount effects twice in dev),
+  // so they live apart from the run-once work below.
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setPercent((p) => (p >= 100 ? p : Math.min(92, p + 7)));
+    }, 120);
+    const slowTimer = setTimeout(() => setSlow(true), MAX_MS);
+    return () => {
+      clearInterval(tick);
+      clearTimeout(slowTimer);
+    };
+  }, []);
+
+  // Run once: record the first step, then forward after a short minimum.
   useEffect(() => {
     if (started.current) return;
     started.current = true;
     const startedAt = Date.now();
 
-    const tick = setInterval(() => {
-      setPercent((p) => Math.min(92, p + 7));
-    }, 120);
-    const slowTimer = setTimeout(() => setSlow(true), MAX_MS);
-
-    const work = save
+    void save
       .mutateAsync(
         firstStepKey
           ? { orgId, step: firstStepKey }
@@ -56,22 +65,15 @@ export function SettingUp({
       )
       .catch((error: unknown) => {
         console.warn("[setting-up] couldn't save onboarding progress", error);
+      })
+      .then(async () => {
+        const elapsed = Date.now() - startedAt;
+        if (elapsed < MIN_MS) {
+          await new Promise((r) => setTimeout(r, MIN_MS - elapsed));
+        }
+        setPercent(100);
+        router.replace(nextPath);
       });
-
-    void work.then(async () => {
-      const elapsed = Date.now() - startedAt;
-      if (elapsed < MIN_MS) {
-        await new Promise((r) => setTimeout(r, MIN_MS - elapsed));
-      }
-      clearInterval(tick);
-      setPercent(100);
-      router.replace(nextPath);
-    });
-
-    return () => {
-      clearInterval(tick);
-      clearTimeout(slowTimer);
-    };
     // Runs once on mount; `save` is stable for our purposes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
