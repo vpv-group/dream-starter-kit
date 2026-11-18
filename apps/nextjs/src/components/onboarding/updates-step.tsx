@@ -107,7 +107,10 @@ export function UpdatesStep(props: {
       preview={preview}
       previewLabel="Your setup"
     >
-      <form onSubmit={(e) => void onFinish(e)} className="flex flex-col gap-6">
+      <form
+        onSubmit={(e) => void onFinish(e)}
+        className="flex flex-1 flex-col gap-6"
+      >
         <StepProgress
           total={props.steps.length}
           current={props.stepIndex}
@@ -146,7 +149,12 @@ export function UpdatesStep(props: {
             />
           </Field>
         </FieldGroup>
-        <Button type="submit" size="lg" className="w-full" disabled={saving}>
+        <Button
+          type="submit"
+          size="lg"
+          className="mt-auto w-full min-[760px]:mt-0"
+          disabled={saving}
+        >
           {saving ? <Spinner /> : null}
           {isLast ? "Finish" : "Continue"}
         </Button>

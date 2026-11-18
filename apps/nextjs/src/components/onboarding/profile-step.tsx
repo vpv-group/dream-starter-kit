@@ -187,7 +187,7 @@ export function ProfileStep(props: {
     >
       <form
         onSubmit={(e) => void onContinue(e)}
-        className="flex flex-col gap-6"
+        className="flex flex-1 flex-col gap-6"
       >
         <StepProgress
           total={props.stepTotal}
@@ -262,7 +262,7 @@ export function ProfileStep(props: {
             </FieldDescription>
           </Field>
         </FieldGroup>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="mt-auto grid grid-cols-2 gap-3 min-[760px]:mt-0">
           <Button
             type="button"
             variant="secondary"

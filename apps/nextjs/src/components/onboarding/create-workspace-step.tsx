@@ -135,7 +135,10 @@ export function CreateWorkspaceStep({
       previewCaption="Teammates see this name and URL in their invites."
       footer={<UseDifferentEmail email={email} />}
     >
-      <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-6">
+      <form
+        onSubmit={(e) => void onSubmit(e)}
+        className="flex flex-1 flex-col gap-6"
+      >
         <StepHeading
           title={`Name your ${lower}`}
           description={`This is where your team works together. You can rename it later.`}
@@ -199,7 +202,7 @@ export function CreateWorkspaceStep({
         <Button
           type="submit"
           size="lg"
-          className="w-full"
+          className="mt-auto w-full min-[760px]:mt-0"
           disabled={!canSubmit}
         >
           {create.isPending ? <Spinner /> : null}

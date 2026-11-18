@@ -46,9 +46,15 @@ export function OnboardingShell({
             </span>
           ) : null}
         </header>
-        <main className="flex flex-1 items-center justify-center py-10">
+        {/* Mobile: the column fills the screen so step actions can sit at
+            the bottom (mt-auto); desktop: centered. */}
+        <main className="flex flex-1 flex-col py-10 min-[760px]:items-center min-[760px]:justify-center">
           <div
-            className={wide ? "w-full max-w-[960px]" : "w-full max-w-[400px]"}
+            className={
+              wide
+                ? "mx-auto flex w-full max-w-[960px] flex-1 flex-col min-[760px]:flex-none"
+                : "mx-auto flex w-full max-w-[400px] flex-1 flex-col min-[760px]:flex-none"
+            }
           >
             {children}
           </div>
