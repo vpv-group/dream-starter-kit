@@ -6,8 +6,11 @@
 
 export * from "./validators/auth";
 export * from "./validators/tag";
+export * from "./validators/workspace";
 export * from "./auth";
 export * from "./auth-settings";
+export * from "./workspaces";
+export * from "./post-auth";
 export { useAuthConfig } from "./hooks/use-auth-config";
 export * from "./hooks/use-content";
 export {
@@ -22,3 +25,14 @@ export { useUserTags } from "./hooks/use-tags";
 export type { UserTag } from "./hooks/use-tags";
 export { useNavMenu } from "./hooks/use-nav-menu";
 export type { NavMenuEntry } from "./hooks/use-nav-menu";
+export {
+  useMyWorkspaces,
+  useSlugAvailability,
+  useCreateWorkspace,
+  useSaveOnboardingProgress,
+  useSetActiveOrg,
+  useSetSignupIntent,
+  toMyWorkspace,
+  workspacesKey,
+} from "./hooks/use-workspaces";
+export type { MyWorkspace, SlugStatus } from "./hooks/use-workspaces";

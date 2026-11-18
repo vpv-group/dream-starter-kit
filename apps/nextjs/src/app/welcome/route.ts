@@ -1,16 +1,32 @@
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+
+import type { PostAuthInput, PostAuthMembership } from "@acme/app";
+import {
+  activeOnboardingSteps,
+  isWorkspaceMode,
+  readSignupIntent,
+  resolvePostAuthDestination,
+} from "@acme/app";
 
 import { reconcileAnonByEmail } from "~/lib/auth/merge-anon";
 import { ensureCmsUser, ensureFreeTag } from "~/lib/cms/mirror-user";
 import { getPayloadClient } from "~/lib/cms/payload-client";
 import { isCmsSeeded } from "~/lib/cms/seed-status";
 import { ensureDbProvisioned } from "~/lib/db/bootstrap-runner";
+import { getAuthSettings } from "~/lib/payload";
 import { getSiteUrl } from "~/lib/site-url";
 import { createAdminClient } from "~/lib/supabase/admin";
 import { createClient } from "~/lib/supabase/server";
 
 /**
- * Post-auth landing — routes by role. Staff land in the CMS: the FIRST staff
+ * Post-auth landing. Gathers the inputs and redirects per the PURE
+ * `resolvePostAuthDestination` in @acme/app (docs/WORKSPACES.md → Routing),
+ * which mobile reuses. Consumer mode (the default account model) routes
+ * exactly as before; Teams/Both add the workspace branches (accept an invite
+ * token, resume onboarding, Name your workspace, the hybrid question).
+ *
+ * Routes by role first. Staff land in the CMS: the FIRST staff
  * login ever (the founder, flagged `profiles.is_staff` by the
  * `handle_new_user` trigger) goes through the CMS setup flow so demo content
  * is seeded behind the shadcn progress bar IMMEDIATELY after the account is
@@ -86,7 +102,19 @@ function databaseNotReadyResponse(): NextResponse {
   });
 }
 
-export async function GET() {
+/** Invite/join tokens are opaque URL-safe strings; ignore anything else. */
+const TOKEN_RE = /^[A-Za-z0-9_-]{16,256}$/;
+
+function readToken(request: NextRequest): PostAuthInput["token"] {
+  const params = new URL(request.url).searchParams;
+  const invite = params.get("invite");
+  if (invite && TOKEN_RE.test(invite)) return { kind: "invite", value: invite };
+  const join = params.get("join");
+  if (join && TOKEN_RE.test(join)) return { kind: "join", value: join };
+  return null;
+}
+
+export async function GET(request: NextRequest) {
   const siteUrl = getSiteUrl();
   const supabase = await createClient();
   const {
@@ -147,7 +175,7 @@ export async function GET() {
   // founder; surface it instead.
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("is_staff")
+    .select("is_staff, last_org_id")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -162,24 +190,104 @@ export async function GET() {
     return databaseNotReadyResponse();
   }
 
-  if (!profile?.is_staff) {
-    return NextResponse.redirect(`${siteUrl}/a`);
-  }
+  const isStaff = profile?.is_staff ?? false;
+  const settings = await getAuthSettings();
 
   // Staff: only the very first staff login should see the seed screen. If the
   // CMS is already seeded, skip /cms-setup entirely. If the seeded check fails
   // (CMS unconfigured, DB unreachable), fall back to /cms-setup — it surfaces
   // a structured, founder-readable error instead of /admin's opaque digest,
   // and its seed POST is idempotent so a stale routing can never double-seed.
-  let dest = "/cms-setup";
-  try {
-    const payload = await getPayloadClient();
-    if (await isCmsSeeded(payload)) dest = "/admin";
-  } catch (error) {
-    console.warn(
-      "[welcome] CMS seeded check failed — routing to /cms-setup",
-      error,
-    );
+  let cmsSeeded: boolean | null = null;
+  if (isStaff) {
+    try {
+      const payload = await getPayloadClient();
+      cmsSeeded = await isCmsSeeded(payload);
+    } catch (error) {
+      console.warn(
+        "[welcome] CMS seeded check failed — routing to /cms-setup",
+        error,
+      );
+    }
   }
-  return NextResponse.redirect(`${siteUrl}${dest}`);
+
+  // Workspace inputs are only read in Teams/Both mode, so consumer sign-ins do
+  // exactly the same queries as before.
+  const workspaceMode = !isStaff && isWorkspaceMode(settings);
+  const memberships: PostAuthMembership[] = [];
+  const ownedOrgs = new Set<string>();
+  if (workspaceMode) {
+    const { data: rows, error: membershipsError } = await supabase
+      .from("memberships")
+      .select(
+        "org_id, role, onboarding_step, onboarding_completed_at, organizations(owner_id)",
+      )
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: true });
+    if (membershipsError) {
+      console.warn("[welcome] memberships lookup failed", membershipsError);
+    }
+    for (const row of rows ?? []) {
+      memberships.push({
+        orgId: row.org_id,
+        role: row.role as "owner" | "admin" | "member",
+        onboardingStep: row.onboarding_step,
+        onboardingCompletedAt: row.onboarding_completed_at,
+      });
+      if (row.organizations.owner_id === user.id) ownedOrgs.add(row.org_id);
+    }
+  }
+
+  const input: PostAuthInput = {
+    accountModel: settings.accountModel,
+    isStaff,
+    isAnonymous: user.is_anonymous ?? false,
+    cmsSeeded,
+    token: workspaceMode ? readToken(request) : null,
+    memberships,
+    lastOrgId: profile?.last_org_id ?? null,
+    // PR 2 wires my_pending_invitations() here together with the
+    // /onboarding/invites screen; until then no invites can be created.
+    pendingInvites: 0,
+    hybridChoice: readSignupIntent(user.user_metadata),
+    stepsFor: (m) =>
+      activeOnboardingSteps(settings, {
+        isAdmin: m.role !== "member",
+        isInvitee: !ownedOrgs.has(m.orgId),
+      }),
+  };
+
+  let destination = resolvePostAuthDestination(input);
+
+  if (destination.kind === "accept-token") {
+    const rpc =
+      destination.tokenKind === "invite"
+        ? supabase.rpc("accept_invitation", { _token: destination.token })
+        : supabase.rpc("join_workspace_by_link", { _token: destination.token });
+    const { data: org, error: acceptError } = await rpc;
+    if (acceptError) {
+      // PR 2 renders these on /invite/[token] (InviteProblem). Until then,
+      // route as if no token was carried so the user still lands somewhere.
+      console.warn("[welcome] token acceptance failed", acceptError.message);
+      destination = resolvePostAuthDestination({ ...input, token: null });
+    } else {
+      // Joined: an invitee walks the invitee steps for that workspace (the
+      // stepsFor callback treats any workspace they don't own as invitee).
+      const joined: PostAuthMembership = {
+        orgId: org.id,
+        role: "member",
+        onboardingStep: null,
+        onboardingCompletedAt: null,
+      };
+      destination = resolvePostAuthDestination({
+        ...input,
+        token: null,
+        memberships: [joined, ...memberships.filter((m) => m.orgId !== org.id)],
+        lastOrgId: org.id,
+      });
+    }
+  }
+
+  const path = destination.kind === "redirect" ? destination.path : "/a";
+  return NextResponse.redirect(`${siteUrl}${path}`);
 }

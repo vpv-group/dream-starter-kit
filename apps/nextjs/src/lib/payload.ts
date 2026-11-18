@@ -350,13 +350,16 @@ export function getAuthSettings(): Promise<AuthSettings> {
  */
 function withWorkspaceUrlPrefix(s: AuthSettings): AuthSettings {
   if (s.workspaceUrlPrefix) return s;
-  let host = "";
-  try {
-    host = new URL(getSiteUrl()).host;
-  } catch {
-    host = "";
-  }
+  const host = siteHost();
   return { ...s, workspaceUrlPrefix: host ? `${host}/` : null };
+}
+
+function siteHost(): string | null {
+  try {
+    return new URL(getSiteUrl()).host || null;
+  } catch {
+    return null;
+  }
 }
 
 /** A link resolved from the reusable `linkField` group (see payload/fields/link). */

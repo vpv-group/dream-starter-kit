@@ -1,0 +1,176 @@
+import { describe, expect, it } from "vitest";
+
+import { DEFAULT_AUTH_SETTINGS } from "./auth-settings";
+import {
+  createWorkspaceSchema,
+  readEmailPreferences,
+} from "./validators/workspace";
+import {
+  activeOnboardingSteps,
+  labelWithArticle,
+  nextOnboardingStep,
+  normalizeSlugInput,
+  RESERVED_WORKSPACE_SLUGS,
+  slugifyWorkspaceName,
+  stepEyebrow,
+  validateWorkspaceSlug,
+  workspaceErrorMessage,
+} from "./workspaces";
+
+describe("workspace slugs", () => {
+  it("accepts 2–39 lowercase chars with single inner hyphens", () => {
+    for (const ok of [
+      "ab",
+      "vyten",
+      "captive-demand",
+      "a1-b2-c3",
+      "x".repeat(39),
+    ]) {
+      expect(validateWorkspaceSlug(ok)).toEqual({ ok: true });
+    }
+  });
+
+  it("rejects bad formats", () => {
+    for (const bad of [
+      "a",
+      "-ab",
+      "ab-",
+      "a--b",
+      "Vyten",
+      "vy ten",
+      "vy_ten",
+      "x".repeat(40),
+    ]) {
+      expect(validateWorkspaceSlug(bad)).toEqual({
+        ok: false,
+        problem: "format",
+      });
+    }
+    expect(validateWorkspaceSlug("")).toEqual({ ok: false, problem: "empty" });
+  });
+
+  it("rejects every reserved route slug that is otherwise well-formed", () => {
+    for (const slug of RESERVED_WORKSPACE_SLUGS) {
+      const res = validateWorkspaceSlug(slug);
+      expect(res.ok).toBe(false);
+    }
+    expect(validateWorkspaceSlug("admin")).toEqual({
+      ok: false,
+      problem: "reserved",
+    });
+    expect(validateWorkspaceSlug("cms-setup")).toEqual({
+      ok: false,
+      problem: "reserved",
+    });
+  });
+
+  it("derives a slug from a name", () => {
+    expect(slugifyWorkspaceName("Vyten")).toBe("vyten");
+    expect(slugifyWorkspaceName("  Captive Demand, Inc. ")).toBe(
+      "captive-demand-inc",
+    );
+    expect(slugifyWorkspaceName("Café Ünïcode")).toBe("cafe-unicode");
+    expect(slugifyWorkspaceName("!!")).toBe("");
+    expect(slugifyWorkspaceName("A")).toBe("");
+    const long = slugifyWorkspaceName("word ".repeat(20));
+    expect(long.length).toBeLessThanOrEqual(39);
+    expect(long.endsWith("-")).toBe(false);
+  });
+
+  it("normalizes typed slug input", () => {
+    expect(normalizeSlugInput("My Team!!")).toBe("my-team");
+    expect(normalizeSlugInput("a--b")).toBe("a-b");
+  });
+
+  it("validates the create form with zod", () => {
+    expect(
+      createWorkspaceSchema.safeParse({ name: " Vyten ", slug: "vyten" })
+        .success,
+    ).toBe(true);
+    expect(
+      createWorkspaceSchema.safeParse({ name: "", slug: "vyten" }).success,
+    ).toBe(false);
+    expect(
+      createWorkspaceSchema.safeParse({ name: "X", slug: "admin" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("workspace copy", () => {
+  it("uses the right article for the label", () => {
+    expect(labelWithArticle("Workspace")).toBe("a workspace");
+    expect(labelWithArticle("Organization")).toBe("an organization");
+  });
+
+  it("maps RPC error codes to copy with the label", () => {
+    expect(workspaceErrorMessage({ message: "slug_unavailable" })).toBe(
+      "That URL is taken. Try another.",
+    );
+    expect(workspaceErrorMessage({ message: "not_a_member" }, "Team")).toBe(
+      "You're not a member of that team.",
+    );
+    expect(workspaceErrorMessage({ message: "boom" })).toMatch(/try again/);
+    expect(workspaceErrorMessage(null)).toMatch(/try again/);
+  });
+
+  it("fills email preference defaults", () => {
+    expect(readEmailPreferences({})).toEqual({
+      tips: true,
+      product_updates: false,
+    });
+    expect(readEmailPreferences({ product_updates: true, junk: 1 })).toEqual({
+      tips: true,
+      product_updates: true,
+    });
+    expect(readEmailPreferences("nope")).toEqual({
+      tips: true,
+      product_updates: false,
+    });
+  });
+});
+
+describe("onboarding step registry", () => {
+  const settings = DEFAULT_AUTH_SETTINGS;
+
+  it("shows only shipped steps: profile + updates for a creator", () => {
+    const steps = activeOnboardingSteps(settings, {
+      isAdmin: true,
+      isInvitee: false,
+    });
+    // invite (PR 2), integrations + plan (PR 3) are not available yet.
+    expect(steps.map((s) => s.key)).toEqual(["profile", "updates"]);
+  });
+
+  it("respects the founder's order and toggles", () => {
+    const steps = activeOnboardingSteps(
+      {
+        onboardingSteps: [
+          { step: "updates", enabled: true },
+          { step: "profile", enabled: false },
+        ],
+      },
+      { isAdmin: true, isInvitee: false },
+    );
+    expect(steps.map((s) => s.key)).toEqual(["updates"]);
+  });
+
+  it("filters admin-only and creator-only steps by audience", () => {
+    const steps = activeOnboardingSteps(settings, {
+      isAdmin: false,
+      isInvitee: true,
+    });
+    expect(steps.every((s) => s.forInvitees && !s.adminOnly)).toBe(true);
+  });
+
+  it("walks forward and builds the eyebrow", () => {
+    const steps = activeOnboardingSteps(settings, {
+      isAdmin: true,
+      isInvitee: false,
+    });
+    expect(nextOnboardingStep(steps, "profile")?.key).toBe("updates");
+    expect(nextOnboardingStep(steps, "updates")).toBeNull();
+    expect(nextOnboardingStep(steps, "unknown")?.key).toBe("profile");
+    expect(stepEyebrow(steps, "updates")).toEqual({ index: "02", total: "02" });
+    expect(stepEyebrow(steps, "nope")).toBeNull();
+  });
+});
