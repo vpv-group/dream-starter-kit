@@ -5,8 +5,6 @@
   </picture>
 </p>
 
-# Dream Starter Kit
-
 **Free forever. Open source.**
 
 A clone-and-ship starter: one **Turborepo** monorepo shipping a **Next.js web app**
