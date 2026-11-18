@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -10,6 +10,9 @@ import {
   EMAIL_METHODS,
   emailSchema,
   isEmailDomainAllowed,
+  isWorkspaceMode,
+  labelLower,
+  labelWithArticle,
   resendSignUpEmail,
   signInWithOAuth,
   signInWithOtp,
@@ -39,11 +42,19 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "~/components/ui/input-otp";
+import {
+  LAST_USED_LABEL,
+  readLastUsedMethod,
+  rememberLastUsedMethod,
+} from "~/lib/auth/last-used-method";
 import { authCallbackUrl } from "~/lib/site-url";
 import { createClient } from "~/lib/supabase/client";
 import { authErrorMessage, isSupabaseConfigured } from "~/lib/supabase/config";
 
 type Mode = "signIn" | "signUp";
+
+/** The last-used cookie only changes on navigation; nothing to subscribe to. */
+const subscribeNever = () => () => undefined;
 type Step = "chooser" | "email" | "password" | "check";
 
 /**
@@ -127,6 +138,33 @@ export function AuthFlow({
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Teams/Both only (consumer mode renders exactly as before): the
+  // "You used {method} last time" hint, read after mount from a cookie.
+  const workspaceMode = isWorkspaceMode(settings);
+  const lastUsedCookie = useSyncExternalStore(
+    subscribeNever,
+    readLastUsedMethod,
+    () => null,
+  );
+  const lastUsed = workspaceMode ? lastUsedCookie : null;
+
+  // Default copy per account model. Staff-set headings/subtitles always win;
+  // consumer keeps the kit's existing defaults.
+  const label = labelLower(settings.workspaceLabel);
+  const defaultSignUpHeading =
+    settings.accountModel === "business"
+      ? `Create your ${label}`
+      : settings.accountModel === "hybrid"
+        ? "Create your account"
+        : "Create your workspace";
+  const defaultSubtitle = !isSignUp
+    ? null
+    : settings.accountModel === "business"
+      ? `Free to start. You’ll name your ${label} after you confirm your email.`
+      : settings.accountModel === "hybrid"
+        ? `You can create or join ${labelWithArticle(label)} after you confirm your email.`
+        : null;
+  const subtitle = settings.subtitle ?? defaultSubtitle;
 
   const heading =
     step === "check"
@@ -138,7 +176,7 @@ export function AuthFlow({
             ? "Create your account"
             : "What’s your email address?"
         : ((isSignUp ? settings.signUpHeading : settings.signInHeading) ??
-          (isSignUp ? "Create your workspace" : `Welcome to ${appName}`));
+          (isSignUp ? defaultSignUpHeading : `Welcome to ${appName}`));
 
   function termsOk(): boolean {
     if (isSignUp && settings.requireTermsAcceptance && !acceptTerms) {
@@ -401,9 +439,9 @@ export function AuthFlow({
       {step === "chooser" && (
         <FieldGroup>
           {Logo}
-          {settings.subtitle && (
+          {subtitle && (
             <FieldDescription className="text-center">
-              {settings.subtitle}
+              {subtitle}
             </FieldDescription>
           )}
 
@@ -428,7 +466,22 @@ export function AuthFlow({
                 </Field>
               )}
               <Field>
-                {entries.map((entry, i) => chooserButton(entry, i === 0))}
+                {entries.map((entry, i) => (
+                  <Fragment key={entry}>
+                    {/* Records the chosen entry for next time's hint. */}
+                    <div
+                      className="contents"
+                      onClickCapture={() => rememberLastUsedMethod(entry)}
+                    >
+                      {chooserButton(entry, i === 0)}
+                    </div>
+                    {lastUsed === entry && (
+                      <FieldDescription className="-mt-1 text-center">
+                        You used {LAST_USED_LABEL[entry]} last time.
+                      </FieldDescription>
+                    )}
+                  </Fragment>
+                ))}
               </Field>
             </>
           )}
