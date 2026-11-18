@@ -1,16 +1,23 @@
 import { redirect } from "next/navigation";
 
+import { needsWorkspaceGate } from "@acme/app";
+
+import type { SidebarWorkspaces } from "~/components/app-sidebar";
+import type { GettingStarted } from "~/components/workspaces/home-getting-started";
 import { AppSidebar } from "~/components/app-sidebar";
 import { BrandingProvider } from "~/components/branding-provider";
 import { AppModWidgetsProvider } from "~/components/mod-widgets-provider";
 import { ReloadOnBfcacheRestore } from "~/components/reload-on-bfcache-restore";
 import { SiteHeader } from "~/components/site-header";
 import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
+import { HomeGettingStarted } from "~/components/workspaces/home-getting-started";
 import { ensureCmsUser, ensureFreeTag } from "~/lib/cms/mirror-user";
 import { disabledModuleSlugs } from "~/lib/mod/enabled";
 import { getWebNavItems } from "~/lib/mod/nav";
-import { getBranding } from "~/lib/payload";
+import { getAuthSettings, getBranding } from "~/lib/payload";
 import { createClient } from "~/lib/supabase/server";
+import { buildChecklist } from "~/lib/workspaces/checklist";
+import { getWorkspaceContext } from "~/lib/workspaces/server";
 
 /**
  * Server-side guard for the authenticated area (belt-and-suspenders with
@@ -62,6 +69,45 @@ export default async function AppLayout({
   ]);
   const isStaff = profile.data?.is_staff ?? false;
 
+  // Teams/Both (docs/WORKSPACES.md): workspace switcher, getting-started
+  // checklist on /a, and — in Teams mode — no app without a workspace.
+  // Consumer mode skips all of it and renders exactly as before.
+  const settings = await getAuthSettings();
+  let sidebarWorkspaces: SidebarWorkspaces | undefined;
+  let gettingStarted: GettingStarted | null = null;
+  if (settings.accountModel !== "consumer" && !user.is_anonymous) {
+    const ctx = await getWorkspaceContext();
+    if (ctx) {
+      if (
+        needsWorkspaceGate({
+          accountModel: settings.accountModel,
+          isStaff,
+          isAnonymous: false,
+          membershipCount: ctx.workspaces.length,
+        })
+      ) {
+        redirect("/onboarding/workspace");
+      }
+      sidebarWorkspaces = {
+        workspaces: ctx.workspaces.map((w) => ({
+          id: w.id,
+          name: w.name,
+          logoUrl: w.logoUrl,
+          role: w.role,
+        })),
+        activeId: ctx.active?.id ?? null,
+        email: ctx.profile.email,
+        workspaceLabel: settings.workspaceLabel,
+      };
+      if (ctx.active) {
+        gettingStarted = {
+          workspaceName: ctx.active.name,
+          items: buildChecklist(settings, ctx.active),
+        };
+      }
+    }
+  }
+
   return (
     <BrandingProvider value={branding}>
       {/* After logout, Back must not restore this entitled shell from bfcache
@@ -75,10 +121,17 @@ export default async function AppLayout({
           } as React.CSSProperties
         }
       >
-        <AppSidebar variant="inset" navItems={navItems} />
+        <AppSidebar
+          variant="inset"
+          navItems={navItems}
+          workspaces={sidebarWorkspaces}
+        />
         <SidebarInset>
           <SiteHeader isStaff={isStaff} navItems={navItems} />
           <AppModWidgetsProvider disabledSlugs={disabledSlugs}>
+            {gettingStarted ? (
+              <HomeGettingStarted data={gettingStarted} />
+            ) : null}
             {children}
           </AppModWidgetsProvider>
         </SidebarInset>
