@@ -5,7 +5,10 @@ Read this first, then `docs/ARCHITECTURE.md` and `docs/ERD.md` — those two are
 **source of truth**. If anything here conflicts with them, they win.
 (`docs/CMS.md` is the per-collection CMS reference — keep it in sync when you
 touch Payload collections; `docs/MODULES.md` is the module framework
-reference; `docs/MCP.md` is the remote MCP server reference.)
+reference; `docs/MCP.md` is the remote MCP server reference;
+`docs/DESIGN-SYSTEM.md` is how app and module screens are built — follow it
+for any signed-in UI, and write components from it rather than copying
+third-party template code.)
 
 ## What this is
 
@@ -53,7 +56,7 @@ clarity beat cleverness.
    directly (auth, chat, reminders, billing entitlements in `public.subscriptions`)
    stays in `public` under RLS. **Favorites are RLS, not CMS:** saves across all
    content collections live in `public.content_favorites` (`(user_id, collection,
-   item_id)`, own-row RLS) so they work for **anonymous** users — it is the ONE
+item_id)`, own-row RLS) so they work for **anonymous** users — it is the ONE
    table anon sessions may write (see the anonymous-identity note below).
    **Anonymous-account-first identity:** a logged-out visitor gets a real
    `auth.uid()` (a Supabase anonymous user, minted on first action — e.g.
