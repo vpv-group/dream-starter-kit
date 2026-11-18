@@ -99,9 +99,13 @@ comment on column public.organizations.allowed_domains is
 alter table public.memberships add column if not exists onboarding_step text;
 alter table public.memberships
   add column if not exists onboarding_completed_at timestamptz;
+alter table public.memberships
+  add column if not exists onboarding_done text[] not null default '{}';
 
 comment on column public.memberships.onboarding_step is
   'Key of the next onboarding step to show this member in this workspace (null = not started).';
+comment on column public.memberships.onboarding_done is
+  'Onboarding step keys this member finished (vs skipped) — drives the getting-started checklist.';
 
 -- ============================================================================
 -- invitations: hashed token, expiry, audit, revoke
@@ -477,7 +481,8 @@ $$;
 create or replace function public.save_onboarding_progress(
   _org_id uuid,
   _step text,
-  _completed boolean default false
+  _completed boolean default false,
+  _done text default null
 )
 returns void
 language plpgsql
@@ -488,7 +493,8 @@ begin
   if (select auth.uid()) is null or public.is_anonymous_session() then
     raise exception 'not_allowed' using errcode = 'P0001';
   end if;
-  if _step is not null and _step !~ '^[a-z0-9][a-z0-9:_-]{0,63}$' then
+  if (_step is not null and _step !~ '^[a-z0-9][a-z0-9:_-]{0,63}$')
+     or (_done is not null and _done !~ '^[a-z0-9][a-z0-9:_-]{0,63}$') then
     raise exception 'invalid_step' using errcode = 'P0001';
   end if;
   update public.memberships
@@ -496,6 +502,10 @@ begin
       onboarding_completed_at = case
         when _completed then coalesce(onboarding_completed_at, now())
         else onboarding_completed_at
+      end,
+      onboarding_done = case
+        when _done is null or _done = any (onboarding_done) then onboarding_done
+        else array_append(onboarding_done, _done)
       end
   where org_id = _org_id and user_id = (select auth.uid());
   if not found then
@@ -515,7 +525,7 @@ begin
     'public.accept_invitation(text)',
     'public.join_workspace_by_link(text)',
     'public.my_pending_invitations()',
-    'public.save_onboarding_progress(uuid, text, boolean)'
+    'public.save_onboarding_progress(uuid, text, boolean, text)'
   ] loop
     execute format('revoke execute on function %s from public, anon', f);
     execute format('grant execute on function %s to authenticated', f);
@@ -555,3 +565,45 @@ begin
   end loop;
 end;
 $$;
+
+-- ============================================================================
+-- Avatars: public-read bucket for profile photos (onboarding "Set up your
+-- profile"). Teammates must see each other's photos, which the private,
+-- owner-only `user-files` bucket can't serve. Writes are confined to the
+-- owner's "<user_id>/" prefix, like user-files.
+-- ============================================================================
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'avatars',
+  'avatars',
+  true,
+  2097152,
+  array['image/png', 'image/jpeg', 'image/webp', 'image/gif']
+)
+on conflict (id) do nothing;
+
+drop policy if exists "avatars: select own" on storage.objects;
+create policy "avatars: select own"
+  on storage.objects for select to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+drop policy if exists "avatars: insert own" on storage.objects;
+create policy "avatars: insert own"
+  on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+    and coalesce(((select auth.jwt()) ->> 'is_anonymous')::boolean, false) = false
+  );
+
+drop policy if exists "avatars: update own" on storage.objects;
+create policy "avatars: update own"
+  on storage.objects for update to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = (select auth.uid())::text)
+  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+drop policy if exists "avatars: delete own" on storage.objects;
+create policy "avatars: delete own"
+  on storage.objects for delete to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = (select auth.uid())::text);

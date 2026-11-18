@@ -300,6 +300,7 @@ export type Database = {
           created_at: string;
           id: string;
           onboarding_completed_at: string | null;
+          onboarding_done: string[];
           onboarding_step: string | null;
           org_id: string;
           role: string;
@@ -309,6 +310,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           onboarding_completed_at?: string | null;
+          onboarding_done?: string[];
           onboarding_step?: string | null;
           org_id: string;
           role?: string;
@@ -318,6 +320,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           onboarding_completed_at?: string | null;
+          onboarding_done?: string[];
           onboarding_step?: string | null;
           org_id?: string;
           role?: string;
@@ -1128,7 +1131,12 @@ export type Database = {
         }[];
       };
       save_onboarding_progress: {
-        Args: { _completed?: boolean; _org_id: string; _step: string };
+        Args: {
+          _completed?: boolean;
+          _done?: string;
+          _org_id: string;
+          _step: string;
+        };
         Returns: undefined;
       };
     };

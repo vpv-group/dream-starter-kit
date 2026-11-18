@@ -19,6 +19,7 @@ export interface MyWorkspace {
   role: "owner" | "admin" | "member";
   onboardingStep: string | null;
   onboardingCompletedAt: string | null;
+  onboardingDone: string[];
 }
 
 export const workspacesKey = (userId: string | undefined) =>
@@ -26,7 +27,11 @@ export const workspacesKey = (userId: string | undefined) =>
 
 type MembershipRow = Pick<
   Tables<"memberships">,
-  "role" | "onboarding_step" | "onboarding_completed_at" | "created_at"
+  | "role"
+  | "onboarding_step"
+  | "onboarding_completed_at"
+  | "onboarding_done"
+  | "created_at"
 > & {
   organizations: Pick<
     Tables<"organizations">,
@@ -45,6 +50,7 @@ export function toMyWorkspace(row: MembershipRow): MyWorkspace | null {
     role: row.role as MyWorkspace["role"],
     onboardingStep: row.onboarding_step,
     onboardingCompletedAt: row.onboarding_completed_at,
+    onboardingDone: row.onboarding_done,
   };
 }
 
@@ -60,7 +66,7 @@ export function useMyWorkspaces() {
       const { data, error } = await supabase
         .from("memberships")
         .select(
-          "role, onboarding_step, onboarding_completed_at, created_at, organizations(id, name, slug, logo_url)",
+          "role, onboarding_step, onboarding_completed_at, onboarding_done, created_at, organizations(id, name, slug, logo_url)",
         )
         .eq("user_id", user.id)
         .order("created_at", { ascending: true });
@@ -145,13 +151,18 @@ export function useSaveOnboardingProgress() {
   return useMutation({
     mutationFn: async (input: {
       orgId: string;
+      /** The step to resume at next time. */
       step: string;
+      /** Mark the whole onboarding finished. */
       completed?: boolean;
+      /** A step the member actually finished (vs skipped with "Do this later"). */
+      done?: string;
     }) => {
       const { error } = await supabase.rpc("save_onboarding_progress", {
         _org_id: input.orgId,
         _step: input.step,
         _completed: input.completed ?? false,
+        ...(input.done ? { _done: input.done } : {}),
       });
       if (error) throw error;
     },
