@@ -1,0 +1,69 @@
+/* Dream — generated from tokens.json (light theme) */
+@font-face { font-family: "Geist"; src: url("fonts/Geist-Variable.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Geist Mono"; src: url("fonts/GeistMono-Variable.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+
+:root {
+  --background: oklch(1 0 0);
+  --surface: oklch(0.985 0.004 264);
+  --surface-raised: oklch(0.965 0.008 264);
+  --card: oklch(1 0 0);
+  --foreground: oklch(0.2 0.03 268);
+  --body: oklch(0.4 0.025 266);
+  --muted-foreground: oklch(0.52 0.02 264);
+  --subtle: oklch(0.66 0.015 264);
+  --border: oklch(0.925 0.008 264);
+  --border-strong: oklch(0.8 0.015 264);
+  --input: oklch(0.66 0.015 264);
+  --ring: oklch(0.53 0.14 155);
+  --brand: oklch(0.6 0.16 155);
+  --brand-foreground: oklch(1 0 0);
+  --primary: oklch(0.53 0.14 155);
+  --primary-foreground: oklch(1 0 0);
+  --primary-hover: oklch(0.46 0.125 155);
+  --primary-deep: oklch(0.32 0.08 155);
+  --primary-subtle: oklch(0.97 0.025 155);
+  --primary-tint: oklch(0.92 0.06 155);
+  --link: oklch(0.5 0.135 155);
+  --secondary: oklch(0.965 0.008 264);
+  --secondary-foreground: oklch(0.2 0.03 268);
+  --accent: oklch(0.97 0.025 155);
+  --accent-foreground: oklch(0.2 0.03 268);
+  --card-foreground: oklch(0.2 0.03 268);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.03 268);
+  --ink: oklch(0.18 0.035 268);
+  --ink-raised: oklch(0.235 0.035 268);
+  --ink-border: oklch(0.32 0.035 268);
+  --on-ink: oklch(0.97 0.005 264);
+  --on-ink-muted: oklch(0.78 0.02 264);
+  --primary-on-ink: oklch(0.78 0.17 155);
+  --signal: oklch(0.72 0.17 155);
+  --info: oklch(0.53 0.24 264);
+  --info-subtle: oklch(0.96 0.022 264);
+  --success: oklch(0.52 0.13 155);
+  --success-subtle: oklch(0.955 0.035 155);
+  --warning: oklch(0.53 0.115 65);
+  --warning-subtle: oklch(0.96 0.04 85);
+  --destructive: oklch(0.55 0.21 25);
+  --destructive-foreground: oklch(1 0 0);
+  --destructive-subtle: oklch(0.96 0.025 20);
+
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px;
+  --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px; --space-16: 64px;
+  --space-24: 96px; --space-32: 128px;
+  --layout-content: 1200px; --layout-text: 680px; --layout-nav: 64px; --layout-app: 430px;
+  --control-md: 48px; --control-lg: 56px; --row-min: 56px; --tabbar: 56px;
+
+  --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px;
+  --radius-xl: 20px; --radius-2xl: 28px; --radius-full: 9999px;
+
+  --shadow-xs: 0 1px 2px oklch(0.2 0.03 268 / 0.06);
+  --shadow-card: 0 1px 2px oklch(0.2 0.03 268 / 0.05), 0 4px 16px oklch(0.2 0.03 268 / 0.05);
+  --shadow-raised: 0 4px 12px oklch(0.2 0.03 268 / 0.06), 0 16px 40px oklch(0.2 0.03 268 / 0.1);
+  --shadow-window: 0 2px 4px oklch(0.2 0.03 268 / 0.04), 0 24px 64px oklch(0.2 0.03 268 / 0.14);
+  --shadow-glow: 0 24px 80px oklch(0.6 0.16 155 / 0.22);
+}

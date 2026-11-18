@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Invite your team (desktop)</title>
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/bundle.css">
+<link rel="stylesheet" href="../assets/desktop.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--link)}a:hover{color:var(--primary-hover)}
+</style>
+</helmet>
+<div class="dr dk">
+  <div class="dk-split">
+    <div class="dk-main">
+      <div class="dk-top">
+        <img src="../assets/dream-logo.svg" alt="Dream" style="height: 28px; width: auto">
+        <span class="dk-meta">Vyten</span>
+      </div>
+
+      <div class="dk-col">
+        <div class="dk-seg" aria-hidden="true"><span class="done"></span><span class="on"></span><span></span><span></span></div>
+        <div class="dr-stephead">
+          <p class="dr-eyebrow">Step 02 <span class="sep">/</span> 04</p>
+          <h1 class="dr-title">Invite your team</h1>
+          <p class="dr-sm" style="color: var(--body)">They’ll get an email with a link to join Vyten.</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 132px; gap: 12px; align-items: start">
+          <div class="dr-field" style="max-width: none">
+            <label for="emails">Email addresses</label>
+            <textarea id="emails" class="dr-input" rows="3" placeholder="ana@vyten.com, sam@vyten.com" style="height: 96px; padding: 12px 16px; line-height: 22px; resize: none; font-family: var(--font-sans)">ana@vyten.com, sam@vyten.com</textarea>
+          </div>
+          <div class="dr-field" style="max-width: none">
+            <label for="role">Role</label>
+            <select id="role" class="dr-input" style="appearance: auto; padding: 0 12px">
+              <option selected>Member</option>
+              <option>Admin</option>
+            </select>
+          </div>
+        </div>
+        <p class="dr-sm dr-muted" style="margin-top: -16px">Separate with commas or new lines. Admins can invite people and manage the workspace.</p>
+
+        <div class="dr-paste" style="max-width: none">
+          <span class="for">Or share an invite link</span>
+          <div class="box">
+            <span class="val" style="font-size: 14px">app.meetdream.com/join/k3V9qT…</span>
+            <button type="button" class="copy">Copy link</button>
+          </div>
+          <span class="dr-sm dr-muted">Only people with an @vyten.com email can join with it.</span>
+        </div>
+
+        <div class="dk-actions">
+          <a href="ConnectSlack.html" class="dr-btn dr-btn-secondary">Do this later</a>
+          <a href="ConnectSlack.html" class="dr-btn dr-btn-primary">Send 2 invitations</a>
+        </div>
+      </div>
+    </div>
+
+    <aside class="dk-aside" aria-label="Members">
+      <div class="dk-preview">
+        <p class="dk-cap">Vyten members</p>
+        <div class="dk-card" style="gap: 0; padding: 8px 24px">
+          <div class="dk-row" style="border-top: 0">
+            <span class="dk-av">VP</span>
+            <span class="grow"><span class="dk-name">Vincent Phamvan</span><span class="dk-meta">vincent@vyten.com</span></span>
+            <span class="dr-tag">Owner</span>
+          </div>
+          <div class="dk-row">
+            <span class="dk-av">A</span>
+            <span class="grow"><span class="dk-name">ana@vyten.com</span><span class="dk-meta">Member · invite ready to send</span></span>
+            <span class="dr-chip">In progress</span>
+          </div>
+          <div class="dk-row" style="border-bottom: 0">
+            <span class="dk-av">S</span>
+            <span class="grow"><span class="dk-name">sam@vyten.com</span><span class="dk-meta">Member · invite ready to send</span></span>
+            <span class="dr-chip">In progress</span>
+          </div>
+        </div>
+        <p class="dk-meta">After sending, each shows Waiting on them until they join. Invites last 7 days.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

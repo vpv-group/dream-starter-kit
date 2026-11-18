@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Connect Slack (desktop)</title>
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/bundle.css">
+<link rel="stylesheet" href="../assets/desktop.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--link)}a:hover{color:var(--primary-hover)}
+</style>
+</helmet>
+<div class="dr dk">
+  <div class="dk-split">
+    <div class="dk-main">
+      <div class="dk-top">
+        <img src="../assets/dream-logo.svg" alt="Dream" style="height: 28px; width: auto">
+        <span class="dk-meta">Vyten</span>
+      </div>
+
+      <div class="dk-col">
+        <div class="dk-seg" aria-hidden="true"><span class="done"></span><span class="done"></span><span class="on"></span><span></span></div>
+        <div class="dr-stephead">
+          <p class="dr-eyebrow">Step 03 <span class="sep">/</span> 04</p>
+          <h1 class="dr-title">Connect Slack</h1>
+          <p class="dr-sm" style="color: var(--body)">Ask your Dream assistant from the Slack workspace your team already uses.</p>
+        </div>
+
+        <ul class="dr-steps" style="max-width: none">
+          <li class="dr-step">
+            <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" stroke-linecap="square" style="flex: none"><path d="M4 5h16v11H9l-5 4z"></path></svg>
+            <div class="txt"><p class="t">Mention it in any channel</p><p class="h">Type @Dream and your question. It replies in the thread.</p></div>
+          </li>
+          <li class="dr-step">
+            <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" stroke-linecap="square" style="flex: none"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"></path></svg>
+            <div class="txt"><p class="t">Send it a direct message</p><p class="h">For questions you’d rather not ask in public.</p></div>
+          </li>
+          <li class="dr-step">
+            <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" stroke-linecap="square" style="flex: none"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+            <div class="txt"><p class="t">You choose the access</p><p class="h">Slack shows what it can read before you allow it.</p></div>
+          </li>
+        </ul>
+
+        <div class="dk-actions">
+          <a href="Updates.html" class="dr-btn dr-btn-secondary">Do this later</a>
+          <button type="button" class="dr-btn dr-btn-primary">Connect Slack</button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="dk-aside" aria-label="Example">
+      <div class="dk-preview">
+        <p class="dk-cap">In a Slack channel</p>
+        <div class="dk-card">
+          <span class="dr-sample">Example</span>
+          <div class="dr-chat" style="max-width: none">
+            <span class="who">Vincent Phamvan</span>
+            <div class="dr-bubble dr-bubble-me">@Dream what’s left on our launch checklist?</div>
+            <span class="who">Dream AI · in thread</span>
+            <div class="dr-bubble dr-bubble-ai">Two items: invite your team, and connect your payment account. Want the links?</div>
+          </div>
+        </div>
+        <p class="dk-meta">Added by the Slack module. This step only appears when it’s installed.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

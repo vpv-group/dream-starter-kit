@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Check your email (desktop)</title>
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/bundle.css">
+<link rel="stylesheet" href="../assets/desktop.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--link)}a:hover{color:var(--primary-hover)}
+</style>
+</helmet>
+<div class="dr dk">
+  <div class="dk-split">
+    <div class="dk-main">
+      <div class="dk-top">
+        <img src="../assets/dream-logo.svg" alt="Dream" style="height: 28px; width: auto">
+        <a href="SignUp.html" class="dk-meta" style="color: var(--link)">Use a different email</a>
+      </div>
+
+      <div class="dk-col">
+        <div class="dr-stephead">
+          <h1 class="dr-title">Check your email</h1>
+          <p class="dr-sm" style="color: var(--body)">We sent a 6-digit code to <b style="color: var(--foreground); font-weight: 500">vincent@vyten.com</b>. Enter it here, or open the link in the email.</p>
+        </div>
+
+        <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px">
+          <legend style="padding: 0; margin-bottom: 8px; font: 500 14px/20px var(--font-sans); color: var(--foreground)">Code</legend>
+          <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px">
+            <input aria-label="Digit 1" class="dr-input" value="4" maxlength="1" style="padding: 0; text-align: center; font: 500 24px/1 var(--font-mono); height: 60px; min-width: 0">
+            <input aria-label="Digit 2" class="dr-input" value="8" maxlength="1" style="padding: 0; text-align: center; font: 500 24px/1 var(--font-mono); height: 60px; min-width: 0">
+            <input aria-label="Digit 3" class="dr-input" value="2" maxlength="1" style="padding: 0; text-align: center; font: 500 24px/1 var(--font-mono); height: 60px; min-width: 0">
+            <input aria-label="Digit 4" class="dr-input" value="0" maxlength="1" style="padding: 0; text-align: center; font: 500 24px/1 var(--font-mono); height: 60px; min-width: 0">
+            <input aria-label="Digit 5" class="dr-input" value="" maxlength="1" style="padding: 0; text-align: center; font: 500 24px/1 var(--font-mono); height: 60px; min-width: 0; border-color: var(--ring); box-shadow: 0 0 0 1px var(--ring)">
+            <input aria-label="Digit 6" class="dr-input" value="" maxlength="1" style="padding: 0; text-align: center; font: 500 24px/1 var(--font-mono); height: 60px; min-width: 0">
+          </div>
+          <span class="dr-sm dr-muted">The code works once. You can paste the whole code into the first box.</span>
+        </fieldset>
+
+        <a href="CreateWorkspace.html" class="dr-btn dr-btn-primary dr-btn-block">Continue</a>
+        <div class="dr-banner">Not there after a few minutes? Check spam, or <a href="#">send a new code</a>.</div>
+      </div>
+
+      <div class="dk-foot"><span>Signing up as vincent@vyten.com</span></div>
+    </div>
+
+    <aside class="dk-aside" aria-label="What happens next">
+      <div class="dk-preview">
+        <p class="dk-cap">What happens next</p>
+        <div class="dk-card">
+          <ol class="dr-steps" style="max-width: none">
+            <li class="dr-step"><span class="num is-you">01</span><div class="txt"><p class="t">Confirm your email</p><p class="h">Enter the code from your inbox.</p></div><span class="dr-chip dr-chip-you">Needs you</span></li>
+            <li class="dr-step"><span class="num">02</span><div class="txt"><p class="t">Name your workspace</p><p class="h">Your team’s home, with its own URL.</p></div></li>
+            <li class="dr-step"><span class="num">03</span><div class="txt"><p class="t">Invite your team</p><p class="h">Optional. You can do it later.</p></div></li>
+          </ol>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Set up your profile (desktop)</title>
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/bundle.css">
+<link rel="stylesheet" href="../assets/desktop.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--link)}a:hover{color:var(--primary-hover)}
+</style>
+</helmet>
+<div class="dr dk">
+  <div class="dk-split">
+    <div class="dk-main">
+      <div class="dk-top">
+        <img src="../assets/dream-logo.svg" alt="Dream" style="height: 28px; width: auto">
+        <span class="dk-meta">Vyten</span>
+      </div>
+
+      <div class="dk-col">
+        <div class="dk-seg" aria-hidden="true"><span class="on"></span><span></span><span></span><span></span></div>
+        <div class="dr-stephead">
+          <p class="dr-eyebrow">Step 01 <span class="sep">/</span> 04</p>
+          <h1 class="dr-title">Set up your profile</h1>
+          <p class="dr-sm" style="color: var(--body)">This is how your team sees you in Vyten.</p>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 16px">
+          <div aria-hidden="true" style="width: 64px; height: 64px; border-radius: 9999px; background: var(--surface-raised); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font: 600 22px/1 var(--font-sans); color: var(--foreground)">VP</div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <button type="button" class="dr-btn dr-btn-secondary dr-btn-sm">Upload a photo</button>
+            <span class="dr-sm dr-muted">Square works best. You can crop it.</span>
+          </div>
+        </div>
+
+        <div class="dr-field" style="max-width: none">
+          <label for="name">Full name</label>
+          <input id="name" class="dr-input" value="Vincent Phamvan">
+        </div>
+        <div class="dr-field" style="max-width: none">
+          <label for="title">Title</label>
+          <input id="title" class="dr-input" placeholder="Founder, designer, coach…" value="Founder">
+          <span class="help">Optional. Shown next to your name.</span>
+        </div>
+
+        <div class="dk-actions">
+          <a href="Invite.html" class="dr-btn dr-btn-secondary">Do this later</a>
+          <a href="Invite.html" class="dr-btn dr-btn-primary">Continue</a>
+        </div>
+      </div>
+    </div>
+
+    <aside class="dk-aside" aria-label="How you will appear">
+      <div class="dk-preview">
+        <p class="dk-cap">How you’ll appear</p>
+        <div class="dk-card">
+          <div style="display: flex; align-items: center; gap: 16px">
+            <span class="dk-av" style="width: 56px; height: 56px; font-size: 18px">VP</span>
+            <div style="display: flex; flex-direction: column">
+              <span class="dr-h" style="font-size: 20px; line-height: 26px">Vincent Phamvan</span>
+              <span class="dk-meta">Founder · Vyten</span>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap">
+            <span class="dr-tag">Owner</span>
+            <span class="dr-tag">vincent@vyten.com</span>
+          </div>
+        </div>
+        <p class="dk-meta">Shown on the member list, comments and mentions.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
