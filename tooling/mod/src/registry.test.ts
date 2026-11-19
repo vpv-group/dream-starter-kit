@@ -6,14 +6,14 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { ModulesLock } from "./lock";
 import { readLock, writeLock } from "./lock";
 import {
-  REGISTRY_ERROR_MESSAGES,
-  RegistryError,
   downloadVerified,
   fetchEntitlements,
   isDreamSource,
   latestCompatible,
   licenseKey,
   parseDreamSource,
+  REGISTRY_ERROR_MESSAGES,
+  RegistryError,
   registryUrl,
   requestDownload,
   sha256Hex,
@@ -89,7 +89,9 @@ describe("env helpers", () => {
   });
 
   it("registryUrl defaults to the Dream registry and strips trailing slashes", () => {
-    expect(registryUrl({})).toBe("https://www.meetdream.com/api/mod/modules/v1");
+    expect(registryUrl({})).toBe(
+      "https://www.meetdream.com/api/mod/modules/v1",
+    );
     expect(registryUrl({ DREAM_REGISTRY_URL: `${REGISTRY}/` })).toBe(REGISTRY);
   });
 });
@@ -303,7 +305,10 @@ describe("latestCompatible", () => {
 
   it("returns null for incompatible, invalid or missing entries", () => {
     expect(
-      latestCompatible({ slug: "crm", latest: "9.0.0", kitCompat: ">=3" }, "2.0.0"),
+      latestCompatible(
+        { slug: "crm", latest: "9.0.0", kitCompat: ">=3" },
+        "2.0.0",
+      ),
     ).toBeNull();
     expect(latestCompatible({ slug: "crm", latest: "not-semver" })).toBeNull();
     expect(latestCompatible(undefined)).toBeNull();

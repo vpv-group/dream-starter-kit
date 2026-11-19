@@ -55,7 +55,8 @@ export function parseDreamSource(arg: string): DreamRef {
 export const REGISTRY_ERROR_MESSAGES: Record<string, string> = {
   invalid_key:
     "the registry rejected the license key — check DREAM_LICENSE_KEY",
-  revoked_key: "license inactive — updates paused (the license key was revoked)",
+  revoked_key:
+    "license inactive — updates paused (the license key was revoked)",
   not_entitled:
     "license inactive — updates paused (your plan does not include this module)",
   incompatible_kit: `no release is compatible with kit ${KIT_VERSION} — update the kit first`,

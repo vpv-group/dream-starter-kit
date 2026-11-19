@@ -343,16 +343,18 @@ export function ModulesView() {
                 >
                   <strong>{entry.name}</strong> {entry.latest ?? ""}
                   {paid && entry.plan && (
-                    <em style={{ marginLeft: 8 }}>
-                      Included in {entry.plan}
-                    </em>
+                    <em style={{ marginLeft: 8 }}>Included in {entry.plan}</em>
                   )}
                   <p style={{ margin: "4px 0" }}>{entry.description}</p>
                   {installedSlugs.has(entry.slug) ? (
                     <em>Installed</em>
                   ) : !installable ? (
                     entry.pricingUrl ? (
-                      <a href={entry.pricingUrl} target="_blank" rel="noreferrer">
+                      <a
+                        href={entry.pricingUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
                         Get access
                       </a>
                     ) : (
