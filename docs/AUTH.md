@@ -184,6 +184,27 @@ enable_signup = false
 
 New staff are still invited from `/admin → Users → Create New`.
 
+## Auth events
+
+`public.auth_events` records, per user, every **auth email** Supabase sends
+(sign-up confirmation, magic link / email code or password reset, invite,
+email change, reauthentication), every **sign-in**, and account changes
+(signed up, password updated). A trigger on Supabase's
+`auth.audit_log_entries` derives the rows; links, codes and tokens are never
+stored. Read-own under RLS; modules may attach `mod_<slug>_*` triggers to it
+(`database.triggersOn`), for example to show these events on a CRM timeline.
+
+- GoTrue logs **magic link / email OTP sign-ins and password resets the same
+  way** (`user_recovery_requested`), so they share the kind
+  `sign_in_or_recovery`.
+- An **email change** has no audit action of its own; the trigger detects it
+  from the user row GoTrue just updated.
+- **Hosted projects:** the trigger needs the auth audit log to be written to
+  the database (Supabase's default). If the migration role can't attach a
+  trigger to `auth.audit_log_entries`, the migration logs a notice and auth
+  events stay empty — check with
+  `select count(*) from public.auth_events;` after a sign-in.
+
 ## Schema / migration
 
 The global lives in the `cms` schema. After changing the global config,

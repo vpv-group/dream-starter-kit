@@ -26,8 +26,10 @@ jobs:
   install-into-kit:
     runs-on: ubuntu-latest
     env:
-      # TODO(eject): pin your kit repo + the kitCompat bounds you support.
+      # TODO(eject): pin your kit repo, the ref you test against, and the
+      # kitCompat bounds you support.
       KIT_REPO: vpv-group/dream-starter-kit
+      KIT_REF: main
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,8 +37,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: ${{ env.KIT_REPO }}
+          ref: ${{ env.KIT_REF }}
           path: kit
       - uses: pnpm/action-setup@v4
+        with:
+          # No package.json at the job root: take pnpm's version from the kit.
+          package_json_file: kit/package.json
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -45,10 +51,12 @@ jobs:
       - name: Install the module into the kit
         working-directory: kit
         run: |
-          pnpm install --frozen-lockfile
           SLUG=$(grep -oP 'slug:\s*"\K[a-z0-9-]+' ../module/module.config.ts | head -1)
           mkdir -p "modules/$SLUG"
           rsync -a --exclude .git ../module/ "modules/$SLUG/"
+          # Not --frozen-lockfile: the module may bring dependencies the
+          # kit's lockfile doesn't have yet.
+          pnpm install --no-frozen-lockfile
           pnpm mod sync
           pnpm typecheck
           pnpm test

@@ -6,7 +6,10 @@ Read this first, then `docs/ARCHITECTURE.md` and `docs/ERD.md` — those two are
 (`docs/CMS.md` is the per-collection CMS reference — keep it in sync when you
 touch Payload collections; `docs/MODULES.md` is the module framework
 reference; `docs/MCP.md` is the remote MCP server reference;
-`docs/WORKSPACES.md` is the account model / B2B workspaces reference.)
+`docs/WORKSPACES.md` is the account model / B2B workspaces reference;
+`docs/DESIGN-SYSTEM.md` is how app and module screens are built — follow it
+for any signed-in UI, and write components from it rather than copying
+third-party template code.)
 
 ## What this is
 
@@ -54,7 +57,7 @@ clarity beat cleverness.
    directly (auth, chat, reminders, billing entitlements in `public.subscriptions`)
    stays in `public` under RLS. **Favorites are RLS, not CMS:** saves across all
    content collections live in `public.content_favorites` (`(user_id, collection,
-   item_id)`, own-row RLS) so they work for **anonymous** users — it is the ONE
+item_id)`, own-row RLS) so they work for **anonymous** users — it is the ONE
    table anon sessions may write (see the anonymous-identity note below).
    **Anonymous-account-first identity:** a logged-out visitor gets a real
    `auth.uid()` (a Supabase anonymous user, minted on first action — e.g.
@@ -140,6 +143,12 @@ Cloud-session quirks:
   (Stripe webhook, `reminders-process`) don't run in cloud sessions.
 - **Unset optional env vars must be absent, not `""`** — empty strings fail the zod
   schema's `min(1)` checks. The hook comments them out when generating `.env`.
+- **`pnpm db:reset` heals a stale gateway** (`scripts/db-reset.sh`): after the reset
+  recreates the auth container, Kong can keep proxying to its old address, so auth
+  answers 502 (`AuthRetryableFetchError` in tests) and Payload migrations were
+  skipped. The script restarts Kong when auth isn't healthy, waits for it, then runs
+  `cms:migrate`; a failing SQL migration still exits non-zero. If auth ever 502s
+  after a manual `supabase db reset`, run `docker restart supabase_kong_dream-starter-kit`.
 - The hook does **not** start the dev server. Use the `web` configuration in
   `.claude/launch.json` (the cloud preview browser) or `pnpm dev:next`.
 - Local URLs: app :3000 · Supabase API :54321 · Studio :54323 · Mailpit :54324

@@ -271,4 +271,96 @@ describe("lintModuleSql", () => {
   it("ignores commented-out SQL", () => {
     expect(lintModuleSql(`-- drop table public.profiles;`, opts)).toEqual([]);
   });
+
+  it("does not read policy, trigger or FK 'update' clauses as DML", () => {
+    const sql = `
+      create policy "upd" on public.mod_chat_threads
+        for update to authenticated using (true) with check (true);
+      create policy "upd2" on public.mod_chat_threads for update using (true);
+      create trigger mod_chat_touch before update on public.mod_chat_threads
+        for each row execute function public.mod_chat_touch();
+      create trigger mod_chat_x after insert or update of title on public.mod_chat_threads
+        for each row execute function public.mod_chat_touch();
+      create table public.mod_chat_messages (
+        thread_id uuid references public.mod_chat_threads (id) on update cascade on delete cascade
+      );
+      insert into public.mod_chat_threads (id) values ('x')
+        on conflict (id) do update set id = excluded.id;
+    `;
+    expect(lintModuleSql(sql, opts)).toEqual([]);
+  });
+
+  it("still catches real UPDATE statements on foreign tables", () => {
+    for (const sql of [
+      `update public.profiles set display_name = 'x';`,
+      `update only profiles set display_name = 'x';`,
+      `update profiles as p set display_name = 'x';`,
+      `update "profiles" set display_name = 'x';`,
+      `with x as (update profiles set display_name = 'x' returning id) select 1;`,
+    ]) {
+      const errors = lintModuleSql(sql, opts);
+      expect(
+        errors.some((e) => e.includes('"profiles"')),
+        sql,
+      ).toBe(true);
+    }
+    expect(
+      lintModuleSql(`update public.mod_chat_threads t set title = 'x';`, opts),
+    ).toEqual([]);
+  });
+
+  it("allows triggers only on declared hook-point tables, with a mod_ name", () => {
+    const sql = `
+      create trigger mod_chat_on_org after insert on public.organizations
+        for each row execute function public.mod_chat_on_org();
+    `;
+    expect(lintModuleSql(sql, opts)).toHaveLength(1);
+    expect(
+      lintModuleSql(sql, { ...opts, triggerTables: ["organizations"] }),
+    ).toEqual([]);
+    const badName = `create or replace trigger on_org after insert on public.organizations
+      for each row execute function public.mod_chat_on_org();`;
+    const errors = lintModuleSql(badName, {
+      ...opts,
+      triggerTables: ["organizations"],
+    });
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("mod_chat_*");
+  });
+});
+
+describe("database.triggersOn", () => {
+  it("accepts core hook-points and required modules' tables", () => {
+    const notif = defineModule({
+      ...base,
+      slug: "notifications",
+      database: { tables: ["mod_notifications"] },
+    });
+    const crm = defineModule({
+      ...base,
+      slug: "crm",
+      requires: ["notifications"],
+      database: {
+        tables: ["mod_crm_accounts"],
+        triggersOn: ["organizations", "profiles", "mod_notifications"],
+      },
+    });
+    expect(validateManifest(crm)).toEqual([]);
+    expect(validateManifestSet([notif, crm])).toEqual([]);
+  });
+
+  it("rejects arbitrary core tables and tables of modules not required", () => {
+    const other = defineModule({
+      ...base,
+      slug: "other",
+      database: { tables: ["mod_other_x"] },
+    });
+    const crm = defineModule({
+      ...base,
+      slug: "crm",
+      database: { triggersOn: ["subscriptions", "mod_other_x"] },
+    });
+    expect(validateManifest(crm)).toHaveLength(1);
+    expect(validateManifestSet([other, crm])).toHaveLength(1);
+  });
 });

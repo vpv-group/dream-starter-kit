@@ -54,6 +54,15 @@ export default defineConfig({
       testMatch: /workspace-.*\.spec\.ts/,
       dependencies: ["workspaces-setup"],
     },
+    // Module-owned specs: modules/<slug>/e2e/*.spec.ts (docs/MODULES.md →
+    // Module tests). Same founder setup, same dev server.
+    {
+      name: "modules",
+      testDir: "../../modules",
+      testMatch: /\/e2e\/.*\.spec\.ts$/,
+      use: { ...devices["Desktop Chrome"] },
+      dependencies: ["setup"],
+    },
   ],
   // Playwright starts the web app (reused locally if already running). The CI
   // workflow provisions Supabase + the .env before this runs.

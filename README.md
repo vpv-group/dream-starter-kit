@@ -62,6 +62,7 @@ backend are wired in. Clone it, rename a few things, and extend it into a real p
 - **[`docs/ERD.md`](./docs/ERD.md)** — data model + the canonical RLS pattern every table follows.
 - **[`docs/CMS.md`](./docs/CMS.md)** — the Payload CMS reference: every collection, global, field & access rule.
 - **[`docs/BRAND.md`](./docs/BRAND.md)** — the Dream brand the kit ships with: logo, colour, type, voice, and how to swap in your own.
+- **[`docs/DESIGN-SYSTEM.md`](./docs/DESIGN-SYSTEM.md)** — how signed-in app screens and module pages are built: layout, framed cards, list views, record pages, boards, status tones.
 - **[`docs/MCP.md`](./docs/MCP.md)** — the remote MCP server: enabling it, connecting clients, OAuth, tools & security.
 - **[`docs/UPDATING.md`](./docs/UPDATING.md)** — how to pull upstream kit updates into your fork without losing your changes.
 - **[`CLAUDE.md`](./CLAUDE.md)** — working agreement, the golden security rules, and the "how to add a feature" recipe.

@@ -93,7 +93,33 @@ the native graph fails the PR.
 | Env vars | `MOD_<SLUG>_*` (client keys get `NEXT_PUBLIC_`/`EXPO_PUBLIC_` added by codegen) | `MOD_CHAT_MAX_TOKENS` |
 
 A best-effort SQL lint verifies migrations only DDL tables the manifest
-declares and never touch `auth.*`/`storage.*`/role/grant DDL.
+declares and never touch `auth.*`/`storage.*`/role/grant DDL. DML is only
+counted where it really is DML (`update <table> set`, `insert into`,
+`delete from`), so `for update` policies, `before update` triggers and
+`on update cascade` are fine.
+
+**Trigger hook-points.** A module that must react to core data (a CRM
+mirroring sign-ups, say) declares `database.triggersOn`: the core
+hook-point tables `organizations`, `memberships`, `invitations`,
+`profiles`, `auth_events`, or tables of modules it `requires`. Triggers on
+those tables must be named `mod_<slug>_*` and dropped in `drop.sql`; the
+lint rejects triggers on any other foreign table. Trigger functions should
+be `security definer`, catch their own errors and never block the core
+write.
+
+**Module tests.** Unit tests live in `modules/<slug>/tests/*.test.ts` and run
+in `pnpm test` (no database). Suites that need the live database go in
+`modules/<slug>/tests/rls/*.test.ts` — `pnpm test:rls` picks them up alongside
+the kit's and they import `admin`, `createUser`, `signIn`, `anonymousUser`
+from `@acme/rls-tests/helpers` (exclude `tests/rls/**` from the module's own
+vitest config). Browser specs go in `modules/<slug>/e2e/*.spec.ts` and run in
+the `modules` Playwright project (`pnpm test:e2e`) with the founder setup and
+helpers from `@acme/web-e2e/helpers`.
+
+**Environment variables.** `turbo.json` declares `MOD_*`,
+`NEXT_PUBLIC_MOD_*` and `EXPO_PUBLIC_MOD_*` globally, so module code may read
+its own `process.env.MOD_<SLUG>_*` keys without tripping
+`turbo/no-undeclared-env-vars`.
 
 ## How the host consumes modules
 
