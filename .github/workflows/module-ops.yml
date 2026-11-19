@@ -18,7 +18,7 @@ on:
         type: choice
         options: [add, update, remove]
       source:
-        description: "add: GitHub url[#vX.Y.Z] or signed zip URL"
+        description: "add: GitHub url[#vX.Y.Z], signed zip URL, or dream:<slug>[@x.y.z]"
         required: false
         type: string
       slug:
@@ -80,8 +80,19 @@ jobs:
           echo "${{ inputs.sha256 }}  /tmp/mod.zip" | sha256sum -c -
           echo "path=/tmp/mod.zip" >> "$GITHUB_OUTPUT"
 
+      - name: Mask the Dream license key
+        # Defense in depth on top of GitHub's automatic secret masking: scrub
+        # the key from every later log line. The CLI itself never prints it.
+        env:
+          DREAM_LICENSE_KEY: ${{ secrets.DREAM_LICENSE_KEY }}
+        run: |
+          if [ -n "$DREAM_LICENSE_KEY" ]; then echo "::add-mask::$DREAM_LICENSE_KEY"; fi
+
       - name: Run the CLI
         id: cli
+        env:
+          # Unlocks `dream:<slug>` installs/updates of paid modules.
+          DREAM_LICENSE_KEY: ${{ secrets.DREAM_LICENSE_KEY }}
         run: |
           set -euo pipefail
           case "${{ inputs.op }}" in
@@ -159,9 +170,18 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Mask the Dream license key
+        env:
+          DREAM_LICENSE_KEY: ${{ secrets.DREAM_LICENSE_KEY }}
+        run: |
+          if [ -n "$DREAM_LICENSE_KEY" ]; then echo "::add-mask::$DREAM_LICENSE_KEY"; fi
       - name: Dispatch updates for outdated modules
         env:
           GH_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
+          # Lets the update check see registry (paid) modules too. When the
+          # license is inactive, status reports them with updateAvailable=false
+          # — they are skipped quietly, never a failure.
+          DREAM_LICENSE_KEY: ${{ secrets.DREAM_LICENSE_KEY }}
         run: |
           pnpm --silent mod status --json > /tmp/status.json || exit 0
           for slug in $(jq -r '.[] | select(.updateAvailable) | .slug' /tmp/status.json); do

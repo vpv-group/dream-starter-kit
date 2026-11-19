@@ -2,6 +2,8 @@ import { createEnv } from "@t3-oss/env-nextjs";
 import { vercel } from "@t3-oss/env-nextjs/presets-zod";
 import { z } from "zod/v4";
 
+import { DREAM_REGISTRY_DEFAULT_URL } from "@acme/config";
+
 import {
   modClientEnv,
   modClientRuntimeEnv,
@@ -88,7 +90,16 @@ export const env = createEnv({
       .optional(),
     VERCEL_GIT_REPO_OWNER: z.string().min(1).optional(),
     VERCEL_GIT_REPO_SLUG: z.string().min(1).optional(),
+    // Overrides the catalog the /admin/modules store reads. When unset it
+    // defaults to `${DREAM_REGISTRY_URL}/catalog?schema=2` (see
+    // lib/mod/dream-registry.ts) — a self-hoster who sets a value keeps it.
     MOD_CATALOG_URL: z.url().optional(),
+    // Dream module registry (paid modules — docs/MODULES.md → Paid modules).
+    // DREAM_LICENSE_KEY unlocks installing/updating paid modules; server-only,
+    // never sent to the browser (the entitlements route proxies it). Also set
+    // it as a GitHub repo secret so module-ops.yml can run the CLI.
+    DREAM_LICENSE_KEY: z.string().min(1).optional(),
+    DREAM_REGISTRY_URL: z.url().default(DREAM_REGISTRY_DEFAULT_URL),
     // Remote MCP server (packages/mcp). MCP_JWT_SECRET signs OAuth access-token
     // JWTs; the MCP surface is OFF until it's set (isMcpConfigured). MCP_ENABLED
     // is an explicit kill switch. CRON_SECRET guards the scheduled notifications

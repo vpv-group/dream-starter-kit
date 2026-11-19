@@ -22,7 +22,9 @@ Commands:
   sync                       Regenerate registries, stubs, migrations and env
                              from modules/* (run after any change there).
   create <slug>              Scaffold a new local module.
-  add <url[#vX.Y.Z]|.zip>    Vendor a module from GitHub or a zip.
+  add <url[#vX.Y.Z]|.zip|dream:<slug>[@x.y.z]>
+                             Vendor a module from GitHub, a zip, or the Dream
+                             registry (paid modules — needs DREAM_LICENSE_KEY).
   update <slug> [--to vX.Y.Z] [--continue]
                              Three-way merge a new upstream version over your
                              (possibly modified) vendored copy.

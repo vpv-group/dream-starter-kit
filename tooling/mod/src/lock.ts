@@ -17,7 +17,17 @@ import { MOD_PATHS, toAbs } from "./paths";
 export type ModSource =
   | "local"
   | { type: "github"; repo: string; ref: string; commit: string }
-  | { type: "zip"; sha256: string; filename: string };
+  | { type: "zip"; sha256: string; filename: string }
+  /** Paid module installed from a Dream module registry (docs/MODULES.md →
+   * Paid modules): `registry` is the base URL, `sha256` the verified hash of
+   * the installed release zip. Added in-place — existing locks stay valid. */
+  | {
+      type: "registry";
+      registry: string;
+      slug: string;
+      version: string;
+      sha256: string;
+    };
 
 export interface ModLockEntry {
   version: string;
