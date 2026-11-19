@@ -24,7 +24,7 @@ describe("workspace slugs", () => {
     for (const ok of [
       "ab",
       "acme",
-      "captive-demand",
+      "edgehill-co",
       "a1-b2-c3",
       "x".repeat(39),
     ]) {
@@ -68,8 +68,8 @@ describe("workspace slugs", () => {
 
   it("derives a slug from a name", () => {
     expect(slugifyWorkspaceName("Acme")).toBe("acme");
-    expect(slugifyWorkspaceName("  Captive Demand, Inc. ")).toBe(
-      "captive-demand-inc",
+    expect(slugifyWorkspaceName("  Edgehill Co, Inc. ")).toBe(
+      "edgehill-co-inc",
     );
     expect(slugifyWorkspaceName("Café Ünïcode")).toBe("cafe-unicode");
     expect(slugifyWorkspaceName("!!")).toBe("");

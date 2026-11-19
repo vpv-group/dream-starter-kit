@@ -38,4 +38,4 @@ Add with the shadcn CLI as needed: `textarea`, `input-group`, `empty`, `spinner`
 - Mobile: primary action full width at the bottom.
 - Copy is sentence case, with no exclamation marks. Status words come from a fixed set: Needs you, In progress, Waiting on X, Needs a fix, Done.
 - Green / `primary` fill only for finished things and the primary action.
-- All sample data (Acme, Alex, ana@acme.com, Captive Demand) is placeholder. Workspace name, label and URL prefix come from the settings.
+- All sample data (Acme, Alex, ana@acme.com, Edgehill Co) is placeholder. Workspace name, label and URL prefix come from the settings.
