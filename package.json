@@ -14,7 +14,7 @@
     "clean:workspaces": "turbo run clean",
     "db:gen-migrations": "pnpm -F @acme/nextjs db:gen-migrations",
     "db:gen-types": "supabase gen types typescript --local > packages/api/src/types.ts",
-    "db:reset": "supabase db reset && pnpm cms:migrate",
+    "db:reset": "bash scripts/db-reset.sh",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "cms:gen-types": "pnpm -F @acme/nextjs payload generate:types",

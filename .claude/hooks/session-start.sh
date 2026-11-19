@@ -18,7 +18,8 @@
 #      role/S3) and a generated PAYLOAD_SECRET. Every var still empty after
 #      that is commented out (on every run, so older .env files are repaired
 #      too) — empty strings fail the zod env schema's min(1) checks.
-#   6. pnpm db:reset  (supabase migrations + seeds + Payload CMS migrations)
+#   6. pnpm db:reset  (supabase migrations + seeds + Payload CMS migrations;
+#      scripts/db-reset.sh restarts Kong if auth 502s after the reset)
 #   7. install Playwright's Chromium — the preview pane doesn't work in cloud
 #      sessions, so visual testing happens by driving the app headlessly with
 #      Playwright (screenshots, e2e specs in tooling/web-e2e). Cached under
