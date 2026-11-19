@@ -59,7 +59,9 @@ export const RESERVED_MOUNTS = [
   "/profile",
   "/checkout",
   "/onboarding",
-  "/organization",
+  "/workspace",
+  "/invite",
+  "/join",
 ] as const;
 
 /** Native mounts are screen names, not paths; only the home screen is claimable. */
