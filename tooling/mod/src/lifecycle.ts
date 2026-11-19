@@ -12,6 +12,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import semver from "semver";
 
+import { KIT_VERSION } from "@acme/config";
+
+import type { ModLockEntry, ModSource } from "./lock";
+import type { CatalogModule } from "./registry";
 import {
   checkoutModuleTree,
   commitModuleTree,
@@ -26,6 +30,19 @@ import { readLock, readPins, writeLock } from "./lock";
 import { loadModules } from "./manifests";
 import { nextVersion } from "./migrations";
 import { MOD_PATHS, toAbs } from "./paths";
+import {
+  downloadVerified,
+  fetchCatalog,
+  fetchEntitlements,
+  isDreamSource,
+  latestCompatible,
+  licenseKey,
+  parseDreamSource,
+  registryUrl,
+  repoIdentity,
+  requestDownload,
+  requireLicenseKey,
+} from "./registry";
 import { sync } from "./sync";
 
 /**
@@ -39,37 +56,75 @@ const SLUG_FROM_CONFIG = /slug:\s*["']([a-z][a-z0-9-]{1,30})["']/;
 const VERSION_FROM_CONFIG = /version:\s*["'](\d+\.\d+\.\d+[^"']*)["']/;
 
 interface Source {
-  kind: "github" | "zip";
-  /** github: clean repo url; zip: file path. */
+  kind: "github" | "zip" | "registry";
+  /** github: clean repo url; zip: file path; registry: dream:<slug>[@x.y.z]. */
   location: string;
-  /** Requested tag (github), e.g. v1.2.3. */
+  /** Requested version — tag (github, vX.Y.Z) or plain x.y.z (registry). */
   ref?: string;
 }
 
 function parseSource(arg: string): Source {
+  if (isDreamSource(arg)) return { kind: "registry", location: arg };
   if (arg.endsWith(".zip")) return { kind: "zip", location: arg };
   const [url, ref] = arg.split("#");
   if (!url) throw new Error(`unparseable source "${arg}"`);
   return { kind: "github", location: url, ref };
 }
 
-/** Clone (github) or unzip into a temp dir whose root is the package root. */
-function fetchSource(src: Source): {
+/** Unzip into a temp dir, tolerating a single top-level folder in the zip. */
+function unzipToTemp(zipPath: string): string {
+  const tmp = mkdtempSync(path.join(tmpdir(), "mod-src-"));
+  execFileSync("unzip", ["-q", zipPath, "-d", tmp]);
+  const entries = readdirSync(tmp);
+  return entries.length === 1 && entries[0] && !entries[0].includes(".")
+    ? path.join(tmp, entries[0])
+    : tmp;
+}
+
+/**
+ * Clone (github), unzip (zip) or download from the Dream registry
+ * (registry) into a temp dir whose root is the package root.
+ */
+async function fetchSource(
+  repoRoot: string,
+  src: Source,
+): Promise<{
   dir: string;
   commit?: string;
   ref?: string;
-} {
-  const tmp = mkdtempSync(path.join(tmpdir(), "mod-src-"));
-  if (src.kind === "zip") {
-    execFileSync("unzip", ["-q", src.location, "-d", tmp]);
-    // Tolerate a single top-level folder inside the zip.
-    const entries = readdirSync(tmp);
-    const root =
-      entries.length === 1 && entries[0] && !entries[0].includes(".")
-        ? path.join(tmp, entries[0])
-        : tmp;
-    return { dir: root };
+  /** Set for registry sources — becomes the lock's source entry. */
+  registry?: Extract<ModSource, { type: "registry" }>;
+}> {
+  if (src.kind === "zip") return { dir: unzipToTemp(src.location) };
+
+  if (src.kind === "registry") {
+    const dreamRef = parseDreamSource(src.location);
+    const registry = registryUrl();
+    const grant = await requestDownload({
+      registry,
+      licenseKey: requireLicenseKey(),
+      slug: dreamRef.slug,
+      version: src.ref ?? dreamRef.version,
+      kitVersion: KIT_VERSION,
+      repo: repoIdentity(repoRoot),
+    });
+    // The signed URL expires in minutes — download (and verify) immediately.
+    const tmp = mkdtempSync(path.join(tmpdir(), "mod-dl-"));
+    const zipFile = path.join(tmp, `${grant.slug}.zip`);
+    await downloadVerified(grant.url, grant.sha256, zipFile);
+    return {
+      dir: unzipToTemp(zipFile),
+      registry: {
+        type: "registry",
+        registry,
+        slug: grant.slug,
+        version: grant.version,
+        sha256: grant.sha256,
+      },
+    };
   }
+
+  const tmp = mkdtempSync(path.join(tmpdir(), "mod-src-"));
 
   let ref = src.ref;
   if (!ref) {
@@ -121,11 +176,16 @@ async function validateAndSync(repoRoot: string): Promise<void> {
   await sync(repoRoot); // loadModules inside throws on any validation error
 }
 
-/** `pnpm mod add <github-url[#vX.Y.Z] | path.zip>` */
+/** `pnpm mod add <github-url[#vX.Y.Z] | path.zip | dream:<slug>[@x.y.z]>` */
 export async function add(repoRoot: string, sourceArg: string): Promise<void> {
   const src = parseSource(sourceArg);
-  const fetched = fetchSource(src);
+  const fetched = await fetchSource(repoRoot, src);
   const { slug, version } = readManifestBasics(fetched.dir);
+  if (fetched.registry && fetched.registry.slug !== slug) {
+    throw new Error(
+      `the registry sent "${slug}" when "${fetched.registry.slug}" was requested — aborting`,
+    );
+  }
 
   const dest = toAbs(repoRoot, `modules/${slug}`);
   if (existsSync(dest)) {
@@ -147,7 +207,8 @@ export async function add(repoRoot: string, sourceArg: string): Promise<void> {
     entry.baseCommit = baseCommit;
     entry.installedVia = "cli";
     entry.source =
-      src.kind === "zip"
+      fetched.registry ??
+      (src.kind === "zip"
         ? {
             type: "zip",
             sha256: sha256File(src.location),
@@ -158,7 +219,7 @@ export async function add(repoRoot: string, sourceArg: string): Promise<void> {
             repo: src.location,
             ref: fetched.ref ?? "",
             commit: fetched.commit ?? "",
-          };
+          });
     writeLock(repoRoot, lock);
   }
 
@@ -190,17 +251,28 @@ export async function update(
     return;
   }
 
-  if (typeof entry.source !== "object" || entry.source.type !== "github") {
+  if (
+    typeof entry.source !== "object" ||
+    (entry.source.type !== "github" && entry.source.type !== "registry")
+  ) {
     throw new Error(
       `"${slug}" has a ${typeof entry.source === "string" ? entry.source : entry.source.type} origin — re-add it from its source to update`,
     );
   }
 
-  const fetched = fetchSource({
-    kind: "github",
-    location: entry.source.repo,
-    ref: opts.to,
-  });
+  const fetched =
+    entry.source.type === "github"
+      ? await fetchSource(repoRoot, {
+          kind: "github",
+          location: entry.source.repo,
+          ref: opts.to,
+        })
+      : await fetchSource(repoRoot, {
+          kind: "registry",
+          location: `dream:${entry.source.slug}`,
+          // Omitted = the latest version compatible with this kit.
+          ref: opts.to?.replace(/^v/, ""),
+        });
   const { version: newVersion } = readManifestBasics(fetched.dir);
 
   const pinnedBase = entry.baseCommit ?? currentBase(repoRoot, slug);
@@ -236,11 +308,14 @@ export async function update(
   git(repoRoot, ["update-ref", `refs/mod-base/${slug}`, theirs]);
   entry.baseCommit = theirs;
   entry.version = newVersion;
-  entry.source = {
-    ...entry.source,
-    ref: fetched.ref ?? entry.source.ref,
-    commit: fetched.commit ?? entry.source.commit,
-  };
+  entry.source =
+    entry.source.type === "github"
+      ? {
+          ...entry.source,
+          ref: fetched.ref ?? entry.source.ref,
+          commit: fetched.commit ?? entry.source.commit,
+        }
+      : (fetched.registry ?? entry.source);
   writeLock(repoRoot, lock);
 
   if (merged.conflicts.length > 0) {
@@ -381,13 +456,89 @@ export async function down(_args: MigrateDownArgs): Promise<void> {
   );
 }
 
+/**
+ * Registry modules' upstream state: one entitlements + catalog fetch per
+ * distinct registry. Entitlement/network problems become calm license
+ * states (updates simply pause) — status never crashes on them.
+ */
+type LicenseState = "active" | "inactive" | "no-key" | "unknown";
+
+async function registryStates(
+  modules: Record<string, ModLockEntry>,
+): Promise<Map<string, { latest: string | null; license: LicenseState }>> {
+  const states = new Map<
+    string,
+    { latest: string | null; license: LicenseState }
+  >();
+  const byRegistry = new Map<
+    string,
+    { slug: string; source: Extract<ModSource, { type: "registry" }> }[]
+  >();
+  for (const [slug, entry] of Object.entries(modules)) {
+    if (typeof entry.source !== "object" || entry.source.type !== "registry") {
+      continue;
+    }
+    const list = byRegistry.get(entry.source.registry) ?? [];
+    list.push({ slug, source: entry.source });
+    byRegistry.set(entry.source.registry, list);
+  }
+
+  const key = licenseKey();
+  for (const [registry, mods] of byRegistry) {
+    let license: LicenseState = key ? "active" : "no-key";
+    let entitled: Set<string> | null = null;
+    if (key) {
+      const ent = await fetchEntitlements({ registry, licenseKey: key });
+      if (ent.status === "active") {
+        entitled = new Set(ent.entitlements.map((e) => e.slug));
+      } else if (ent.status === "inactive") {
+        license = "inactive";
+      } else {
+        license = "unknown"; // network problem — report nothing, quietly
+      }
+    }
+    const catalog = new Map<string, CatalogModule>();
+    if (license === "active") {
+      try {
+        for (const mod of await fetchCatalog(registry)) {
+          catalog.set(mod.slug, mod);
+        }
+      } catch {
+        // catalog unreachable — no update info, still report license state
+      }
+    }
+    for (const mod of mods) {
+      const perModule: LicenseState =
+        license === "active" && entitled && !entitled.has(mod.source.slug)
+          ? "inactive"
+          : license;
+      states.set(mod.slug, {
+        latest:
+          perModule === "active"
+            ? latestCompatible(catalog.get(mod.source.slug))
+            : null,
+        license: perModule,
+      });
+    }
+  }
+  return states;
+}
+
+const LICENSE_NOTES: Partial<Record<LicenseState, string>> = {
+  inactive: "license inactive — updates paused",
+  "no-key": "no license key — updates paused",
+};
+
 /** `pnpm mod list` / `pnpm mod status [--json]` */
-// eslint-disable-next-line @typescript-eslint/require-await
 export async function status(
   repoRoot: string,
   opts: { json?: boolean; checkUpstream?: boolean },
 ): Promise<void> {
   const lock = readLock(repoRoot);
+  const registry = opts.checkUpstream
+    ? await registryStates(lock.modules)
+    : new Map<string, { latest: string | null; license: LicenseState }>();
+
   const rows = Object.entries(lock.modules).map(([slug, entry]) => {
     const modified = entry.baseCommit
       ? modifiedFiles(
@@ -397,6 +548,7 @@ export async function status(
         )
       : [];
     let latest: string | null = null;
+    let license: LicenseState | undefined;
     if (
       opts.checkUpstream &&
       typeof entry.source === "object" &&
@@ -419,6 +571,11 @@ export async function status(
         latest = null;
       }
     }
+    const regState = registry.get(slug);
+    if (regState) {
+      latest = regState.latest;
+      license = regState.license;
+    }
     return {
       slug,
       version: entry.version,
@@ -427,6 +584,7 @@ export async function status(
       pinned: entry.pinned ?? false,
       modifiedFiles: modified.length,
       latest,
+      ...(license ? { license } : {}),
       updateAvailable:
         latest !== null && semver.gt(latest, entry.version) && !entry.pinned,
     };
@@ -437,11 +595,13 @@ export async function status(
     return;
   }
   for (const r of rows) {
+    const note = r.license ? LICENSE_NOTES[r.license] : undefined;
     console.log(
       `${r.slug}@${r.version} [${r.source}]` +
         (r.pinned ? " pinned" : "") +
         (r.modifiedFiles > 0 ? ` modified(${r.modifiedFiles})` : "") +
-        (r.updateAvailable ? ` → ${r.latest} available` : ""),
+        (r.updateAvailable ? ` → ${r.latest} available` : "") +
+        (note ? ` — ${note}` : ""),
     );
   }
 }
