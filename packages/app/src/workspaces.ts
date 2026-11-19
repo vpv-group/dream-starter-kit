@@ -268,3 +268,115 @@ export function stepEyebrow(
   const pad = (n: number) => String(n).padStart(2, "0");
   return { index: pad(i + 1), total: pad(steps.length) };
 }
+
+// ---------------------------------------------------------------------------
+// Invitations
+// ---------------------------------------------------------------------------
+
+/** Free-mail domains can't restrict an invite link. Mirrors public.is_free_mail_domain(). */
+export const FREE_MAIL_DOMAINS: readonly string[] = [
+  "gmail.com",
+  "googlemail.com",
+  "outlook.com",
+  "hotmail.com",
+  "live.com",
+  "msn.com",
+  "yahoo.com",
+  "ymail.com",
+  "icloud.com",
+  "me.com",
+  "mac.com",
+  "aol.com",
+  "proton.me",
+  "protonmail.com",
+  "gmx.com",
+  "gmx.de",
+  "mail.com",
+  "yandex.com",
+  "zoho.com",
+  "hey.com",
+  "fastmail.com",
+];
+
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const DOMAIN_RE = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/;
+
+/** Max addresses per invite request (mirrors create_invitations). */
+export const MAX_INVITES_PER_REQUEST = 50;
+
+/**
+ * Split pasted text into distinct, lower-cased addresses (commas, semicolons,
+ * whitespace and newlines all separate). "Name <a@b.com>" keeps the address.
+ */
+export function parseEmailList(input: string): {
+  valid: string[];
+  invalid: string[];
+} {
+  const seen = new Set<string>();
+  const valid: string[] = [];
+  const invalid: string[] = [];
+  // "Ana Lopez <ana@x.com>" → "ana@x.com" before splitting on separators.
+  const flattened = input.replace(/[^,;\n<>@]*<([^<>]+)>/g, " $1 ");
+  for (const raw of flattened.split(/[\s,;]+/)) {
+    const candidate = raw.trim().toLowerCase();
+    if (!candidate) continue;
+    if (seen.has(candidate)) continue;
+    seen.add(candidate);
+    (EMAIL_RE.test(candidate) ? valid : invalid).push(candidate);
+  }
+  return { valid, invalid };
+}
+
+/** Normalize + validate a domain list for invite-link restrictions. */
+export function parseAllowedDomains(
+  input: string,
+): { ok: true; domains: string[] } | { ok: false; error: string } {
+  const domains = [
+    ...new Set(
+      input
+        .split(/[\s,;]+/)
+        .map((d) => d.trim().toLowerCase().replace(/^@/, ""))
+        .filter(Boolean),
+    ),
+  ];
+  for (const d of domains) {
+    if (!DOMAIN_RE.test(d)) return { ok: false, error: `${d} isn't a domain.` };
+    if (FREE_MAIL_DOMAINS.includes(d)) {
+      return {
+        ok: false,
+        error: `${d} is a free email provider, so anyone could join.`,
+      };
+    }
+  }
+  return { ok: true, domains };
+}
+
+/** Per-address outcome of an invite request (POST /api/workspaces/:id/invitations). */
+export type InviteResult =
+  | "sent"
+  | "existing_account"
+  | "already_member"
+  | "invalid"
+  | "rate_limited"
+  | "send_failed";
+
+export function inviteResultLabel(result: InviteResult): string {
+  switch (result) {
+    case "sent":
+      return "Invite sent";
+    case "existing_account":
+      return "Has an account — they'll see it when they sign in";
+    case "already_member":
+      return "Already a member";
+    case "invalid":
+      return "Not a valid email";
+    case "rate_limited":
+      return "Daily invite limit reached";
+    case "send_failed":
+      return "Couldn't send the email";
+  }
+}
+
+/** The /invite/{token} and /join/{token} page states. */
+export type InviteProblemKind =
+  "expired" | "revoked" | "used" | "not_found" | "wrong_account" | "disabled";

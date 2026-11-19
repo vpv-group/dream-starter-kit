@@ -10,6 +10,8 @@ import {
   labelWithArticle,
   nextOnboardingStep,
   normalizeSlugInput,
+  parseAllowedDomains,
+  parseEmailList,
   RESERVED_WORKSPACE_SLUGS,
   slugifyWorkspaceName,
   stepEyebrow,
@@ -172,5 +174,29 @@ describe("onboarding step registry", () => {
     expect(nextOnboardingStep(steps, "unknown")?.key).toBe("profile");
     expect(stepEyebrow(steps, "updates")).toEqual({ index: "02", total: "02" });
     expect(stepEyebrow(steps, "nope")).toBeNull();
+  });
+});
+
+describe("invitations helpers", () => {
+  it("parses pasted email lists", () => {
+    expect(
+      parseEmailList(
+        "Ana@Vyten.com, bob@vyten.com;\nana@vyten.com  nope, Carl Diaz <carl@x.io>",
+      ),
+    ).toEqual({
+      valid: ["ana@vyten.com", "bob@vyten.com", "carl@x.io"],
+      invalid: ["nope"],
+    });
+    expect(parseEmailList("   ")).toEqual({ valid: [], invalid: [] });
+  });
+
+  it("validates invite-link domains and blocks free mail", () => {
+    expect(parseAllowedDomains("Vyten.com, @acme.io")).toEqual({
+      ok: true,
+      domains: ["vyten.com", "acme.io"],
+    });
+    expect(parseAllowedDomains("gmail.com").ok).toBe(false);
+    expect(parseAllowedDomains("not a domain").ok).toBe(false);
+    expect(parseAllowedDomains("")).toEqual({ ok: true, domains: [] });
   });
 });

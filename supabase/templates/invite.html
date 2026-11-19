@@ -1,16 +1,47 @@
 <!--
-  Staff invite email (Supabase "Invite user" template), sent when an admin
-  creates a user in /admin (payload/hooks/invite-user.ts).
+  Supabase "Invite user" template. Two senders share it:
 
-  Links straight to the app's /accept-invite page with {{ .TokenHash }}; the
-  page verifies it with an explicit verifyOtp(type: "invite") call. This keeps
-  the one-time token out of the navigation redirect chain, so link prefetchers
+  1. Workspace invites (B2B, docs/WORKSPACES.md) — POST
+     /api/workspaces/:id/invitations calls auth.admin.inviteUserByEmail with
+     user metadata { invited_to_workspace, invited_by_name, app_name } and
+     redirectTo = {SITE}/invite/{token}. The link carries that as redirect_to,
+     so after setting a password /accept-invite forwards to
+     /welcome?invite={token}, which joins the workspace.
+  2. Staff invites — an admin creating a user in /admin
+     (payload/hooks/invite-user.ts). No workspace metadata → the staff copy.
+
+  Both link to the app's /accept-invite page with {{ .TokenHash }}; the page
+  verifies it with an explicit verifyOtp(type: "invite") call. This keeps the
+  one-time token out of the navigation redirect chain, so link prefetchers
   (mail scanners) and browser navigation restarts can't burn it — unlike the
   default {{ .ConfirmationURL }} flow.
+
+  Optional metadata is read with `if`/`with` so a missing key renders nothing.
 
   Hosted Supabase does not read this file — paste the same markup into the
   Dashboard (Authentication -> Emails -> Invite user). See README -> Deploy.
 -->
+
+{{ if .Data.invited_to_workspace }}
+<h2>
+  {{ with .Data.invited_by_name }}{{ . }} invited you{{ else }}You have been
+  invited{{ end }} to {{ .Data.invited_to_workspace }}
+</h2>
+
+<p>
+  Join {{ .Data.invited_to_workspace }} on {{ with .Data.app_name }}{{ .
+  }}{{ else }}{{ $.SiteURL }}{{ end }}. Follow this link to accept the invite
+  and set your password:
+</p>
+<p>
+  <a
+    href="{{ .SiteURL }}/accept-invite?token_hash={{ .TokenHash }}&type=invite&redirect_to={{ .RedirectTo }}"
+    >Join {{ .Data.invited_to_workspace }}</a
+  >
+</p>
+
+<p>If you weren’t expecting this invitation, you can ignore this email.</p>
+{{ else }}
 <h2>You have been invited</h2>
 
 <p>
@@ -24,3 +55,4 @@
 </p>
 
 <p>If you weren’t expecting this invitation, you can ignore this email.</p>
+{{ end }}
