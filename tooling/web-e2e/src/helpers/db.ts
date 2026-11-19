@@ -133,3 +133,44 @@ export async function grantActiveSubscription(userId: string): Promise<void> {
     throw new Error(`grantActiveSubscription failed: ${res.status}`);
   }
 }
+
+/**
+ * Insert a pending organization invitation for `email` (service role) and
+ * return its id. Used by organization.spec.ts.
+ */
+export async function createInvitation(
+  orgId: string,
+  email: string,
+  role: "admin" | "member" = "member",
+): Promise<string> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/invitations`, {
+    method: "POST",
+    headers: {
+      ...serviceHeaders(),
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify({ org_id: orgId, email, role }),
+  });
+  if (!res.ok) throw new Error(`invitation insert failed: ${res.status}`);
+  const rows = (await res.json()) as { id: string }[];
+  const id = rows[0]?.id;
+  if (!id) throw new Error("invitation insert returned no row");
+  return id;
+}
+
+/** Organizations owned by a user (service role). */
+export async function fetchOwnedOrganizations(
+  ownerId: string,
+): Promise<{ id: string; name: string; website: string | null }[]> {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/organizations?owner_id=eq.${ownerId}&select=id,name,website`,
+    { headers: serviceHeaders() },
+  );
+  if (!res.ok) throw new Error(`organizations lookup failed: ${res.status}`);
+  return (await res.json()) as {
+    id: string;
+    name: string;
+    website: string | null;
+  }[];
+}

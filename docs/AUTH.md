@@ -69,6 +69,51 @@ email → password / check-your-email sub-flow:
 - **Post-login / post-signup redirect** — override the default `/welcome`
   role-based routing.
 
+## Organizations
+
+**Sign-up & access → Organization mode** decides what happens to teams after
+sign-up:
+
+| Mode | Behaviour |
+| --- | --- |
+| **Off** (default) | No organization step. Right for consumer apps. |
+| **Personal** | `/welcome` gives each new user a personal organization (`ensure_personal_org()`). They can create or join real ones later. |
+| **Required** | Non-staff users without a membership are sent to **`/onboarding/organization`** after confirming their email: accept a pending invitation that matches their email, or create an organization (name + optional website). The `(app)` layout enforces the same rule as a backstop. |
+
+The header shows an **organization switcher** (wireframe-style popover) when the
+user belongs to more than one organization, or to any when the mode isn't
+off. The active organization is a plain cookie (`dream-active-org`) — a UI
+preference; RLS is the security boundary. Read it in code with `useActiveOrg()`
+from `@acme/app` (web provider in `components/active-org-provider.tsx`,
+server helper `lib/org/active-org.ts`).
+
+Invitations are rows in `public.invitations` created by organization admins
+(RLS). The invitee sees them on `/onboarding/organization` once signed in with
+the invited email; sending invitation emails is up to the app (the CRM module
+does it for its workspace). The routing rule is the pure
+`resolveOrganizationGate()` in `@acme/app`, unit-tested.
+
+## Auth events
+
+`public.auth_events` records, per user, every **auth email** Supabase sends
+(sign-up confirmation, magic link / email code or password reset, invite,
+email change, reauthentication), every **sign-in**, and account changes
+(signed up, password updated). A trigger on Supabase's
+`auth.audit_log_entries` derives the rows; links, codes and tokens are never
+stored. Read-own under RLS; modules may attach `mod_<slug>_*` triggers to it
+(`database.triggersOn`) — the CRM logs these on each person's timeline.
+
+- GoTrue logs **magic link / email OTP sign-ins and password resets the same
+  way** (`user_recovery_requested`), so they share the kind
+  `sign_in_or_recovery`.
+- An **email change** has no audit action of its own; the trigger detects it
+  from the user row GoTrue just updated.
+- **Hosted projects:** the trigger needs the auth audit log to be written to
+  the database (Supabase's default). If the migration role can't attach a
+  trigger to `auth.audit_log_entries`, the migration logs a notice and auth
+  events stay empty — check with
+  `select count(*) from public.auth_events;` after a sign-in.
+
 ## Security tab
 
 <a id="passwords"></a>

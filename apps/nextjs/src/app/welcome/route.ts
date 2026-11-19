@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 
+import { resolveOrganizationGate } from "@acme/app";
+
 import { reconcileAnonByEmail } from "~/lib/auth/merge-anon";
 import { ensureCmsUser, ensureFreeTag } from "~/lib/cms/mirror-user";
 import { getPayloadClient } from "~/lib/cms/payload-client";
 import { isCmsSeeded } from "~/lib/cms/seed-status";
 import { ensureDbProvisioned } from "~/lib/db/bootstrap-runner";
+import { getAuthSettings } from "~/lib/payload";
 import { getSiteUrl } from "~/lib/site-url";
 import { createAdminClient } from "~/lib/supabase/admin";
 import { createClient } from "~/lib/supabase/server";
@@ -163,6 +166,30 @@ export async function GET() {
   }
 
   if (!profile?.is_staff) {
+    // Organizations (docs/AUTH.md → Organizations): "personal" gives every
+    // user their own organization; "required" sends users without one to the
+    // create-or-join step. Best-effort — a failure here never blocks sign-in.
+    if (!user.is_anonymous) {
+      try {
+        const { organizationMode } = await getAuthSettings();
+        if (organizationMode === "personal") {
+          await supabase.rpc("ensure_personal_org");
+        }
+        const { count } = await supabase
+          .from("memberships")
+          .select("org_id", { count: "exact", head: true })
+          .eq("user_id", user.id);
+        const gate = resolveOrganizationGate({
+          isStaff: false,
+          isAnonymous: false,
+          mode: organizationMode,
+          hasMembership: (count ?? 0) > 0,
+        });
+        if (gate) return NextResponse.redirect(`${siteUrl}${gate}`);
+      } catch (error) {
+        console.warn("[welcome] organization step skipped", error);
+      }
+    }
     return NextResponse.redirect(`${siteUrl}/a`);
   }
 

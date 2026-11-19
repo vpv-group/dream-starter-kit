@@ -8,6 +8,7 @@ import { NotificationBell } from "@acme/mod-notifications/web";
 import { Button } from "@acme/ui/button";
 
 import type { NavMenuItem } from "~/lib/mod/nav-types";
+import { OrgSwitcher } from "~/components/org-switcher";
 import { Separator } from "~/components/ui/separator";
 import { SidebarTrigger } from "~/components/ui/sidebar";
 import { hasModule } from "~/mod/registry.client.generated";
@@ -20,9 +21,13 @@ const FALLBACK_TITLES: Record<string, string> = {
 export function SiteHeader({
   navItems,
   isStaff = false,
+  showOrgSwitcher = false,
+  canCreateOrg = false,
 }: {
   navItems: NavMenuItem[];
   isStaff?: boolean;
+  showOrgSwitcher?: boolean;
+  canCreateOrg?: boolean;
 }) {
   const pathname = usePathname();
   // Title comes from the CMS-driven menu (longest matching href wins), so
@@ -43,6 +48,15 @@ export function SiteHeader({
           orientation="vertical"
           className="mx-2 data-[orientation=vertical]:h-4"
         />
+        {showOrgSwitcher && (
+          <>
+            <OrgSwitcher canCreate={canCreateOrg} />
+            <Separator
+              orientation="vertical"
+              className="mx-1 data-[orientation=vertical]:h-4"
+            />
+          </>
+        )}
         <h1 className="text-base font-medium">{title}</h1>
         <div className="ml-auto flex items-center gap-2">
           {/* The bell is the notifications module's surface. If you remove
