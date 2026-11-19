@@ -2,6 +2,9 @@
   "name": "@acme/web-e2e",
   "private": true,
   "type": "module",
+  "exports": {
+    "./helpers": "./src/helpers/index.ts"
+  },
   "scripts": {
     "clean": "git clean -xdf .cache .turbo node_modules playwright-report test-results",
     "format": "prettier --check . --ignore-path ../../.gitignore",
