@@ -5,7 +5,8 @@ Read this first, then `docs/ARCHITECTURE.md` and `docs/ERD.md` — those two are
 **source of truth**. If anything here conflicts with them, they win.
 (`docs/CMS.md` is the per-collection CMS reference — keep it in sync when you
 touch Payload collections; `docs/MODULES.md` is the module framework
-reference; `docs/MCP.md` is the remote MCP server reference.)
+reference; `docs/MCP.md` is the remote MCP server reference;
+`docs/WORKSPACES.md` is the account model / B2B workspaces reference.)
 
 ## What this is
 
