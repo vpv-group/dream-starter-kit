@@ -63,9 +63,15 @@ interface Source {
   ref?: string;
 }
 
-function parseSource(arg: string): Source {
+export function parseSource(
+  arg: string,
+  // `pnpm mod …` runs the CLI from tooling/mod (pnpm -F), so a relative zip
+  // path resolves against INIT_CWD: the directory the user ran pnpm in.
+  baseDir = process.env.INIT_CWD ?? process.cwd(),
+): Source {
   if (isDreamSource(arg)) return { kind: "registry", location: arg };
-  if (arg.endsWith(".zip")) return { kind: "zip", location: arg };
+  if (arg.endsWith(".zip"))
+    return { kind: "zip", location: path.resolve(baseDir, arg) };
   const [url, ref] = arg.split("#");
   if (!url) throw new Error(`unparseable source "${arg}"`);
   return { kind: "github", location: url, ref };
