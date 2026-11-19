@@ -59,7 +59,7 @@ export function commitModuleTree(
 export function currentBase(repoRoot: string, slug: string): string | null {
   for (const ref of [baseRef(slug), legacyBaseRef(slug)]) {
     try {
-      return git(repoRoot, ["rev-parse", "--verify", ref]);
+      return git(repoRoot, ["rev-parse", "--verify", "--quiet", ref]);
     } catch {
       // try the next ref
     }
