@@ -386,6 +386,59 @@ describe("RLS: organizations / memberships / invitations (relational)", () => {
   });
 });
 
+describe("profiles.email", () => {
+  it("profiles.email mirrors the auth email and stays read-own", async () => {
+    const own = await clientA
+      .from("profiles")
+      .select("email")
+      .eq("id", aId)
+      .single();
+    expect(own.data?.email).toBe(userA.email);
+    const other = await clientB.from("profiles").select("email").eq("id", aId);
+    expect(other.data).toHaveLength(0);
+  });
+});
+
+describe("auth_events: derived from the auth audit log, read-own", () => {
+  it("records a sign-in for the user and never exposes it to others", async () => {
+    // beforeAll signed both users in with a password → a 'login' audit entry each.
+    const own = await clientA
+      .from("auth_events")
+      .select("action, category, email_kind")
+      .eq("user_id", aId);
+    expect(
+      own.data?.some((e) => e.action === "login" && e.category === "session"),
+    ).toBe(true);
+    const others = await clientB
+      .from("auth_events")
+      .select("*")
+      .eq("user_id", aId);
+    expect(others.data).toHaveLength(0);
+  });
+
+  it("records auth emails without links or codes", async () => {
+    await clientA.auth.resetPasswordForEmail(userA.email);
+    const { data } = await admin
+      .from("auth_events")
+      .select("*")
+      .eq("user_id", aId)
+      .eq("category", "email");
+    const evt = data?.find((e) => e.email_kind === "sign_in_or_recovery");
+    expect(evt).toBeDefined();
+    expect(evt?.email).toBe(userA.email);
+    expect(JSON.stringify(evt)).not.toMatch(/token|code|http/i);
+  });
+
+  it("clients cannot write auth events", async () => {
+    const { error } = await clientA.from("auth_events").insert({
+      user_id: aId,
+      action: "login",
+      category: "session",
+    });
+    expect(error).not.toBeNull();
+  });
+});
+
 describe("RLS: chat_messages inherit their thread's owner", () => {
   it("A can read A's own message", async () => {
     const { data, error } = await clientA

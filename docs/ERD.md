@@ -70,7 +70,16 @@ erDiagram
         text title "job title (onboarding profile step)"
         uuid last_org_id FK "active workspace (membership-guarded)"
         jsonb email_preferences "tips / product_updates"
+        text email "mirror of auth.users.email"
         timestamptz created_at
+    }
+    auth_events {
+        uuid id PK
+        uuid user_id FK "profiles(id)"
+        text action "GoTrue audit action"
+        text category "email | session | account"
+        text email_kind "confirmation | sign_in_or_recovery | invite | email_change | reauthentication"
+        timestamptz occurred_at
     }
     content_favorites {
         uuid id PK
@@ -199,6 +208,8 @@ erDiagram
 - `memberships` — the user↔org join with a `role` (drives org-scoped RLS). `onboarding_step` / `onboarding_completed_at` let `/welcome` resume the welcome steps per person per workspace; `onboarding_done` lists the steps actually finished (vs skipped) for the getting-started checklist.
 - `invitations` — email invites. Tokens are 32 random bytes stored **only** as SHA-256 (`token_hash`); `expires_at`, `invited_by`, `accepted_at` / `accepted_by` and a `revoked` status give expiry and an audit trail. A partial unique index allows one pending invite per `(org_id, lower(email))`.
 - `profiles` workspace fields — `title`, `last_org_id` (the active workspace; a trigger rejects any workspace the user isn't a member of) and `email_preferences`, all column-grant updatable by the owner.
+- `profiles.email` mirrors `auth.users.email` (null for anonymous users) and stays in sync on email change and anonymous → permanent conversion, so modules can address users without reading `auth.users`. Read-own like the rest of the row.
+- `auth_events` — auth emails sent, sign-ins and account changes per user, derived from Supabase's auth audit log by a trigger. Never stores links, codes or tokens. Read-own; no client writes. Modules may attach `mod_<slug>_*` triggers to it (`database.triggersOn`). See docs/AUTH.md → Auth events.
 
 **Workspace RPCs** _(all `security definer`, `set search_path = ''`, executable by `authenticated` only)_ — every cross-boundary write goes through these; errors are stable snake_case messages (`slug_unavailable`, `invite_expired`, …) the clients map to copy:
 

@@ -34,6 +34,47 @@ export type Database = {
   };
   public: {
     Tables: {
+      auth_events: {
+        Row: {
+          action: string;
+          audit_id: string | null;
+          category: string;
+          email: string | null;
+          email_kind: string | null;
+          id: string;
+          occurred_at: string;
+          user_id: string;
+        };
+        Insert: {
+          action: string;
+          audit_id?: string | null;
+          category: string;
+          email?: string | null;
+          email_kind?: string | null;
+          id?: string;
+          occurred_at?: string;
+          user_id: string;
+        };
+        Update: {
+          action?: string;
+          audit_id?: string | null;
+          category?: string;
+          email?: string | null;
+          email_kind?: string | null;
+          id?: string;
+          occurred_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "auth_events_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       content_favorites: {
         Row: {
           collection: string;
@@ -941,6 +982,7 @@ export type Database = {
           avatar_url: string | null;
           created_at: string;
           display_name: string | null;
+          email: string | null;
           email_preferences: Json;
           id: string;
           is_anonymous: boolean;
@@ -953,6 +995,7 @@ export type Database = {
           avatar_url?: string | null;
           created_at?: string;
           display_name?: string | null;
+          email?: string | null;
           email_preferences?: Json;
           id: string;
           is_anonymous?: boolean;
@@ -965,6 +1008,7 @@ export type Database = {
           avatar_url?: string | null;
           created_at?: string;
           display_name?: string | null;
+          email?: string | null;
           email_preferences?: Json;
           id?: string;
           is_anonymous?: boolean;
