@@ -95,7 +95,11 @@
     "NEXT_PUBLIC_CMS_URL",
     "EXPO_PUBLIC_CMS_URL",
     "MAILPIT_URL",
-    "PORT"
+    "PORT",
+    "CRON_SECRET",
+    "MOD_*",
+    "NEXT_PUBLIC_MOD_*",
+    "EXPO_PUBLIC_MOD_*"
   ],
   "globalPassThroughEnv": [
     "NODE_ENV",
