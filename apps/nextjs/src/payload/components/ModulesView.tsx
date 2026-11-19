@@ -23,16 +23,42 @@ interface RegistryResponse {
   };
   opsConfigured: boolean;
   catalogUrl: string | null;
+  /** Is DREAM_LICENSE_KEY set (paid modules — docs/MODULES.md)? */
+  licenseConfigured: boolean;
 }
 
 interface CatalogEntry {
   slug: string;
   name: string;
   description?: string;
-  repo: string;
+  /** Free modules install from a repo; paid ones from the Dream registry. */
+  repo?: string;
   latest?: string;
   kitCompat?: string;
+  paid?: boolean;
+  /** "Included in <plan>" on paid cards. */
+  plan?: string;
+  /** Where to buy access when not entitled. */
+  pricingUrl?: string;
 }
+
+interface EntitlementsState {
+  configured: boolean;
+  status: "none" | "active" | "inactive" | "error";
+  code?: string;
+  entitlements: { slug: string; plan?: string }[];
+}
+
+/** Tiny semver-ish "is b newer than a" for update badges (no prereleases). */
+const isNewer = (a: string, b: string): boolean => {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    const [x = 0, y = 0] = [pa[i], pb[i]];
+    if (x !== y) return y > x;
+  }
+  return false;
+};
 
 interface OpsResponse {
   runs: {
@@ -56,6 +82,9 @@ const sourceLabel = (source: unknown): string => {
 export function ModulesView() {
   const [registry, setRegistry] = useState<RegistryResponse | null>(null);
   const [catalog, setCatalog] = useState<CatalogEntry[]>([]);
+  const [entitlements, setEntitlements] = useState<EntitlementsState | null>(
+    null,
+  );
   const [ops, setOps] = useState<OpsResponse | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -76,6 +105,12 @@ export function ModulesView() {
         setCatalog([]);
       }
     }
+    // License/entitlement state for paid modules — proxied server-side so the
+    // key never reaches the browser.
+    const ent = (await fetch("/api/modules/entitlements").then((r) =>
+      r.ok ? r.json() : null,
+    )) as EntitlementsState | null;
+    setEntitlements(ent);
     if (reg?.opsConfigured) {
       const o = (await fetch("/api/modules/ops").then((r) =>
         r.ok ? r.json() : null,
@@ -153,6 +188,22 @@ export function ModulesView() {
 
   const installedSlugs = new Set(registry.installed.map((i) => i.slug));
 
+  // Paid-module state (docs/MODULES.md → Paid modules). The license key lives
+  // server-side only; `entitlements` is the proxied, derived state.
+  const licenseActive = entitlements?.status === "active";
+  const entitledPlans = new Map(
+    (entitlements?.entitlements ?? []).map((e) => [e.slug, e.plan]),
+  );
+  const isEntitled = (slug: string) => licenseActive && entitledPlans.has(slug);
+  const catalogBySlug = new Map(catalog.map((e) => [e.slug, e]));
+  /** Per-module license label for installed registry modules. */
+  const licenseLabel = (slug: string): string => {
+    if (!registry.licenseConfigured) return "no license key — updates paused";
+    if (entitlements?.status === "error") return "license status unavailable";
+    if (!isEntitled(slug)) return "license inactive — updates paused";
+    return "license active";
+  };
+
   return (
     <div
       className="gutter--left gutter--right"
@@ -189,20 +240,51 @@ export function ModulesView() {
         <tbody>
           {registry.installed.map((mod) => {
             const entry = registry.lock.modules[mod.slug];
+            const origin = sourceLabel(entry?.source);
+            const fromRegistry = origin === "registry";
+            const catalogLatest = catalogBySlug.get(mod.slug)?.latest;
+            const registryUpdate =
+              fromRegistry &&
+              isEntitled(mod.slug) &&
+              catalogLatest &&
+              isNewer(mod.version, catalogLatest)
+                ? catalogLatest
+                : null;
             return (
               <tr key={mod.slug}>
                 <td>
                   {mod.name} {mod.system ? "· system" : ""}
                   {entry?.pinned ? " · pinned" : ""}
                 </td>
-                <td>{mod.version}</td>
-                <td>{sourceLabel(entry?.source)}</td>
+                <td>
+                  {mod.version}
+                  {registryUpdate ? (
+                    <>
+                      {" "}
+                      <em>→ {registryUpdate} available</em>
+                    </>
+                  ) : fromRegistry && isEntitled(mod.slug) ? (
+                    " · up to date"
+                  ) : (
+                    ""
+                  )}
+                </td>
+                <td>
+                  {origin}
+                  {fromRegistry && (
+                    <>
+                      {" · "}
+                      <em>{licenseLabel(mod.slug)}</em>
+                    </>
+                  )}
+                </td>
                 <td style={{ whiteSpace: "nowrap" }}>
                   <a href={`/admin/collections/kit-modules`}>enable/disable</a>
                   {" · "}
                   <a href={`/admin/collections/nav-items`}>menu</a>
                   {registry.opsConfigured &&
-                    sourceLabel(entry?.source) === "github" && (
+                    (origin === "github" ||
+                      (fromRegistry && isEntitled(mod.slug))) && (
                       <>
                         {" · "}
                         <button
@@ -247,30 +329,53 @@ export function ModulesView() {
         <>
           <h2 style={{ marginTop: 32 }}>Catalog</h2>
           <div style={{ display: "grid", gap: 12 }}>
-            {catalog.map((entry) => (
-              <div
-                key={entry.slug}
-                style={{ border: "1px solid", borderRadius: 6, padding: 12 }}
-              >
-                <strong>{entry.name}</strong> {entry.latest ?? ""}
-                <p style={{ margin: "4px 0" }}>{entry.description}</p>
-                {installedSlugs.has(entry.slug) ? (
-                  <em>Installed</em>
-                ) : registry.opsConfigured ? (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() =>
-                      void dispatchOp({ op: "add", source: entry.repo })
-                    }
-                  >
-                    Install
-                  </button>
-                ) : (
-                  <code>pnpm mod add {entry.repo}</code>
-                )}
-              </div>
-            ))}
+            {catalog.map((entry) => {
+              // Paid modules distribute through the Dream registry
+              // (`dream:<slug>`), free ones from their public repo.
+              const paid = entry.paid ?? !entry.repo;
+              const entitled = isEntitled(entry.slug);
+              const source = paid ? `dream:${entry.slug}` : entry.repo;
+              const installable = !paid || entitled;
+              return (
+                <div
+                  key={entry.slug}
+                  style={{ border: "1px solid", borderRadius: 6, padding: 12 }}
+                >
+                  <strong>{entry.name}</strong> {entry.latest ?? ""}
+                  {paid && entry.plan && (
+                    <em style={{ marginLeft: 8 }}>
+                      Included in {entry.plan}
+                    </em>
+                  )}
+                  <p style={{ margin: "4px 0" }}>{entry.description}</p>
+                  {installedSlugs.has(entry.slug) ? (
+                    <em>Installed</em>
+                  ) : !installable ? (
+                    entry.pricingUrl ? (
+                      <a href={entry.pricingUrl} target="_blank" rel="noreferrer">
+                        Get access
+                      </a>
+                    ) : (
+                      <em>
+                        {registry.licenseConfigured
+                          ? "Not included in your plan"
+                          : "Needs a license key (DREAM_LICENSE_KEY)"}
+                      </em>
+                    )
+                  ) : registry.opsConfigured && source ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void dispatchOp({ op: "add", source })}
+                    >
+                      Install
+                    </button>
+                  ) : (
+                    <code>pnpm mod add {source}</code>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </>
       )}

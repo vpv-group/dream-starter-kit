@@ -1,5 +1,5 @@
-import { env } from "~/env";
 import { opsConfigured, requireAdmin } from "~/lib/mod/admin-ops";
+import { catalogUrl, licenseConfigured } from "~/lib/mod/dream-registry";
 import { modulesLock } from "~/mod/lock.generated";
 import { modInstalled } from "~/mod/registry.data.generated";
 
@@ -16,6 +16,7 @@ export async function GET() {
     installed: modInstalled,
     lock: modulesLock,
     opsConfigured: opsConfigured(),
-    catalogUrl: env.MOD_CATALOG_URL ?? null,
+    catalogUrl: catalogUrl(),
+    licenseConfigured: licenseConfigured(),
   });
 }
