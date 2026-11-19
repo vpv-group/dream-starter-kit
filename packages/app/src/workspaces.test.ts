@@ -86,8 +86,7 @@ describe("workspace slugs", () => {
 
   it("validates the create form with zod", () => {
     expect(
-      createWorkspaceSchema.safeParse({ name: " Acme ", slug: "acme" })
-        .success,
+      createWorkspaceSchema.safeParse({ name: " Acme ", slug: "acme" }).success,
     ).toBe(true);
     expect(
       createWorkspaceSchema.safeParse({ name: "", slug: "acme" }).success,
