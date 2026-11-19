@@ -105,6 +105,12 @@ export const moduleManifestSchema = z.object({
        * core DML whitelist (e.g. billing → tags/user_tags). Validated by sync.
        */
       dml: z.array(z.string().min(1)).default([]),
+      /**
+       * Foreign tables this module attaches `mod_<slug>_*` triggers to:
+       * core hook-points (organizations, memberships, invitations, profiles,
+       * auth_events) or tables of modules it `requires`.
+       */
+      triggersOn: z.array(z.string().min(1)).default([]),
     })
     .prefault({}),
   cms: z

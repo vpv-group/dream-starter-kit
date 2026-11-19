@@ -211,6 +211,7 @@ export async function loadModules(repoRoot: string): Promise<LoadedModule[]> {
           file: path.relative(mod.dir, file),
           ownTables: mod.manifest.database.tables,
           allowedDmlTables: allowedDml,
+          triggerTables: mod.manifest.database.triggersOn,
         }),
       );
     }

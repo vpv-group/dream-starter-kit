@@ -140,6 +140,49 @@ describe("buildStubs", () => {
     );
     expect(stub?.slug).toBe("billing");
   });
+
+  it("generates nested dynamic stubs for multi-segment paths", () => {
+    const crm = loaded({
+      slug: "crm",
+      name: "CRM",
+      version: "1.0.0",
+      kitCompat: ">=2.0.0 <3",
+      routes: {
+        web: [
+          { path: "", component: "CrmHome" },
+          { path: "[object]", component: "ObjectList" },
+          { path: "[object]/[id]", component: "RecordPage" },
+          { path: "settings", component: "CrmSettings" },
+        ],
+        native: [
+          { path: "", component: "CrmHomeScreen" },
+          { path: "[object]/index", component: "ObjectListScreen" },
+          { path: "[object]/[id]", component: "RecordScreen" },
+        ],
+      },
+    });
+    const files = buildStubs([crm]);
+    const paths = files.map((f) => f.path);
+    const web = "apps/nextjs/src/app/(frontend)/(app)/a/crm";
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        `${web}/page.tsx`,
+        `${web}/[object]/page.tsx`,
+        `${web}/[object]/[id]/page.tsx`,
+        `${web}/settings/page.tsx`,
+        "apps/expo/src/app/(app)/a/crm/index.tsx",
+        "apps/expo/src/app/(app)/a/crm/[object]/index.tsx",
+        "apps/expo/src/app/(app)/a/crm/[object]/[id].tsx",
+      ]),
+    );
+    // One enabled-gating layout for the whole mount, not one per segment.
+    expect(paths.filter((p) => p.endsWith("/layout.tsx"))).toEqual([
+      `${web}/layout.tsx`,
+    ]);
+    expect(
+      files.find((f) => f.path === `${web}/[object]/[id]/page.tsx`)?.content,
+    ).toContain('export { RecordPage as default } from "@acme/mod-crm/web";');
+  });
 });
 
 describe("env example fence", () => {
