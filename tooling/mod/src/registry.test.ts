@@ -89,7 +89,7 @@ describe("env helpers", () => {
   });
 
   it("registryUrl defaults to the Dream registry and strips trailing slashes", () => {
-    expect(registryUrl({})).toBe("https://meetdream.com/api/ext/modules/v1");
+    expect(registryUrl({})).toBe("https://www.meetdream.com/api/mod/modules/v1");
     expect(registryUrl({ DREAM_REGISTRY_URL: `${REGISTRY}/` })).toBe(REGISTRY);
   });
 });

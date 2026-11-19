@@ -21,7 +21,7 @@ export const KIT_VERSION = "2.0.0";
  * `MOD_CATALOG_URL` is set.
  */
 export const DREAM_REGISTRY_DEFAULT_URL =
-  "https://meetdream.com/api/ext/modules/v1";
+  "https://www.meetdream.com/api/mod/modules/v1";
 
 /**
  * Default AI model — a Vercel AI Gateway "provider/model" slug.

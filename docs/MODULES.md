@@ -191,7 +191,8 @@ Vercel); enable “Allow auto-merge” in the repo settings.
 ## Paid modules (Dream registry)
 
 Paid modules distribute through a Dream module registry
-(default `https://meetdream.com/api/ext/modules/v1`; protocol reference:
+(default `https://www.meetdream.com/api/mod/modules/v1` — the `modules` module
+in meet-dream, served as public, rate-limited routes; protocol reference:
 meet-dream's `docs/MODULES.md`) instead of a public GitHub repo, addressed as
 `dream:<slug>` sources:
 
