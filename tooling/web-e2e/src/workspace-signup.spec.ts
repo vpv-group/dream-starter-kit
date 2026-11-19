@@ -1,7 +1,5 @@
-import type { APIRequestContext } from "@playwright/test";
-import { expect, request as playwrightRequest, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-import { FOUNDER_STORAGE_STATE } from "./helpers/founder";
 import { fetchAuthEmail, signUpToCheckEmail } from "./helpers/mailpit";
 
 /**
@@ -9,38 +7,10 @@ import { fetchAuthEmail, signUpToCheckEmail } from "./helpers/mailpit";
  * Mailpit → Name your workspace → skip the welcome steps → /a with the
  * workspace switcher showing the new workspace.
  *
- * Runs in the `workspaces` Playwright project, AFTER the main suite (it flips
- * the site-wide account model, which would reroute parallel consumer
- * sign-ups), and restores Individuals afterwards even on failure.
+ * Runs in the `workspaces` Playwright project: workspaces.setup.ts switches
+ * the app to Teams after the main suite, and its teardown restores it.
  */
-test.describe.configure({ mode: "serial", retries: 0 });
-
-const baseURL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-let staff: APIRequestContext;
-
-async function setAccountModel(accountModel: "consumer" | "business") {
-  // Payload REST global update, authenticated as the founder (staff) through
-  // the Supabase SSO strategy — the same write path as /admin.
-  const res = await staff.post("/cms-api/globals/authentication-settings", {
-    data: { accountModel },
-  });
-  expect(res.ok(), `set accountModel=${accountModel}: ${res.status()}`).toBe(
-    true,
-  );
-}
-
-test.beforeAll(async () => {
-  staff = await playwrightRequest.newContext({
-    baseURL,
-    storageState: FOUNDER_STORAGE_STATE,
-  });
-  await setAccountModel("business");
-});
-
-test.afterAll(async () => {
-  await setAccountModel("consumer");
-  await staff.dispose();
-});
+test.describe.configure({ retries: 0 });
 
 test("a Teams-mode sign-up names a workspace and lands in it", async ({
   page,
@@ -72,6 +42,10 @@ test("a Teams-mode sign-up names a workspace and lands in it", async ({
   // Splash, then the first welcome step.
   await page.waitForURL(/\/onboarding\/profile/, { timeout: 30_000 });
   await expect(page.getByText("Step 01")).toBeVisible();
+  await page.getByRole("button", { name: "Do this later" }).click();
+
+  // Owners can invite teammates; skip it here (workspace-invite.spec.ts).
+  await page.waitForURL(/\/onboarding\/invite$/);
   await page.getByRole("button", { name: "Do this later" }).click();
 
   await page.waitForURL(/\/onboarding\/updates/);
