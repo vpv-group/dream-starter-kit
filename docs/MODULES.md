@@ -153,6 +153,7 @@ its generated widget registry through `@acme/mod-kit/react`'s
 pnpm mod create <slug>            # working scaffold (table+RLS, hooks, screens,
                                   #   widget, settings, ping route, tests)
 pnpm mod add <url[#vX.Y.Z]|.zip>  # vendor + validate + snapshot + lock + sync
+pnpm mod add dream:<slug>[@x.y.z] # paid module from the Dream registry (below)
 pnpm mod update <slug> [--to vX.Y.Z] [--continue]
 pnpm mod remove <slug> [--keep-data]
 pnpm mod list | status [--json] [--check]
@@ -186,6 +187,61 @@ auto-merge.
 pull-requests:write, actions:read on this repo); set it as the `MOD_OPS_TOKEN`
 repo secret AND the `GITHUB_OPS_TOKEN` Vercel env (plus `GITHUB_REPO` off
 Vercel); enable “Allow auto-merge” in the repo settings.
+
+## Paid modules (Dream registry)
+
+Paid modules distribute through a Dream module registry
+(default `https://meetdream.com/api/ext/modules/v1`; protocol reference:
+meet-dream's `docs/MODULES.md`) instead of a public GitHub repo, addressed as
+`dream:<slug>` sources:
+
+```bash
+pnpm mod add dream:crm         # latest version compatible with this kit
+pnpm mod add dream:crm@1.2.0   # a specific version
+pnpm mod update crm            # same refs/mod-base three-way merge as GitHub
+pnpm mod status --check        # update + license state per module
+```
+
+**Setup**
+
+1. Get a license key from meetdream.com.
+2. Set `DREAM_LICENSE_KEY` in the Vercel env (server-only — the browser only
+   ever sees derived entitlement state via the staff-gated
+   `/api/modules/entitlements` proxy, never the key).
+3. Add the same key as the **`DREAM_LICENSE_KEY` GitHub repo secret** so
+   `module-ops.yml` (admin installs/updates + the daily auto-update) can run
+   the CLI. The workflow masks it in logs (`::add-mask::`); the CLI never
+   prints it — it travels only in the `X-Dream-License-Key` header.
+4. Optional: `DREAM_REGISTRY_URL` points at a different registry. The
+   `/admin/modules` catalog defaults to `${DREAM_REGISTRY_URL}/catalog?schema=2`;
+   a self-hoster who sets `MOD_CATALOG_URL` keeps their own catalog.
+
+**How it works.** `mod add dream:<slug>` sends
+`POST {registry}/download` (`{ slug, version?, kitVersion, repo }` — the repo
+identity comes from `GITHUB_REPOSITORY`/`GITHUB_REPO` or the git origin, so
+the registry can enforce per-repo activations), downloads the returned signed
+URL **immediately** (it expires in minutes), verifies its `sha256` before
+anything touches disk, and then runs the normal zip install path. The lock
+records a `{ type: "registry", registry, slug, version, sha256 }` source, so
+updates are the same pristine-base three-way merge as GitHub sources — local
+edits survive. In `/admin/modules`, paid catalog cards show "Included in
+\<plan\>" with **Install** when the key is entitled (dispatching
+`op: add, source: dream:<slug>` through the same PR pipeline) and
+**Get access** (the module's pricing page) when it isn't or no key is set;
+installed registry modules show version, update state and license status.
+
+**When the license lapses** (`revoked_key` / `not_entitled`) nothing breaks:
+the vendored code keeps running and deploying; `mod status` and the admin page
+report "license inactive — updates paused"; the scheduled auto-update skips
+the module quietly. Re-activating resumes updates. The other registry error
+codes (`invalid_key`, `incompatible_kit`, `no_release`, `activation_limit`,
+`registry_not_configured`) map to actionable CLI messages.
+
+**License/trust note.** A registry module is vendored code like any other
+install — the trust model below applies unchanged (everything is a PR, path
+confinement, full CI); the recorded sha256 pins exactly the bytes the registry
+served. The license key is a secret: env/secret stores only, never committed,
+never logged.
 
 ## Trust model (read before installing)
 
