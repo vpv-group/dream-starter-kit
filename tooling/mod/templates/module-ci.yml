@@ -40,6 +40,9 @@ jobs:
           ref: ${{ env.KIT_REF }}
           path: kit
       - uses: pnpm/action-setup@v4
+        with:
+          # No package.json at the job root: take pnpm's version from the kit.
+          package_json_file: kit/package.json
       - uses: actions/setup-node@v4
         with:
           node-version: 22
