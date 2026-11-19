@@ -187,18 +187,20 @@ export function AuthFlow({
   const heading =
     step === "check"
       ? "Check your email"
-      : step === "email" || step === "password"
-        ? purpose === "sso"
-          ? "What’s your work email?"
-          : isSignUp && step === "password"
-            ? "Create your account"
-            : "What’s your email address?"
-        : ((isSignUp ? settings.signUpHeading : settings.signInHeading) ??
-          (joinWorkspaceName
-            ? `Join ${joinWorkspaceName}`
-            : isSignUp
-              ? defaultSignUpHeading
-              : `Welcome to ${appName}`));
+      : joinWorkspaceName && (step === "email" || step === "password")
+        ? `Join ${joinWorkspaceName}`
+        : step === "email" || step === "password"
+          ? purpose === "sso"
+            ? "What’s your work email?"
+            : isSignUp && step === "password"
+              ? "Create your account"
+              : "What’s your email address?"
+          : ((isSignUp ? settings.signUpHeading : settings.signInHeading) ??
+            (joinWorkspaceName
+              ? `Join ${joinWorkspaceName}`
+              : isSignUp
+                ? defaultSignUpHeading
+                : `Welcome to ${appName}`));
 
   function termsOk(): boolean {
     if (isSignUp && settings.requireTermsAcceptance && !acceptTerms) {
@@ -539,18 +541,23 @@ export function AuthFlow({
             {Logo}
             <Field>
               {lockedEmail ? (
-                <InputGroup>
-                  <InputGroupInput
-                    type="email"
-                    aria-label="Email"
-                    className="text-center"
-                    value={lockedEmail}
-                    readOnly
-                  />
-                  <InputGroupAddon align="inline-end">
-                    <LockIcon aria-label="Locked to the invited address" />
-                  </InputGroupAddon>
-                </InputGroup>
+                <>
+                  <InputGroup>
+                    <InputGroupInput
+                      type="email"
+                      aria-label="Email"
+                      className="text-center"
+                      value={lockedEmail}
+                      readOnly
+                    />
+                    <InputGroupAddon align="inline-end">
+                      <LockIcon aria-label="Locked to the invited address" />
+                    </InputGroupAddon>
+                  </InputGroup>
+                  <FieldDescription className="text-center">
+                    Invites only work for the address they were sent to.
+                  </FieldDescription>
+                </>
               ) : (
                 <Input
                   type="email"
