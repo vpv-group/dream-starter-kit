@@ -17,6 +17,7 @@ import {
   buildEnvExampleBlock,
   buildLockModule,
 } from "./generate";
+import { installWorkspace } from "./install";
 import { readLock, readPins, writeLock, writePins } from "./lock";
 import { loadModules } from "./manifests";
 import { syncSupabaseMigrations } from "./migrations";
@@ -177,7 +178,7 @@ function syncAppDependencies(repoRoot: string): void {
     }
   }
   if (changed) {
-    execSync("pnpm install", { cwd: repoRoot, stdio: "inherit" });
+    installWorkspace(repoRoot);
   }
 }
 

@@ -26,6 +26,7 @@ import {
   rerootLegacyBase,
   snapshotModule,
 } from "./git";
+import { installWorkspace } from "./install";
 import { readLock, readPins, writeLock } from "./lock";
 import { loadModules } from "./manifests";
 import { nextVersion } from "./migrations";
@@ -180,7 +181,7 @@ function readManifestBasics(dir: string): { slug: string; version: string } {
 }
 
 async function validateAndSync(repoRoot: string): Promise<void> {
-  execSync("pnpm install", { cwd: repoRoot, stdio: "inherit" });
+  installWorkspace(repoRoot);
   await sync(repoRoot); // loadModules inside throws on any validation error
 }
 

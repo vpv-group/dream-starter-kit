@@ -1,9 +1,9 @@
-import { execSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { slugToSnake } from "@acme/mod-kit";
 
+import { installWorkspace } from "./install";
 import { toAbs } from "./paths";
 import { sync } from "./sync";
 
@@ -392,7 +392,7 @@ describe("createItemSchema", () => {
 
   // Link the new workspace package BEFORE sync — loading the manifest needs
   // @acme/mod-kit resolvable from the new package.
-  execSync("pnpm install", { cwd: repoRoot, stdio: "inherit" });
+  installWorkspace(repoRoot);
   await sync(repoRoot);
   console.log(
     `\nScaffolded modules/${slug}. Next: pnpm db:reset && ` +
