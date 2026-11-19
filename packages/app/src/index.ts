@@ -20,7 +20,7 @@ export {
   type ToggleFavoriteInput,
 } from "./hooks/use-favorites";
 export { useProfile, useUpdateProfile } from "./hooks/use-profile";
-export { useDeleteAccount } from "./hooks/use-delete-account";
+export { useDeleteAccount, SoleOwnerError } from "./hooks/use-delete-account";
 export { useUserTags } from "./hooks/use-tags";
 export type { UserTag } from "./hooks/use-tags";
 export { useNavMenu } from "./hooks/use-nav-menu";

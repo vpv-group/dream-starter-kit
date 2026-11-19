@@ -48,6 +48,24 @@ Deno.serve(async (req) => {
   } = await userClient.auth.getUser();
   if (userErr || !user) return json({ error: "Unauthorized" }, 401);
 
+  // Workspaces: a sole owner of a workspace with other members must transfer
+  // ownership first. The DB trigger (profiles_guard_delete) enforces it; check
+  // up front so nothing irreversible (Stripe cancellation) happens and the
+  // client gets a clear 409 naming the workspaces.
+  const { data: blocking, error: blockErr } = await userClient.rpc(
+    "my_blocking_workspaces",
+  );
+  if (blockErr) return json({ error: blockErr.message }, 500);
+  if (Array.isArray(blocking) && blocking.length > 0) {
+    return json(
+      {
+        error: "sole_owner_with_members",
+        workspaces: blocking.map((w: { org_name: string }) => w.org_name),
+      },
+      409,
+    );
+  }
+
   // Service-role client bypasses RLS to delete the auth user.
   const admin = createClient(supabaseUrl, serviceKey);
 
@@ -80,7 +98,10 @@ Deno.serve(async (req) => {
   }
 
   const { error: delErr } = await admin.auth.admin.deleteUser(user.id);
-  if (delErr) return json({ error: delErr.message }, 500);
+  if (delErr) {
+    const status = delErr.message.includes("sole_owner_with_members") ? 409 : 500;
+    return json({ error: delErr.message }, status);
+  }
 
   return json({ success: true }, 200);
 });
