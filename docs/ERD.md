@@ -210,8 +210,15 @@ erDiagram
 | `join_workspace_by_link(_token)` | Joins as `member` when the link is enabled and the caller's confirmed email passes `allowed_domains`. |
 | `my_pending_invitations()` | The invitee's only window onto their invites (org name/slug/logo, inviter, role, expiry). Never returns tokens. |
 | `save_onboarding_progress(_org_id, _step, _completed, _done)` | A member records their own stepper position (memberships are otherwise admin-write). |
+| `accept_pending_invitation(_invitation_id)` | Join from "You've been invited" (no token; the confirmed email must match). |
+| `create_invitations(_org, _emails, _role, _expires_days)` | Owners/admins invite by email: dedupes, skips members and invalid addresses, rotates a pending invite's token, ~50 per workspace per day. Returns each new token once. |
+| `resend_invitation(_invitation_id, _expires_days)` | Rotate a pending invite's token and expiry (the old link stops working). |
+| `workspace_members(_org)` | Members of a workspace I belong to — name, photo, title, email, role only. |
+| `invitation_preview(_token)` / `join_link_preview(_token)` | What the public `/invite` and `/join` pages show; callable signed out; never return hashes. |
+| `reset_join_link(_org)` / `set_join_link(_org, _enabled, _allowed_domains)` | Owners/admins rotate the invite link (plaintext returned once), turn it on or off, and restrict it to company domains (free mail refused). |
+| `my_blocking_workspaces()` | Workspaces where I'm the only owner and others are members (the delete-account pre-check). |
 
-**Workspace policies and guards** — `profiles: co-members read` lets members of a shared workspace read each other's profile rows (member lists, mentions). RESTRICTIVE `no anon` policies on `organizations`, `memberships` and `invitations` keep anonymous (Turnstile) sessions out entirely. A trigger blocks removing or demoting a workspace's **last owner** (cascades from deleting the workspace or the profile are exempt). `is_staff` and `memberships.role` never imply each other.
+**Workspace policies and guards** — members see each other only through `workspace_members()`; the earlier `profiles: co-members read` policy was dropped (`20261119000000_workspace_invitations.sql`) because it exposed whole profile rows, phone included. Only owners may grant, change or remove the owner role (`memberships_guard_owner_role`), and a sole owner of a workspace with other members can't be deleted (`profiles_guard_delete`) until ownership is transferred. RESTRICTIVE `no anon` policies on `organizations`, `memberships` and `invitations` keep anonymous (Turnstile) sessions out entirely. A trigger blocks removing or demoting a workspace's **last owner** (cascades from deleting the workspace or the profile are exempt). `is_staff` and `memberships.role` never imply each other.
 
 **Avatars** — the public-read `avatars` storage bucket (2 MB, png/jpeg/webp/gif) holds profile photos so teammates can see them; writes are confined to the owner's `<user_id>/` prefix and blocked for anonymous sessions.
 

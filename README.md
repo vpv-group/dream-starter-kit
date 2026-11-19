@@ -425,10 +425,14 @@ app needs — including `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_K
      verified explicitly by the page instead of being consumed by following a redirect;
      the default link-style token gets burned by mail-scanner prefetch or a browser
      navigation restart. (`/accept-invite` is covered by the `/**` Redirect URL wildcard
-     above — no extra entry needed.)
+     above — no extra entry needed.) The same template sends **workspace invites**
+     (Teams / Both account models): it switches to "{inviter} invited you to
+     {workspace}" copy from the invite's metadata and carries `redirect_to` so the
+     invitee lands in that workspace. Re-paste it whenever the file changes.
 
    Also consider custom SMTP (**Authentication → Emails → SMTP**): Supabase's built-in
-   sender is heavily rate-limited (~2 emails/hour) and meant for testing only.
+   sender is heavily rate-limited (~2 emails/hour) and meant for testing only — set it
+   up before relying on workspace invites, which each send an email.
 
    > **Signed up before configuring the URLs?** The first confirmation link will have
    > redirected to `localhost` (or expired on a retry) — the account is fine. The
