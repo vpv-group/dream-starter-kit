@@ -10,6 +10,8 @@ import {
   labelWithArticle,
   nextOnboardingStep,
   normalizeSlugInput,
+  parseAllowedDomains,
+  parseEmailList,
   RESERVED_WORKSPACE_SLUGS,
   slugifyWorkspaceName,
   stepEyebrow,
@@ -21,8 +23,8 @@ describe("workspace slugs", () => {
   it("accepts 2–39 lowercase chars with single inner hyphens", () => {
     for (const ok of [
       "ab",
-      "vyten",
-      "captive-demand",
+      "acme",
+      "edgehill-co",
       "a1-b2-c3",
       "x".repeat(39),
     ]) {
@@ -36,7 +38,7 @@ describe("workspace slugs", () => {
       "-ab",
       "ab-",
       "a--b",
-      "Vyten",
+      "Acme",
       "vy ten",
       "vy_ten",
       "x".repeat(40),
@@ -65,9 +67,9 @@ describe("workspace slugs", () => {
   });
 
   it("derives a slug from a name", () => {
-    expect(slugifyWorkspaceName("Vyten")).toBe("vyten");
-    expect(slugifyWorkspaceName("  Captive Demand, Inc. ")).toBe(
-      "captive-demand-inc",
+    expect(slugifyWorkspaceName("Acme")).toBe("acme");
+    expect(slugifyWorkspaceName("  Edgehill Co, Inc. ")).toBe(
+      "edgehill-co-inc",
     );
     expect(slugifyWorkspaceName("Café Ünïcode")).toBe("cafe-unicode");
     expect(slugifyWorkspaceName("!!")).toBe("");
@@ -84,11 +86,10 @@ describe("workspace slugs", () => {
 
   it("validates the create form with zod", () => {
     expect(
-      createWorkspaceSchema.safeParse({ name: " Vyten ", slug: "vyten" })
-        .success,
+      createWorkspaceSchema.safeParse({ name: " Acme ", slug: "acme" }).success,
     ).toBe(true);
     expect(
-      createWorkspaceSchema.safeParse({ name: "", slug: "vyten" }).success,
+      createWorkspaceSchema.safeParse({ name: "", slug: "acme" }).success,
     ).toBe(false);
     expect(
       createWorkspaceSchema.safeParse({ name: "X", slug: "admin" }).success,
@@ -132,13 +133,13 @@ describe("workspace copy", () => {
 describe("onboarding step registry", () => {
   const settings = DEFAULT_AUTH_SETTINGS;
 
-  it("shows only shipped steps: profile + updates for a creator", () => {
+  it("shows only shipped steps: profile, invite, updates for a creator", () => {
     const steps = activeOnboardingSteps(settings, {
       isAdmin: true,
       isInvitee: false,
     });
-    // invite (PR 2), integrations + plan (PR 3) are not available yet.
-    expect(steps.map((s) => s.key)).toEqual(["profile", "updates"]);
+    // integrations + plan (PR 3) are not available yet.
+    expect(steps.map((s) => s.key)).toEqual(["profile", "invite", "updates"]);
   });
 
   it("respects the founder's order and toggles", () => {
@@ -167,10 +168,35 @@ describe("onboarding step registry", () => {
       isAdmin: true,
       isInvitee: false,
     });
-    expect(nextOnboardingStep(steps, "profile")?.key).toBe("updates");
+    expect(nextOnboardingStep(steps, "profile")?.key).toBe("invite");
+    expect(nextOnboardingStep(steps, "invite")?.key).toBe("updates");
     expect(nextOnboardingStep(steps, "updates")).toBeNull();
     expect(nextOnboardingStep(steps, "unknown")?.key).toBe("profile");
-    expect(stepEyebrow(steps, "updates")).toEqual({ index: "02", total: "02" });
+    expect(stepEyebrow(steps, "updates")).toEqual({ index: "03", total: "03" });
     expect(stepEyebrow(steps, "nope")).toBeNull();
+  });
+});
+
+describe("invitations helpers", () => {
+  it("parses pasted email lists", () => {
+    expect(
+      parseEmailList(
+        "Ana@Acme.com, bob@acme.com;\nana@acme.com  nope, Carl Diaz <carl@x.io>",
+      ),
+    ).toEqual({
+      valid: ["ana@acme.com", "bob@acme.com", "carl@x.io"],
+      invalid: ["nope"],
+    });
+    expect(parseEmailList("   ")).toEqual({ valid: [], invalid: [] });
+  });
+
+  it("validates invite-link domains and blocks free mail", () => {
+    expect(parseAllowedDomains("Acme.com, @acme.io")).toEqual({
+      ok: true,
+      domains: ["acme.com", "acme.io"],
+    });
+    expect(parseAllowedDomains("gmail.com").ok).toBe(false);
+    expect(parseAllowedDomains("not a domain").ok).toBe(false);
+    expect(parseAllowedDomains("")).toEqual({ ok: true, domains: [] });
   });
 });

@@ -8,6 +8,7 @@ import { useSession, useSupabase } from "@acme/api";
 
 import type { SignupIntent } from "../post-auth";
 import type { CreateWorkspaceInput } from "../validators/workspace";
+import type { InviteResult } from "../workspaces";
 import { validateWorkspaceSlug } from "../workspaces";
 
 /** One of the current user's workspaces, with their role and onboarding state. */
@@ -200,6 +201,329 @@ export function useSetSignupIntent() {
       });
       if (error) throw error;
       return intent;
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Invitations + members (PR 2)
+// ---------------------------------------------------------------------------
+
+// `process.env.*_PUBLIC_*` is inlined by each platform's bundler (Metro / Next).
+declare const process: { env: Record<string, string | undefined> };
+const APP_BASE =
+  process.env.EXPO_PUBLIC_CMS_URL ?? process.env.NEXT_PUBLIC_CMS_URL ?? "";
+
+/** One row of my_pending_invitations(): invites sent to my confirmed email. */
+export interface PendingInvitation {
+  invitationId: string;
+  orgId: string;
+  orgName: string;
+  orgSlug: string;
+  logoUrl: string | null;
+  inviterName: string | null;
+  role: string;
+  expiresAt: string | null;
+}
+
+export function useMyPendingInvitations() {
+  const supabase = useSupabase();
+  const { user } = useSession();
+  return useQuery({
+    queryKey: ["pending-invitations", user?.id],
+    enabled: !!user,
+    queryFn: async (): Promise<PendingInvitation[]> => {
+      const { data, error } = await supabase.rpc("my_pending_invitations");
+      if (error) throw error;
+      return data.map((r) => ({
+        invitationId: r.invitation_id,
+        orgId: r.org_id,
+        orgName: r.org_name,
+        orgSlug: r.org_slug,
+        logoUrl: r.logo_url,
+        inviterName: r.inviter_name,
+        role: r.role,
+        expiresAt: r.expires_at,
+      }));
+    },
+  });
+}
+
+/** Join from the "You've been invited" screen (accept_pending_invitation). */
+export function useAcceptPendingInvitation() {
+  const supabase = useSupabase();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (invitationId: string) => {
+      const { data, error } = await supabase.rpc("accept_pending_invitation", {
+        _invitation_id: invitationId,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+      void queryClient.invalidateQueries({ queryKey: ["pending-invitations"] });
+      void queryClient.invalidateQueries({ queryKey: ["profile"] });
+    },
+  });
+}
+
+/** Join with an emailed invite token (accept_invitation) — e.g. a deep link. */
+export function useAcceptInvitation() {
+  const supabase = useSupabase();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (token: string) => {
+      const { data, error } = await supabase.rpc("accept_invitation", {
+        _token: token,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+      void queryClient.invalidateQueries({ queryKey: ["pending-invitations"] });
+    },
+  });
+}
+
+export interface WorkspaceMember {
+  userId: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  title: string | null;
+  email: string | null;
+  role: "owner" | "admin" | "member";
+  joinedAt: string;
+  isYou: boolean;
+}
+
+/** Members of a workspace I belong to (workspace_members — safe columns only). */
+export function useWorkspaceMembers(orgId: string | null | undefined) {
+  const supabase = useSupabase();
+  return useQuery({
+    queryKey: ["workspace-members", orgId],
+    enabled: !!orgId,
+    queryFn: async (): Promise<WorkspaceMember[]> => {
+      if (!orgId) return [];
+      const { data, error } = await supabase.rpc("workspace_members", {
+        _org: orgId,
+      });
+      if (error) throw error;
+      return data.map((m) => ({
+        userId: m.user_id,
+        displayName: m.display_name,
+        avatarUrl: m.avatar_url,
+        title: m.title,
+        email: m.email,
+        role: m.role as WorkspaceMember["role"],
+        joinedAt: m.joined_at,
+        isYou: m.is_you,
+      }));
+    },
+  });
+}
+
+export interface WorkspaceInvitation {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+/** Pending invitations of a workspace (RLS: owners/admins only). */
+export function useWorkspaceInvitations(orgId: string | null | undefined) {
+  const supabase = useSupabase();
+  return useQuery({
+    queryKey: ["workspace-invitations", orgId],
+    enabled: !!orgId,
+    queryFn: async (): Promise<WorkspaceInvitation[]> => {
+      if (!orgId) return [];
+      const { data, error } = await supabase
+        .from("invitations")
+        .select("id, email, role, status, expires_at, created_at")
+        .eq("org_id", orgId)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data.map((i) => ({
+        id: i.id,
+        email: i.email,
+        role: i.role,
+        status: i.status,
+        expiresAt: i.expires_at,
+        createdAt: i.created_at,
+      }));
+    },
+  });
+}
+
+function useInvalidateWorkspace(orgId: string | null | undefined) {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({
+      queryKey: ["workspace-members", orgId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["workspace-invitations", orgId],
+    });
+  };
+}
+
+export function useRevokeInvitation(orgId: string | null | undefined) {
+  const supabase = useSupabase();
+  const invalidate = useInvalidateWorkspace(orgId);
+  return useMutation({
+    mutationFn: async (invitationId: string) => {
+      const { error } = await supabase
+        .from("invitations")
+        .update({ status: "revoked" })
+        .eq("id", invitationId);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateMemberRole(orgId: string | null | undefined) {
+  const supabase = useSupabase();
+  const invalidate = useInvalidateWorkspace(orgId);
+  return useMutation({
+    mutationFn: async (input: {
+      userId: string;
+      role: WorkspaceMember["role"];
+    }) => {
+      if (!orgId) throw new Error("No workspace");
+      const { data, error } = await supabase
+        .from("memberships")
+        .update({ role: input.role })
+        .eq("org_id", orgId)
+        .eq("user_id", input.userId)
+        .select("id");
+      if (error) throw error;
+      if (data.length === 0) throw new Error("not_allowed");
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useRemoveMember(orgId: string | null | undefined) {
+  const supabase = useSupabase();
+  const invalidate = useInvalidateWorkspace(orgId);
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      if (!orgId) throw new Error("No workspace");
+      const { data, error } = await supabase
+        .from("memberships")
+        .delete()
+        .eq("org_id", orgId)
+        .eq("user_id", userId)
+        .select("id");
+      if (error) throw error;
+      if (data.length === 0) throw new Error("not_allowed");
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Enable/disable the invite link and set its allowed domains (set_join_link). */
+export function useSetJoinLink(orgId: string | null | undefined) {
+  const supabase = useSupabase();
+  return useMutation({
+    mutationFn: async (input: {
+      enabled: boolean;
+      allowedDomains: string[];
+    }) => {
+      if (!orgId) throw new Error("No workspace");
+      const { error } = await supabase.rpc("set_join_link", {
+        _org: orgId,
+        _enabled: input.enabled,
+        _allowed_domains: input.allowedDomains,
+      });
+      if (error) throw error;
+    },
+  });
+}
+
+/** POST to a workspace API route with the session's access token (web + Expo). */
+async function postWorkspaceApi<T>(
+  supabase: ReturnType<typeof useSupabase>,
+  path: string,
+  body?: unknown,
+): Promise<T> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  const res = await fetch(`${APP_BASE}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const json = (await res.json().catch(() => ({}))) as T & { error?: string };
+  if (!res.ok) throw new Error(json.error ?? `Request failed (${res.status})`);
+  return json;
+}
+
+export interface InviteResultRow {
+  email: string;
+  result: InviteResult;
+  link?: string;
+}
+
+/** Send invites (POST /api/workspaces/:id/invitations). */
+export function useSendInvitations(orgId: string | null | undefined) {
+  const supabase = useSupabase();
+  const invalidate = useInvalidateWorkspace(orgId);
+  return useMutation({
+    mutationFn: async (input: {
+      emails: string[];
+      role: "member" | "admin";
+    }) => {
+      if (!orgId) throw new Error("No workspace");
+      return (
+        await postWorkspaceApi<{ results: InviteResultRow[] }>(
+          supabase,
+          `/api/workspaces/${orgId}/invitations`,
+          input,
+        )
+      ).results;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useResendInvitation(orgId: string | null | undefined) {
+  const supabase = useSupabase();
+  const invalidate = useInvalidateWorkspace(orgId);
+  return useMutation({
+    mutationFn: async (invitationId: string) => {
+      if (!orgId) throw new Error("No workspace");
+      return postWorkspaceApi<Omit<InviteResultRow, "email">>(
+        supabase,
+        `/api/workspaces/${orgId}/invitations/${invitationId}/resend`,
+      );
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Create or rotate the invite link; the plaintext link is returned once. */
+export function useResetJoinLink(orgId: string | null | undefined) {
+  const supabase = useSupabase();
+  return useMutation({
+    mutationFn: async () => {
+      if (!orgId) throw new Error("No workspace");
+      return (
+        await postWorkspaceApi<{ link: string }>(
+          supabase,
+          `/api/workspaces/${orgId}/join-link`,
+        )
+      ).link;
     },
   });
 }

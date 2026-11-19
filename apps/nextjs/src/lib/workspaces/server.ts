@@ -41,6 +41,8 @@ export interface WorkspaceContext {
   isAnonymous: boolean;
   workspaces: WorkspaceMember[];
   active: WorkspaceMember | null;
+  /** Invites sent to my confirmed email that I haven't joined yet. */
+  pendingInvites: { invitationId: string; orgName: string }[];
 }
 
 /** The signed-in user's workspace context, or null when signed out. Cached per request. */
@@ -55,7 +57,7 @@ export const getWorkspaceContext = cache(
     const settings = await getAuthSettings();
     const workspaceMode = isWorkspaceMode(settings);
 
-    const [{ data: profile }, memberships] = await Promise.all([
+    const [{ data: profile }, memberships, pending] = await Promise.all([
       supabase
         .from("profiles")
         .select(
@@ -71,6 +73,9 @@ export const getWorkspaceContext = cache(
             )
             .eq("user_id", user.id)
             .order("created_at", { ascending: true })
+        : Promise.resolve({ data: [] }),
+      workspaceMode && !user.is_anonymous
+        ? supabase.rpc("my_pending_invitations")
         : Promise.resolve({ data: [] }),
     ]);
 
@@ -110,6 +115,10 @@ export const getWorkspaceContext = cache(
       },
       workspaces,
       active,
+      pendingInvites: (pending.data ?? []).map((r) => ({
+        invitationId: r.invitation_id,
+        orgName: r.org_name,
+      })),
     };
   },
 );

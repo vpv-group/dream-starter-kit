@@ -32,10 +32,10 @@ const stamp = Date.now();
 const password = "password123!";
 
 const emails = {
-  owner: `ws-owner-${stamp}@vyten.test`,
-  invitee: `ws-invitee-${stamp}@vyten.test`,
+  owner: `ws-owner-${stamp}@acme.test`,
+  invitee: `ws-invitee-${stamp}@acme.test`,
   outsider: `ws-outsider-${stamp}@other.test`,
-  joiner: `ws-joiner-${stamp}@vyten.test`,
+  joiner: `ws-joiner-${stamp}@acme.test`,
 };
 
 type Client = SupabaseClient<Database>;
@@ -50,7 +50,7 @@ let orgId = "";
 let outsiderOrgId = "";
 /** The invitee's emailed-invite token (plaintext only lives in the link). */
 let inviteeToken = "";
-const slug = `vyten-${stamp}`;
+const slug = `acme-${stamp}`;
 
 const token = () => randomBytes(32).toString("base64url");
 const sha256 = (t: string) => createHash("sha256").update(t).digest("hex");
@@ -93,7 +93,7 @@ beforeAll(async () => {
     clients[key] = client;
   }
   const created = await clients.owner.rpc("create_workspace", {
-    _name: "Vyten",
+    _name: "Acme",
     _slug: slug,
   });
   expect(created.error).toBeNull();
@@ -203,7 +203,7 @@ describe("create_workspace", () => {
 
 describe("cross-workspace isolation", () => {
   it("an outsider can't read the workspace, its memberships or invites", async () => {
-    await invite(`peek-${stamp}@vyten.test`);
+    await invite(`peek-${stamp}@acme.test`);
     const c = clients.outsider;
     expect(
       (await c.from("organizations").select("id").eq("id", orgId)).data,
@@ -241,7 +241,7 @@ describe("accept_invitation", () => {
     });
     expect(wrong.error?.message).toBe("invite_wrong_account");
 
-    const expired = await invite(`exp-${stamp}@vyten.test`, {
+    const expired = await invite(`exp-${stamp}@acme.test`, {
       expires_at: new Date(Date.now() - 60_000).toISOString(),
     });
     const exp = await clients.invitee.rpc("accept_invitation", {
@@ -249,7 +249,7 @@ describe("accept_invitation", () => {
     });
     expect(exp.error?.message).toBe("invite_expired");
 
-    const revoked = await invite(`rev-${stamp}@vyten.test`, {
+    const revoked = await invite(`rev-${stamp}@acme.test`, {
       status: "revoked",
     });
     const rev = await clients.invitee.rpc("accept_invitation", {
@@ -316,17 +316,28 @@ describe("accept_invitation", () => {
     expect(membership?.role).toBe("member");
   });
 
-  it("co-members can read each other's profiles; outsiders still can't", async () => {
-    const byInvitee = await clients.invitee
+  it("co-members can't read each other's profile rows, but see safe columns via workspace_members", async () => {
+    const rows = await clients.invitee
       .from("profiles")
-      .select("id")
+      .select("id, phone")
       .eq("id", ids.owner);
-    expect(byInvitee.data).toHaveLength(1);
-    const byOutsider = await clients.outsider
-      .from("profiles")
-      .select("id")
-      .eq("id", ids.owner);
-    expect(byOutsider.data).toHaveLength(0);
+    expect(rows.data).toHaveLength(0);
+
+    const { data: members, error } = await clients.invitee.rpc(
+      "workspace_members",
+      { _org: orgId },
+    );
+    expect(error).toBeNull();
+    const owner = members?.find((m) => m.user_id === ids.owner);
+    expect(owner?.role).toBe("owner");
+    expect(owner?.email).toBe(emails.owner);
+    expect(Object.keys(owner ?? {})).not.toContain("phone");
+    expect(members?.find((m) => m.user_id === ids.invitee)?.is_you).toBe(true);
+
+    const outsider = await clients.outsider.rpc("workspace_members", {
+      _org: orgId,
+    });
+    expect(outsider.error?.message).toBe("not_a_member");
   });
 
   it("a member can't promote themselves or add memberships", async () => {
@@ -369,7 +380,7 @@ describe("join_workspace_by_link", () => {
       .update({
         join_token_hash: sha256(link),
         join_link_enabled: false,
-        allowed_domains: ["vyten.test"],
+        allowed_domains: ["acme.test"],
       })
       .eq("id", orgId);
 
@@ -421,5 +432,219 @@ describe("ownership guard", () => {
       .eq("org_id", orgId)
       .eq("user_id", ids.owner);
     expect(demote.error?.message).toBe("last_owner");
+  });
+});
+
+describe("invitations: create, preview, resend, accept by id", () => {
+  const anon = () => createClient<Database>(SUPABASE_URL, ANON_KEY, noPersist);
+
+  it("create_invitations dedupes, skips members and invalid addresses, and is admin-only", async () => {
+    const { data, error } = await clients.owner.rpc("create_invitations", {
+      _org: orgId,
+      _emails: [
+        `New-${stamp}@acme.test`,
+        ` new-${stamp}@acme.test `,
+        "not-an-email",
+        emails.invitee,
+      ],
+      _role: "member",
+      _expires_days: 7,
+    });
+    expect(error).toBeNull();
+    const byEmail = Object.fromEntries(
+      (data ?? []).map((r) => [r.invite_email, r]),
+    );
+    expect(Object.keys(byEmail)).toHaveLength(3);
+    expect(byEmail[`new-${stamp}@acme.test`]?.result).toBe("invited");
+    expect(byEmail[`new-${stamp}@acme.test`]?.invite_token).toHaveLength(43);
+    expect(byEmail["not-an-email"]?.result).toBe("invalid");
+    expect(byEmail[emails.invitee]?.result).toBe("already_member");
+
+    const stored = await admin
+      .from("invitations")
+      .select("token_hash")
+      .eq("email", `new-${stamp}@acme.test`)
+      .single();
+    const token = byEmail[`new-${stamp}@acme.test`]?.invite_token ?? "";
+    expect(stored.data?.token_hash).toBe(sha256(token));
+
+    const asMember = await clients.joiner.rpc("create_invitations", {
+      _org: orgId,
+      _emails: [`x-${stamp}@acme.test`],
+    });
+    expect(asMember.error?.message).toBe("not_allowed");
+    const asOutsider = await clients.outsider.rpc("create_invitations", {
+      _org: orgId,
+      _emails: [`y-${stamp}@acme.test`],
+    });
+    expect(asOutsider.error?.message).toBe("not_allowed");
+    const ownerRole = await clients.owner.rpc("create_invitations", {
+      _org: orgId,
+      _emails: [`z-${stamp}@acme.test`],
+      _role: "owner",
+    });
+    expect(ownerRole.error?.message).toBe("invalid_role");
+  });
+
+  it("invitation_preview works signed out and never exposes hashes", async () => {
+    const created = await clients.owner.rpc("create_invitations", {
+      _org: orgId,
+      _emails: [`preview-${stamp}@acme.test`],
+    });
+    const inviteToken = created.data?.[0]?.invite_token ?? "";
+    const { data, error } = await anon().rpc("invitation_preview", {
+      _token: inviteToken,
+    });
+    expect(error).toBeNull();
+    expect(data?.[0]?.status).toBe("valid");
+    expect(data?.[0]?.org_slug).toBe(slug);
+    expect(data?.[0]?.email).toBe(`preview-${stamp}@acme.test`);
+    expect(JSON.stringify(data)).not.toMatch(/hash/i);
+
+    const unknown = await anon().rpc("invitation_preview", { _token: token() });
+    expect(unknown.data?.[0]?.status).toBe("not_found");
+  });
+
+  it("resend_invitation rotates the token: the old link stops working", async () => {
+    const created = await clients.owner.rpc("create_invitations", {
+      _org: orgId,
+      _emails: [`resend-${stamp}@acme.test`],
+    });
+    const first = created.data?.[0];
+    const resent = await clients.owner.rpc("resend_invitation", {
+      _invitation_id: first?.invitation_id ?? "",
+      _expires_days: 7,
+    });
+    expect(resent.error).toBeNull();
+    const fresh = resent.data?.[0]?.invite_token ?? "";
+    expect(fresh).not.toBe(first?.invite_token);
+    const oldPreview = await anon().rpc("invitation_preview", {
+      _token: first?.invite_token ?? "",
+    });
+    expect(oldPreview.data?.[0]?.status).toBe("not_found");
+    const newPreview = await anon().rpc("invitation_preview", {
+      _token: fresh,
+    });
+    expect(newPreview.data?.[0]?.status).toBe("valid");
+
+    const byMember = await clients.joiner.rpc("resend_invitation", {
+      _invitation_id: first?.invitation_id ?? "",
+    });
+    expect(byMember.error?.message).toBe("invite_not_found");
+  });
+
+  it("accept_pending_invitation needs the invited, confirmed email", async () => {
+    const created = await clients.owner.rpc("create_invitations", {
+      _org: orgId,
+      _emails: [emails.outsider],
+      _role: "admin",
+    });
+    const invitationId = created.data?.[0]?.invitation_id ?? "";
+
+    const wrong = await clients.joiner.rpc("accept_pending_invitation", {
+      _invitation_id: invitationId,
+    });
+    expect(wrong.error?.message).toBe("invite_wrong_account");
+
+    const pending = await clients.outsider.rpc("my_pending_invitations");
+    expect(pending.data?.some((r) => r.invitation_id === invitationId)).toBe(
+      true,
+    );
+
+    const accepted = await clients.outsider.rpc("accept_pending_invitation", {
+      _invitation_id: invitationId,
+    });
+    expect(accepted.error).toBeNull();
+    const { data: membership } = await clients.outsider
+      .from("memberships")
+      .select("role")
+      .eq("org_id", orgId)
+      .eq("user_id", ids.outsider)
+      .single();
+    expect(membership?.role).toBe("admin");
+
+    const again = await clients.outsider.rpc("accept_pending_invitation", {
+      _invitation_id: invitationId,
+    });
+    expect(again.error?.message).toBe("invite_used");
+  });
+});
+
+describe("invite links: reset, preview, domain rules", () => {
+  it("owners/admins rotate the link; members can't; free mail is refused", async () => {
+    const reset = await clients.owner.rpc("reset_join_link", { _org: orgId });
+    expect(reset.error).toBeNull();
+    expect(reset.data).toHaveLength(43);
+
+    const preview = await createClient<Database>(
+      SUPABASE_URL,
+      ANON_KEY,
+      noPersist,
+    ).rpc("join_link_preview", { _token: reset.data ?? "" });
+    expect(preview.data?.[0]?.status).toBe("valid");
+    expect(preview.data?.[0]?.org_slug).toBe(slug);
+
+    const byMember = await clients.joiner.rpc("reset_join_link", {
+      _org: orgId,
+    });
+    expect(byMember.error?.message).toBe("not_allowed");
+
+    const freeMail = await clients.owner.rpc("set_join_link", {
+      _org: orgId,
+      _enabled: true,
+      _allowed_domains: ["gmail.com"],
+    });
+    expect(freeMail.error?.message).toBe("free_mail_domain");
+
+    const off = await clients.owner.rpc("set_join_link", {
+      _org: orgId,
+      _enabled: false,
+      _allowed_domains: ["Acme.test"],
+    });
+    expect(off.error).toBeNull();
+    const { data: org } = await admin
+      .from("organizations")
+      .select("join_link_enabled, allowed_domains")
+      .eq("id", orgId)
+      .single();
+    expect(org?.join_link_enabled).toBe(false);
+    expect(org?.allowed_domains).toEqual(["acme.test"]);
+  });
+});
+
+describe("roles and account deletion", () => {
+  it("admins can't grant the owner role; owners can manage admins", async () => {
+    // The outsider joined above as an admin.
+    const selfPromote = await clients.outsider
+      .from("memberships")
+      .update({ role: "owner" })
+      .eq("org_id", orgId)
+      .eq("user_id", ids.outsider);
+    expect(selfPromote.error?.message).toBe("owners_only");
+
+    const promote = await clients.owner
+      .from("memberships")
+      .update({ role: "admin" })
+      .eq("org_id", orgId)
+      .eq("user_id", ids.invitee)
+      .select("role");
+    expect(promote.error).toBeNull();
+    expect(promote.data?.[0]?.role).toBe("admin");
+  });
+
+  it("a sole owner of a workspace with members can't be deleted", async () => {
+    const { data: blocking } = await clients.owner.rpc(
+      "my_blocking_workspaces",
+    );
+    expect(blocking?.map((b) => b.org_id)).toContain(orgId);
+
+    const { error } = await admin.auth.admin.deleteUser(ids.owner);
+    expect(error).not.toBeNull();
+    const { data: still } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("id", ids.owner)
+      .maybeSingle();
+    expect(still?.id).toBe(ids.owner);
   });
 });

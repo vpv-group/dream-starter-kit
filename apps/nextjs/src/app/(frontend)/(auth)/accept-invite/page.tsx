@@ -13,6 +13,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { createClient } from "~/lib/supabase/client";
+import { inviteTokenFromRedirect } from "~/lib/workspaces/pending-token";
 
 /**
  * Staff-invite landing page. Reached from the Supabase invite email sent by
@@ -30,14 +31,19 @@ import { createClient } from "~/lib/supabase/client";
  * page and not /auth/callback). We adopt those too, for hosted projects that
  * haven't customized the template.
  *
- * Once a session exists the invitee sets a password and enters /admin —
- * `profiles.is_staff` was already flagged when the invite was sent.
+ * Once a session exists the invitee sets a password. Staff invitees enter
+ * /admin (`profiles.is_staff` was flagged when the invite was sent). Workspace
+ * invitees (docs/WORKSPACES.md) arrive with `redirect_to=/invite/{token}` from
+ * the template and are sent to `/welcome?invite={token}`, which joins them.
  */
 export default function AcceptInvitePage() {
   const [supabase] = useState(createClient);
   const [status, setStatus] = useState<"loading" | "ready" | "invalid">(
     "loading",
   );
+  // Workspace invites carry their /invite/{token} target; read it before the
+  // query string is scrubbed below.
+  const [workspaceToken, setWorkspaceToken] = useState<string | null>(null);
   // One-time tokens must be verified exactly once — guard against React 18
   // StrictMode's dev-only double effect run (a second verifyOtp would 403).
   const ran = useRef(false);
@@ -49,6 +55,12 @@ export default function AcceptInvitePage() {
     async function adoptSession() {
       const query = new URLSearchParams(window.location.search);
       const tokenHash = query.get("token_hash");
+      setWorkspaceToken(
+        inviteTokenFromRedirect(
+          query.get("redirect_to"),
+          window.location.origin,
+        ),
+      );
       const hash = new URLSearchParams(window.location.hash.slice(1));
       const access_token = hash.get("access_token");
       const refresh_token = hash.get("refresh_token");
@@ -104,7 +116,11 @@ export default function AcceptInvitePage() {
       // Hard navigation so the proxy + Payload SSO bridge re-read the fresh
       // session. Route through /welcome, which sends staff to /admin and
       // members (e.g. guest paywall buyers) to the app — not the gated /admin.
-      window.location.assign("/welcome");
+      window.location.assign(
+        workspaceToken
+          ? `/welcome?invite=${encodeURIComponent(workspaceToken)}`
+          : "/welcome",
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not set password");
     }

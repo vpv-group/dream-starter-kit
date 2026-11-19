@@ -1069,7 +1069,75 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      accept_pending_invitation: {
+        Args: { _invitation_id: string };
+        Returns: {
+          allowed_domains: string[];
+          created_at: string;
+          data: Json;
+          id: string;
+          join_link_enabled: boolean;
+          join_token_hash: string | null;
+          logo_url: string | null;
+          name: string;
+          owner_id: string;
+          slug: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "organizations";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      apply_invitation: {
+        Args: { _inv: Database["public"]["Tables"]["invitations"]["Row"] };
+        Returns: {
+          allowed_domains: string[];
+          created_at: string;
+          data: Json;
+          id: string;
+          join_link_enabled: boolean;
+          join_token_hash: string | null;
+          logo_url: string | null;
+          name: string;
+          owner_id: string;
+          slug: string;
+        };
+        SetofOptions: {
+          from: "invitations";
+          to: "organizations";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      blocking_owned_workspaces: {
+        Args: { _user: string };
+        Returns: {
+          member_count: number;
+          org_id: string;
+          org_name: string;
+        }[];
+      };
+      check_invitation_for_caller: {
+        Args: { _inv: Database["public"]["Tables"]["invitations"]["Row"] };
+        Returns: undefined;
+      };
       confirmed_email: { Args: never; Returns: string };
+      create_invitations: {
+        Args: {
+          _emails: string[];
+          _expires_days?: number;
+          _org: string;
+          _role?: string;
+        };
+        Returns: {
+          invitation_id: string;
+          invite_email: string;
+          invite_token: string;
+          result: string;
+        }[];
+      };
       create_workspace: {
         Args: { _name: string; _slug: string };
         Returns: {
@@ -1091,11 +1159,36 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      invitation_preview: {
+        Args: { _token: string };
+        Returns: {
+          email: string;
+          expires_at: string;
+          inviter_name: string;
+          logo_url: string;
+          org_name: string;
+          org_slug: string;
+          role: string;
+          status: string;
+        }[];
+      };
       is_anonymous_session: { Args: never; Returns: boolean };
+      is_free_mail_domain: { Args: { _domain: string }; Returns: boolean };
       is_org_admin: { Args: { _org: string }; Returns: boolean };
       is_org_member: { Args: { _org: string }; Returns: boolean };
+      is_org_owner: { Args: { _org: string }; Returns: boolean };
       is_reserved_slug: { Args: { _slug: string }; Returns: boolean };
       is_slug_available: { Args: { _slug: string }; Returns: boolean };
+      join_link_preview: {
+        Args: { _token: string };
+        Returns: {
+          allowed_domains: string[];
+          logo_url: string;
+          org_name: string;
+          org_slug: string;
+          status: string;
+        }[];
+      };
       join_workspace_by_link: {
         Args: { _token: string };
         Returns: {
@@ -1117,6 +1210,14 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      my_blocking_workspaces: {
+        Args: never;
+        Returns: {
+          member_count: number;
+          org_id: string;
+          org_name: string;
+        }[];
+      };
       my_pending_invitations: {
         Args: never;
         Returns: {
@@ -1130,6 +1231,15 @@ export type Database = {
           role: string;
         }[];
       };
+      new_url_token: { Args: never; Returns: string };
+      resend_invitation: {
+        Args: { _expires_days?: number; _invitation_id: string };
+        Returns: {
+          invite_email: string;
+          invite_token: string;
+        }[];
+      };
+      reset_join_link: { Args: { _org: string }; Returns: string };
       save_onboarding_progress: {
         Args: {
           _completed?: boolean;
@@ -1138,6 +1248,24 @@ export type Database = {
           _step: string;
         };
         Returns: undefined;
+      };
+      set_join_link: {
+        Args: { _allowed_domains?: string[]; _enabled: boolean; _org: string };
+        Returns: undefined;
+      };
+      sha256_hex: { Args: { _value: string }; Returns: string };
+      workspace_members: {
+        Args: { _org: string };
+        Returns: {
+          avatar_url: string;
+          display_name: string;
+          email: string;
+          is_you: boolean;
+          joined_at: string;
+          role: string;
+          title: string;
+          user_id: string;
+        }[];
       };
     };
     Enums: {

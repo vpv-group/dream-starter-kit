@@ -1,13 +1,15 @@
 import { Alert, ScrollView, View } from "react-native";
-import { Stack } from "expo-router";
+import { Link, Stack } from "expo-router";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { Controller, useForm } from "react-hook-form";
 
 import type { UpdateProfileInput } from "@acme/app";
 import { useSession } from "@acme/api";
 import {
+  isWorkspaceMode,
   signOut,
   updateProfileSchema,
+  useAuthConfig,
   useDeleteAccount,
   useProfile,
   useUpdateProfile,
@@ -28,6 +30,7 @@ export default function Profile() {
   const updateProfile = useUpdateProfile();
   const deleteAccount = useDeleteAccount();
   const tags = useUserTags();
+  const authConfig = useAuthConfig();
 
   const {
     control,
@@ -146,6 +149,11 @@ export default function Profile() {
         loading={updateProfile.isPending}
         onPress={() => void handleSubmit(onSave)()}
       />
+      {isWorkspaceMode(authConfig) ? (
+        <Link href="/workspaces" asChild>
+          <Button title={`${authConfig.workspaceLabel}s`} variant="outline" />
+        </Link>
+      ) : null}
       <Button
         title="Sign out"
         variant="outline"

@@ -3,8 +3,14 @@ import Link from "next/link";
 
 import { SignupForm } from "~/components/signup-form";
 import { getAuthSettings, getBranding } from "~/lib/payload";
+import { readInviteParams } from "~/lib/workspaces/invite-params";
 
-export default async function SignUpPage() {
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const invite = readInviteParams(await searchParams);
   const [settings, { appName }] = await Promise.all([
     getAuthSettings(),
     getBranding(),
@@ -29,7 +35,12 @@ export default async function SignUpPage() {
 
   return (
     <Suspense>
-      <SignupForm settings={settings} appName={appName} />
+      <SignupForm
+        settings={settings}
+        appName={appName}
+        lockedEmail={invite.lockedEmail}
+        joinWorkspaceName={invite.workspaceName}
+      />
     </Suspense>
   );
 }
