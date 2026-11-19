@@ -17,12 +17,14 @@ import * as migration_20260624_000100_drop_favorites from './20260624_000100_dro
 import * as migration_20260624_151421_image_audit_settings from './20260624_151421_image_audit_settings';
 import * as migration_20260702_173249_authentication_settings from './20260702_173249_authentication_settings';
 import * as migration_20260827_194320_legal_pages from './20260827_194320_legal_pages';
+import * as migration_20260827_194400_organization_mode_column from './20260827_194400_organization_mode_column';
 import * as migration_20260827_194500_move_legal_docs from './20260827_194500_move_legal_docs';
 import * as migration_20261103_222708_payload_3_92_object_key from './20261103_222708_payload_3_92_object_key';
 import * as migration_20261117_200000_rename_extensions_to_modules from './20261117_200000_rename_extensions_to_modules';
 import * as migration_20261117_212656_dream_brand_theme_defaults from './20261117_212656_dream_brand_theme_defaults';
 import * as migration_20261117_212755_dream_brand_serif_default from './20261117_212755_dream_brand_serif_default';
 import * as migration_20261117_222758_sync_snapshot_after_module_rename from './20261117_222758_sync_snapshot_after_module_rename';
+import * as migration_20261119_033314_organization_mode from './20261119_033314_organization_mode';
 
 export const migrations = [
   {
@@ -121,6 +123,11 @@ export const migrations = [
     name: '20260827_194320_legal_pages',
   },
   {
+    up: migration_20260827_194400_organization_mode_column.up,
+    down: migration_20260827_194400_organization_mode_column.down,
+    name: '20260827_194400_organization_mode_column',
+  },
+  {
     up: migration_20260827_194500_move_legal_docs.up,
     down: migration_20260827_194500_move_legal_docs.down,
     name: '20260827_194500_move_legal_docs',
@@ -148,6 +155,11 @@ export const migrations = [
   {
     up: migration_20261117_222758_sync_snapshot_after_module_rename.up,
     down: migration_20261117_222758_sync_snapshot_after_module_rename.down,
-    name: '20261117_222758_sync_snapshot_after_module_rename'
+    name: '20261117_222758_sync_snapshot_after_module_rename',
+  },
+  {
+    up: migration_20261119_033314_organization_mode.up,
+    down: migration_20261119_033314_organization_mode.down,
+    name: '20261119_033314_organization_mode'
   },
 ];

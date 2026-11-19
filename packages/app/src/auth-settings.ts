@@ -60,6 +60,14 @@ export interface SsoDomain {
   providerId: string | null;
 }
 
+/**
+ * What happens to organizations after sign-up (docs/AUTH.md → Organizations).
+ * - `off`: no organization step (consumer apps; the default).
+ * - `personal`: each user gets a personal organization on first sign-in.
+ * - `required`: users must create or join an organization before using the app.
+ */
+export type OrganizationMode = "off" | "personal" | "required";
+
 /** Top-level chooser buttons (the three email methods collapse into "email"). */
 export type ChooserEntry = "email" | "google" | "apple" | "sso";
 
@@ -87,6 +95,7 @@ export interface AuthSettings {
   subtitle: string | null;
   ssoButtonLabel: string;
   ssoDomains: SsoDomain[];
+  organizationMode: OrganizationMode;
 }
 
 const recordFromRows = (
@@ -126,6 +135,7 @@ export const DEFAULT_AUTH_SETTINGS: AuthSettings = {
   subtitle: null,
   ssoButtonLabel: "Continue with SAML SSO",
   ssoDomains: [],
+  organizationMode: "off",
 };
 
 // The raw Payload global is loosely typed (every field nullable/optional). These
@@ -237,6 +247,12 @@ export function normalizeAuthSettings(input: unknown): AuthSettings {
     subtitle: optStr(raw.subtitle),
     ssoButtonLabel: str(raw.ssoButtonLabel, d.ssoButtonLabel),
     ssoDomains,
+    organizationMode:
+      raw.organizationMode === "personal" ||
+      raw.organizationMode === "required" ||
+      raw.organizationMode === "off"
+        ? raw.organizationMode
+        : d.organizationMode,
   };
 }
 

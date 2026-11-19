@@ -5402,6 +5402,10 @@ export interface AuthenticationSetting {
       }[]
     | null;
   /**
+   * Organizations group users into teams (B2B). Required sends new users to /onboarding/organization to create one or accept an invitation. See https://github.com/vpv-group/dream-starter-kit/blob/main/docs/AUTH.md#organizations.
+   */
+  organizationMode?: ("off" | "personal" | "required") | null;
+  /**
    * When off, public sign-up is hidden and the sign-up route is blocked (invite-only). For hard server enforcement also set enable_signup = false in Supabase — see https://github.com/vpv-group/dream-starter-kit/blob/main/docs/AUTH.md#invite-only.
    */
   allowSignups?: boolean | null;
@@ -5911,6 +5915,7 @@ export interface AuthenticationSettingsSelect<T extends boolean = true> {
         enabled?: T;
         id?: T;
       };
+  organizationMode?: T;
   allowSignups?: T;
   emailDomainMode?: T;
   emailDomains?:

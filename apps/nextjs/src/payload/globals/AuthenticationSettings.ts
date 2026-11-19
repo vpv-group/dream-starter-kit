@@ -106,6 +106,30 @@ export const AuthenticationSettings: GlobalConfig = {
           label: "Sign-up & access",
           fields: [
             {
+              name: "organizationMode",
+              type: "select",
+              defaultValue: "off",
+              options: [
+                { label: "Off — no organizations", value: "off" },
+                {
+                  label:
+                    "Personal — one organization per user, created automatically",
+                  value: "personal",
+                },
+                {
+                  label:
+                    "Required — create or join an organization after sign-up",
+                  value: "required",
+                },
+              ],
+              admin: {
+                description:
+                  "Organizations group users into teams (B2B). Required sends " +
+                  "new users to /onboarding/organization to create one or accept " +
+                  `an invitation. See ${DOCS_AUTH}#organizations.`,
+              },
+            },
+            {
               name: "allowSignups",
               type: "checkbox",
               defaultValue: true,

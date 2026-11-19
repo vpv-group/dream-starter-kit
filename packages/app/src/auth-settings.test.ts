@@ -61,6 +61,21 @@ describe("auth-settings normalizer", () => {
   });
 });
 
+describe("organization mode", () => {
+  it("defaults to off and accepts only known modes", () => {
+    expect(normalizeAuthSettings(null).organizationMode).toBe("off");
+    expect(
+      normalizeAuthSettings({ organizationMode: "required" }).organizationMode,
+    ).toBe("required");
+    expect(
+      normalizeAuthSettings({ organizationMode: "personal" }).organizationMode,
+    ).toBe("personal");
+    expect(
+      normalizeAuthSettings({ organizationMode: "bogus" }).organizationMode,
+    ).toBe("off");
+  });
+});
+
 describe("email domain rules", () => {
   const base = normalizeAuthSettings({
     emailDomainMode: "allowlist",
