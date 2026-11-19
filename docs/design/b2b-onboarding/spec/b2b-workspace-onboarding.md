@@ -1,6 +1,6 @@
 # Dream Starter Kit — B2B workspace onboarding (spec)
 
-Nov 18, 2026 · Vincent Phamvan · written against `vpv-group/dream-starter-kit` main @ `642279a` (Nov 17, 2026)
+Nov 18, 2026 · written against `vpv-group/dream-starter-kit` main @ `642279a` (Nov 17, 2026)
 
 ## Summary
 
@@ -127,12 +127,12 @@ There are three ways in. All of them end with a membership row, a 2-step welcome
 
 **1. Email invite.**
 
-1. An owner or admin invites `ana@vyten.com` (step 7 or Settings → Members).
+1. An owner or admin invites `ana@acme.com` (step 7 or Settings → Members).
 2. A server route stores the invite:
    - an `invitations` row with a random 32-byte token, stored as SHA-256 only
    - `expires_at` = now + `inviteExpiryDays`
    - `invited_by`
-3. It sends the email "Vincent invited you to Vyten on {App}" (wireframe `InviteEmail`), which links to `/invite/{token}`.
+3. It sends the email "Alex invited you to Acme on {App}" (wireframe `InviteEmail`), which links to `/invite/{token}`.
 4. `/invite/{token}` (public, wireframe `InviteLanding`) shows the workspace, the inviter, and "Continue as {invited email}". What happens next depends on the visitor:
    - **Signed out:** the auth flow with the email pre-filled and **locked** (`JoinSignIn`), then `/welcome?invite={token}`.
    - **Signed in as the invited email:** accept immediately.

@@ -32,10 +32,10 @@ const stamp = Date.now();
 const password = "password123!";
 
 const emails = {
-  owner: `ws-owner-${stamp}@vyten.test`,
-  invitee: `ws-invitee-${stamp}@vyten.test`,
+  owner: `ws-owner-${stamp}@acme.test`,
+  invitee: `ws-invitee-${stamp}@acme.test`,
   outsider: `ws-outsider-${stamp}@other.test`,
-  joiner: `ws-joiner-${stamp}@vyten.test`,
+  joiner: `ws-joiner-${stamp}@acme.test`,
 };
 
 type Client = SupabaseClient<Database>;
@@ -50,7 +50,7 @@ let orgId = "";
 let outsiderOrgId = "";
 /** The invitee's emailed-invite token (plaintext only lives in the link). */
 let inviteeToken = "";
-const slug = `vyten-${stamp}`;
+const slug = `acme-${stamp}`;
 
 const token = () => randomBytes(32).toString("base64url");
 const sha256 = (t: string) => createHash("sha256").update(t).digest("hex");
@@ -93,7 +93,7 @@ beforeAll(async () => {
     clients[key] = client;
   }
   const created = await clients.owner.rpc("create_workspace", {
-    _name: "Vyten",
+    _name: "Acme",
     _slug: slug,
   });
   expect(created.error).toBeNull();
@@ -203,7 +203,7 @@ describe("create_workspace", () => {
 
 describe("cross-workspace isolation", () => {
   it("an outsider can't read the workspace, its memberships or invites", async () => {
-    await invite(`peek-${stamp}@vyten.test`);
+    await invite(`peek-${stamp}@acme.test`);
     const c = clients.outsider;
     expect(
       (await c.from("organizations").select("id").eq("id", orgId)).data,
@@ -241,7 +241,7 @@ describe("accept_invitation", () => {
     });
     expect(wrong.error?.message).toBe("invite_wrong_account");
 
-    const expired = await invite(`exp-${stamp}@vyten.test`, {
+    const expired = await invite(`exp-${stamp}@acme.test`, {
       expires_at: new Date(Date.now() - 60_000).toISOString(),
     });
     const exp = await clients.invitee.rpc("accept_invitation", {
@@ -249,7 +249,7 @@ describe("accept_invitation", () => {
     });
     expect(exp.error?.message).toBe("invite_expired");
 
-    const revoked = await invite(`rev-${stamp}@vyten.test`, {
+    const revoked = await invite(`rev-${stamp}@acme.test`, {
       status: "revoked",
     });
     const rev = await clients.invitee.rpc("accept_invitation", {
@@ -380,7 +380,7 @@ describe("join_workspace_by_link", () => {
       .update({
         join_token_hash: sha256(link),
         join_link_enabled: false,
-        allowed_domains: ["vyten.test"],
+        allowed_domains: ["acme.test"],
       })
       .eq("id", orgId);
 
@@ -442,8 +442,8 @@ describe("invitations: create, preview, resend, accept by id", () => {
     const { data, error } = await clients.owner.rpc("create_invitations", {
       _org: orgId,
       _emails: [
-        `New-${stamp}@vyten.test`,
-        ` new-${stamp}@vyten.test `,
+        `New-${stamp}@acme.test`,
+        ` new-${stamp}@acme.test `,
         "not-an-email",
         emails.invitee,
       ],
@@ -455,32 +455,32 @@ describe("invitations: create, preview, resend, accept by id", () => {
       (data ?? []).map((r) => [r.invite_email, r]),
     );
     expect(Object.keys(byEmail)).toHaveLength(3);
-    expect(byEmail[`new-${stamp}@vyten.test`]?.result).toBe("invited");
-    expect(byEmail[`new-${stamp}@vyten.test`]?.invite_token).toHaveLength(43);
+    expect(byEmail[`new-${stamp}@acme.test`]?.result).toBe("invited");
+    expect(byEmail[`new-${stamp}@acme.test`]?.invite_token).toHaveLength(43);
     expect(byEmail["not-an-email"]?.result).toBe("invalid");
     expect(byEmail[emails.invitee]?.result).toBe("already_member");
 
     const stored = await admin
       .from("invitations")
       .select("token_hash")
-      .eq("email", `new-${stamp}@vyten.test`)
+      .eq("email", `new-${stamp}@acme.test`)
       .single();
-    const token = byEmail[`new-${stamp}@vyten.test`]?.invite_token ?? "";
+    const token = byEmail[`new-${stamp}@acme.test`]?.invite_token ?? "";
     expect(stored.data?.token_hash).toBe(sha256(token));
 
     const asMember = await clients.joiner.rpc("create_invitations", {
       _org: orgId,
-      _emails: [`x-${stamp}@vyten.test`],
+      _emails: [`x-${stamp}@acme.test`],
     });
     expect(asMember.error?.message).toBe("not_allowed");
     const asOutsider = await clients.outsider.rpc("create_invitations", {
       _org: orgId,
-      _emails: [`y-${stamp}@vyten.test`],
+      _emails: [`y-${stamp}@acme.test`],
     });
     expect(asOutsider.error?.message).toBe("not_allowed");
     const ownerRole = await clients.owner.rpc("create_invitations", {
       _org: orgId,
-      _emails: [`z-${stamp}@vyten.test`],
+      _emails: [`z-${stamp}@acme.test`],
       _role: "owner",
     });
     expect(ownerRole.error?.message).toBe("invalid_role");
@@ -489,7 +489,7 @@ describe("invitations: create, preview, resend, accept by id", () => {
   it("invitation_preview works signed out and never exposes hashes", async () => {
     const created = await clients.owner.rpc("create_invitations", {
       _org: orgId,
-      _emails: [`preview-${stamp}@vyten.test`],
+      _emails: [`preview-${stamp}@acme.test`],
     });
     const inviteToken = created.data?.[0]?.invite_token ?? "";
     const { data, error } = await anon().rpc("invitation_preview", {
@@ -498,7 +498,7 @@ describe("invitations: create, preview, resend, accept by id", () => {
     expect(error).toBeNull();
     expect(data?.[0]?.status).toBe("valid");
     expect(data?.[0]?.org_slug).toBe(slug);
-    expect(data?.[0]?.email).toBe(`preview-${stamp}@vyten.test`);
+    expect(data?.[0]?.email).toBe(`preview-${stamp}@acme.test`);
     expect(JSON.stringify(data)).not.toMatch(/hash/i);
 
     const unknown = await anon().rpc("invitation_preview", { _token: token() });
@@ -508,7 +508,7 @@ describe("invitations: create, preview, resend, accept by id", () => {
   it("resend_invitation rotates the token: the old link stops working", async () => {
     const created = await clients.owner.rpc("create_invitations", {
       _org: orgId,
-      _emails: [`resend-${stamp}@vyten.test`],
+      _emails: [`resend-${stamp}@acme.test`],
     });
     const first = created.data?.[0];
     const resent = await clients.owner.rpc("resend_invitation", {
@@ -599,7 +599,7 @@ describe("invite links: reset, preview, domain rules", () => {
     const off = await clients.owner.rpc("set_join_link", {
       _org: orgId,
       _enabled: false,
-      _allowed_domains: ["Vyten.test"],
+      _allowed_domains: ["Acme.test"],
     });
     expect(off.error).toBeNull();
     const { data: org } = await admin
@@ -608,7 +608,7 @@ describe("invite links: reset, preview, domain rules", () => {
       .eq("id", orgId)
       .single();
     expect(org?.join_link_enabled).toBe(false);
-    expect(org?.allowed_domains).toEqual(["vyten.test"]);
+    expect(org?.allowed_domains).toEqual(["acme.test"]);
   });
 });
 
