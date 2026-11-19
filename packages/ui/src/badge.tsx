@@ -19,6 +19,12 @@ const badgeVariants = cva(
           "border-border text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         ghost: "[a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         link: "text-primary underline-offset-4 [a&]:hover:underline",
+        // Status tones (docs/DESIGN-SYSTEM.md §5).
+        neutral: "border-border text-muted-foreground bg-transparent",
+        info: "border-info/30 bg-info-subtle text-info",
+        success: "border-success/30 bg-success-subtle text-success",
+        warning: "border-warning/30 bg-warning-subtle text-warning",
+        danger: "border-destructive/30 bg-destructive-subtle text-destructive",
       },
     },
     defaultVariants: {
