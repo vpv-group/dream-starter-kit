@@ -67,6 +67,8 @@ export function parseSource(
   arg: string,
   // `pnpm mod …` runs the CLI from tooling/mod (pnpm -F), so a relative zip
   // path resolves against INIT_CWD: the directory the user ran pnpm in.
+  // Set by pnpm at run time; not a build input, so turbo needn't hash it.
+  // eslint-disable-next-line turbo/no-undeclared-env-vars
   baseDir = process.env.INIT_CWD ?? process.cwd(),
 ): Source {
   if (isDreamSource(arg)) return { kind: "registry", location: arg };
