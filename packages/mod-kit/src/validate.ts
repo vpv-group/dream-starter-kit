@@ -58,6 +58,8 @@ export const RESERVED_MOUNTS = [
   "/cms-setup",
   "/profile",
   "/checkout",
+  "/onboarding",
+  "/organization",
 ] as const;
 
 /** Native mounts are screen names, not paths; only the home screen is claimable. */
@@ -114,6 +116,18 @@ export function validateManifest(m: ModuleManifest): string[] {
     if (!fn.startsWith(`${m.slug}-`)) {
       errors.push(
         `[${m.slug}] edge function "${fn}" must be prefixed "${m.slug}-"`,
+      );
+    }
+  }
+  for (const t of m.database.triggersOn) {
+    if (
+      !CORE_TRIGGER_TABLES.includes(
+        t as (typeof CORE_TRIGGER_TABLES)[number],
+      ) &&
+      !t.startsWith("mod_")
+    ) {
+      errors.push(
+        `[${m.slug}] database.triggersOn "${t}" must be a core hook-point table (${CORE_TRIGGER_TABLES.join(", ")}) or a table of a required module`,
       );
     }
   }
@@ -242,6 +256,13 @@ export function validateManifestSet(manifests: ModuleManifest[]): string[] {
     for (const dep of manifests.filter((x) => m.requires.includes(x.slug))) {
       for (const t of dep.database.tables) reachable.add(t);
     }
+    for (const t of m.database.triggersOn) {
+      if (t.startsWith("mod_") && !reachable.has(t)) {
+        errors.push(
+          `[${m.slug}] database.triggersOn table "${t}" is not a table of a required module`,
+        );
+      }
+    }
     for (const t of m.database.dml) {
       if (!reachable.has(t)) {
         errors.push(
@@ -269,8 +290,37 @@ const SQL_FORBIDDEN_PATTERNS: [RegExp, string][] = [
 const DDL_TABLE_RE =
   /\b(?:create\s+table(?:\s+if\s+not\s+exists)?|alter\s+table(?:\s+if\s+exists)?(?:\s+only)?|drop\s+table(?:\s+if\s+exists)?)\s+(?:public\.)?"?([a-z0-9_]+)"?/gi;
 
-const DML_TABLE_RE =
-  /\b(?:insert\s+into|update(?:\s+only)?|delete\s+from)\s+(?:public\.)?"?([a-z0-9_]+)"?/gi;
+/**
+ * DML target matchers. `update` only counts as DML when followed by a table
+ * and `set` — otherwise "for update to", "before update on", "insert or
+ * update of", "on update cascade" and "do update set" would all be read as
+ * DML on a table named "to"/"on"/"cascade".
+ */
+const DML_TABLE_RES: RegExp[] = [
+  /\binsert\s+into\s+(?:only\s+)?(?:public\.)?"?([a-z0-9_]+)"?/gi,
+  /\bdelete\s+from\s+(?:only\s+)?(?:public\.)?"?([a-z0-9_]+)"?/gi,
+  /\bupdate\s+(?:only\s+)?(?:public\.)?"?([a-z0-9_]+)"?(?:\s+(?:as\s+)?(?!set\b)[a-z_][a-z0-9_]*)?\s+set\b/gi,
+];
+
+/**
+ * `create [or replace] [constraint] trigger <name> … on <table>`. Captures
+ * the trigger name and the table it attaches to.
+ */
+const TRIGGER_RE =
+  /\bcreate\s+(?:or\s+replace\s+)?(?:constraint\s+)?trigger\s+"?([a-z0-9_]+)"?[\s\S]*?\bon\s+(?:public\.)?"?([a-z0-9_]+)"?/gi;
+
+/**
+ * Core `public` tables a module may attach triggers to, when it declares
+ * them in `database.triggersOn` (e.g. a CRM mirroring sign-ups). Tables of
+ * modules listed in `requires` are also allowed.
+ */
+export const CORE_TRIGGER_TABLES = [
+  "organizations",
+  "memberships",
+  "invitations",
+  "profiles",
+  "auth_events",
+] as const;
 
 /**
  * Modules used to be called "extensions", and their tables were
@@ -298,6 +348,8 @@ export function lintModuleSql(
     ownTables: string[];
     /** Extra tables DML is allowed on (from `requires` + declared core access). */
     allowedDmlTables?: string[];
+    /** Foreign tables triggers may attach to (from `database.triggersOn`). */
+    triggerTables?: string[];
   },
 ): string[] {
   const errors: string[] = [];
@@ -323,11 +375,33 @@ export function lintModuleSql(
       );
     }
   }
-  for (const match of cleaned.matchAll(DML_TABLE_RE)) {
-    const table = match[1] && legacyTableName(match[1]);
-    if (table && !dmlAllowed.has(table)) {
+  for (const re of DML_TABLE_RES) {
+    for (const match of cleaned.matchAll(re)) {
+      const table = match[1] && legacyTableName(match[1]);
+      if (table && !dmlAllowed.has(table)) {
+        errors.push(
+          `${where}: DML on table "${table}" which is neither owned nor whitelisted via requires`,
+        );
+      }
+    }
+  }
+
+  // Triggers: on the module's own tables, or on declared hook-point tables
+  // (database.triggersOn). Triggers on foreign tables must be named
+  // mod_<slug>_* so drop.sql and humans can find them.
+  const triggerTables = new Set(opts.triggerTables ?? []);
+  const triggerPrefix = tablePrefix(opts.slug);
+  for (const match of cleaned.matchAll(TRIGGER_RE)) {
+    const name = match[1] ?? "";
+    const table = match[2] && legacyTableName(match[2]);
+    if (!table || own.has(table)) continue;
+    if (!triggerTables.has(table)) {
       errors.push(
-        `${where}: DML on table "${table}" which is neither owned nor whitelisted via requires`,
+        `${where}: trigger "${name}" on table "${table}" which is neither owned nor declared in database.triggersOn`,
+      );
+    } else if (!startsWithPrefix(name, triggerPrefix)) {
+      errors.push(
+        `${where}: trigger "${name}" on "${table}" must be named "${triggerPrefix}_*"`,
       );
     }
   }
