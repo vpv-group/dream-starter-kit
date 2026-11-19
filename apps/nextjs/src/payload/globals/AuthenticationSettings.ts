@@ -37,10 +37,181 @@ export const AuthenticationSettings: GlobalConfig = {
       `Setup guide: ${DOCS_AUTH}`,
   },
   access: { read: anyone, update: isStaff },
+  hooks: {
+    // Record the first explicit choice of account model, so the founder's
+    // /cms-setup picker (wireframe AccountModel) is shown exactly once. A save
+    // in /admin that changes the model counts as choosing it.
+    beforeChange: [
+      ({ data, originalDoc }) => {
+        const prev = (originalDoc ?? {}) as {
+          accountModel?: string | null;
+          accountModelChosenAt?: string | null;
+        };
+        const next = data as {
+          accountModel?: string | null;
+          accountModelChosenAt?: string | null;
+        };
+        if (
+          !next.accountModelChosenAt &&
+          !prev.accountModelChosenAt &&
+          next.accountModel &&
+          next.accountModel !== (prev.accountModel ?? "consumer")
+        ) {
+          next.accountModelChosenAt = new Date().toISOString();
+        }
+        return next;
+      },
+    ],
+  },
   fields: [
     {
       type: "tabs",
       tabs: [
+        {
+          label: "Account model",
+          description:
+            "Who signs up for your app. Individuals keeps today's sign-up. " +
+            "Teams puts every user in a shared workspace with invites and a " +
+            "member list. Both lets each person choose. The model only changes " +
+            "the UI and routing; it never changes database access rules. See " +
+            "docs/WORKSPACES.md.",
+          fields: [
+            {
+              name: "accountModel",
+              type: "radio",
+              defaultValue: "consumer",
+              options: [
+                { label: "Individuals", value: "consumer" },
+                { label: "Teams and companies", value: "business" },
+                { label: "Both", value: "hybrid" },
+              ],
+              admin: {
+                layout: "vertical",
+                description:
+                  "Switching Teams → Individuals keeps all workspace data but " +
+                  "hides it. Switching Individuals → Teams sends existing " +
+                  "members to “Name your workspace” on their next sign-in.",
+              },
+            },
+            {
+              // Set once by the founder's /cms-setup picker or the first
+              // change of accountModel here (see hooks.beforeChange).
+              name: "accountModelChosenAt",
+              type: "date",
+              admin: {
+                readOnly: true,
+                hidden: true,
+              },
+            },
+            {
+              type: "row",
+              admin: { condition: (data) => data.accountModel !== "consumer" },
+              fields: [
+                {
+                  name: "workspaceLabel",
+                  type: "select",
+                  defaultValue: "Workspace",
+                  options: [
+                    "Workspace",
+                    "Organization",
+                    "Team",
+                    "Studio",
+                    "Practice",
+                  ],
+                  admin: {
+                    width: "50%",
+                    description: "What a shared space is called everywhere.",
+                  },
+                },
+                {
+                  name: "workspaceUrlPrefix",
+                  type: "text",
+                  admin: {
+                    width: "50%",
+                    placeholder: "app.example.com/",
+                    description:
+                      "Shown before the URL field. Blank uses your site's host.",
+                  },
+                },
+              ],
+            },
+            {
+              type: "row",
+              admin: { condition: (data) => data.accountModel !== "consumer" },
+              fields: [
+                {
+                  name: "inviteExpiryDays",
+                  type: "number",
+                  defaultValue: 7,
+                  min: 1,
+                  max: 30,
+                  admin: {
+                    width: "50%",
+                    step: 1,
+                    description: "Days before an emailed invite expires.",
+                  },
+                },
+                {
+                  name: "allowInviteLinks",
+                  type: "checkbox",
+                  defaultValue: true,
+                  admin: {
+                    width: "50%",
+                    description:
+                      "Let workspace admins share a join link. They can still " +
+                      "turn their own link off.",
+                  },
+                },
+              ],
+            },
+            {
+              name: "onboardingSteps",
+              type: "array",
+              labels: { singular: "Step", plural: "Onboarding steps" },
+              // Mirrors DEFAULT_ONBOARDING_STEPS in @acme/app (auth-settings.ts).
+              defaultValue: [
+                { step: "profile", enabled: true },
+                { step: "invite", enabled: true },
+                { step: "integrations", enabled: true },
+                { step: "updates", enabled: true },
+                { step: "plan", enabled: false },
+              ],
+              admin: {
+                condition: (data) => data.accountModel !== "consumer",
+                description:
+                  "The skippable welcome steps after a workspace is created. " +
+                  "Drag to reorder, toggle to show or hide. Invited members " +
+                  "only see Profile and Updates.",
+              },
+              fields: [
+                {
+                  type: "row",
+                  fields: [
+                    {
+                      name: "step",
+                      type: "select",
+                      required: true,
+                      options: [
+                        { label: "Set up your profile", value: "profile" },
+                        { label: "Invite your team", value: "invite" },
+                        { label: "Connect apps", value: "integrations" },
+                        { label: "Stay in the loop", value: "updates" },
+                        { label: "Choose a plan", value: "plan" },
+                      ],
+                      admin: { width: "60%" },
+                    },
+                    {
+                      name: "enabled",
+                      type: "checkbox",
+                      defaultValue: false,
+                      admin: { width: "40%" },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
         {
           label: "Methods",
           description:

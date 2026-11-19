@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Invite email (desktop)</title>
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/bundle.css">
+<link rel="stylesheet" href="../assets/desktop.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--link)}a:hover{color:var(--primary-hover)}
+</style>
+</helmet>
+<div class="dr dk" style="background: var(--surface)">
+  <div style="padding: 24px 56px; background: var(--background); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px">
+    <span class="dr-sample">Email preview</span>
+    <p style="margin: 4px 0 0; font: 600 20px/28px var(--font-sans); letter-spacing: -0.01em; color: var(--foreground)">Vincent invited you to Vyten on Dream</p>
+    <p class="dr-sm dr-muted">From Dream · To ana@vyten.com</p>
+  </div>
+
+  <div style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 56px 24px; gap: 16px">
+    <div style="width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 24px; padding: 40px; border-radius: 14px; border: 1px solid var(--border); background: var(--card)">
+      <img src="../assets/dream-logo.svg" alt="Dream" style="height: 24px; width: auto; align-self: flex-start">
+      <div style="display: flex; align-items: center; gap: 16px">
+        <span aria-hidden="true" class="dk-ws" style="width: 52px; height: 52px; border-radius: 12px; font-size: 22px">V</span>
+        <h1 class="dr-title" style="font-size: 26px; line-height: 32px">Join Vyten on Dream</h1>
+      </div>
+      <p style="margin: 0; font-size: 16px; line-height: 24px; color: var(--body)">Vincent Phamvan (vincent@vyten.com) invited you to work together in Vyten. You’ll join as a member.</p>
+      <a href="InviteLanding.html" class="dr-btn dr-btn-primary" style="align-self: flex-start; min-width: 200px">Join Vyten</a>
+      <p class="dr-sm dr-muted" style="padding-top: 16px; border-top: 1px solid var(--border)">This invite is for ana@vyten.com and expires in 7 days. It only works once.</p>
+    </div>
+    <p class="dr-sm dr-muted" style="max-width: 560px; text-align: center">Weren’t expecting this? You can ignore it. No account is made until you join.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

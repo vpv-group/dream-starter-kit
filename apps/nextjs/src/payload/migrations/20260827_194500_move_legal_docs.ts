@@ -1,4 +1,5 @@
 import type { MigrateDownArgs, MigrateUpArgs } from "@payloadcms/db-postgres";
+import { sql } from "@payloadcms/db-postgres";
 
 // Terms of Service and Privacy Policy moved from the block-composed `pages`
 // collection (slugs `terms`/`privacy`) into the dedicated `legal` collection
@@ -81,7 +82,7 @@ function proseContent(layout: unknown, pageTitle: string): LexicalState | null {
   return { root: { ...base.root, children } };
 }
 
-export async function up({ payload, req }: MigrateUpArgs): Promise<void> {
+export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   for (const move of MOVES) {
     const { docs } = await payload.find({
       collection: "pages",
@@ -169,24 +170,17 @@ export async function up({ payload, req }: MigrateUpArgs): Promise<void> {
     });
   }
 
-  const auth = await payload.findGlobal({
-    slug: "authentication-settings",
-    depth: 0,
-    overrideAccess: true,
-    req,
-  });
-  const authPatch: Record<string, string> = {};
-  if (auth.termsUrl && auth.termsUrl in URL_REWRITES)
-    authPatch.termsUrl = URL_REWRITES[auth.termsUrl] ?? auth.termsUrl;
-  if (auth.privacyUrl && auth.privacyUrl in URL_REWRITES)
-    authPatch.privacyUrl = URL_REWRITES[auth.privacyUrl] ?? auth.privacyUrl;
-  if (Object.keys(authPatch).length > 0) {
-    await payload.updateGlobal({
-      slug: "authentication-settings",
-      data: authPatch,
-      overrideAccess: true,
-      req,
-    });
+  // authentication-settings: plain SQL, NOT the Local API. The Local API
+  // queries with the CURRENT config, so on a fresh database it would select
+  // columns/tables that later migrations add to this global (e.g. the
+  // Account model tab) and fail before those migrations run.
+  for (const [from, to] of Object.entries(URL_REWRITES)) {
+    await db.execute(
+      sql`update "cms"."authentication_settings" set "terms_url" = ${to} where "terms_url" = ${from}`,
+    );
+    await db.execute(
+      sql`update "cms"."authentication_settings" set "privacy_url" = ${to} where "privacy_url" = ${from}`,
+    );
   }
 }
 

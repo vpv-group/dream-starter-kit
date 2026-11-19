@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Check your email</title>
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/bundle.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--link)}a:hover{color:var(--primary-hover)}
+</style>
+</helmet>
+<div class="dr" style="width: 390px; height: 844px; box-sizing: border-box; padding: 24px 16px 34px; display: flex; flex-direction: column; gap: 24px; background: var(--background)">
+  <div style="display: flex; align-items: center; justify-content: space-between; height: 32px">
+    <a href="SignUp.html" style="display: inline-flex; align-items: center; gap: 4px; min-height: 44px; font: 500 15px/20px var(--font-sans); text-decoration: none">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square"><path d="M15 5l-7 7 7 7"></path></svg>Back
+    </a>
+    <img src="../assets/dream-icon.svg" alt="Dream" style="height: 24px; width: auto">
+  </div>
+
+  <div class="dr-stephead" style="margin-top: 40px">
+    <h1 class="dr-title">Check your email</h1>
+    <p class="dr-sm" style="color: var(--body)">We sent a 6-digit code to <b style="color: var(--foreground); font-weight: 500">vincent@vyten.com</b>. Enter it here, or open the link in the email.</p>
+  </div>
+
+  <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px">
+    <legend style="padding: 0; margin-bottom: 8px; font: 500 14px/20px var(--font-sans); color: var(--foreground)">Code</legend>
+    <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px">
+      <input aria-label="Digit 1" class="dr-input" value="4" maxlength="1" style="padding: 0; text-align: center; font: 500 22px/1 var(--font-mono); height: 56px; min-width: 0">
+      <input aria-label="Digit 2" class="dr-input" value="8" maxlength="1" style="padding: 0; text-align: center; font: 500 22px/1 var(--font-mono); height: 56px; min-width: 0">
+      <input aria-label="Digit 3" class="dr-input" value="2" maxlength="1" style="padding: 0; text-align: center; font: 500 22px/1 var(--font-mono); height: 56px; min-width: 0">
+      <input aria-label="Digit 4" class="dr-input" value="0" maxlength="1" style="padding: 0; text-align: center; font: 500 22px/1 var(--font-mono); height: 56px; min-width: 0">
+      <input aria-label="Digit 5" class="dr-input" value="" maxlength="1" style="padding: 0; text-align: center; font: 500 22px/1 var(--font-mono); height: 56px; min-width: 0; border-color: var(--ring); box-shadow: 0 0 0 1px var(--ring)">
+      <input aria-label="Digit 6" class="dr-input" value="" maxlength="1" style="padding: 0; text-align: center; font: 500 22px/1 var(--font-mono); height: 56px; min-width: 0">
+    </div>
+    <span class="dr-sm dr-muted">The code works once. Paste the whole code into the first box if that’s easier.</span>
+  </fieldset>
+
+  <div class="dr-banner">Not there after a few minutes? Check spam, or send a new code.</div>
+
+  <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px">
+    <a href="CreateWorkspace.html" class="dr-btn dr-btn-primary dr-btn-block">Continue</a>
+    <div style="display: flex; justify-content: space-between">
+      <button type="button" class="dr-btn dr-btn-ghost">Send a new code</button>
+      <a href="SignUp.html" class="dr-btn dr-btn-ghost">Use a different email</a>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

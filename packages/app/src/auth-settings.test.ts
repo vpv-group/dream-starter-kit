@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   chooserEntries,
   DEFAULT_AUTH_SETTINGS,
+  DEFAULT_ONBOARDING_STEPS,
   isEmailDomainAllowed,
+  isWorkspaceMode,
   normalizeAuthSettings,
   resolveDefaultMethod,
   ssoParamsForEmail,
@@ -108,5 +110,81 @@ describe("sso routing", () => {
 
   it("returns null for an unmapped domain", () => {
     expect(ssoParamsForEmail("jo@other.com", s)).toBeNull();
+  });
+});
+
+describe("auth-settings: account model", () => {
+  it("defaults to the consumer model with the built-in onboarding steps", () => {
+    const s = normalizeAuthSettings(undefined);
+    expect(s.accountModel).toBe("consumer");
+    expect(s.accountModelChosen).toBe(false);
+    expect(isWorkspaceMode(s)).toBe(false);
+    expect(s.workspaceLabel).toBe("Workspace");
+    expect(s.inviteExpiryDays).toBe(7);
+    expect(s.allowInviteLinks).toBe(true);
+    expect(s.onboardingSteps).toEqual(DEFAULT_ONBOARDING_STEPS);
+  });
+
+  it("reads business/hybrid, the chosen timestamp and the label", () => {
+    const s = normalizeAuthSettings({
+      accountModel: "business",
+      accountModelChosenAt: "2026-11-18T00:00:00.000Z",
+      workspaceLabel: "Team",
+      workspaceUrlPrefix: "  app.example.com/ ",
+    });
+    expect(s.accountModel).toBe("business");
+    expect(s.accountModelChosen).toBe(true);
+    expect(isWorkspaceMode(s)).toBe(true);
+    expect(s.workspaceLabel).toBe("Team");
+    expect(s.workspaceUrlPrefix).toBe("app.example.com/");
+    expect(normalizeAuthSettings({ accountModel: "hybrid" }).accountModel).toBe(
+      "hybrid",
+    );
+  });
+
+  it("is idempotent over its own JSON output (the /api/auth/config shape)", () => {
+    const once = normalizeAuthSettings({
+      accountModel: "hybrid",
+      accountModelChosenAt: "2026-11-18T00:00:00.000Z",
+    });
+    const twice = normalizeAuthSettings(JSON.parse(JSON.stringify(once)));
+    expect(twice).toEqual(once);
+  });
+
+  it("rejects unknown models/labels and clamps invite expiry to [1, 30]", () => {
+    const s = normalizeAuthSettings({
+      accountModel: "enterprise",
+      workspaceLabel: "Guild",
+      inviteExpiryDays: 90,
+    });
+    expect(s.accountModel).toBe("consumer");
+    expect(s.workspaceLabel).toBe("Workspace");
+    expect(s.inviteExpiryDays).toBe(30);
+    expect(
+      normalizeAuthSettings({ inviteExpiryDays: 0 }).inviteExpiryDays,
+    ).toBe(1);
+  });
+
+  it("dedupes onboarding steps and backfills missing built-ins as disabled", () => {
+    const s = normalizeAuthSettings({
+      onboardingSteps: [
+        { step: "updates", enabled: true },
+        { step: "updates", enabled: false },
+        { step: "profile", enabled: true },
+        { step: "Not A Key!", enabled: true },
+        { step: "module:chat-adapter-slack:connect", enabled: true },
+      ],
+    });
+    expect(s.onboardingSteps.map((r) => r.step)).toEqual([
+      "updates",
+      "profile",
+      "module:chat-adapter-slack:connect",
+      "invite",
+      "integrations",
+      "plan",
+    ]);
+    expect(s.onboardingSteps.find((r) => r.step === "invite")?.enabled).toBe(
+      false,
+    );
   });
 });

@@ -21,6 +21,7 @@ import { APP_NAME } from "@acme/config/constants";
 import type { ThemeSettingsInput } from "./theme/defaults";
 import { getViewerEntitlement } from "./billing-entitlement";
 import { getPayloadClient } from "./cms/payload-client";
+import { getSiteUrl } from "./site-url";
 
 /**
  * Server-side access to Payload via its LOCAL API (in-process, no HTTP) — the
@@ -336,9 +337,29 @@ const authSettingsGlobal = cache(async () => {
 
 export function getAuthSettings(): Promise<AuthSettings> {
   return safe(
-    async () => normalizeAuthSettings(await authSettingsGlobal()),
-    DEFAULT_AUTH_SETTINGS,
+    async () =>
+      withWorkspaceUrlPrefix(normalizeAuthSettings(await authSettingsGlobal())),
+    withWorkspaceUrlPrefix(DEFAULT_AUTH_SETTINGS),
   );
+}
+
+/**
+ * A blank `workspaceUrlPrefix` means "use the site's host", resolved here so
+ * every consumer (RSC pages and the mobile /api/auth/config) gets a concrete
+ * display string like `app.example.com/`.
+ */
+function withWorkspaceUrlPrefix(s: AuthSettings): AuthSettings {
+  if (s.workspaceUrlPrefix) return s;
+  const host = siteHost();
+  return { ...s, workspaceUrlPrefix: host ? `${host}/` : null };
+}
+
+function siteHost(): string | null {
+  try {
+    return new URL(getSiteUrl()).host || null;
+  } catch {
+    return null;
+  }
 }
 
 /** A link resolved from the reusable `linkField` group (see payload/fields/link). */

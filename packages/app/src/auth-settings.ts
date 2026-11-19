@@ -63,6 +63,57 @@ export interface SsoDomain {
 /** Top-level chooser buttons (the three email methods collapse into "email"). */
 export type ChooserEntry = "email" | "google" | "apple" | "sso";
 
+/**
+ * Who signs up for the app (Account model tab). `consumer` is today's D2C flow
+ * and the default, so existing clones never change; `business` puts every user
+ * in a workspace; `hybrid` asks once after email proof. See docs/WORKSPACES.md.
+ */
+export type AccountModel = "consumer" | "business" | "hybrid";
+export const ACCOUNT_MODELS: readonly AccountModel[] = [
+  "consumer",
+  "business",
+  "hybrid",
+];
+
+/** Labels the founder may pick for a workspace; drives every piece of copy. */
+export const WORKSPACE_LABELS = [
+  "Workspace",
+  "Organization",
+  "Team",
+  "Studio",
+  "Practice",
+] as const;
+export type WorkspaceLabel = (typeof WORKSPACE_LABELS)[number];
+
+/**
+ * Built-in onboarding steps, in their default order. Module-contributed steps
+ * (PR 3) use keys of the form `module:<slug>:<key>`.
+ */
+export type BuiltInOnboardingStep =
+  "profile" | "invite" | "integrations" | "updates" | "plan";
+export const BUILT_IN_ONBOARDING_STEPS: readonly BuiltInOnboardingStep[] = [
+  "profile",
+  "invite",
+  "integrations",
+  "updates",
+  "plan",
+];
+
+/** One row of the staff-orderable onboarding-step list (like login methods). */
+export interface OnboardingStepRow {
+  step: string;
+  enabled: boolean;
+}
+
+/** Mirrors the global's default. `plan` (choose a plan) is off by default. */
+export const DEFAULT_ONBOARDING_STEPS: OnboardingStepRow[] = [
+  { step: "profile", enabled: true },
+  { step: "invite", enabled: true },
+  { step: "integrations", enabled: true },
+  { step: "updates", enabled: true },
+  { step: "plan", enabled: false },
+];
+
 /** Normalized, fully-defaulted auth config consumed by the UI on both platforms. */
 export interface AuthSettings {
   /** Full, deduped, ordered method list (every method present exactly once). */
@@ -87,6 +138,18 @@ export interface AuthSettings {
   subtitle: string | null;
   ssoButtonLabel: string;
   ssoDomains: SsoDomain[];
+  /** Account model (Individuals / Teams / Both). Never touches RLS. */
+  accountModel: AccountModel;
+  /** True once the founder (or staff in /admin) has explicitly picked the model. */
+  accountModelChosen: boolean;
+  /** "Workspace", "Organization", … — substituted into all workspace copy. */
+  workspaceLabel: WorkspaceLabel;
+  /** Shown before the slug field, e.g. "app.example.com/". Null = derive from the site URL. */
+  workspaceUrlPrefix: string | null;
+  inviteExpiryDays: number;
+  allowInviteLinks: boolean;
+  /** Full, deduped, ordered onboarding-step list (every built-in step present once). */
+  onboardingSteps: OnboardingStepRow[];
 }
 
 const recordFromRows = (
@@ -126,6 +189,13 @@ export const DEFAULT_AUTH_SETTINGS: AuthSettings = {
   subtitle: null,
   ssoButtonLabel: "Continue with SAML SSO",
   ssoDomains: [],
+  accountModel: "consumer",
+  accountModelChosen: false,
+  workspaceLabel: "Workspace",
+  workspaceUrlPrefix: null,
+  inviteExpiryDays: 7,
+  allowInviteLinks: true,
+  onboardingSteps: DEFAULT_ONBOARDING_STEPS,
 };
 
 // The raw Payload global is loosely typed (every field nullable/optional). These
@@ -167,6 +237,30 @@ function normalizeMethods(raw: Raw): LoginMethodRow[] {
   // Any method the admin removed entirely is backfilled as disabled.
   for (const method of AUTH_METHOD_ORDER) {
     if (!seen.has(method)) out.push({ method, enabled: false });
+  }
+  return out;
+}
+
+const STEP_KEY_RE = /^[a-z0-9][a-z0-9:_-]{0,63}$/;
+
+/** Read + normalize the orderable `onboardingSteps` array: dedupe valid keys,
+ * then backfill any missing built-in steps (disabled) at the end. */
+function normalizeOnboardingSteps(raw: Raw): OnboardingStepRow[] {
+  const rowsIn = Array.isArray(raw.onboardingSteps)
+    ? raw.onboardingSteps.map(asRaw)
+    : [];
+  if (rowsIn.length === 0) return DEFAULT_ONBOARDING_STEPS;
+
+  const seen = new Set<string>();
+  const out: OnboardingStepRow[] = [];
+  for (const row of rowsIn) {
+    const step = typeof row.step === "string" ? row.step.trim() : "";
+    if (!STEP_KEY_RE.test(step) || seen.has(step)) continue;
+    seen.add(step);
+    out.push({ step, enabled: bool(row.enabled, false) });
+  }
+  for (const step of BUILT_IN_ONBOARDING_STEPS) {
+    if (!seen.has(step)) out.push({ step, enabled: false });
   }
   return out;
 }
@@ -237,7 +331,34 @@ export function normalizeAuthSettings(input: unknown): AuthSettings {
     subtitle: optStr(raw.subtitle),
     ssoButtonLabel: str(raw.ssoButtonLabel, d.ssoButtonLabel),
     ssoDomains,
+    accountModel: (ACCOUNT_MODELS as readonly unknown[]).includes(
+      raw.accountModel,
+    )
+      ? (raw.accountModel as AccountModel)
+      : d.accountModel,
+    // The global stores a timestamp; the normalized API JSON stores a boolean.
+    accountModelChosen:
+      raw.accountModelChosen === true ||
+      (typeof raw.accountModelChosenAt === "string" &&
+        raw.accountModelChosenAt.length > 0),
+    workspaceLabel: (WORKSPACE_LABELS as readonly unknown[]).includes(
+      raw.workspaceLabel,
+    )
+      ? (raw.workspaceLabel as WorkspaceLabel)
+      : d.workspaceLabel,
+    workspaceUrlPrefix: optStr(raw.workspaceUrlPrefix),
+    inviteExpiryDays: Math.min(
+      30,
+      Math.max(1, Math.round(num(raw.inviteExpiryDays, d.inviteExpiryDays))),
+    ),
+    allowInviteLinks: bool(raw.allowInviteLinks, d.allowInviteLinks),
+    onboardingSteps: normalizeOnboardingSteps(raw),
   };
+}
+
+/** True when the app runs workspaces (Teams or Both). */
+export function isWorkspaceMode(s: AuthSettings): boolean {
+  return s.accountModel !== "consumer";
 }
 
 /** Enabled methods in the configured order (the first is the primary CTA). */

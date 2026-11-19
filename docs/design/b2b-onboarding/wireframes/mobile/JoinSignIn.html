@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Join Vyten, confirm email</title>
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/bundle.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--link)}a:hover{color:var(--primary-hover)}
+</style>
+</helmet>
+<div class="dr" style="width: 390px; height: 844px; box-sizing: border-box; padding: 24px 16px 34px; display: flex; flex-direction: column; gap: 24px; background: var(--background)">
+  <div style="display: flex; align-items: center; justify-content: space-between; height: 32px">
+    <a href="InviteLanding.html" style="display: inline-flex; align-items: center; gap: 4px; min-height: 44px; font: 500 15px/20px var(--font-sans); text-decoration: none">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square"><path d="M15 5l-7 7 7 7"></path></svg>Back
+    </a>
+    <img src="../assets/dream-icon.svg" alt="Dream" style="height: 24px; width: auto">
+  </div>
+
+  <div class="dr-stephead" style="margin-top: 40px">
+    <h1 class="dr-title">Join Vyten</h1>
+    <p class="dr-sm" style="color: var(--body)">Confirm it’s you. We’ll send a 6-digit code to the address the invite was sent to.</p>
+  </div>
+
+  <div class="dr-field" style="max-width: none">
+    <label for="email">Email</label>
+    <div style="position: relative">
+      <input id="email" type="email" class="dr-input" value="ana@vyten.com" readonly aria-readonly="true" style="width: 100%; box-sizing: border-box; padding-right: 44px; background: var(--surface-raised); border-color: var(--border-strong)">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.75" stroke-linecap="square" style="position: absolute; right: 14px; top: 15px"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+    </div>
+    <span class="help">Invites only work for the address they were sent to.</span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <a href="Profile.html" class="dr-btn dr-btn-primary dr-btn-block">Send me a code</a>
+    <div style="display: flex; align-items: center; gap: 12px" aria-hidden="true">
+      <span style="flex: 1; height: 1px; background: var(--border)"></span>
+      <span class="dr-sm dr-muted">or</span>
+      <span style="flex: 1; height: 1px; background: var(--border)"></span>
+    </div>
+    <button type="button" class="dr-btn dr-btn-secondary dr-btn-block">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square"><path d="M20 12.2c0-.6-.1-1.2-.2-1.7H12v3.3h4.5a3.9 3.9 0 0 1-1.7 2.5"></path><path d="M12 20a8 8 0 1 1 5.3-14"></path></svg>
+      Continue with Google
+    </button>
+  </div>
+
+  <p class="dr-sm dr-muted" style="margin-top: auto; text-align: center">After the code, you’ll set up your profile and land in Vyten. No workspace to create.</p>
+</div>
+</x-dc>
+</body>
+</html>

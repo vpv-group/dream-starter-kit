@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Create your workspace (desktop)</title>
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/bundle.css">
+<link rel="stylesheet" href="../assets/desktop.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--link)}a:hover{color:var(--primary-hover)}
+</style>
+</helmet>
+<div class="dr dk">
+  <div class="dk-split">
+    <div class="dk-main">
+      <div class="dk-top">
+        <img src="../assets/dream-logo.svg" alt="Dream" style="height: 28px; width: auto">
+        <span class="dk-meta">Already have an account? <a href="#">Sign in</a></span>
+      </div>
+
+      <div class="dk-col">
+        <div class="dr-stephead">
+          <h1 class="dr-title">Create your workspace</h1>
+          <p class="dr-sm" style="color: var(--body)">Free to start. You’ll name your workspace after you confirm your email.</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <div class="dr-field" style="max-width: none">
+            <label for="email">Work email</label>
+            <input id="email" type="email" class="dr-input" placeholder="you@company.com" value="vincent@vyten.com">
+            <span class="help">We’ll send a 6-digit code to confirm it’s you.</span>
+          </div>
+          <a href="CheckEmail.html" class="dr-btn dr-btn-primary dr-btn-block">Continue with email</a>
+          <p class="dr-sm dr-muted" style="text-align: center">You used email last time.</p>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px" aria-hidden="true">
+          <span style="flex: 1; height: 1px; background: var(--border)"></span>
+          <span class="dr-sm dr-muted">or</span>
+          <span style="flex: 1; height: 1px; background: var(--border)"></span>
+        </div>
+
+        <div class="dk-actions">
+          <button type="button" class="dr-btn dr-btn-secondary">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square"><path d="M20 12.2c0-.6-.1-1.2-.2-1.7H12v3.3h4.5a3.9 3.9 0 0 1-1.7 2.5"></path><path d="M12 20a8 8 0 1 1 5.3-14"></path></svg>
+            Google
+          </button>
+          <button type="button" class="dr-btn dr-btn-secondary">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+            SAML SSO
+          </button>
+        </div>
+      </div>
+
+      <div class="dk-foot"><span>By continuing you agree to the <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</span></div>
+    </div>
+
+    <aside class="dk-aside" aria-label="What happens next">
+      <div class="dk-preview">
+        <p class="dk-cap">What happens next</p>
+        <div class="dk-card">
+          <ol class="dr-steps" style="max-width: none">
+            <li class="dr-step"><span class="num is-you">01</span><div class="txt"><p class="t">Confirm your email</p><p class="h">A 6-digit code, about a minute.</p></div></li>
+            <li class="dr-step"><span class="num">02</span><div class="txt"><p class="t">Name your workspace</p><p class="h">Your team’s home, with its own URL.</p></div></li>
+            <li class="dr-step"><span class="num">03</span><div class="txt"><p class="t">Invite your team</p><p class="h">Optional. You can do it later.</p></div></li>
+          </ol>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

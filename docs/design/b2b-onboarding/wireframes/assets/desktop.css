@@ -1,0 +1,39 @@
+/* Desktop layout helpers for the Dream onboarding wireframes. Colours, type and radii come from ds/dream. */
+.dk { width: 100%; min-height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--background); font-family: var(--font-sans); color: var(--body); }
+.dk *, .dk *::before, .dk *::after { box-sizing: border-box; }
+.dk-split { flex: 1; display: flex; flex-wrap: wrap; min-height: 900px; }
+.dk-main { flex: 1 1 520px; min-width: 0; display: flex; flex-direction: column; padding: 40px 56px; }
+.dk-top { display: flex; align-items: center; justify-content: space-between; min-height: 32px; }
+.dk-col { width: 100%; max-width: 400px; margin: auto; padding: 48px 0; display: flex; flex-direction: column; gap: 24px; }
+.dk-col-wide { max-width: 560px; }
+.dk-col-xwide { max-width: 960px; }
+.dk-foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
+.dk-aside { flex: 1 1 520px; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 56px; background: var(--surface); border-left: 1px solid var(--border); }
+.dk-preview { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 16px; }
+.dk-cap { margin: 0; font: 500 12px/16px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-foreground); }
+.dk-card { display: flex; flex-direction: column; gap: 16px; padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--card); box-shadow: var(--shadow-card); }
+.dk-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.dk-actions .dr-btn { flex: 1 1 160px; }
+.dk-seg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; width: 100%; max-width: 400px; margin: 0 auto; }
+.dk-seg span { height: 6px; border-radius: 0 var(--radius-full) var(--radius-full) 0; background: var(--primary-tint); }
+.dk-seg .on { background: var(--foreground); }
+.dk-seg .done { background: var(--brand); }
+.dk-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.dk-opt { display: flex; flex-direction: column; gap: 12px; padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--card); cursor: pointer; }
+.dk-opt.is-sel { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+.dk-opt-head { display: flex; align-items: center; justify-content: space-between; }
+.dk-radio { flex: none; width: 20px; height: 20px; border-radius: var(--radius-full); border: 1.5px solid var(--input); }
+.dk-opt.is-sel .dk-radio { border: 6px solid var(--primary); }
+.dk-opt-t { font: 600 17px/24px var(--font-sans); letter-spacing: -0.01em; color: var(--foreground); }
+.dk-opt-d { font-size: 14px; line-height: 20px; color: var(--body); }
+.dk-ws { flex: none; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: var(--ink); color: var(--on-ink); font: 600 15px/1 var(--font-sans); }
+.dk-av { flex: none; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-full); background: var(--surface-raised); border: 1px solid var(--border); font: 600 12px/1 var(--font-sans); color: var(--foreground); }
+.dk-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 12px 0; border-top: 1px solid var(--border); }
+.dk-row:last-child { border-bottom: 1px solid var(--border); }
+.dk-row .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.dk-name { font: 600 15px/22px var(--font-sans); color: var(--foreground); }
+.dk-meta { font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
+@media (max-width: 760px) {
+  .dk-main { padding: 24px 16px; }
+  .dk-aside { padding: 32px 16px; border-left: 0; border-top: 1px solid var(--border); }
+}

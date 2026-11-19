@@ -38,6 +38,36 @@ Practically: enabling "Google" here shows the Google button, but Google must
   `packages/app/src/auth-settings.ts` (`AuthSettings`, `normalizeAuthSettings`,
   `chooserEntries`, `isEmailDomainAllowed`, `ssoParamsForEmail`).
 
+## Account model tab
+
+**Who signs up for your app?** One founder-level setting decides whether the app
+is for **Individuals** (`consumer`, the default — today's flow, unchanged),
+**Teams and companies** (`business` — every user lives in a workspace), or
+**Both** (`hybrid` — personal by default, anyone can create or join a workspace).
+The founder answers it once as the first screen of `/cms-setup`, before the CMS
+seed; staff can change it here afterwards. Full model, routing and data:
+[`WORKSPACES.md`](./WORKSPACES.md).
+
+| Field | Default | What it does |
+| --- | --- | --- |
+| `accountModel` | `consumer` | Individuals / Teams and companies / Both. Changes UI and routing only — **never RLS**. |
+| `accountModelChosenAt` | — | Hidden. Stamped by the `/cms-setup` picker, or by the first save here that changes the model, so the picker shows exactly once. |
+| `workspaceLabel` | Workspace | Workspace / Organization / Team / Studio / Practice — substituted into all workspace copy. |
+| `workspaceUrlPrefix` | site host | Shown before the URL field on Name your workspace. Blank = the host of `getSiteUrl()`. |
+| `inviteExpiryDays` | 7 | Days before an emailed invite expires (1–30). |
+| `allowInviteLinks` | on | Whether workspace admins may share a join link. |
+| `onboardingSteps` | profile, invite, integrations, updates on; plan off | Orderable, toggleable welcome steps (like the method list). Steps this build doesn't ship yet are skipped silently: invite (invitations), integrations (module steps) and plan (workspace billing). |
+
+Sign-up copy follows the model when **Appearance** headings are blank: Teams uses
+"Create your {label}" + "Free to start. You'll name your {label} after you
+confirm your email."; Both uses "Create your account"; Individuals keeps the
+kit's existing copy. In Teams/Both the chooser also shows a "You used {method}
+last time." hint (first-party cookie `last_auth_method`).
+
+Switching **Individuals → Teams** sends existing members to "Name your
+workspace" when they next reach the app. Switching **Teams → Individuals** keeps
+all workspace data and hides the UI.
+
 ## Methods: reorder + toggle
 
 The **Methods** tab is an orderable list. **Drag to reorder, toggle to

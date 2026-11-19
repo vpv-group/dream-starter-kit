@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Who signs up for your app (desktop)</title>
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/bundle.css">
+<link rel="stylesheet" href="../assets/desktop.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--link)}a:hover{color:var(--primary-hover)}
+</style>
+</helmet>
+<div class="dr dk">
+  <div class="dk-main">
+    <div class="dk-top">
+      <img src="../assets/dream-logo.svg" alt="Dream" style="height: 28px; width: auto">
+      <span class="dr-tag">Admin setup</span>
+    </div>
+
+    <div class="dk-col dk-col-xwide">
+      <div class="dr-stephead" style="max-width: 640px">
+        <p class="dr-eyebrow">Step 01 <span class="sep">/</span> 02</p>
+        <h1 class="dr-title">Who signs up for your app?</h1>
+        <p style="margin: 0; font-size: 16px; line-height: 24px; color: var(--body)">This sets how sign-up works for everyone after you. You can change it later in Admin › Authentication.</p>
+      </div>
+
+      <fieldset class="dk-opts" style="margin: 0; padding: 0; border: 0">
+        <legend class="dr-sr">Account model</legend>
+        <label class="dk-opt">
+          <input type="radio" name="model" value="consumer" class="dr-sr">
+          <span class="dk-opt-head">
+            <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" stroke-linecap="square"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"></path></svg>
+            <span class="dk-radio" aria-hidden="true"></span>
+          </span>
+          <span class="dk-opt-t">Individuals</span>
+          <span class="dk-opt-d">Each person signs up for themselves. Members, customers, clients.</span>
+          <span class="dk-meta" style="padding-top: 12px; border-top: 1px solid var(--border)">Sign-up stays as it is today.</span>
+        </label>
+        <label class="dk-opt is-sel">
+          <input type="radio" name="model" value="business" checked class="dr-sr">
+          <span class="dk-opt-head">
+            <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--foreground)" stroke-width="1.5" stroke-linecap="square"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"></path><circle cx="17" cy="9" r="2.5"></circle><path d="M17 14c2.8 0 4.5 2 4.5 5"></path></svg>
+            <span class="dk-radio" aria-hidden="true"></span>
+          </span>
+          <span class="dk-opt-t">Teams and companies</span>
+          <span class="dk-opt-d">People work together in a shared workspace. The first person creates it and invites the rest.</span>
+          <span class="dk-meta" style="padding-top: 12px; border-top: 1px solid var(--border)">Adds workspaces, invites and a member list.</span>
+        </label>
+        <label class="dk-opt">
+          <input type="radio" name="model" value="hybrid" class="dr-sr">
+          <span class="dk-opt-head">
+            <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" stroke-linecap="square"><circle cx="8" cy="9" r="3"></circle><path d="M3 19c0-3 2.2-5 5-5"></path><rect x="12" y="11" width="9" height="9" rx="2"></rect></svg>
+            <span class="dk-radio" aria-hidden="true"></span>
+          </span>
+          <span class="dk-opt-t">Both</span>
+          <span class="dk-opt-d">Personal by default. Anyone can create or join a workspace later.</span>
+          <span class="dk-meta" style="padding-top: 12px; border-top: 1px solid var(--border)">Asks new people once: for myself, or with my team.</span>
+        </label>
+      </fieldset>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+        <div class="dr-stephead"><div class="meta"><span>Who: <b>you, the admin</b></span><span>How long: <b>under a minute</b> (estimate)</span></div></div>
+        <button type="button" class="dr-btn dr-btn-primary" style="min-width: 200px">Continue</button>
+      </div>
+    </div>
+
+    <div class="dk-foot"><span>Next we add sample content to your CMS.</span></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

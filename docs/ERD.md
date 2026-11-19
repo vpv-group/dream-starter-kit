@@ -67,6 +67,9 @@ erDiagram
         boolean is_anonymous "true for Supabase anon users"
         boolean is_staff
         text phone "captured from wallet checkout"
+        text title "job title (onboarding profile step)"
+        uuid last_org_id FK "active workspace (membership-guarded)"
+        jsonb email_preferences "tips / product_updates"
         timestamptz created_at
     }
     content_favorites {
@@ -79,7 +82,13 @@ erDiagram
     organizations {
         uuid id PK
         text name
+        text slug UK "workspace URL, not reserved"
         uuid owner_id FK
+        text logo_url
+        text join_token_hash UK "sha256 of invite-link token"
+        boolean join_link_enabled
+        text_array allowed_domains
+        jsonb data
         timestamptz created_at
     }
     memberships {
@@ -87,13 +96,21 @@ erDiagram
         uuid org_id FK
         uuid user_id FK
         text role "owner | admin | member"
+        text onboarding_step "resume point"
+        timestamptz onboarding_completed_at
+        text_array onboarding_done "finished (not skipped) steps"
     }
     invitations {
         uuid id PK
         uuid org_id FK
         text email
         text role
-        text status "pending | accepted"
+        text status "pending | accepted | revoked"
+        text token_hash UK "sha256 of emailed token"
+        uuid invited_by FK
+        timestamptz expires_at
+        timestamptz accepted_at
+        uuid accepted_by FK
     }
     customers {
         uuid id PK
@@ -176,11 +193,27 @@ erDiagram
 - `profiles` — app-level user record, 1:1 with `auth.users` (same `id`). Created by a trigger on signup. The anchor for most RLS policies. Carries `is_staff`, `is_anonymous` (true for Supabase anonymous users — minted on a logged-out visitor's first action; never staff; converted to permanent on email confirmation), and `phone` (captured from wallet checkout; column-grant updatable by the owner like `display_name`).
 - `content_favorites` — generic per-user saves across **all** content collections, keyed `(user_id, collection, item_id)` with own-row RLS. Content lives in the `cms` schema so the item is referenced by Payload collection slug + doc id (no FK). **The one table anonymous users may write** — so a logged-out visitor can favorite before signing up. Replaces the old CMS `favorites` collection.
 
-**Teams / multi-tenancy** _(optional — drop for single-user apps)_
+**Teams / multi-tenancy** _(workspaces — used when the founder's account model is Teams or Both; see [`WORKSPACES.md`](./WORKSPACES.md))_
 
-- `organizations` — a workspace/company.
-- `memberships` — the user↔org join with a `role` (drives org-scoped RLS).
-- `invitations` — pending invites by email.
+- `organizations` — a workspace. `slug` is lowercase, 2–39 chars, single inner hyphens, unique, and never a reserved route word (`a`, `admin`, `api`, `onboarding`, … — `is_reserved_slug()`, mirrored in `packages/app/src/workspaces.ts`); direct inserts get a random `org-…` slug. `join_token_hash` / `join_link_enabled` / `allowed_domains` back the shareable invite link; `logo_url` and `data jsonb` are free for branding and product fields.
+- `memberships` — the user↔org join with a `role` (drives org-scoped RLS). `onboarding_step` / `onboarding_completed_at` let `/welcome` resume the welcome steps per person per workspace; `onboarding_done` lists the steps actually finished (vs skipped) for the getting-started checklist.
+- `invitations` — email invites. Tokens are 32 random bytes stored **only** as SHA-256 (`token_hash`); `expires_at`, `invited_by`, `accepted_at` / `accepted_by` and a `revoked` status give expiry and an audit trail. A partial unique index allows one pending invite per `(org_id, lower(email))`.
+- `profiles` workspace fields — `title`, `last_org_id` (the active workspace; a trigger rejects any workspace the user isn't a member of) and `email_preferences`, all column-grant updatable by the owner.
+
+**Workspace RPCs** _(all `security definer`, `set search_path = ''`, executable by `authenticated` only)_ — every cross-boundary write goes through these; errors are stable snake_case messages (`slug_unavailable`, `invite_expired`, …) the clients map to copy:
+
+| Function | What it does |
+| --- | --- |
+| `is_slug_available(_slug)` | Format + reserved + uniqueness check (debounced from the Name your workspace form). |
+| `create_workspace(_name, _slug)` | Non-anonymous caller creates a workspace; the existing trigger enrolls them as `owner`; sets `last_org_id`. |
+| `accept_invitation(_token)` | Hashes the token; requires a pending, unexpired invite whose email equals the caller's **confirmed** email; inserts the membership (idempotent), stamps `accepted_*`, sets `last_org_id`. |
+| `join_workspace_by_link(_token)` | Joins as `member` when the link is enabled and the caller's confirmed email passes `allowed_domains`. |
+| `my_pending_invitations()` | The invitee's only window onto their invites (org name/slug/logo, inviter, role, expiry). Never returns tokens. |
+| `save_onboarding_progress(_org_id, _step, _completed, _done)` | A member records their own stepper position (memberships are otherwise admin-write). |
+
+**Workspace policies and guards** — `profiles: co-members read` lets members of a shared workspace read each other's profile rows (member lists, mentions). RESTRICTIVE `no anon` policies on `organizations`, `memberships` and `invitations` keep anonymous (Turnstile) sessions out entirely. A trigger blocks removing or demoting a workspace's **last owner** (cascades from deleting the workspace or the profile are exempt). `is_staff` and `memberships.role` never imply each other.
+
+**Avatars** — the public-read `avatars` storage bucket (2 MB, png/jpeg/webp/gif) holds profile photos so teammates can see them; writes are confined to the owner's `<user_id>/` prefix and blocked for anonymous sessions.
 
 **Billing** _(core for any paid app — written by the Stripe webhook)_
 

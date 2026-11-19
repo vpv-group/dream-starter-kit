@@ -5391,6 +5391,38 @@ export interface ProfileField {
 export interface AuthenticationSetting {
   id: number;
   /**
+   * Switching Teams → Individuals keeps all workspace data but hides it. Switching Individuals → Teams sends existing members to “Name your workspace” on their next sign-in.
+   */
+  accountModel?: ("consumer" | "business" | "hybrid") | null;
+  accountModelChosenAt?: string | null;
+  /**
+   * What a shared space is called everywhere.
+   */
+  workspaceLabel?:
+    ("Workspace" | "Organization" | "Team" | "Studio" | "Practice") | null;
+  /**
+   * Shown before the URL field. Blank uses your site's host.
+   */
+  workspaceUrlPrefix?: string | null;
+  /**
+   * Days before an emailed invite expires.
+   */
+  inviteExpiryDays?: number | null;
+  /**
+   * Let workspace admins share a join link. They can still turn their own link off.
+   */
+  allowInviteLinks?: boolean | null;
+  /**
+   * The skippable welcome steps after a workspace is created. Drag to reorder, toggle to show or hide. Invited members only see Profile and Updates.
+   */
+  onboardingSteps?:
+    | {
+        step: "profile" | "invite" | "integrations" | "updates" | "plan";
+        enabled?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
    * Drag the handle to reorder. Toggle Enabled to show/hide. Google/Apple need the provider enabled in Supabase; SAML SSO needs [auth.sso] + a registered identity provider.
    */
   loginMethods?:
@@ -5904,6 +5936,19 @@ export interface ProfileFieldsSelect<T extends boolean = true> {
  * via the `definition` "authentication-settings_select".
  */
 export interface AuthenticationSettingsSelect<T extends boolean = true> {
+  accountModel?: T;
+  accountModelChosenAt?: T;
+  workspaceLabel?: T;
+  workspaceUrlPrefix?: T;
+  inviteExpiryDays?: T;
+  allowInviteLinks?: T;
+  onboardingSteps?:
+    | T
+    | {
+        step?: T;
+        enabled?: T;
+        id?: T;
+      };
   loginMethods?:
     | T
     | {

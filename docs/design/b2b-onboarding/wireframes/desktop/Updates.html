@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stay in the loop (desktop)</title>
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/bundle.css">
+<link rel="stylesheet" href="../assets/desktop.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--link)}a:hover{color:var(--primary-hover)}
+</style>
+</helmet>
+<div class="dr dk">
+  <div class="dk-split">
+    <div class="dk-main">
+      <div class="dk-top">
+        <img src="../assets/dream-logo.svg" alt="Dream" style="height: 28px; width: auto">
+        <span class="dk-meta">Vyten</span>
+      </div>
+
+      <div class="dk-col">
+        <div class="dk-seg" aria-hidden="true"><span class="done"></span><span class="done"></span><span class="done"></span><span class="on"></span></div>
+        <div class="dr-stephead">
+          <p class="dr-eyebrow">Step 04 <span class="sep">/</span> 04</p>
+          <h1 class="dr-title">Stay in the loop</h1>
+          <p class="dr-sm" style="color: var(--body)">Choose what we email you. Change this any time in Settings.</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column">
+          <label class="dk-row" style="cursor: pointer">
+            <span class="grow"><span style="font: 600 17px/24px var(--font-sans); color: var(--foreground)">Getting started tips</span><span class="dk-meta">A short series for your first weeks.</span></span>
+            <input type="checkbox" role="switch" checked class="dr-sr">
+            <span aria-hidden="true" style="flex: none; width: 44px; height: 26px; border-radius: 9999px; background: var(--primary); position: relative">
+              <span style="position: absolute; top: 3px; left: 21px; width: 20px; height: 20px; border-radius: 9999px; background: var(--primary-foreground)"></span>
+            </span>
+          </label>
+          <label class="dk-row" style="cursor: pointer">
+            <span class="grow"><span style="font: 600 17px/24px var(--font-sans); color: var(--foreground)">Product updates</span><span class="dk-meta">What’s new in Dream.</span></span>
+            <input type="checkbox" role="switch" class="dr-sr">
+            <span aria-hidden="true" style="flex: none; width: 44px; height: 26px; border-radius: 9999px; background: var(--surface-raised); border: 1px solid var(--input); box-sizing: border-box; position: relative">
+              <span style="position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 9999px; background: var(--card); box-shadow: var(--shadow-xs)"></span>
+            </span>
+          </label>
+        </div>
+
+        <div class="dk-actions">
+          <a href="Home.html" class="dr-btn dr-btn-primary">Finish</a>
+        </div>
+      </div>
+    </div>
+
+    <aside class="dk-aside" aria-label="Your setup">
+      <div class="dk-preview">
+        <p class="dk-cap">Your setup</p>
+        <div class="dk-card">
+          <ol class="dr-steps" style="max-width: none">
+            <li class="dr-step"><span class="num is-done">01</span><div class="txt"><p class="t">Set up your profile</p></div><span class="dr-chip dr-chip-done"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5L4.8 9.3L10.2 3.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"></path></svg>Done</span></li>
+            <li class="dr-step"><span class="num is-done">02</span><div class="txt"><p class="t">Invite your team</p><p class="h">2 invites sent.</p></div><span class="dr-chip dr-chip-done"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5L4.8 9.3L10.2 3.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"></path></svg>Done</span></li>
+            <li class="dr-step"><span class="num">03</span><div class="txt"><p class="t">Connect Slack</p><p class="h">Skipped. It stays on your checklist.</p></div></li>
+            <li class="dr-step"><span class="num is-you">04</span><div class="txt"><p class="t">Stay in the loop</p></div><span class="dr-chip dr-chip-you">Needs you</span></li>
+          </ol>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

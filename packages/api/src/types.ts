@@ -98,30 +98,59 @@ export type Database = {
       };
       invitations: {
         Row: {
+          accepted_at: string | null;
+          accepted_by: string | null;
           created_at: string;
           email: string;
+          expires_at: string | null;
           id: string;
+          invited_by: string | null;
           org_id: string;
           role: string;
           status: string;
+          token_hash: string | null;
         };
         Insert: {
+          accepted_at?: string | null;
+          accepted_by?: string | null;
           created_at?: string;
           email: string;
+          expires_at?: string | null;
           id?: string;
+          invited_by?: string | null;
           org_id: string;
           role?: string;
           status?: string;
+          token_hash?: string | null;
         };
         Update: {
+          accepted_at?: string | null;
+          accepted_by?: string | null;
           created_at?: string;
           email?: string;
+          expires_at?: string | null;
           id?: string;
+          invited_by?: string | null;
           org_id?: string;
           role?: string;
           status?: string;
+          token_hash?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "invitations_accepted_by_fkey";
+            columns: ["accepted_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "invitations_invited_by_fkey";
+            columns: ["invited_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "invitations_org_id_fkey";
             columns: ["org_id"];
@@ -270,6 +299,9 @@ export type Database = {
         Row: {
           created_at: string;
           id: string;
+          onboarding_completed_at: string | null;
+          onboarding_done: string[];
+          onboarding_step: string | null;
           org_id: string;
           role: string;
           user_id: string;
@@ -277,6 +309,9 @@ export type Database = {
         Insert: {
           created_at?: string;
           id?: string;
+          onboarding_completed_at?: string | null;
+          onboarding_done?: string[];
+          onboarding_step?: string | null;
           org_id: string;
           role?: string;
           user_id: string;
@@ -284,6 +319,9 @@ export type Database = {
         Update: {
           created_at?: string;
           id?: string;
+          onboarding_completed_at?: string | null;
+          onboarding_done?: string[];
+          onboarding_step?: string | null;
           org_id?: string;
           role?: string;
           user_id?: string;
@@ -853,22 +891,40 @@ export type Database = {
       };
       organizations: {
         Row: {
+          allowed_domains: string[];
           created_at: string;
+          data: Json;
           id: string;
+          join_link_enabled: boolean;
+          join_token_hash: string | null;
+          logo_url: string | null;
           name: string;
           owner_id: string;
+          slug: string;
         };
         Insert: {
+          allowed_domains?: string[];
           created_at?: string;
+          data?: Json;
           id?: string;
+          join_link_enabled?: boolean;
+          join_token_hash?: string | null;
+          logo_url?: string | null;
           name: string;
           owner_id: string;
+          slug?: string;
         };
         Update: {
+          allowed_domains?: string[];
           created_at?: string;
+          data?: Json;
           id?: string;
+          join_link_enabled?: boolean;
+          join_token_hash?: string | null;
+          logo_url?: string | null;
           name?: string;
           owner_id?: string;
+          slug?: string;
         };
         Relationships: [
           {
@@ -885,30 +941,47 @@ export type Database = {
           avatar_url: string | null;
           created_at: string;
           display_name: string | null;
+          email_preferences: Json;
           id: string;
           is_anonymous: boolean;
           is_staff: boolean;
+          last_org_id: string | null;
           phone: string | null;
+          title: string | null;
         };
         Insert: {
           avatar_url?: string | null;
           created_at?: string;
           display_name?: string | null;
+          email_preferences?: Json;
           id: string;
           is_anonymous?: boolean;
           is_staff?: boolean;
+          last_org_id?: string | null;
           phone?: string | null;
+          title?: string | null;
         };
         Update: {
           avatar_url?: string | null;
           created_at?: string;
           display_name?: string | null;
+          email_preferences?: Json;
           id?: string;
           is_anonymous?: boolean;
           is_staff?: boolean;
+          last_org_id?: string | null;
           phone?: string | null;
+          title?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "profiles_last_org_id_fkey";
+            columns: ["last_org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       tags: {
         Row: {
@@ -975,8 +1048,97 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_invitation: {
+        Args: { _token: string };
+        Returns: {
+          allowed_domains: string[];
+          created_at: string;
+          data: Json;
+          id: string;
+          join_link_enabled: boolean;
+          join_token_hash: string | null;
+          logo_url: string | null;
+          name: string;
+          owner_id: string;
+          slug: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "organizations";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      confirmed_email: { Args: never; Returns: string };
+      create_workspace: {
+        Args: { _name: string; _slug: string };
+        Returns: {
+          allowed_domains: string[];
+          created_at: string;
+          data: Json;
+          id: string;
+          join_link_enabled: boolean;
+          join_token_hash: string | null;
+          logo_url: string | null;
+          name: string;
+          owner_id: string;
+          slug: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "organizations";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      is_anonymous_session: { Args: never; Returns: boolean };
       is_org_admin: { Args: { _org: string }; Returns: boolean };
       is_org_member: { Args: { _org: string }; Returns: boolean };
+      is_reserved_slug: { Args: { _slug: string }; Returns: boolean };
+      is_slug_available: { Args: { _slug: string }; Returns: boolean };
+      join_workspace_by_link: {
+        Args: { _token: string };
+        Returns: {
+          allowed_domains: string[];
+          created_at: string;
+          data: Json;
+          id: string;
+          join_link_enabled: boolean;
+          join_token_hash: string | null;
+          logo_url: string | null;
+          name: string;
+          owner_id: string;
+          slug: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "organizations";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      my_pending_invitations: {
+        Args: never;
+        Returns: {
+          expires_at: string;
+          invitation_id: string;
+          inviter_name: string;
+          logo_url: string;
+          org_id: string;
+          org_name: string;
+          org_slug: string;
+          role: string;
+        }[];
+      };
+      save_onboarding_progress: {
+        Args: {
+          _completed?: boolean;
+          _done?: string;
+          _org_id: string;
+          _step: string;
+        };
+        Returns: undefined;
+      };
     };
     Enums: {
       [_ in never]: never;

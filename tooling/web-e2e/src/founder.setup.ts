@@ -102,6 +102,14 @@ test("founder sign-up seeds the CMS before /admin", async ({ page }) => {
   ).toBeLessThan(400);
   expect(welcome.status()).toBeGreaterThanOrEqual(300);
 
+  // Founder step (B2B onboarding, docs/WORKSPACES.md): /cms-setup first asks
+  // "Who signs up for your app?" once. Keep the default (Individuals) so the
+  // rest of the suite runs in consumer mode, exactly as before.
+  await expect(
+    page.getByRole("heading", { name: "Who signs up for your app?" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+
   // The shadcn progress screen, then hand-off to /admin once seeding completes.
   // Seeding + the Payload admin bundle can be slow on a cold CI runner.
   await expect(
