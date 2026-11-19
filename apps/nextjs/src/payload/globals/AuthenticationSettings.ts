@@ -59,7 +59,7 @@ export const AuthenticationSettings: GlobalConfig = {
         ) {
           next.accountModelChosenAt = new Date().toISOString();
         }
-        return data;
+        return next;
       },
     ],
   },
