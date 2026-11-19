@@ -9,7 +9,13 @@ import { updateSession } from "~/lib/supabase/middleware";
 // "/a" covers the app home AND every module's default mount (/a/<slug>/…);
 // module mount overrides in the authed area must be listed individually
 // (e.g. "/billing").
-const PROTECTED_PREFIXES = ["/profile", "/a", "/billing", "/onboarding"];
+const PROTECTED_PREFIXES = [
+  "/profile",
+  "/a",
+  "/billing",
+  "/onboarding",
+  "/workspace",
+];
 // Auth pages a signed-in user shouldn't see.
 const AUTH_PREFIXES = ["/sign-in", "/sign-up", "/forgot-password"];
 

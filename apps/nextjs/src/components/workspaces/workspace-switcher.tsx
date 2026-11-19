@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Check, ChevronsUpDown, Plus, Settings } from "lucide-react";
+import { Check, ChevronsUpDown, Mail, Plus, Settings } from "lucide-react";
 
 import { labelLower, labelWithArticle, useSetActiveOrg } from "@acme/app";
 import { toast } from "@acme/ui/toast";
@@ -71,18 +71,22 @@ function WorkspaceMark({
 /**
  * shadcn "team switcher" (SidebarMenu + DropdownMenu) at the top of the app
  * sidebar in Teams/Both mode (wireframe Home). Lists the user's workspaces,
- * "Create a workspace", and a disabled "Workspace settings" (PR 2).
+ * pending invitations, "Create a workspace", and Workspace settings
+ * (Settings → Members at /workspace).
  */
 export function WorkspaceSwitcher({
   workspaces,
   activeId,
   email,
   workspaceLabel,
+  pendingInvites = [],
 }: {
   workspaces: SwitcherWorkspace[];
   activeId: string | null;
   email: string;
   workspaceLabel: string;
+  /** Invites to my email I haven't joined — "Join {name}" items. */
+  pendingInvites?: { invitationId: string; orgName: string }[];
 }) {
   const router = useRouter();
   const { isMobile } = useSidebar();
@@ -154,6 +158,26 @@ export function WorkspaceSwitcher({
                 ) : null}
               </DropdownMenuItem>
             ))}
+            {pendingInvites.length > 0 ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-muted-foreground text-xs">
+                  Invitations
+                </DropdownMenuLabel>
+                {pendingInvites.map((invite) => (
+                  <DropdownMenuItem
+                    key={invite.invitationId}
+                    className="gap-2 p-2"
+                    asChild
+                  >
+                    <a href="/onboarding/invites">
+                      <Mail className="size-4" />
+                      <span className="truncate">Join {invite.orgName}</span>
+                    </a>
+                  </DropdownMenuItem>
+                ))}
+              </>
+            ) : null}
             {workspaces.length > 0 ? <DropdownMenuSeparator /> : null}
             <DropdownMenuItem className="gap-2 p-2" asChild>
               <a href="/onboarding/workspace">
@@ -161,10 +185,14 @@ export function WorkspaceSwitcher({
                 Create {labelWithArticle(lower)}
               </a>
             </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 p-2" disabled>
-              <Settings className="size-4" />
-              {workspaceLabel} settings
-            </DropdownMenuItem>
+            {active ? (
+              <DropdownMenuItem className="gap-2 p-2" asChild>
+                <a href="/workspace">
+                  <Settings className="size-4" />
+                  {workspaceLabel} settings
+                </a>
+              </DropdownMenuItem>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

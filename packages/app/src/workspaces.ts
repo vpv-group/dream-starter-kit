@@ -164,9 +164,8 @@ export interface OnboardingStepDef {
   /** Shown to people who joined an existing workspace (invitees). */
   forInvitees: boolean;
   /**
-   * Whether this build ships a screen for it. `invite` lands with
-   * invitations (PR 2); `integrations` renders module-contributed steps and
-   * `plan` workspace billing (PR 3). Unavailable steps are skipped silently,
+   * Whether this build ships a screen for it. `integrations` renders
+   * module-contributed steps and `plan` workspace billing (PR 3). Unavailable steps are skipped silently,
    * even when enabled in the settings.
    */
   available: boolean;
@@ -190,7 +189,7 @@ export const ONBOARDING_STEP_DEFS: Record<
     title: "Invite your team",
     adminOnly: true,
     forInvitees: false,
-    available: false,
+    available: true,
   },
   integrations: {
     key: "integrations",

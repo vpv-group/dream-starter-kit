@@ -34,5 +34,24 @@ export {
   useSetSignupIntent,
   toMyWorkspace,
   workspacesKey,
+  useMyPendingInvitations,
+  useAcceptPendingInvitation,
+  useAcceptInvitation,
+  useWorkspaceMembers,
+  useWorkspaceInvitations,
+  useRevokeInvitation,
+  useUpdateMemberRole,
+  useRemoveMember,
+  useSetJoinLink,
+  useSendInvitations,
+  useResendInvitation,
+  useResetJoinLink,
 } from "./hooks/use-workspaces";
-export type { MyWorkspace, SlugStatus } from "./hooks/use-workspaces";
+export type {
+  MyWorkspace,
+  SlugStatus,
+  PendingInvitation,
+  WorkspaceMember,
+  WorkspaceInvitation,
+  InviteResultRow,
+} from "./hooks/use-workspaces";

@@ -27,6 +27,7 @@ export interface SidebarWorkspaces {
   activeId: string | null;
   email: string;
   workspaceLabel: string;
+  pendingInvites?: { invitationId: string; orgName: string }[];
 }
 
 export function AppSidebar({

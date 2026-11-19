@@ -86,7 +86,11 @@ export default async function AppLayout({
           membershipCount: ctx.workspaces.length,
         })
       ) {
-        redirect("/onboarding/workspace");
+        redirect(
+          ctx.pendingInvites.length > 0
+            ? "/onboarding/invites"
+            : "/onboarding/workspace",
+        );
       }
       sidebarWorkspaces = {
         workspaces: ctx.workspaces.map((w) => ({
@@ -98,6 +102,7 @@ export default async function AppLayout({
         activeId: ctx.active?.id ?? null,
         email: ctx.profile.email,
         workspaceLabel: settings.workspaceLabel,
+        pendingInvites: ctx.pendingInvites,
       };
       if (ctx.active) {
         gettingStarted = {
