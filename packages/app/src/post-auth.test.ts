@@ -148,7 +148,7 @@ describe("resolvePostAuthDestination", () => {
         path(
           base({
             memberships: [
-              member({ onboardingCompletedAt: null, onboardingStep: "invite" }),
+              member({ onboardingCompletedAt: null, onboardingStep: "plan" }),
             ],
           }),
         ),
@@ -180,6 +180,21 @@ describe("resolvePostAuthDestination", () => {
           }),
         ),
       ).toBe("/onboarding/updates");
+    });
+    it("an invitee (member role) never resumes at the admin-only invite step", () => {
+      expect(
+        path(
+          base({
+            memberships: [
+              member({
+                role: "member",
+                onboardingCompletedAt: null,
+                onboardingStep: "invite",
+              }),
+            ],
+          }),
+        ),
+      ).toBe("/onboarding/profile");
     });
     it("members beat pending invites and the hybrid question", () => {
       expect(

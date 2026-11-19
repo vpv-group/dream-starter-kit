@@ -134,13 +134,13 @@ describe("workspace copy", () => {
 describe("onboarding step registry", () => {
   const settings = DEFAULT_AUTH_SETTINGS;
 
-  it("shows only shipped steps: profile + updates for a creator", () => {
+  it("shows only shipped steps: profile, invite, updates for a creator", () => {
     const steps = activeOnboardingSteps(settings, {
       isAdmin: true,
       isInvitee: false,
     });
-    // invite (PR 2), integrations + plan (PR 3) are not available yet.
-    expect(steps.map((s) => s.key)).toEqual(["profile", "updates"]);
+    // integrations + plan (PR 3) are not available yet.
+    expect(steps.map((s) => s.key)).toEqual(["profile", "invite", "updates"]);
   });
 
   it("respects the founder's order and toggles", () => {
@@ -169,10 +169,11 @@ describe("onboarding step registry", () => {
       isAdmin: true,
       isInvitee: false,
     });
-    expect(nextOnboardingStep(steps, "profile")?.key).toBe("updates");
+    expect(nextOnboardingStep(steps, "profile")?.key).toBe("invite");
+    expect(nextOnboardingStep(steps, "invite")?.key).toBe("updates");
     expect(nextOnboardingStep(steps, "updates")).toBeNull();
     expect(nextOnboardingStep(steps, "unknown")?.key).toBe("profile");
-    expect(stepEyebrow(steps, "updates")).toEqual({ index: "02", total: "02" });
+    expect(stepEyebrow(steps, "updates")).toEqual({ index: "03", total: "03" });
     expect(stepEyebrow(steps, "nope")).toBeNull();
   });
 });
