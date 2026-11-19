@@ -3,6 +3,7 @@
 import { Fragment, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { LockIcon } from "lucide-react";
 
 import type { AuthSettings, ChooserEntry } from "@acme/app";
 import {
@@ -36,6 +37,11 @@ import {
   FieldLabel,
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "~/components/ui/input-group";
 import {
   InputOTP,
   InputOTPGroup,
@@ -71,10 +77,20 @@ export function AuthFlow({
   appName,
   onAuthenticated,
   redirectTo: redirectToProp,
+  lockedEmail,
+  joinWorkspaceName,
 }: {
   mode: Mode;
   settings: AuthSettings;
   appName: string;
+  /**
+   * Workspace invites (JoinSignIn): the address the invite was sent to,
+   * prefilled and read-only — invites only work for that address. Server-side
+   * acceptance re-checks the confirmed email, so this is UX, not security.
+   */
+  lockedEmail?: string;
+  /** Workspace invites: "Join {name}" heading + invite copy. */
+  joinWorkspaceName?: string;
   /**
    * When provided, the paths that establish a session entirely client-side
    * (password sign-in, sign-up returning a session, email-code verify) call
@@ -130,7 +146,7 @@ export function AuthFlow({
 
   const [step, setStep] = useState<Step>("chooser");
   const [purpose, setPurpose] = useState<"email" | "sso">("email");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(lockedEmail ?? "");
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
@@ -164,7 +180,9 @@ export function AuthFlow({
       : settings.accountModel === "hybrid"
         ? `You can create or join ${labelWithArticle(label)} after you confirm your email.`
         : null;
-  const subtitle = settings.subtitle ?? defaultSubtitle;
+  const subtitle = joinWorkspaceName
+    ? "Confirm it’s you. Invites only work for the address they were sent to."
+    : (settings.subtitle ?? defaultSubtitle);
 
   const heading =
     step === "check"
@@ -176,7 +194,11 @@ export function AuthFlow({
             ? "Create your account"
             : "What’s your email address?"
         : ((isSignUp ? settings.signUpHeading : settings.signInHeading) ??
-          (isSignUp ? defaultSignUpHeading : `Welcome to ${appName}`));
+          (joinWorkspaceName
+            ? `Join ${joinWorkspaceName}`
+            : isSignUp
+              ? defaultSignUpHeading
+              : `Welcome to ${appName}`));
 
   function termsOk(): boolean {
     if (isSignUp && settings.requireTermsAcceptance && !acceptTerms) {
@@ -516,16 +538,31 @@ export function AuthFlow({
           <FieldGroup>
             {Logo}
             <Field>
-              <Input
-                type="email"
-                aria-label="Email"
-                placeholder="Enter your email address…"
-                autoComplete="email"
-                autoFocus
-                className="text-center"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+              {lockedEmail ? (
+                <InputGroup>
+                  <InputGroupInput
+                    type="email"
+                    aria-label="Email"
+                    className="text-center"
+                    value={lockedEmail}
+                    readOnly
+                  />
+                  <InputGroupAddon align="inline-end">
+                    <LockIcon aria-label="Locked to the invited address" />
+                  </InputGroupAddon>
+                </InputGroup>
+              ) : (
+                <Input
+                  type="email"
+                  aria-label="Email"
+                  placeholder="Enter your email address…"
+                  autoComplete="email"
+                  autoFocus
+                  className="text-center"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              )}
             </Field>
             {error && (
               <FieldDescription className="text-destructive text-center">

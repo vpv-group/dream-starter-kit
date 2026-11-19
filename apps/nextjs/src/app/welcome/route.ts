@@ -18,6 +18,11 @@ import { getAuthSettings } from "~/lib/payload";
 import { getSiteUrl } from "~/lib/site-url";
 import { createAdminClient } from "~/lib/supabase/admin";
 import { createClient } from "~/lib/supabase/server";
+import {
+  decodePendingToken,
+  PENDING_TOKEN_COOKIE,
+  WORKSPACE_TOKEN_RE,
+} from "~/lib/workspaces/pending-token";
 
 /**
  * Post-auth landing. Gathers the inputs and redirects per the PURE
@@ -102,16 +107,28 @@ function databaseNotReadyResponse(): NextResponse {
   });
 }
 
-/** Invite/join tokens are opaque URL-safe strings; ignore anything else. */
-const TOKEN_RE = /^[A-Za-z0-9_-]{16,256}$/;
-
+/**
+ * An invite or join-link token from the query (?invite= / ?join=), else from
+ * the pending-token cookie that /invite/[token]/continue and
+ * /join/[token]/continue set before sign-in (it survives the emailed-link hop).
+ */
 function readToken(request: NextRequest): PostAuthInput["token"] {
   const params = new URL(request.url).searchParams;
   const invite = params.get("invite");
-  if (invite && TOKEN_RE.test(invite)) return { kind: "invite", value: invite };
+  if (invite && WORKSPACE_TOKEN_RE.test(invite)) {
+    return { kind: "invite", value: invite };
+  }
   const join = params.get("join");
-  if (join && TOKEN_RE.test(join)) return { kind: "join", value: join };
-  return null;
+  if (join && WORKSPACE_TOKEN_RE.test(join))
+    return { kind: "join", value: join };
+  return decodePendingToken(request.cookies.get(PENDING_TOKEN_COOKIE)?.value);
+}
+
+/** Redirect, clearing the pending-token cookie once it has been handled. */
+function redirectTo(url: string, clearToken: boolean): NextResponse {
+  const res = NextResponse.redirect(url);
+  if (clearToken) res.cookies.delete(PENDING_TOKEN_COOKIE);
+  return res;
 }
 
 export async function GET(request: NextRequest) {
@@ -124,6 +141,7 @@ export async function GET(request: NextRequest) {
   if (!user) {
     return NextResponse.redirect(`${siteUrl}/sign-in`);
   }
+  const hadTokenCookie = request.cookies.has(PENDING_TOKEN_COOKIE);
 
   // A brand-new deploy can reach here BEFORE the runtime DB bootstrap has
   // managed to provision the database (a just-created Supabase project may
@@ -238,17 +256,25 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  let pendingInvites = 0;
+  if (workspaceMode && memberships.length === 0) {
+    const { data: pending } = await supabase.rpc("my_pending_invitations");
+    pendingInvites = pending?.length ?? 0;
+  }
+
+  // Invite links obey the founder's Account model → allowInviteLinks switch.
+  let token = workspaceMode ? readToken(request) : null;
+  if (token?.kind === "join" && !settings.allowInviteLinks) token = null;
+
   const input: PostAuthInput = {
     accountModel: settings.accountModel,
     isStaff,
     isAnonymous: user.is_anonymous ?? false,
     cmsSeeded,
-    token: workspaceMode ? readToken(request) : null,
+    token,
     memberships,
     lastOrgId: profile?.last_org_id ?? null,
-    // PR 2 wires my_pending_invitations() here together with the
-    // /onboarding/invites screen; until then no invites can be created.
-    pendingInvites: 0,
+    pendingInvites,
     hybridChoice: readSignupIntent(user.user_metadata),
     stepsFor: (m) =>
       activeOnboardingSteps(settings, {
@@ -266,10 +292,14 @@ export async function GET(request: NextRequest) {
         : supabase.rpc("join_workspace_by_link", { _token: destination.token });
     const { data: org, error: acceptError } = await rpc;
     if (acceptError) {
-      // PR 2 renders these on /invite/[token] (InviteProblem). Until then,
-      // route as if no token was carried so the user still lands somewhere.
+      // The invite/join page explains what went wrong (InviteProblem:
+      // expired, revoked, used, wrong account, disabled link).
       console.warn("[welcome] token acceptance failed", acceptError.message);
-      destination = resolvePostAuthDestination({ ...input, token: null });
+      const page = destination.tokenKind === "invite" ? "invite" : "join";
+      return redirectTo(
+        `${siteUrl}/${page}/${encodeURIComponent(destination.token)}?error=${encodeURIComponent(acceptError.message)}`,
+        true,
+      );
     } else {
       // Joined: an invitee walks the invitee steps for that workspace (the
       // stepsFor callback treats any workspace they don't own as invitee).
@@ -289,5 +319,5 @@ export async function GET(request: NextRequest) {
   }
 
   const path = destination.kind === "redirect" ? destination.path : "/a";
-  return NextResponse.redirect(`${siteUrl}${path}`);
+  return redirectTo(`${siteUrl}${path}`, hadTokenCookie);
 }

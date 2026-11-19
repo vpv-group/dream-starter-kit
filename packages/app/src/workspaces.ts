@@ -379,4 +379,36 @@ export function inviteResultLabel(result: InviteResult): string {
 
 /** The /invite/{token} and /join/{token} page states. */
 export type InviteProblemKind =
-  "expired" | "revoked" | "used" | "not_found" | "wrong_account" | "disabled";
+  | "expired"
+  | "revoked"
+  | "used"
+  | "not_found"
+  | "wrong_account"
+  | "disabled"
+  | "domain";
+
+/** Map an RPC error code (accept_invitation / join_workspace_by_link) to a page state. */
+export function inviteProblemFromCode(
+  code: string | null | undefined,
+): InviteProblemKind | null {
+  switch (code) {
+    case "invite_expired":
+      return "expired";
+    case "invite_revoked":
+      return "revoked";
+    case "invite_used":
+      return "used";
+    case "invite_wrong_account":
+      return "wrong_account";
+    case "join_link_disabled":
+      return "disabled";
+    case "join_domain_not_allowed":
+      return "domain";
+    case "invite_not_found":
+    case "join_link_invalid":
+    case "not_allowed":
+      return "not_found";
+    default:
+      return null;
+  }
+}
