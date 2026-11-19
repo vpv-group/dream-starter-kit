@@ -67,7 +67,16 @@ erDiagram
         boolean is_anonymous "true for Supabase anon users"
         boolean is_staff
         text phone "captured from wallet checkout"
+        text email "mirror of auth.users.email"
         timestamptz created_at
+    }
+    auth_events {
+        uuid id PK
+        uuid user_id FK "profiles(id)"
+        text action "GoTrue audit action"
+        text category "email | session | account"
+        text email_kind "confirmation | sign_in_or_recovery | invite | email_change | reauthentication"
+        timestamptz occurred_at
     }
     content_favorites {
         uuid id PK
@@ -80,6 +89,8 @@ erDiagram
         uuid id PK
         text name
         uuid owner_id FK
+        text website
+        boolean is_personal "one per owner"
         timestamptz created_at
     }
     memberships {
@@ -93,7 +104,9 @@ erDiagram
         uuid org_id FK
         text email
         text role
-        text status "pending | accepted"
+        text status "pending | accepted | declined | revoked"
+        uuid invited_by FK
+        timestamptz expires_at
     }
     customers {
         uuid id PK
@@ -178,9 +191,11 @@ erDiagram
 
 **Teams / multi-tenancy** _(optional — drop for single-user apps)_
 
-- `organizations` — a workspace/company.
-- `memberships` — the user↔org join with a `role` (drives org-scoped RLS).
-- `invitations` — pending invites by email.
+- `organizations` — a workspace/company. `website` (optional) and `is_personal` (the one-per-user organization created in "personal" organization mode).
+- `memberships` — the user↔org join with a `role` (drives org-scoped RLS). Members may leave (delete their own non-owner membership).
+- `invitations` — invites by email with a lifecycle (`pending → accepted | declined | revoked`, `expires_at`, `invited_by`). Invitees never read this table directly: `my_invitations()`, `accept_invitation(id)` and `decline_invitation(id)` (security definer, matched to the caller's verified JWT email) drive onboarding. `org_members(org)` returns co-members' names and emails to members only, since `profiles` is read-own. See docs/AUTH.md → Organizations.
+- `profiles.email` mirrors `auth.users.email` (null for anonymous users) and stays in sync on email change and anonymous → permanent conversion, so modules can address users without reading `auth.users`.
+- `auth_events` — auth emails sent, sign-ins and account changes per user, derived from Supabase's auth audit log by a trigger. Never stores links, codes or tokens. Read-own. See docs/AUTH.md → Auth events.
 
 **Billing** _(core for any paid app — written by the Stripe webhook)_
 

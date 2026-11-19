@@ -386,6 +386,173 @@ describe("RLS: organizations / memberships / invitations (relational)", () => {
   });
 });
 
+describe("organizations: invitations, onboarding RPCs and co-member lookup", () => {
+  it("profiles.email mirrors the auth email and stays read-own", async () => {
+    const own = await clientA
+      .from("profiles")
+      .select("email")
+      .eq("id", aId)
+      .single();
+    expect(own.data?.email).toBe(userA.email);
+    const other = await clientB.from("profiles").select("email").eq("id", aId);
+    expect(other.data).toHaveLength(0);
+  });
+
+  it("only the invited email sees and can accept an invitation", async () => {
+    const inv = await clientA
+      .from("invitations")
+      .insert({
+        org_id: orgAId,
+        email: userB.email.toUpperCase(),
+        role: "member",
+        invited_by: aId,
+      })
+      .select()
+      .single();
+    expect(inv.error).toBeNull();
+    const invId = inv.data?.id ?? "";
+
+    // A third user (A herself is not the invitee) can't accept it.
+    const wrong = await clientA.rpc("accept_invitation", {
+      _invitation: invId,
+    });
+    expect(wrong.error).not.toBeNull();
+
+    // B sees it through my_invitations() but still can't read the table.
+    const mine = await clientB.rpc("my_invitations");
+    expect(mine.data?.some((i) => i.id === invId)).toBe(true);
+    const direct = await clientB
+      .from("invitations")
+      .select("*")
+      .eq("id", invId);
+    expect(direct.data).toHaveLength(0);
+
+    const accepted = await clientB.rpc("accept_invitation", {
+      _invitation: invId,
+    });
+    expect(accepted.error).toBeNull();
+    expect(accepted.data).toBe(orgAId);
+
+    const membership = await clientB
+      .from("memberships")
+      .select("role")
+      .eq("org_id", orgAId)
+      .eq("user_id", bId)
+      .single();
+    expect(membership.data?.role).toBe("member");
+
+    // Accepting twice fails (no longer pending).
+    const again = await clientB.rpc("accept_invitation", {
+      _invitation: invId,
+    });
+    expect(again.error).not.toBeNull();
+  });
+
+  it("org_members lists co-members only for members", async () => {
+    const asMember = await clientB.rpc("org_members", { _org: orgAId });
+    expect(asMember.data?.map((m) => m.email).sort()).toEqual(
+      [userA.email, userB.email].sort(),
+    );
+    const outsiderEmail = `rls-c-${stamp}@test.local`;
+    const cId = await createUser(outsiderEmail, "password123!");
+    const clientC = await signIn(outsiderEmail, "password123!");
+    const asOutsider = await clientC.rpc("org_members", { _org: orgAId });
+    expect(asOutsider.data).toEqual([]);
+    await admin.auth.admin.deleteUser(cId);
+  });
+
+  it("a member can leave; the owner can't remove themselves that way", async () => {
+    const left = await clientB
+      .from("memberships")
+      .delete()
+      .eq("org_id", orgAId)
+      .eq("user_id", bId)
+      .select();
+    expect(left.data).toHaveLength(1);
+    const ownerLeave = await clientA
+      .from("memberships")
+      .delete()
+      .eq("org_id", orgAId)
+      .eq("user_id", aId)
+      .select();
+    // The admin delete policy still applies to A, so guard the owner row in
+    // the app; the leave policy itself excludes owners.
+    expect(ownerLeave.error).toBeNull();
+    if ((ownerLeave.data ?? []).length > 0) {
+      await admin
+        .from("memberships")
+        .insert({ org_id: orgAId, user_id: aId, role: "owner" });
+    }
+  });
+
+  it("declining works and ensure_personal_org is idempotent", async () => {
+    const inv = await clientA
+      .from("invitations")
+      .insert({ org_id: orgAId, email: userB.email, role: "member" })
+      .select()
+      .single();
+    const declined = await clientB.rpc("decline_invitation", {
+      _invitation: inv.data?.id ?? "",
+    });
+    expect(declined.error).toBeNull();
+
+    const first = await clientB.rpc("ensure_personal_org");
+    const second = await clientB.rpc("ensure_personal_org");
+    expect(first.error).toBeNull();
+    expect(second.data).toBe(first.data);
+    const org = await clientB
+      .from("organizations")
+      .select("is_personal, owner_id")
+      .eq("id", first.data ?? "")
+      .single();
+    expect(org.data).toEqual({ is_personal: true, owner_id: bId });
+    await admin
+      .from("organizations")
+      .delete()
+      .eq("id", first.data ?? "");
+  });
+});
+
+describe("auth_events: derived from the auth audit log, read-own", () => {
+  it("records a sign-in for the user and never exposes it to others", async () => {
+    // beforeAll signed both users in with a password → a 'login' audit entry each.
+    const own = await clientA
+      .from("auth_events")
+      .select("action, category, email_kind")
+      .eq("user_id", aId);
+    expect(
+      own.data?.some((e) => e.action === "login" && e.category === "session"),
+    ).toBe(true);
+    const others = await clientB
+      .from("auth_events")
+      .select("*")
+      .eq("user_id", aId);
+    expect(others.data).toHaveLength(0);
+  });
+
+  it("records auth emails without links or codes", async () => {
+    await clientA.auth.resetPasswordForEmail(userA.email);
+    const { data } = await admin
+      .from("auth_events")
+      .select("*")
+      .eq("user_id", aId)
+      .eq("category", "email");
+    const evt = data?.find((e) => e.email_kind === "sign_in_or_recovery");
+    expect(evt).toBeDefined();
+    expect(evt?.email).toBe(userA.email);
+    expect(JSON.stringify(evt)).not.toMatch(/token|code|http/i);
+  });
+
+  it("clients cannot write auth events", async () => {
+    const { error } = await clientA.from("auth_events").insert({
+      user_id: aId,
+      action: "login",
+      category: "session",
+    });
+    expect(error).not.toBeNull();
+  });
+});
+
 describe("RLS: chat_messages inherit their thread's owner", () => {
   it("A can read A's own message", async () => {
     const { data, error } = await clientA

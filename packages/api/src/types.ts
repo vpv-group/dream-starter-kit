@@ -34,6 +34,47 @@ export type Database = {
   };
   public: {
     Tables: {
+      auth_events: {
+        Row: {
+          action: string;
+          audit_id: string | null;
+          category: string;
+          email: string | null;
+          email_kind: string | null;
+          id: string;
+          occurred_at: string;
+          user_id: string;
+        };
+        Insert: {
+          action: string;
+          audit_id?: string | null;
+          category: string;
+          email?: string | null;
+          email_kind?: string | null;
+          id?: string;
+          occurred_at?: string;
+          user_id: string;
+        };
+        Update: {
+          action?: string;
+          audit_id?: string | null;
+          category?: string;
+          email?: string | null;
+          email_kind?: string | null;
+          id?: string;
+          occurred_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "auth_events_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       content_favorites: {
         Row: {
           collection: string;
@@ -100,28 +141,44 @@ export type Database = {
         Row: {
           created_at: string;
           email: string;
+          expires_at: string;
           id: string;
+          invited_by: string | null;
           org_id: string;
+          responded_at: string | null;
           role: string;
           status: string;
         };
         Insert: {
           created_at?: string;
           email: string;
+          expires_at?: string;
           id?: string;
+          invited_by?: string | null;
           org_id: string;
+          responded_at?: string | null;
           role?: string;
           status?: string;
         };
         Update: {
           created_at?: string;
           email?: string;
+          expires_at?: string;
           id?: string;
+          invited_by?: string | null;
           org_id?: string;
+          responded_at?: string | null;
           role?: string;
           status?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "invitations_invited_by_fkey";
+            columns: ["invited_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "invitations_org_id_fkey";
             columns: ["org_id"];
@@ -855,20 +912,26 @@ export type Database = {
         Row: {
           created_at: string;
           id: string;
+          is_personal: boolean;
           name: string;
           owner_id: string;
+          website: string | null;
         };
         Insert: {
           created_at?: string;
           id?: string;
+          is_personal?: boolean;
           name: string;
           owner_id: string;
+          website?: string | null;
         };
         Update: {
           created_at?: string;
           id?: string;
+          is_personal?: boolean;
           name?: string;
           owner_id?: string;
+          website?: string | null;
         };
         Relationships: [
           {
@@ -885,6 +948,7 @@ export type Database = {
           avatar_url: string | null;
           created_at: string;
           display_name: string | null;
+          email: string | null;
           id: string;
           is_anonymous: boolean;
           is_staff: boolean;
@@ -894,6 +958,7 @@ export type Database = {
           avatar_url?: string | null;
           created_at?: string;
           display_name?: string | null;
+          email?: string | null;
           id: string;
           is_anonymous?: boolean;
           is_staff?: boolean;
@@ -903,6 +968,7 @@ export type Database = {
           avatar_url?: string | null;
           created_at?: string;
           display_name?: string | null;
+          email?: string | null;
           id?: string;
           is_anonymous?: boolean;
           is_staff?: boolean;
@@ -975,8 +1041,36 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_invitation: { Args: { _invitation: string }; Returns: string };
+      current_user_email: { Args: never; Returns: string };
+      decline_invitation: { Args: { _invitation: string }; Returns: undefined };
+      ensure_personal_org: { Args: never; Returns: string };
       is_org_admin: { Args: { _org: string }; Returns: boolean };
       is_org_member: { Args: { _org: string }; Returns: boolean };
+      my_invitations: {
+        Args: never;
+        Returns: {
+          created_at: string;
+          expires_at: string;
+          id: string;
+          invited_by_name: string;
+          org_id: string;
+          org_name: string;
+          org_website: string;
+          role: string;
+        }[];
+      };
+      org_members: {
+        Args: { _org: string };
+        Returns: {
+          avatar_url: string;
+          display_name: string;
+          email: string;
+          joined_at: string;
+          role: string;
+          user_id: string;
+        }[];
+      };
     };
     Enums: {
       [_ in never]: never;
