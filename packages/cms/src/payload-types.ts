@@ -228,6 +228,7 @@ export interface Config {
     "image-generation-settings": ImageGenerationSetting;
     "profile-fields": ProfileField;
     "authentication-settings": AuthenticationSetting;
+    "dream-site": DreamSite;
     "mod-billing-settings": ModBillingSetting;
     "mod-chat-settings": ModChatSetting;
     "mod-docs-settings": ModDocsSetting;
@@ -241,6 +242,7 @@ export interface Config {
     "profile-fields": ProfileFieldsSelect<false> | ProfileFieldsSelect<true>;
     "authentication-settings":
       AuthenticationSettingsSelect<false> | AuthenticationSettingsSelect<true>;
+    "dream-site": DreamSiteSelect<false> | DreamSiteSelect<true>;
     "mod-billing-settings":
       ModBillingSettingsSelect<false> | ModBillingSettingsSelect<true>;
     "mod-chat-settings":
@@ -5505,6 +5507,34 @@ export interface AuthenticationSetting {
   createdAt?: string | null;
 }
 /**
+ * Your free Dream Starter Kit site license from meetdream.com: kit updates and free modules for life. Registered automatically after setup on a public domain (never on localhost; set DREAM_TELEMETRY=off to opt out). To use paid modules, put your meetdream.com plan on this site at meetdream.com/a/modules.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "dream-site".
+ */
+export interface DreamSite {
+  id: number;
+  /**
+   * Registered domain.
+   */
+  domain?: string | null;
+  /**
+   * The site license key. Add it as the GitHub repository secret DREAM_LICENSE_KEY so module ops can install modules. Keep it secret.
+   */
+  licenseKey?: string | null;
+  licenseKeyPrefix?: string | null;
+  registeredAt?: string | null;
+  lastReportedAt?: string | null;
+  /**
+   * Last registry error, if any.
+   */
+  lastError?: string | null;
+  nonce?: string | null;
+  lastAttemptAt?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "mod-billing-settings".
  */
@@ -5982,6 +6012,23 @@ export interface AuthenticationSettingsSelect<T extends boolean = true> {
         providerId?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "dream-site_select".
+ */
+export interface DreamSiteSelect<T extends boolean = true> {
+  domain?: T;
+  licenseKey?: T;
+  licenseKeyPrefix?: T;
+  registeredAt?: T;
+  lastReportedAt?: T;
+  lastError?: T;
+  nonce?: T;
+  lastAttemptAt?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

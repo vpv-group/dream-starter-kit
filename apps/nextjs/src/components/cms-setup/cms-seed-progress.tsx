@@ -17,8 +17,11 @@ const ADMIN_URL = "/admin";
 
 export function CmsSeedProgress({
   stepLabel,
+  notice,
 }: {
   stepLabel?: React.ReactNode;
+  /** Shown under the heading, e.g. the site-license disclosure. */
+  notice?: React.ReactNode;
 }) {
   const [percent, setPercent] = useState(0);
   const [label, setLabel] = useState("Preparing your CMS…");
@@ -141,6 +144,8 @@ export function CmsSeedProgress({
             happens once.
           </p>
         </div>
+
+        {notice}
 
         {error ? (
           <div className="flex flex-col gap-3">

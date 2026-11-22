@@ -1,10 +1,11 @@
 import { headers } from "next/headers";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import { cmsConfigStatus, cmsNotConfiguredMessage } from "~/lib/cms/env-status";
 import { getPayloadClient } from "~/lib/cms/payload-client";
 import { isCmsSeeded } from "~/lib/cms/seed-status";
 import { summarizeDbError } from "~/lib/db/bootstrap-core";
+import { syncDreamSite } from "~/lib/dream/site";
 import { seedCmsContent } from "~/payload/seed";
 
 /**
@@ -90,6 +91,14 @@ export async function POST() {
   if (await isCmsSeeded(payload)) {
     return NextResponse.json({ seeded: false, alreadySeeded: true });
   }
+
+  // Once the seed has streamed, claim this site's free license on
+  // meetdream.com (disclosed on /cms-setup; DREAM_TELEMETRY=off opts out).
+  // Runs after the response, so it never slows the progress bar.
+  after(async () => {
+    if (await isCmsSeeded(payload))
+      await syncDreamSite(payload, { force: true });
+  });
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
