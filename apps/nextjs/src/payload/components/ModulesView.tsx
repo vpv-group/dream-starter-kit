@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 
 /**
  * /admin/modules — manage installed modules (docs/MODULES-PLAN.md
@@ -22,6 +23,8 @@ interface RegistryResponse {
     >;
   };
   opsConfigured: boolean;
+  /** Paid modules need module ops (GITHUB_OPS_TOKEN); off until then. */
+  paidModulesEnabled: boolean;
   catalogUrl: string | null;
   /** Is DREAM_LICENSE_KEY set (paid modules — docs/MODULES.md)? */
   licenseConfigured: boolean;
@@ -36,6 +39,8 @@ interface CatalogEntry {
   latest?: string;
   kitCompat?: string;
   paid?: boolean;
+  /** Dream registry catalog (schema 2) says "paid" | "free". */
+  access?: "paid" | "free";
   /** "Included in <plan>" on paid cards. */
   plan?: string;
   /** Where to buy access when not entitled. */
@@ -44,10 +49,14 @@ interface CatalogEntry {
 
 interface EntitlementsState {
   configured: boolean;
-  status: "none" | "active" | "inactive" | "error";
+  status: "none" | "active" | "inactive" | "error" | "disabled";
   code?: string;
   entitlements: { slug: string; plan?: string }[];
 }
+
+/** Paid modules come from the Dream registry, free ones from a public repo. */
+const isPaidEntry = (entry: CatalogEntry): boolean =>
+  entry.paid ?? (entry.access ? entry.access === "paid" : !entry.repo);
 
 /** Tiny semver-ish "is b newer than a" for update badges (no prereleases). */
 const isNewer = (a: string, b: string): boolean => {
@@ -196,8 +205,14 @@ export function ModulesView() {
   );
   const isEntitled = (slug: string) => licenseActive && entitledPlans.has(slug);
   const catalogBySlug = new Map(catalog.map((e) => [e.slug, e]));
+  // No module ops → no paid modules: only free catalog entries are shown.
+  const visibleCatalog = registry.paidModulesEnabled
+    ? catalog
+    : catalog.filter((e) => !isPaidEntry(e));
   /** Per-module license label for installed registry modules. */
   const licenseLabel = (slug: string): string => {
+    if (!registry.paidModulesEnabled)
+      return "paid modules off — set up module ops (top of /admin)";
     if (!registry.licenseConfigured) return "no license key — updates paused";
     if (entitlements?.status === "error") return "license status unavailable";
     if (!isEntitled(slug)) return "license inactive — updates paused";
@@ -212,9 +227,12 @@ export function ModulesView() {
       <h1>Modules</h1>
       {!registry.opsConfigured && (
         <p style={{ opacity: 0.8 }}>
-          Read-only: set <code>GITHUB_OPS_TOKEN</code> (and{" "}
-          <code>GITHUB_REPO</code> off-Vercel) to install/update/remove from
-          here. Until then use the CLI: <code>pnpm mod add &lt;url&gt;</code>,{" "}
+          Read-only, and paid modules are off: set up module ops (the{" "}
+          <code>MOD_OPS_TOKEN</code> repo secret and the{" "}
+          <code>GITHUB_OPS_TOKEN</code> env — steps at the top of{" "}
+          <Link href="/admin">the dashboard</Link>) to install, update and
+          remove from here. Until then, free modules work with the CLI:{" "}
+          <code>pnpm mod add &lt;url&gt;</code>,{" "}
           <code>pnpm mod update &lt;slug&gt;</code>,{" "}
           <code>pnpm mod remove &lt;slug&gt;</code>.
         </p>
@@ -325,14 +343,14 @@ export function ModulesView() {
         </tbody>
       </table>
 
-      {catalog.length > 0 && (
+      {visibleCatalog.length > 0 && (
         <>
           <h2 style={{ marginTop: 32 }}>Catalog</h2>
           <div style={{ display: "grid", gap: 12 }}>
-            {catalog.map((entry) => {
+            {visibleCatalog.map((entry) => {
               // Paid modules distribute through the Dream registry
               // (`dream:<slug>`), free ones from their public repo.
-              const paid = entry.paid ?? !entry.repo;
+              const paid = isPaidEntry(entry);
               const entitled = isEntitled(entry.slug);
               const source = paid ? `dream:${entry.slug}` : entry.repo;
               const installable = !paid || entitled;

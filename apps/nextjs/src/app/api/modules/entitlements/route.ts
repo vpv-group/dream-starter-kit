@@ -1,4 +1,4 @@
-import { requireAdmin } from "~/lib/mod/admin-ops";
+import { paidModulesEnabled, requireAdmin } from "~/lib/mod/admin-ops";
 import { fetchEntitlements } from "~/lib/mod/dream-registry";
 
 /**
@@ -11,5 +11,13 @@ export async function GET() {
   const gate = await requireAdmin();
   if (!gate.ok) return gate.res;
 
+  // No module ops → no paid modules: don't even call the registry.
+  if (!paidModulesEnabled()) {
+    return Response.json({
+      configured: false,
+      status: "disabled",
+      entitlements: [],
+    });
+  }
   return Response.json(await fetchEntitlements());
 }

@@ -37,6 +37,8 @@ export async function proxy(request: NextRequest) {
     pathname === "/mcp" ||
     pathname.startsWith("/mcp/") ||
     pathname.startsWith("/.well-known/oauth-") ||
+    // Site-license domain proof (lib/dream/site-core.ts) — public, no session.
+    pathname === "/.well-known/dream-site.json" ||
     pathname === "/oauth/register" ||
     pathname === "/oauth/token"
   ) {

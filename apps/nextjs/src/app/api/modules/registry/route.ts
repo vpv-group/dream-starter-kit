@@ -1,5 +1,9 @@
-import { opsConfigured, requireAdmin } from "~/lib/mod/admin-ops";
-import { catalogUrl, licenseConfigured } from "~/lib/mod/dream-registry";
+import {
+  opsConfigured,
+  paidModulesEnabled,
+  requireAdmin,
+} from "~/lib/mod/admin-ops";
+import { catalogUrlFor, licenseConfigured } from "~/lib/mod/dream-registry";
 import { modulesLock } from "~/mod/lock.generated";
 import { modInstalled } from "~/mod/registry.data.generated";
 
@@ -16,7 +20,8 @@ export async function GET() {
     installed: modInstalled,
     lock: modulesLock,
     opsConfigured: opsConfigured(),
-    catalogUrl: catalogUrl(),
-    licenseConfigured: licenseConfigured(),
+    paidModulesEnabled: paidModulesEnabled(),
+    catalogUrl: catalogUrlFor(paidModulesEnabled()),
+    licenseConfigured: await licenseConfigured(),
   });
 }

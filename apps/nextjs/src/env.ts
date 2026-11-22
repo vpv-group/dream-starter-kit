@@ -100,6 +100,11 @@ export const env = createEnv({
     // it as a GitHub repo secret so module-ops.yml can run the CLI.
     DREAM_LICENSE_KEY: z.string().min(1).optional(),
     DREAM_REGISTRY_URL: z.url().default(DREAM_REGISTRY_DEFAULT_URL),
+    // Free site license (docs/MODULES.md → Site license): after the first CMS
+    // seed this deployment registers its domain + admin/staff emails with
+    // meetdream.com for a free license key (kit updates, free modules), then
+    // reports daily. Disclosed on /cms-setup. "off" opts out entirely.
+    DREAM_TELEMETRY: z.enum(["on", "off"]).optional(),
     // Remote MCP server (packages/mcp). MCP_JWT_SECRET signs OAuth access-token
     // JWTs; the MCP surface is OFF until it's set (isMcpConfigured). MCP_ENABLED
     // is an explicit kill switch. CRON_SECRET guards the scheduled notifications

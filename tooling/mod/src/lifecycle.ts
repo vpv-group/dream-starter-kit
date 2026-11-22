@@ -38,11 +38,13 @@ import {
   isDreamSource,
   latestCompatible,
   licenseKey,
+  opsToken,
   parseDreamSource,
   registryUrl,
   repoIdentity,
   requestDownload,
   requireLicenseKey,
+  requireOpsToken,
 } from "./registry";
 import { sync } from "./sync";
 
@@ -108,6 +110,7 @@ async function fetchSource(
 
   if (src.kind === "registry") {
     const dreamRef = parseDreamSource(src.location);
+    requireOpsToken();
     const registry = registryUrl();
     const grant = await requestDownload({
       registry,
@@ -470,7 +473,7 @@ export async function down(_args: MigrateDownArgs): Promise<void> {
  * distinct registry. Entitlement/network problems become calm license
  * states (updates simply pause) — status never crashes on them.
  */
-type LicenseState = "active" | "inactive" | "no-key" | "unknown";
+type LicenseState = "active" | "inactive" | "no-key" | "unknown" | "disabled";
 
 async function registryStates(
   modules: Record<string, ModLockEntry>,
@@ -490,6 +493,16 @@ async function registryStates(
     const list = byRegistry.get(entry.source.registry) ?? [];
     list.push({ slug, source: entry.source });
     byRegistry.set(entry.source.registry, list);
+  }
+
+  // No module ops → paid modules are off: report it, call nothing.
+  if (!opsToken()) {
+    for (const mods of byRegistry.values()) {
+      for (const mod of mods) {
+        states.set(mod.slug, { latest: null, license: "disabled" });
+      }
+    }
+    return states;
   }
 
   const key = licenseKey();
@@ -535,6 +548,7 @@ async function registryStates(
 
 const LICENSE_NOTES: Partial<Record<LicenseState, string>> = {
   inactive: "license inactive — updates paused",
+  disabled: "paid modules off — set MOD_OPS_TOKEN (module ops)",
   "no-key": "no license key — updates paused",
 };
 

@@ -1,6 +1,12 @@
 import { z } from "zod/v4";
 
-import { githubApi, requireAdmin } from "~/lib/mod/admin-ops";
+import {
+  githubApi,
+  PAID_MODULES_DISABLED,
+  paidModulesEnabled,
+  requireAdmin,
+} from "~/lib/mod/admin-ops";
+import { isPaidOp } from "~/lib/mod/paid-ops";
 
 /**
  * Module operations (docs/MODULES-PLAN.md §6): every mutation dispatches
@@ -29,6 +35,9 @@ export async function POST(req: Request) {
     return Response.json({ error: "Invalid op" }, { status: 400 });
   }
   const { op, source, slug, version, keepData, sha256 } = parsed.data;
+  if (isPaidOp({ op, source, slug }) && !paidModulesEnabled()) {
+    return Response.json(PAID_MODULES_DISABLED, { status: 403 });
+  }
 
   const res = await githubApi("/actions/workflows/module-ops.yml/dispatches", {
     method: "POST",

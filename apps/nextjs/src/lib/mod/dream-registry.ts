@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod/v4";
 
 import { env } from "~/env";
+import { DREAM_SITE_GLOBAL } from "~/lib/dream/site-core";
 
 /**
  * Dream module registry (paid modules — docs/MODULES.md → Paid modules).
@@ -25,13 +26,49 @@ export function catalogUrl(): string {
   return env.MOD_CATALOG_URL ?? `${dreamRegistryUrl()}/catalog?schema=2`;
 }
 
-export function licenseConfigured(): boolean {
-  return Boolean(env.DREAM_LICENSE_KEY);
+/**
+ * The catalog for the admin store, or null: the Dream catalog lists paid
+ * modules, so it's only offered once paid modules are enabled. A self-hoster's
+ * MOD_CATALOG_URL is always kept.
+ */
+export function catalogUrlFor(paidEnabled: boolean): string | null {
+  if (env.MOD_CATALOG_URL) return env.MOD_CATALOG_URL;
+  return paidEnabled ? catalogUrl() : null;
+}
+
+/**
+ * The license key the app uses: DREAM_LICENSE_KEY when set, otherwise this
+ * deployment's free SITE key (docs/MODULES.md → Site license), which it got
+ * automatically after the first CMS seed.
+ */
+export async function licenseKey(): Promise<string | null> {
+  if (env.DREAM_LICENSE_KEY) return env.DREAM_LICENSE_KEY;
+  try {
+    const { getPayloadClient } = await import("~/lib/cms/payload-client");
+    const payload = await getPayloadClient();
+    const site = (await payload.findGlobal({
+      slug: DREAM_SITE_GLOBAL,
+      overrideAccess: true,
+      depth: 0,
+    })) as { licenseKey?: string | null };
+    return site.licenseKey ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function licenseConfigured(): Promise<boolean> {
+  return Boolean(await licenseKey());
 }
 
 const entitlementItem = z.union([
   z.string(),
-  z.object({ slug: z.string(), plan: z.string().optional() }),
+  z.object({
+    slug: z.string(),
+    plan: z.string().optional(),
+    /** The registry lists every module with this flag; false = not owned. */
+    entitled: z.boolean().optional(),
+  }),
 ]);
 const entitlementsSchema = z.object({
   entitlements: z.array(entitlementItem).optional(),
@@ -43,14 +80,15 @@ const errorBodySchema = z.object({
 });
 
 export interface EntitlementsState {
-  /** Is DREAM_LICENSE_KEY set at all? */
+  /** Is there a license key (DREAM_LICENSE_KEY or the site key)? */
   configured: boolean;
   /**
    * none = no key; active = the key unlocks `entitlements`; inactive = the
    * registry rejected the key (`code` says why — revoked_key, not_entitled,
-   * invalid_key); error = the registry was unreachable.
+   * invalid_key); error = the registry was unreachable; disabled = paid
+   * modules are off until module ops is configured.
    */
-  status: "none" | "active" | "inactive" | "error";
+  status: "none" | "active" | "inactive" | "error" | "disabled";
   code?: string;
   entitlements: { slug: string; plan?: string }[];
 }
@@ -61,7 +99,7 @@ export interface EntitlementsState {
  * the staff-only admin UI. Never throws: problems become calm states.
  */
 export async function fetchEntitlements(): Promise<EntitlementsState> {
-  const key = env.DREAM_LICENSE_KEY;
+  const key = await licenseKey();
   if (!key) return { configured: false, status: "none", entitlements: [] };
   try {
     const res = await fetch(`${dreamRegistryUrl()}/entitlements`, {
@@ -72,7 +110,7 @@ export async function fetchEntitlements(): Promise<EntitlementsState> {
     if (!res.ok) {
       const parsed = errorBodySchema.safeParse(body);
       const code = parsed.success
-        ? (parsed.data.error ?? parsed.data.code)
+        ? (parsed.data.code ?? parsed.data.error)
         : undefined;
       return {
         configured: true,
@@ -88,9 +126,13 @@ export async function fetchEntitlements(): Promise<EntitlementsState> {
     return {
       configured: true,
       status: "active",
-      entitlements: items.map((item) =>
-        typeof item === "string" ? { slug: item } : item,
-      ),
+      entitlements: items
+        .filter((item) => typeof item === "string" || item.entitled !== false)
+        .map((item) =>
+          typeof item === "string"
+            ? { slug: item }
+            : { slug: item.slug, ...(item.plan ? { plan: item.plan } : {}) },
+        ),
     };
   } catch {
     return { configured: true, status: "error", entitlements: [] };

@@ -209,10 +209,69 @@ migrations at boot. Brakes: `MOD_AUTO_UPDATE=off` / `MOD_AUTO_MERGE=off`
 (repo variables), per-module `pinned` in the lock; removals never
 auto-merge.
 
-**Founder setup:** create a fine-grained PAT (contents:write,
-pull-requests:write, actions:read on this repo); set it as the `MOD_OPS_TOKEN`
-repo secret AND the `GITHUB_OPS_TOKEN` Vercel env (plus `GITHUB_REPO` off
-Vercel); enable “Allow auto-merge” in the repo settings.
+**Founder setup** (also shown at the top of `/admin` until it's done): create
+a fine-grained PAT on this repo with read & write access to Contents, Pull
+requests, Actions and Workflows; set it as the `MOD_OPS_TOKEN` repo secret
+AND the `GITHUB_OPS_TOKEN` env (plus `GITHUB_REPO` off Vercel); enable
+“Allow auto-merge” in the repo settings.
+
+**Without the token, module ops is off.** Every job in `module-ops.yml` is
+*skipped* (a preflight job leaves a notice explaining why) instead of failing,
+`/admin/modules` is read-only, and **paid modules are disabled everywhere**:
+the admin panel hides them and never contacts the registry, its API routes
+refuse `dream:` installs and paid updates (`403 paid_modules_disabled`), and
+the CLI refuses `pnpm mod add|update` of a registry module until
+`MOD_OPS_TOKEN` (or `GITHUB_OPS_TOKEN`) is set. Free modules keep working
+from the CLI.
+
+**Kit updates (free).** The same daily run also checks the Dream Starter Kit
+itself (`kit-update` job): when the kit's `upstream/main` has moved on, it
+opens one PR labeled `kit-update` from a `sync/upstream-<date>` branch, or
+refreshes the open one. No license key is needed. These PRs **never
+auto-merge**: review them and land them with a **merge commit, never a
+squash** (docs/UPDATING.md). Conflicts are committed as markers and the PR is
+labeled `kit-update-conflicts`. Turn the check off with `KIT_AUTO_UPDATE=off`,
+or run it on demand with *Run workflow* → `op: kit-update`. It is skipped in
+the kit repository itself.
+
+## Site license
+
+Every deployment gets a **free site license key** from meetdream.com, so kit
+updates and free modules work without anyone creating or pasting a key:
+
+1. **First CMS seed.** Right after the founder's `/cms-setup` seed finishes,
+   `lib/dream/site.ts` registers the site:
+   - It asks the registry for a signed challenge and serves the nonce at
+     `/.well-known/dream-site.json`. The registry fetches it to confirm that
+     the request really comes from this domain.
+   - It sends the founder's email (the earliest admin), the other
+     admin/editor emails, the kit version and the GitHub repo slug.
+   - The registry returns the site key. It is stored in the admin-only
+     **System → Site License** global and shown at the top of `/admin`.
+2. **Daily.** Vercel Cron calls `/api/cms/dream-site/report`
+   (`CRON_SECRET`); without the cron, a staff visit to `/admin` does it at
+   most once a day. Each report sends the kit version and any new
+   admin/editor emails. If the key was rotated, the site registers again.
+3. **Upgrading.** The founder signs in at meetdream.com (their account was
+   created with that email, unconfirmed and with no email sent). Under
+   **/a/modules → Your sites** they choose **Use my plan on this site**. A
+   site key never inherits a plan on its own.
+
+The app uses `DREAM_LICENSE_KEY` when set and the site key otherwise. The
+`module-ops` workflow can't read the database, so to use paid modules, copy
+the key (top of `/admin`) into the `DREAM_LICENSE_KEY` repository secret.
+
+**Privacy and opt-out.** The founder is told on `/cms-setup` before anything
+is sent. Registration sends only:
+
+- the public domain;
+- admin and editor emails (up to 25);
+- the kit version;
+- the repository slug.
+
+Local and private hosts (localhost, IPs, `.local`, `.test`, …) never
+register. Set **`DREAM_TELEMETRY=off`** to turn all of it off. Errors never
+break the app: they are recorded in the global's `lastError`.
 
 ## Paid modules (Dream registry)
 
@@ -231,8 +290,12 @@ pnpm mod status --check        # update + license state per module
 
 **Setup**
 
-1. Get a license key from meetdream.com.
-2. Set `DREAM_LICENSE_KEY` in the Vercel env (server-only — the browser only
+0. Set up module ops first (above): paid modules are off without it.
+1. Use this site's free key (see [Site license](#site-license)) with your
+   meetdream.com plan put on the site, or get an account key from
+   meetdream.com.
+2. Optionally set `DREAM_LICENSE_KEY` in the Vercel env (it overrides the
+   site key) (server-only — the browser only
    ever sees derived entitlement state via the staff-gated
    `/api/modules/entitlements` proxy, never the key).
 3. Add the same key as the **`DREAM_LICENSE_KEY` GitHub repo secret** so

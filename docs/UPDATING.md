@@ -15,6 +15,33 @@ once, never squash it away, and updates stay easy forever.
 
 ---
 
+## Automatic update PRs (module ops)
+
+With module ops set up (the `MOD_OPS_TOKEN` secret — see
+[`MODULES.md`](./MODULES.md#admin-panel--automatic-updates)), the daily
+`module-ops.yml` run does this routine for you. Kit updates are free and need
+no license key. The `kit-update` job:
+
+1. Fetches `upstream/main`. If it's already merged, it exits.
+2. Merges `upstream/main` into a `sync/upstream-<date>` branch.
+   - The first merge on a "Use this template" repo uses
+     `--allow-unrelated-histories` automatically.
+   - Conflicts are committed as markers, and the PR gets the
+     `kit-update-conflicts` label.
+3. Opens one PR labeled `kit-update` that shows the version jump.
+   - Later runs refresh that same PR instead of opening another.
+
+It **never auto-merges**. Review it, run the post-merge validation below, and
+land it with a **merge commit** — never squash.
+
+- Turn it off with the `KIT_AUTO_UPDATE=off` repository variable.
+- Run it now with *Actions → Module ops → Run workflow → `op: kit-update`*.
+- `KIT_UPSTREAM_URL` (repository variable) points it at a different upstream.
+
+The rest of this guide is the same routine done by hand.
+
+---
+
 ## One-time setup — add the kit as a remote
 
 Your fork has GitHub's built-in "upstream" relationship, but the CLI merge flow
