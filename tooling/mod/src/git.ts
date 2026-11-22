@@ -19,6 +19,27 @@ export function git(repoRoot: string, args: string[], input?: string): string {
   }).trim();
 }
 
+/**
+ * Snapshot commits are internal plumbing (refs/mod-base/*), not user history,
+ * so they carry a fixed identity: `pnpm mod add` must work on CI runners and
+ * machines with no git user configured.
+ */
+const SNAPSHOT_IDENTITY = {
+  GIT_AUTHOR_NAME: "Dream modules",
+  GIT_AUTHOR_EMAIL: "modules@dream.invalid",
+  GIT_COMMITTER_NAME: "Dream modules",
+  GIT_COMMITTER_EMAIL: "modules@dream.invalid",
+};
+
+/** `git commit-tree` with the snapshot identity. Returns the commit sha. */
+export function commitTree(repoRoot: string, args: string[]): string {
+  return execFileSync("git", ["commit-tree", ...args], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    env: { ...process.env, ...SNAPSHOT_IDENTITY },
+  }).trim();
+}
+
 const baseRef = (slug: string) => `refs/mod-base/${slug}`;
 /** Where snapshots lived before modules (once "extensions") were renamed. */
 const legacyBaseRef = (slug: string) => `refs/ext-base/${slug}`;
@@ -44,8 +65,7 @@ export function commitModuleTree(
     run(["read-tree", "--empty"]);
     run(["add", "-f", `modules/${slug}`]);
     const tree = run(["write-tree"]);
-    return git(repoRoot, [
-      "commit-tree",
+    return commitTree(repoRoot, [
       tree,
       ...(parent ? ["-p", parent] : []),
       "-m",
@@ -98,8 +118,7 @@ export function rerootLegacyBase(
     ["mktree"],
     `040000 tree ${modulesDir}\tmodules\n`,
   );
-  return git(repoRoot, [
-    "commit-tree",
+  return commitTree(repoRoot, [
     root,
     "-p",
     base,
