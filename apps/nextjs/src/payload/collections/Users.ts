@@ -10,6 +10,7 @@ import {
 } from "../access";
 import { supabaseStrategy } from "../auth/supabase-strategy";
 import { inviteUserOnCreate } from "../hooks/invite-user";
+import { syncUserToSupabase } from "../hooks/sync-user-to-supabase";
 import { validateCustomFields } from "../hooks/validate-custom-fields";
 
 /**
@@ -31,6 +32,11 @@ import { validateCustomFields } from "../hooks/validate-custom-fields";
  * flow (client-side sign-in → POST /api/cms/mirror-self), and a best-effort
  * backstop in the (app) shell layout. `pnpm cms:backfill-users` catches up any
  * account created before that wiring or whose mirror call was missed.
+ *
+ * Edits to the login email, display name, phone and job title write through to
+ * Supabase (hooks/sync-user-to-supabase.ts); admins set passwords from the
+ * sidebar "Password" panel (never stored here). See docs/AUTH.md → Account
+ * settings.
  *
  * Creating a user here (new email) emails them a Supabase invite and grants
  * staff access. For an existing user, use "Grant staff access". The "User tags"
@@ -64,7 +70,7 @@ export const Users: CollectionConfig = {
       "Supabase invite and grants staff access; for an existing user use " +
       "“Grant staff access”. User tags (incl. the plan-name tag) are managed below.",
   },
-  hooks: { beforeChange: [inviteUserOnCreate] },
+  hooks: { beforeChange: [inviteUserOnCreate, syncUserToSupabase] },
   access: {
     admin: canAccessAdmin,
     create: isAdmin,
@@ -75,7 +81,21 @@ export const Users: CollectionConfig = {
   fields: [
     // With the local strategy disabled Payload drops its built-in email field, so
     // we define our own — populated from the Supabase profile by the SSO bridge.
-    { name: "email", type: "email", index: true },
+    // Supabase Auth owns it: an admin edit writes through (hooks/sync-user-to-
+    // supabase.ts) and a member's confirmed change on /profile flows back via
+    // the signup mirror (lib/cms/mirror-user.ts). Admin-only, so editors can't
+    // change their own login email here (they use /profile, with confirmation).
+    {
+      name: "email",
+      type: "email",
+      index: true,
+      access: { update: adminFieldAccess },
+      admin: {
+        description:
+          "Login email. Changing it updates the Supabase account immediately " +
+          "(no confirmation email) — members change their own on /profile.",
+      },
+    },
     { name: "name", type: "text" },
     {
       name: "displayName",
@@ -260,7 +280,11 @@ export const Users: CollectionConfig = {
             {
               name: "phone",
               type: "text",
-              admin: { description: "Required before any SMS send." },
+              admin: {
+                description:
+                  "Contact phone (not a login). Required before any SMS send. " +
+                  "Synced with the member's profile on save.",
+              },
             },
             { name: "dateOfBirth", type: "date" },
             {
@@ -423,6 +447,20 @@ export const Users: CollectionConfig = {
         position: "sidebar",
         components: {
           Field: "~/payload/components/GrantStaffButton#GrantStaffButton",
+        },
+      },
+    },
+    {
+      // Set the member's Supabase password (admin only) — the value goes
+      // straight to /api/cms/user-password and is never stored in the CMS.
+      name: "passwordManager",
+      type: "ui",
+      admin: {
+        position: "sidebar",
+        condition: (_data, _sibling, { user }) =>
+          Boolean(user?.roles.includes("admin")),
+        components: {
+          Field: "~/payload/components/UserPasswordField#UserPasswordField",
         },
       },
     },

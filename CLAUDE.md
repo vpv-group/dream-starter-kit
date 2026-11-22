@@ -282,7 +282,14 @@ universal best-effort backstop in the `(app)` shell layout (any member reaching 
 app is mirrored regardless of entry path). All paths are idempotent. The catch-up
 tool for accounts created before any of this — or when a mirror call was missed —
 is **`pnpm cms:backfill-users`** (idempotent; lists Supabase users and mirrors each).
-Mirror failures are logged (`[mirror-user]`), never silently swallowed. Access is
+Mirror failures are logged (`[mirror-user]`), never silently swallowed. The
+mirror also keeps `cms.users.email` equal to the Supabase login email, and
+**account editing is two-way**: members change email (secure change — confirm
+on both addresses), password (reauthentication nonce when the session is >24h)
+and profile/phone on `/profile` (web + native, `@acme/app` hooks); admins edit
+the same in `/admin` → Users, written through to Supabase by
+`payload/hooks/sync-user-to-supabase.ts` + the `/api/cms/user-password` panel
+(see `docs/AUTH.md` → Account settings). Access is
 **default-deny**: only users with `profiles.is_staff = true` get in — **the bridge
 authenticates staff only for now**; member-scoped collections carry correct
 owner-scoped access rules, but opening `/cms-api` to member sessions is a documented

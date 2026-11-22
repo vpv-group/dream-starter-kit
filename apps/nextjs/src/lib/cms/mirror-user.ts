@@ -6,8 +6,9 @@ import { getPayloadClient } from "./payload-client";
 
 /**
  * Mirror a Supabase user into the Payload `users` collection so the admin Users
- * page lists ALL app users (not just staff). Idempotent: no-ops if a row already
- * exists for this `supabaseUserId`.
+ * page lists ALL app users (not just staff). Idempotent: creates the row once;
+ * on later calls it only keeps the login email in step with Supabase Auth (plus
+ * the explicit `syncProfile` fields and wallet backfill below).
  *
  * Providing `supabaseUserId` makes the staff-invite hook (payload/hooks/invite-
  * user.ts) skip — so mirroring a normal user does NOT send an invite or flag
@@ -29,6 +30,17 @@ export async function ensureCmsUser(user: {
    * security-critical state incl. phone; cms.users mirrors + holds the address).
    */
   metadata?: Record<string, unknown> | null;
+  /**
+   * Member-edited profile fields to copy over an EXISTING row (the /profile
+   * save path — POST /api/cms/mirror-self `{ syncProfile: true }`). Unlike the
+   * wallet backfill above, these overwrite: the member just changed them. A
+   * `null` clears the CMS value; an omitted key leaves it alone.
+   */
+  syncProfile?: {
+    displayName?: string | null;
+    phone?: string | null;
+    jobTitle?: string | null;
+  };
 }): Promise<void> {
   try {
     const payload = await getPayloadClient();
@@ -105,6 +117,9 @@ export async function ensureCmsUser(user: {
           ...(address ? { address } : {}),
         },
         overrideAccess: true,
+        // Supabase is already the source of these values — don't write them
+        // back (payload/hooks/sync-user-to-supabase.ts).
+        context: { skipSupabaseSync: true },
       });
       return;
     }
@@ -113,11 +128,32 @@ export async function ensureCmsUser(user: {
     // never clobber a value a staff member or the user edited.
     const doc = existing.docs[0] as {
       id: string | number;
+      email?: string | null;
       phone?: string | null;
       address?: Record<string, string | null | undefined> | null;
     };
     const data: Record<string, unknown> = {};
-    if (phone && !str(doc.phone)) data.phone = phone;
+    // Supabase Auth owns the login email: after a confirmed email change (or an
+    // admin edit, which writes through to Auth first) bring the CMS copy in
+    // line so /admin never shows a stale address.
+    const authEmail = str(user.email);
+    if (
+      authEmail &&
+      authEmail.toLowerCase() !== str(doc.email)?.toLowerCase()
+    ) {
+      data.email = authEmail;
+    }
+    const sync = user.syncProfile;
+    if (sync) {
+      if (sync.displayName !== undefined) {
+        data.displayName = str(sync.displayName) ?? null;
+      }
+      if (sync.phone !== undefined) data.phone = str(sync.phone) ?? null;
+      if (sync.jobTitle !== undefined)
+        data.jobTitle = str(sync.jobTitle) ?? null;
+    }
+    if (phone && !str(doc.phone) && data.phone === undefined)
+      data.phone = phone;
     if (address) {
       const cur = doc.address ?? {};
       const merged: Record<string, string> = {};
@@ -132,6 +168,7 @@ export async function ensureCmsUser(user: {
         id: doc.id,
         data,
         overrideAccess: true,
+        context: { skipSupabaseSync: true },
       });
     }
   } catch (e) {

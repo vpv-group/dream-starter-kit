@@ -1,59 +1,55 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { useForm } from "react-hook-form";
 
-import type { UpdateProfileInput } from "@acme/app";
 import { useSession } from "@acme/api";
 import {
   resendSignUpEmail,
   signOut,
-  updateProfileSchema,
   useDeleteAccount,
-  useProfile,
-  useUpdateProfile,
   useUserTags,
 } from "@acme/app";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@acme/ui/alert-dialog";
 import { toast } from "@acme/ui/toast";
 
+import { EmailCard } from "~/components/profile/email-card";
+import { PasswordCard } from "~/components/profile/password-card";
+import { ProfileDetailsCard } from "~/components/profile/profile-details-card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
 import { authCallbackUrl } from "~/lib/site-url";
 import { createClient } from "~/lib/supabase/client";
 import { authErrorMessage } from "~/lib/supabase/config";
 
+/**
+ * Account settings: profile metadata, sign-in email, password, tags, and
+ * account deletion. Email/password changes go through the member's own session
+ * (`supabase.auth.updateUser`) so Supabase's secure-change rules apply — see
+ * docs/AUTH.md → Account settings. Anonymous sessions only see the profile.
+ */
 export default function ProfilePage() {
   const router = useRouter();
   const supabase = createClient();
   const { user } = useSession();
-  const profile = useProfile();
-  const updateProfile = useUpdateProfile();
   const deleteAccount = useDeleteAccount();
   const tags = useUserTags();
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<UpdateProfileInput>({
-    resolver: standardSchemaResolver(updateProfileSchema),
-    values: {
-      displayName: profile.data?.display_name ?? "",
-      avatarUrl: profile.data?.avatar_url ?? "",
-    },
-  });
-
-  async function onSave(values: UpdateProfileInput) {
-    try {
-      await updateProfile.mutateAsync(values);
-      toast.success("Profile saved");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Save failed");
-    }
-  }
 
   async function onSignOut() {
     try {
@@ -87,11 +83,6 @@ export default function ProfilePage() {
   }
 
   async function onDelete() {
-    if (
-      !window.confirm("Permanently delete your account? This cannot be undone.")
-    ) {
-      return;
-    }
     try {
       await deleteAccount.mutateAsync();
       toast.success("Account deleted");
@@ -102,10 +93,19 @@ export default function ProfilePage() {
     }
   }
 
+  const isAnonymous = Boolean(user?.is_anonymous);
+
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-8 p-6">
-      <div className="flex items-center justify-between">
-        <p className="text-muted-foreground text-sm">{user?.email}</p>
+    <div className="@container/main mx-auto flex w-full max-w-2xl flex-col gap-6 p-4 md:p-6">
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold tracking-tight lg:text-2xl">
+            Account
+          </h1>
+          <p className="text-muted-foreground truncate text-sm">
+            {user?.email ?? "Manage your profile and sign-in details."}
+          </p>
+        </div>
         <Button
           type="button"
           variant="outline"
@@ -115,89 +115,84 @@ export default function ProfilePage() {
         </Button>
       </div>
 
-      {user && !user.email_confirmed_at && (
-        <div className="border-muted-foreground/30 -mt-4 rounded-lg border p-4">
-          <h2 className="font-medium">Email not verified</h2>
-          <p className="text-muted-foreground mb-3 text-sm">
-            Your email address hasn’t been confirmed yet. We can send you a
-            fresh confirmation link and code.
-          </p>
-          <Button type="button" onClick={() => void onVerifyEmail()}>
-            Verify email
-          </Button>
-        </div>
+      <ProfileDetailsCard />
+
+      {!isAnonymous && (
+        <>
+          <EmailCard onVerifyEmail={() => void onVerifyEmail()} />
+          <PasswordCard />
+        </>
       )}
 
-      <form
-        onSubmit={(e) => void handleSubmit(onSave)(e)}
-        className="flex flex-col gap-4"
-      >
-        <div className="grid gap-2">
-          <Label htmlFor="displayName">Display name</Label>
-          <Input id="displayName" {...register("displayName")} />
-          {errors.displayName && (
-            <p className="text-destructive text-sm">
-              {errors.displayName.message}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tags</CardTitle>
+          <CardDescription>Your plan and segments.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {tags.data && tags.data.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {tags.data.map((tag) => (
+                <Badge
+                  key={tag.id}
+                  variant="secondary"
+                  style={
+                    tag.color
+                      ? { backgroundColor: tag.color, color: "#fff" }
+                      : undefined
+                  }
+                >
+                  {tag.name}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              {tags.isLoading ? "Loading…" : "No tags yet."}
             </p>
           )}
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="avatarUrl">Avatar URL</Label>
-          <Input
-            id="avatarUrl"
-            placeholder="https://…"
-            {...register("avatarUrl")}
-          />
-          {errors.avatarUrl && (
-            <p className="text-destructive text-sm">
-              {errors.avatarUrl.message}
-            </p>
-          )}
-        </div>
-        <Button type="submit" disabled={updateProfile.isPending}>
-          {updateProfile.isPending ? "Saving…" : "Save"}
-        </Button>
-      </form>
+        </CardContent>
+      </Card>
 
-      <div className="grid gap-2">
-        <Label>Tags</Label>
-        {tags.data && tags.data.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {tags.data.map((tag) => (
-              <Badge
-                key={tag.id}
-                variant="secondary"
-                style={
-                  tag.color
-                    ? { backgroundColor: tag.color, color: "#fff" }
-                    : undefined
-                }
+      <Card className="border-destructive/30">
+        <CardHeader>
+          <CardTitle className="text-destructive">Danger zone</CardTitle>
+          <CardDescription>
+            Delete your account and all associated data.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={deleteAccount.isPending}
               >
-                {tag.name}
-              </Badge>
-            ))}
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-sm">
-            {tags.isLoading ? "Loading…" : "No tags yet."}
-          </p>
-        )}
-      </div>
-
-      <div className="border-destructive/30 mt-4 rounded-lg border p-4">
-        <h2 className="text-destructive font-medium">Danger zone</h2>
-        <p className="text-muted-foreground mb-3 text-sm">
-          Delete your account and all associated data.
-        </p>
-        <Button
-          type="button"
-          variant="destructive"
-          disabled={deleteAccount.isPending}
-          onClick={() => void onDelete()}
-        >
-          {deleteAccount.isPending ? "Deleting…" : "Delete account"}
-        </Button>
-      </div>
+                {deleteAccount.isPending ? "Deleting…" : "Delete account"}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This permanently deletes your account and all associated data.
+                  It cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  variant="destructive"
+                  onClick={() => void onDelete()}
+                >
+                  Delete account
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardContent>
+      </Card>
     </div>
   );
 }

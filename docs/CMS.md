@@ -64,6 +64,17 @@ caller's Supabase session and JIT-provisions a `cms.users` row (linked by
   (`payload/hooks/invite-user.ts` sends a Supabase invite + flags `is_staff`).
 - Users are **soft-deleted** (`trash: true`); the bridge rejects trashed rows —
   restore from the admin Trash view.
+- **Account editing** (docs/AUTH.md → Account settings): admin edits to a user's
+  `email`, `displayName`, `phone` and `jobTitle` write through to Supabase
+  (`payload/hooks/sync-user-to-supabase.ts` — email via
+  `auth.admin.updateUserById`, pre-confirmed; the rest to `profiles` +
+  `user_metadata`), and the sidebar **Password** panel
+  (`components/UserPasswordField.tsx` → `POST /api/cms/user-password`, admin role)
+  sets a member's password without storing it. The other direction:
+  `ensureCmsUser` keeps `cms.users.email` equal to the Supabase login email on every
+  mirror call, and a `/profile` save posts `{ syncProfile: true }` to
+  `/api/cms/mirror-self`, which copies display name / phone / job title from the
+  member's `profiles` row.
 
 ## Access helpers (`payload/access/index.ts`)
 
@@ -98,6 +109,7 @@ caller's Supabase session and JIT-provisions a `cms.users` row (linked by
 | `uniquePolymorphic(...)`                        | One row per owner + polymorphic target (open reports)                                                                                 |
 | `incrementReportCount`                          | Denormalizes `reportCount` onto the reported doc                                                                                      |
 | `invite-user`                                   | On staff-created Users rows: Supabase invite email + `is_staff` flag                                                                  |
+| `sync-user-to-supabase`                         | On admin Users updates: write email / display name / phone / job title through to Supabase Auth + `profiles`                           |
 | `sync-plan-to-stripe` / `sync-coupon-to-stripe` | afterChange → create/update Stripe product, **recreate + archive** immutable prices/coupons; status lands on `syncStatus`/`syncError` |
 | `validate-custom-fields`                        | Validates `users.customFields` against the `profile-fields` global                                                                    |
 
@@ -277,7 +289,10 @@ global, staff-managed `tags`); **Contact tab** (phone, DOB, timezone, language,
 address); **Preferences tab** (push/SMS/marketing opt-ins,
 `notificationPreferences`, `onboardingCompleted`, `lastActiveAt`); **Billing
 tab** (read-only `stripeCustomerID`); joins
-`subscriptions`/`enrollments`/`devices`. **Access:** admin panel
+`subscriptions`/`enrollments`/`devices`; UI fields `tagsManager`,
+`grantStaff` and the admin-only `passwordManager`. `email` is admin-only to
+update and, like `displayName`/`phone`/`jobTitle`, writes through to Supabase on
+save (`sync-user-to-supabase` hook). **Access:** admin panel
 `canAccessAdmin`; create `isAdmin` (triggers the invite hook); read/update
 `isAdminOrSelf`; delete `isAdmin`. Trash (soft delete; bridge rejects trashed).
 

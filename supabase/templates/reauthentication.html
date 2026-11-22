@@ -1,0 +1,20 @@
+<!--
+  Supabase "Reauthentication" template.
+
+  Sent by supabase.auth.reauthenticate(). With "Secure password change" ON
+  (config.toml `secure_password_change = true`), a user whose session is older
+  than 24 hours must enter this code (the `nonce`) to change their password
+  from /profile (web + native) — supabase.auth.updateUser({ password, nonce }).
+
+  Hosted Supabase does not read this file — paste the same markup into the
+  Dashboard (Authentication -> Emails -> Reauthentication). See README -> Deploy.
+-->
+<h2>Confirm it’s you</h2>
+
+<p>Enter this code to confirm your password change:</p>
+<p style="font-size: 24px; letter-spacing: 4px"><strong>{{ .Token }}</strong></p>
+
+<p>
+  If you didn’t try to change your password, you can ignore this email — but
+  consider changing it, since someone may have access to your account.
+</p>
