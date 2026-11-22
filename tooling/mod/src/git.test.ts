@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { commitModuleTree, currentBase, git, rerootLegacyBase } from "./git";
 
@@ -59,5 +59,30 @@ describe("rerootLegacyBase", () => {
     git(repo, ["update-ref", "refs/ext-base/demo", legacy]);
 
     expect(currentBase(repo, "demo")).toBe(legacy);
+  });
+});
+
+describe("commitModuleTree without a git identity", () => {
+  it("commits the snapshot with the fixed module identity", () => {
+    // No user.* and no global/system config, like a fresh CI runner.
+    const dir = mkdtempSync(path.join(tmpdir(), "mod-git-noid-"));
+    repos.push(dir);
+    const emptyConfig = path.join(dir, "empty.gitconfig");
+    writeFileSync(emptyConfig, "");
+    vi.stubEnv("GIT_CONFIG_GLOBAL", emptyConfig);
+    vi.stubEnv("GIT_CONFIG_NOSYSTEM", "1");
+    vi.stubEnv("HOME", dir);
+    try {
+      const repo = path.join(dir, "repo");
+      mkdirSync(path.join(repo, "modules", "demo"), { recursive: true });
+      git(repo, ["init", "-q"]);
+      writeFileSync(path.join(repo, "modules", "demo", "a.txt"), "hi\n");
+      const sha = commitModuleTree(repo, "demo", "mod-base: demo v1.0.0");
+      expect(git(repo, ["log", "-1", "--format=%an <%ae>", sha])).toBe(
+        "Dream modules <modules@dream.invalid>",
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
