@@ -50,6 +50,22 @@ export function opsConfigured(): boolean {
   return Boolean(env.GITHUB_OPS_TOKEN && githubRepo());
 }
 
+/**
+ * Paid modules (the Dream registry, `dream:<slug>`) need module ops: the same
+ * PAT as the MOD_OPS_TOKEN repo secret, set here as GITHUB_OPS_TOKEN. Until it
+ * is, nothing paid runs — no registry calls, no paid catalog, no paid
+ * installs or updates (the CLI enforces the same rule; docs/MODULES.md).
+ */
+export function paidModulesEnabled(): boolean {
+  return opsConfigured();
+}
+
+export const PAID_MODULES_DISABLED = {
+  error:
+    "Paid modules need module ops: set the MOD_OPS_TOKEN repo secret and the GITHUB_OPS_TOKEN env (see the setup steps at the top of /admin).",
+  code: "paid_modules_disabled",
+} as const;
+
 export async function githubApi(
   path: string,
   init?: RequestInit,

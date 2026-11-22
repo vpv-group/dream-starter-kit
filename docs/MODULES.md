@@ -209,10 +209,20 @@ migrations at boot. Brakes: `MOD_AUTO_UPDATE=off` / `MOD_AUTO_MERGE=off`
 (repo variables), per-module `pinned` in the lock; removals never
 auto-merge.
 
-**Founder setup:** create a fine-grained PAT (contents:write,
-pull-requests:write, actions:read on this repo); set it as the `MOD_OPS_TOKEN`
-repo secret AND the `GITHUB_OPS_TOKEN` Vercel env (plus `GITHUB_REPO` off
-Vercel); enable “Allow auto-merge” in the repo settings.
+**Founder setup** (also shown at the top of `/admin` until it's done): create
+a fine-grained PAT on this repo with read & write access to Contents, Pull
+requests, Actions and Workflows; set it as the `MOD_OPS_TOKEN` repo secret
+AND the `GITHUB_OPS_TOKEN` env (plus `GITHUB_REPO` off Vercel); enable
+“Allow auto-merge” in the repo settings.
+
+**Without the token, module ops is off.** Every job in `module-ops.yml` is
+*skipped* (a preflight job leaves a notice explaining why) instead of failing,
+`/admin/modules` is read-only, and **paid modules are disabled everywhere**:
+the admin panel hides them and never contacts the registry, its API routes
+refuse `dream:` installs and paid updates (`403 paid_modules_disabled`), and
+the CLI refuses `pnpm mod add|update` of a registry module until
+`MOD_OPS_TOKEN` (or `GITHUB_OPS_TOKEN`) is set. Free modules keep working
+from the CLI.
 
 ## Paid modules (Dream registry)
 
@@ -231,6 +241,7 @@ pnpm mod status --check        # update + license state per module
 
 **Setup**
 
+0. Set up module ops first (above): paid modules are off without it.
 1. Get a license key from meetdream.com.
 2. Set `DREAM_LICENSE_KEY` in the Vercel env (server-only — the browser only
    ever sees derived entitlement state via the staff-gated

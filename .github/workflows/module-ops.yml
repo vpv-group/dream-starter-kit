@@ -4,9 +4,14 @@
 # module ships is therefore visible as a reviewable diff and gated by the
 # full CI before it can run — zip installs included, never a direct commit.
 #
-# Auth: a fine-grained PAT in the `MOD_OPS_TOKEN` repo secret (contents:write,
-# pull-requests:write, workflows:read). Pushes by the default GITHUB_TOKEN
-# would not trigger the `pull_request` CI run.
+# Auth: a fine-grained PAT in the `MOD_OPS_TOKEN` repo secret (Contents,
+# Pull requests and Actions: read & write; Workflows: read & write). Pushes by
+# the default GITHUB_TOKEN would not trigger the `pull_request` CI run. The
+# same PAT goes in the app's `GITHUB_OPS_TOKEN` env (docs/MODULES.md).
+#
+# Without MOD_OPS_TOKEN every job here is SKIPPED (not failed): the preflight
+# job reports why. Paid modules (`dream:<slug>`) also need it — the CLI, the
+# admin panel and its API routes refuse them until module ops is configured.
 name: Module ops
 
 on:
@@ -51,8 +56,25 @@ permissions:
   pull-requests: write
 
 jobs:
+  # Job-level `if:` can't read secrets, so this turns "is the token set?" into
+  # an output. Missing token → a notice, and every job below is skipped.
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      has_token: ${{ steps.check.outputs.has_token }}
+    steps:
+      - id: check
+        env:
+          HAS_TOKEN: ${{ secrets.MOD_OPS_TOKEN != '' }}
+        run: |
+          echo "has_token=$HAS_TOKEN" >> "$GITHUB_OUTPUT"
+          if [ "$HAS_TOKEN" != "true" ]; then
+            echo "::notice title=Module ops is off::Set the MOD_OPS_TOKEN repo secret to enable module installs, updates and paid modules. Setup: docs/MODULES.md#admin-panel--automatic-updates (also shown at the top of /admin)."
+          fi
+
   op:
-    if: github.event_name == 'workflow_dispatch'
+    needs: preflight
+    if: github.event_name == 'workflow_dispatch' && needs.preflight.outputs.has_token == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -91,8 +113,10 @@ jobs:
       - name: Run the CLI
         id: cli
         env:
-          # Unlocks `dream:<slug>` installs/updates of paid modules.
+          # Unlocks `dream:<slug>` installs/updates of paid modules (which also
+          # need module ops itself: the CLI checks MOD_OPS_TOKEN).
           DREAM_LICENSE_KEY: ${{ secrets.DREAM_LICENSE_KEY }}
+          MOD_OPS_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
         run: |
           set -euo pipefail
           case "${{ inputs.op }}" in
@@ -154,16 +178,15 @@ jobs:
           fi
 
   schedule:
-    if: github.event_name == 'schedule'
+    # MOD_AUTO_UPDATE=off (repo variable) turns the daily module check off.
+    needs: preflight
+    if: github.event_name == 'schedule' && needs.preflight.outputs.has_token == 'true' && vars.MOD_AUTO_UPDATE != 'off'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.MOD_OPS_TOKEN }}
           fetch-depth: 0
-      - name: Skip when auto-update is off
-        if: vars.MOD_AUTO_UPDATE == 'off'
-        run: echo "MOD_AUTO_UPDATE=off — skipping" && exit 0
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -182,6 +205,7 @@ jobs:
           # license is inactive, status reports them with updateAvailable=false
           # — they are skipped quietly, never a failure.
           DREAM_LICENSE_KEY: ${{ secrets.DREAM_LICENSE_KEY }}
+          MOD_OPS_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
         run: |
           pnpm --silent mod status --json > /tmp/status.json || exit 0
           for slug in $(jq -r '.[] | select(.updateAvailable) | .slug' /tmp/status.json); do

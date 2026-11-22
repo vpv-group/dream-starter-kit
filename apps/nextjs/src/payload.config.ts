@@ -123,7 +123,12 @@ export default buildConfig({
       // On first boot (no content yet) this redirects the freshly-created admin
       // to /cms-setup, which seeds demo content with a progress bar. Self-
       // disables once the CMS has content. See payload/components/SeedGate.tsx.
-      beforeDashboard: ["~/payload/components/SeedGate#SeedGate"],
+      beforeDashboard: [
+        "~/payload/components/SeedGate#SeedGate",
+        // Module ops setup steps (MOD_OPS_TOKEN) until it's configured —
+        // see payload/components/ModOpsSetupAlert.tsx.
+        "~/payload/components/ModOpsSetupAlert#ModOpsSetupAlert",
+      ],
       // Wraps every admin route and injects the site-wide shadcn theme as a
       // <style> (from the theme-settings global) so the admin chrome follows the
       // same theme as the front end. See payload/components/ThemeStyleProvider.tsx.

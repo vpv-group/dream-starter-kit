@@ -120,6 +120,30 @@ export function licenseKey(
   return key === undefined || key === "" ? null : key;
 }
 
+/**
+ * Module ops' GitHub token (the MOD_OPS_TOKEN repo secret; the app calls the
+ * same PAT GITHUB_OPS_TOKEN), or null. Paid modules need it: without module
+ * ops nothing paid runs — not here, not in the admin panel (docs/MODULES.md).
+ */
+export function opsToken(
+  env: Record<string, string | undefined> = process.env,
+): string | null {
+  const token = (env.MOD_OPS_TOKEN ?? env.GITHUB_OPS_TOKEN)?.trim();
+  return token === undefined || token === "" ? null : token;
+}
+
+export function requireOpsToken(
+  env: Record<string, string | undefined> = process.env,
+): void {
+  if (!opsToken(env)) {
+    throw new Error(
+      "Paid modules need module ops: set MOD_OPS_TOKEN (or GITHUB_OPS_TOKEN) — " +
+        "the same GitHub token as the MOD_OPS_TOKEN repo secret " +
+        "(docs/MODULES.md → Admin panel + automatic updates)",
+    );
+  }
+}
+
 export function requireLicenseKey(
   env: Record<string, string | undefined> = process.env,
 ): string {
@@ -258,7 +282,12 @@ export type EntitlementsResult =
 
 const entitlementItem = z.union([
   z.string(),
-  z.object({ slug: z.string(), plan: z.string().optional() }),
+  z.object({
+    slug: z.string(),
+    plan: z.string().optional(),
+    /** The registry lists every module with this flag; false = not owned. */
+    entitled: z.boolean().optional(),
+  }),
 ]);
 const entitlementsSchema = z.object({
   entitlements: z.array(entitlementItem).optional(),
@@ -288,9 +317,13 @@ export async function fetchEntitlements(
       : [];
     return {
       status: "active",
-      entitlements: items.map((item) =>
-        typeof item === "string" ? { slug: item } : item,
-      ),
+      entitlements: items
+        .filter((item) => typeof item === "string" || item.entitled !== false)
+        .map((item) =>
+          typeof item === "string"
+            ? { slug: item }
+            : { slug: item.slug, ...(item.plan ? { plan: item.plan } : {}) },
+        ),
     };
   } catch (err) {
     return {

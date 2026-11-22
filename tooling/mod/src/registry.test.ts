@@ -11,11 +11,13 @@ import {
   isDreamSource,
   latestCompatible,
   licenseKey,
+  opsToken,
   parseDreamSource,
   REGISTRY_ERROR_MESSAGES,
   RegistryError,
   registryUrl,
   requestDownload,
+  requireOpsToken,
   sha256Hex,
 } from "./registry";
 
@@ -272,6 +274,25 @@ describe("fetchEntitlements", () => {
     });
   });
 
+  it("drops modules the registry lists as not entitled", async () => {
+    const result = await fetchEntitlements(
+      opts,
+      stubFetch(() =>
+        json(200, {
+          account: { email: "a@b.test" },
+          modules: [
+            { slug: "crm", name: "CRM", entitled: true },
+            { slug: "ai", name: "AI", entitled: false },
+          ],
+        }),
+      ),
+    );
+    expect(result).toEqual({
+      status: "active",
+      entitlements: [{ slug: "crm" }],
+    });
+  });
+
   it("turns registry error codes into an inactive state", async () => {
     expect(
       await fetchEntitlements(
@@ -312,5 +333,19 @@ describe("latestCompatible", () => {
     ).toBeNull();
     expect(latestCompatible({ slug: "crm", latest: "not-semver" })).toBeNull();
     expect(latestCompatible(undefined)).toBeNull();
+  });
+});
+
+describe("module ops gate for paid modules", () => {
+  it("reads MOD_OPS_TOKEN, falling back to GITHUB_OPS_TOKEN", () => {
+    expect(opsToken({ MOD_OPS_TOKEN: " t1 " })).toBe("t1");
+    expect(opsToken({ GITHUB_OPS_TOKEN: "t2" })).toBe("t2");
+    expect(opsToken({ MOD_OPS_TOKEN: "" })).toBeNull();
+    expect(opsToken({})).toBeNull();
+  });
+
+  it("refuses paid-module work without a token", () => {
+    expect(() => requireOpsToken({})).toThrow(/module ops/);
+    expect(() => requireOpsToken({ MOD_OPS_TOKEN: "t" })).not.toThrow();
   });
 });
