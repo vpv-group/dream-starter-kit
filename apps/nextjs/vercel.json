@@ -4,6 +4,10 @@
     {
       "path": "/api/cms/notifications/dispatch",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cms/dream-site/report",
+      "schedule": "23 5 * * *"
     }
   ]
 }

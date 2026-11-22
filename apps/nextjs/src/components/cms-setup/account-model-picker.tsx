@@ -50,9 +50,12 @@ const OPTIONS: ChoiceOption<AccountModel>[] = [
 export function AccountModelPicker({
   branding,
   onDone,
+  notice,
 }: {
   branding: Branding;
   onDone: () => void;
+  /** Shown under the actions, e.g. the site-license disclosure. */
+  notice?: React.ReactNode;
 }) {
   const [choice, setChoice] = useState<AccountModel>("consumer");
   const [saving, setSaving] = useState(false);
@@ -132,6 +135,7 @@ export function AccountModelPicker({
               Continue
             </Button>
           </div>
+          {notice}
         </div>
       </main>
       <footer className="text-muted-foreground text-sm">

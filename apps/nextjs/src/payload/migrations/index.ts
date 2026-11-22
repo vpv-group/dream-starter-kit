@@ -24,6 +24,7 @@ import * as migration_20261117_212656_dream_brand_theme_defaults from './2026111
 import * as migration_20261117_212755_dream_brand_serif_default from './20261117_212755_dream_brand_serif_default';
 import * as migration_20261117_222758_sync_snapshot_after_module_rename from './20261117_222758_sync_snapshot_after_module_rename';
 import * as migration_20261118_231216_workspaces_account_model from './20261118_231216_workspaces_account_model';
+import * as migration_20261122_193348_dream_site from './20261122_193348_dream_site';
 
 export const migrations = [
   {
@@ -154,6 +155,11 @@ export const migrations = [
   {
     up: migration_20261118_231216_workspaces_account_model.up,
     down: migration_20261118_231216_workspaces_account_model.down,
-    name: '20261118_231216_workspaces_account_model'
+    name: '20261118_231216_workspaces_account_model',
+  },
+  {
+    up: migration_20261122_193348_dream_site.up,
+    down: migration_20261122_193348_dream_site.down,
+    name: '20261122_193348_dream_site'
   },
 ];

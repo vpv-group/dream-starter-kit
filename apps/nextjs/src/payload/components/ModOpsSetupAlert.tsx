@@ -2,7 +2,10 @@ import Link from "next/link";
 import { KeyRound } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { getPayloadClient } from "~/lib/cms/payload-client";
+import { siteLicenseKey } from "~/lib/dream/site";
 import { githubRepo, opsConfigured } from "~/lib/mod/admin-ops";
+import { CopySecret } from "./CopySecret";
 
 const PAT_URL = "https://github.com/settings/personal-access-tokens/new";
 const VERCEL_ENV_DOCS =
@@ -17,8 +20,12 @@ const DOCS_URL =
  * workflow skips and /admin/modules is read-only. Server component — reads
  * server env, ships no client JS, renders nothing once configured.
  */
-export function ModOpsSetupAlert() {
+export async function ModOpsSetupAlert() {
   if (opsConfigured()) return null;
+  // The free site key this deployment got after setup (Site license), if any.
+  const siteKey = await getPayloadClient()
+    .then(siteLicenseKey)
+    .catch(() => null);
   const repo = githubRepo();
   const secretsUrl = repo
     ? `https://github.com/${repo}/settings/secrets/actions/new`
@@ -75,8 +82,40 @@ export function ModOpsSetupAlert() {
               ), then redeploy.
             </li>
             <li>
-              For paid modules, also add your license key as the repository
-              secret <code>DREAM_LICENSE_KEY</code>.
+              Add your license key as the repository secret{" "}
+              <code>DREAM_LICENSE_KEY</code>
+              {siteKey ? (
+                <>
+                  . This site&apos;s free license key from meetdream.com:
+                  <br />
+                  <CopySecret value={siteKey} />
+                  <br />
+                  To use paid modules, put your meetdream.com plan on this site
+                  at{" "}
+                  <a
+                    href="https://www.meetdream.com/a/modules"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    meetdream.com/a/modules
+                  </a>
+                  .
+                </>
+              ) : (
+                <>
+                  {" "}
+                  (your site&apos;s free key appears here once it has
+                  registered, or use one from{" "}
+                  <a
+                    href="https://www.meetdream.com/a/modules"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    meetdream.com
+                  </a>
+                  ).
+                </>
+              )}
             </li>
           </ol>
           <p className="mt-2">

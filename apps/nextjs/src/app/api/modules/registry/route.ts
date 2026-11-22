@@ -22,6 +22,6 @@ export async function GET() {
     opsConfigured: opsConfigured(),
     paidModulesEnabled: paidModulesEnabled(),
     catalogUrl: catalogUrlFor(paidModulesEnabled()),
-    licenseConfigured: licenseConfigured(),
+    licenseConfigured: await licenseConfigured(),
   });
 }

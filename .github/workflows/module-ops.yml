@@ -12,16 +12,21 @@
 # Without MOD_OPS_TOKEN every job here is SKIPPED (not failed): the preflight
 # job reports why. Paid modules (`dream:<slug>`) also need it — the CLI, the
 # admin panel and its API routes refuse them until module ops is configured.
+#
+# The daily run also checks the Dream Starter Kit itself for updates
+# (`kit-update` job, free — no license key) and opens a PR merging the kit's
+# upstream main. It never auto-merges: merge it with a MERGE COMMIT (never
+# squash — docs/UPDATING.md). KIT_AUTO_UPDATE=off (repo variable) disables it.
 name: Module ops
 
 on:
   workflow_dispatch:
     inputs:
       op:
-        description: add | update | remove
+        description: add | update | remove | kit-update
         required: true
         type: choice
-        options: [add, update, remove]
+        options: [add, update, remove, kit-update]
       source:
         description: "add: GitHub url[#vX.Y.Z], signed zip URL, or dream:<slug>[@x.y.z]"
         required: false
@@ -44,7 +49,8 @@ on:
         required: false
         type: string
   schedule:
-    # Daily update check (MOD_AUTO_UPDATE=off repo variable disables it).
+    # Daily module + kit update check (MOD_AUTO_UPDATE=off / KIT_AUTO_UPDATE=off
+    # repo variables disable each).
     - cron: "23 6 * * *"
 
 concurrency:
@@ -74,7 +80,7 @@ jobs:
 
   op:
     needs: preflight
-    if: github.event_name == 'workflow_dispatch' && needs.preflight.outputs.has_token == 'true'
+    if: github.event_name == 'workflow_dispatch' && inputs.op != 'kit-update' && needs.preflight.outputs.has_token == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -211,3 +217,98 @@ jobs:
           for slug in $(jq -r '.[] | select(.updateAvailable) | .slug' /tmp/status.json); do
             gh workflow run module-ops.yml -f op=update -f slug="$slug"
           done
+
+  kit-update:
+    # Free Dream Starter Kit updates (docs/UPDATING.md → Automatic update PRs):
+    # merges the kit's upstream main into a sync/upstream-<date> branch and
+    # opens a PR labeled `kit-update`. No license key needed. NEVER
+    # auto-merges — and must land as a merge commit, never a squash, so the
+    # next update stays a plain three-way merge. Skipped in the kit repo itself.
+    needs: preflight
+    if: >-
+      needs.preflight.outputs.has_token == 'true' &&
+      github.repository != 'vpv-group/dream-starter-kit' &&
+      vars.KIT_AUTO_UPDATE != 'off' &&
+      (github.event_name == 'schedule' || inputs.op == 'kit-update')
+    runs-on: ubuntu-latest
+    env:
+      UPSTREAM_URL: ${{ vars.KIT_UPSTREAM_URL || 'https://github.com/vpv-group/dream-starter-kit.git' }}
+      GH_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MOD_OPS_TOKEN }}
+          fetch-depth: 0
+      - name: Fetch the kit's upstream
+        run: |
+          git remote add upstream "$UPSTREAM_URL" 2>/dev/null || git remote set-url upstream "$UPSTREAM_URL"
+          git fetch --no-tags upstream main
+          git config user.name "module-ops"
+          git config user.email "module-ops@users.noreply.github.com"
+      - name: Open or refresh the kit update PR
+        run: |
+          set -euo pipefail
+          version_of() { git show "$1:package.json" | jq -r '.version // "unknown"'; }
+          LATEST=$(version_of upstream/main)
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "::notice title=Kit is up to date::Already includes Dream Starter Kit $LATEST."
+            exit 0
+          fi
+          CURRENT=$(version_of HEAD)
+          BASE=$(git rev-parse --abbrev-ref HEAD)
+          gh label create kit-update --color 0e8a16 --description "Dream Starter Kit update (merge commit, never squash)" 2>/dev/null || true
+          gh label create kit-update-conflicts --color d93f0b --description "Kit update needs conflicts resolved" 2>/dev/null || true
+
+          # One open kit-update PR at a time: refresh it instead of stacking.
+          OPEN_PR=$(gh pr list --label kit-update --state open --json number,headRefName --jq '.[0] | select(.) | "\(.number) \(.headRefName)"')
+          if [ -n "$OPEN_PR" ]; then
+            read -r PR_NUMBER BRANCH <<< "$OPEN_PR"
+            git fetch origin "$BRANCH"
+            git checkout -B "$BRANCH" "origin/$BRANCH"
+            if git merge-base --is-ancestor upstream/main HEAD; then
+              echo "::notice title=Kit update PR is current::#$PR_NUMBER already has $LATEST."
+              exit 0
+            fi
+            if git merge --no-edit -m "chore(kit): merge Dream Starter Kit $LATEST (upstream/main)" upstream/main; then
+              git push origin "$BRANCH"
+              gh pr comment "$PR_NUMBER" --body "Updated to Dream Starter Kit **$LATEST**. Still never auto-merged — merge with a merge commit, not a squash."
+            else
+              git merge --abort
+              gh pr comment "$PR_NUMBER" --body "Dream Starter Kit **$LATEST** is out, but merging it into this branch conflicts. Merge or close this PR; the next daily run opens a fresh one."
+            fi
+            exit 0
+          fi
+
+          BRANCH="sync/upstream-$(date -u +%F)"
+          git checkout -b "$BRANCH"
+          ARGS=()
+          # "Use this template" repos share no history with the kit: the first
+          # merge needs --allow-unrelated-histories (docs/UPDATING.md).
+          git merge-base HEAD upstream/main >/dev/null 2>&1 || ARGS+=(--allow-unrelated-histories)
+          LABELS="kit-update"
+          if ! git merge --no-edit "${ARGS[@]}" -m "chore(kit): merge Dream Starter Kit $LATEST (upstream/main)" upstream/main; then
+            # Commit the conflict markers so a human (or Claude) can resolve
+            # them on the PR — same as module update conflicts.
+            CONFLICTS=$(git diff --name-only --diff-filter=U)
+            git add -A
+            git commit --no-edit -m "chore(kit): merge Dream Starter Kit $LATEST (upstream/main) — conflicts to resolve"
+            LABELS="kit-update,kit-update-conflicts"
+          fi
+          git push -u origin "$BRANCH"
+
+          BODY="Automated Dream Starter Kit update: **$CURRENT → $LATEST** (merges \`upstream/main\` from $UPSTREAM_URL). Free — no license key needed.
+
+          **Merge with a merge commit — never squash.** Squashing drops the record that \`upstream/main\` is an ancestor, and the next update needs \`--allow-unrelated-histories\` again (docs/UPDATING.md).
+
+          After merging: \`pnpm install\`, regenerate types (\`pnpm db:gen-types\`, \`pnpm cms:gen-types\`) and, locally, \`pnpm db:reset\`. Migrations apply automatically on deploy.
+
+          This PR never auto-merges. Turn the daily check off with the \`KIT_AUTO_UPDATE=off\` repository variable."
+          if [ -n "${CONFLICTS:-}" ]; then
+            BODY="$BODY
+
+          ⚠️ **$(echo "$CONFLICTS" | wc -l) files have conflicts to resolve** (markers committed): $(echo "$CONFLICTS" | head -40 | sed 's/.*/`&`/' | tr '\n' ' ')$( [ "$(echo "$CONFLICTS" | wc -l)" -gt 40 ] && echo "…and more (search the branch for \`<<<<<<<\`)")
+          Generated files: take either side and regenerate. Migrations: keep both sides' files. \`pnpm-lock.yaml\`: re-run \`pnpm install\`."
+          fi
+          gh pr create --base "$BASE" --head "$BRANCH" \
+            --title "chore(kit): update Dream Starter Kit $CURRENT → $LATEST" \
+            --body "$BODY" --label "$LABELS"

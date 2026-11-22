@@ -336,6 +336,14 @@ then merge `upstream/main` into a `sync/…` branch and open a PR — **never sq
 PRs** (it breaks the shared-history relationship and forces a full re-merge next time).
 Full tested routine, conflict hotspots, and the `merge=ours` pinning trick for files
 you intentionally diverge on: **[`docs/UPDATING.md`](./docs/UPDATING.md)**.
+With module ops set up (`MOD_OPS_TOKEN`), a daily job opens these kit-update PRs
+for you. They are free, never auto-merge, and must be merged with a merge commit.
+
+**Free site license.** After the first CMS seed, your deployment registers its
+domain and admin/staff emails with meetdream.com. It gets a free license key
+for lifetime kit updates and free modules. You're told on `/cms-setup` before
+anything is sent; set `DREAM_TELEMETRY=off` to opt out. See
+[`docs/MODULES.md` → Site license](./docs/MODULES.md#site-license).
 
 ## Testing
 
