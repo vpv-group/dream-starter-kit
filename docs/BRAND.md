@@ -36,6 +36,10 @@ Rules:
   the check) on every side.
 - Do not redraw, stretch, rotate, outline, or add a shadow or gradient. Do not
   recolour outside emerald, white and ink.
+- The Payload admin shows the icon in its breadcrumb and the logo on Payload's
+  own sign-in screens (`apps/nextjs/src/payload/components/BrandIcon.tsx`,
+  `BrandLogo.tsx`; colours follow the admin's light/dark toggle in
+  `app/(payload)/custom.css`). Replace both when you rebrand.
 - The header and footer show the drawn logo only while the app name is still
   `Dream` and no logo is uploaded in `/admin` → Theme
   (`apps/nextjs/src/components/starter-kit-logo.tsx`). Rename the app or upload

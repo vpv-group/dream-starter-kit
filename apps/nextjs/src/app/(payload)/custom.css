@@ -155,3 +155,30 @@ html[data-theme="dark"] {
   stroke-width: 1px;
   vector-effect: non-scaling-stroke;
 }
+
+/* Dream brand marks in the admin chrome (payload/components/BrandIcon.tsx,
+ * BrandLogo.tsx). Emerald on light; the lighter emerald on dark, following the
+ * admin's own theme toggle rather than the OS setting. Colours: docs/BRAND.md. */
+.dream-brand-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+.dream-brand-icon path {
+  fill: #009b53;
+}
+[data-theme="dark"] .dream-brand-icon path {
+  fill: #41d686;
+}
+.dream-brand-logo img {
+  display: block;
+  height: 28px;
+  width: auto;
+}
+.dream-brand-logo__dark,
+[data-theme="dark"] .dream-brand-logo__light {
+  display: none;
+}
+[data-theme="dark"] .dream-brand-logo__dark {
+  display: block;
+}

@@ -35,6 +35,7 @@ import { FolderTypeField as FolderTypeField_2b8867833a34864a02ddf429b0728a40 } f
 import { RegenerateAllImages as RegenerateAllImages_5552ed3b6af65aa0c30dbc3814b71069 } from '~/payload/components/RegenerateAllImages'
 import { LogoutButton as LogoutButton_6c9a924bbf94f383766dffe3be60632c } from '~/payload/components/LogoutButton'
 import { BrandIcon as BrandIcon_7f003298658d3b7c758be66cf37cc99a } from '~/payload/components/BrandIcon'
+import { BrandLogo as BrandLogo_11d3156590230f2611ead54e0eaf3582 } from '~/payload/components/BrandLogo'
 import { SeedGate as SeedGate_579c462e1297910adc75e16d2ce018f6 } from '~/payload/components/SeedGate'
 import { ThemeStyleProvider as ThemeStyleProvider_1ee7cf46bd3ef3bd11106074673f2adc } from '~/payload/components/ThemeStyleProvider'
 import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
@@ -80,6 +81,7 @@ export const importMap = {
   "~/payload/components/RegenerateAllImages#RegenerateAllImages": RegenerateAllImages_5552ed3b6af65aa0c30dbc3814b71069,
   "~/payload/components/LogoutButton#LogoutButton": LogoutButton_6c9a924bbf94f383766dffe3be60632c,
   "~/payload/components/BrandIcon#BrandIcon": BrandIcon_7f003298658d3b7c758be66cf37cc99a,
+  "~/payload/components/BrandLogo#BrandLogo": BrandLogo_11d3156590230f2611ead54e0eaf3582,
   "~/payload/components/SeedGate#SeedGate": SeedGate_579c462e1297910adc75e16d2ce018f6,
   "~/payload/components/ThemeStyleProvider#ThemeStyleProvider": ThemeStyleProvider_1ee7cf46bd3ef3bd11106074673f2adc,
   "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24,
