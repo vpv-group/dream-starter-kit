@@ -5,9 +5,9 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 const TERMS_URL = "https://www.meetdream.com/legal";
 
 /**
- * Founder disclosure on /sign-up and /cms-setup (docs/MODULES.md → Site
- * license): after setup this site registers with meetdream.com for its free
- * license key, under the Dream Starter Kit terms.
+ * Founder disclosure on the first account's /sign-up only (docs/MODULES.md →
+ * Site license): after setup this site registers with meetdream.com for its
+ * free license key, under the Dream Starter Kit terms.
  */
 export function SiteLicenseNotice({ domain }: { domain: string | null }) {
   return (
