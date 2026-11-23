@@ -227,7 +227,6 @@ function InstallFromGitHub() {
         onChange={(e: ChangeEvent<HTMLInputElement>) => setUrl(e.target.value)}
         path="kitModulesInstallUrl"
         placeholder="https://github.com/you/dream-mod-thing"
-        readOnly={!registry?.opsConfigured}
         value={url}
       />
       <Button
@@ -266,16 +265,11 @@ function UploadZip() {
   return (
     <div className="kit-modules-page__sidebar-section">
       <h4>Upload ZIP</h4>
-      <Dropzone
-        className="kit-modules-dropzone"
-        disabled={!registry?.opsConfigured}
-        onChange={pick}
-      >
+      <Dropzone className="kit-modules-dropzone" onChange={pick}>
         <div className="kit-modules-dropzone__inner">
           <span>{file ? file.name : "Drop a module .zip here, or"}</span>
           <Button
             buttonStyle="pill"
-            disabled={!registry?.opsConfigured}
             margin={false}
             onClick={() => inputRef.current?.click()}
             size="small"
@@ -301,6 +295,11 @@ function UploadZip() {
       >
         Upload &amp; install
       </Button>
+      {registry && !registry.opsConfigured ? (
+        <p className="kit-modules-page__muted">
+          Installing needs module ops — see the notice above the table.
+        </p>
+      ) : null}
     </div>
   );
 }
