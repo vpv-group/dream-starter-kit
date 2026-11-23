@@ -8,6 +8,8 @@ import { adminFieldAccess, isAdmin } from "../access";
  * overrideAccess) — registered automatically after the first CMS seed and
  * reported daily. Admins can read it (incl. the key, to copy into the
  * DREAM_LICENSE_KEY repo secret for paid modules); nobody edits it here.
+ * Without a key, a "Generate license key" button registers on demand
+ * (/api/cms/dream-site/register).
  */
 export const DreamSite: GlobalConfig = {
   slug: "dream-site",
@@ -23,6 +25,17 @@ export const DreamSite: GlobalConfig = {
   },
   access: { read: isAdmin, update: () => false },
   fields: [
+    {
+      // "Generate license key" while there is no key (sites set up before
+      // site licenses, or a failed registration) — no data stored.
+      name: "register",
+      type: "ui",
+      admin: {
+        components: {
+          Field: "~/payload/components/DreamSiteRegister#DreamSiteRegister",
+        },
+      },
+    },
     {
       name: "domain",
       type: "text",
