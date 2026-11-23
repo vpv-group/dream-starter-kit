@@ -232,18 +232,41 @@ client; a Supabase error (e.g. the email is taken) aborts the save with a toast.
 Server-side writes whose values came *from* Supabase (the mirror, the SSO
 bridge) don't trigger it (`context.skipSupabaseSync`, or no `req.user`).
 
-**Hosted setup:** paste the **Change Email Address** and **Reauthentication**
-templates into **Authentication → Emails** (see README → Deploy), and keep
-**Secure email change** on.
+**Confirmations.** Every account change is confirmed on screen and, for the
+security-relevant ones, by email:
 
-**Default-template fallback.** A project still on Supabase's default templates
-sends GoTrue redirect-style links: the first email-change link redirects to the
-Site URL with `?message=Confirmation+link+accepted…#message=…&sb=`, and a failed
-link with `#error_description=…`. `<AuthUrlMessage />` (front-end root layout,
-`lib/auth/url-message.ts`) shows that status as a top-center toast on whatever
-page GoTrue lands on and strips the params. Pasting the kit templates is still
-preferred — the link then opens `/confirm-email` and its full "One more step"
-page.
+| Change | On screen (top-center toast / native alert) | Email |
+| --- | --- | --- |
+| Email (after the 2nd link) | "Email address changed" — `?notice=email-changed` on the `emailRedirectTo` | — (both addresses already got a confirmation link) |
+| Password (member) | "Password changed" | Supabase **Password changed** security notification ([`password_changed_notification.html`](../supabase/templates/password_changed_notification.html), `[auth.email.notification.password_changed]`) |
+| Password (admin reset) | "Password updated." in the admin panel | App email "Your password was changed" (`/api/cms/user-password`) — Supabase doesn't notify for admin updates |
+| Phone added / changed / removed | "Phone number changed" / "…removed" | App email (`payload/hooks/notify-contact-change.ts`, number masked to its last 4 digits) — member or admin edit |
+
+App emails go through Payload's nodemailer adapter (`payload.config.ts`
+`email`, `lib/email/smtp.ts`) using `SMTP_*` (`.env.example` → "Outgoing
+email"); locally that's Mailpit's SMTP port, so they land in Mailpit next to
+the auth emails. Unset in production → Payload only logs them. The member
+phone notice is sent when the profile sync reaches `cms.users`
+(`/api/cms/mirror-self`, best-effort).
+
+**Hosted setup:** paste the **Change Email Address** and **Reauthentication**
+templates into **Authentication → Emails** (see README → Deploy), keep
+**Secure email change** on, turn on **Security notifications → Password
+changed** with the kit template, and set `SMTP_*` (same provider as Supabase's
+custom SMTP) for the app's own notices.
+
+**URL status toasts.** `<AuthUrlMessage />` (front-end root layout,
+`lib/auth/url-message.ts`) turns auth status in the URL into a top-center toast
+on whatever page it lands on, then strips those params: the kit's
+`?notice=email-changed`, and — for a project still on Supabase's default
+templates, whose GoTrue redirect-style links land on the Site URL — the first
+email-change link's `?message=Confirmation+link+accepted…#message=…&sb=` and a
+failed link's `#error_code=…&error_description=…`. The URL is
+attacker-controlled, so **only allowlisted copy is shown**: unknown `message` /
+`notice` values are dropped and `error_description` is never rendered (errors
+map by `error_code` to fixed text). A bare `?error=` (used by `/sign-in` and the
+invite pages) is left alone. Pasting the kit templates is still preferred — the
+first link then opens `/confirm-email` and its full "One more step" page.
 
 ## Auth events
 

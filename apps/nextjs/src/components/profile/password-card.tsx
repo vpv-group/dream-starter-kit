@@ -145,7 +145,10 @@ function ChangePasswordFlow({ onDone }: { onDone: () => void }) {
   async function onSubmit({ password }: ChangePasswordInput) {
     try {
       await changePassword.mutateAsync({ password, nonce: code });
-      toast.success("Password updated");
+      toast.success("Password changed", {
+        description: "Use your new password the next time you sign in.",
+        position: "top-center",
+      });
       onDone();
     } catch (e) {
       if (isReauthenticationInvalid(e)) {

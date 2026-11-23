@@ -10,6 +10,7 @@ import {
 } from "../access";
 import { supabaseStrategy } from "../auth/supabase-strategy";
 import { inviteUserOnCreate } from "../hooks/invite-user";
+import { notifyContactChange } from "../hooks/notify-contact-change";
 import { syncUserToSupabase } from "../hooks/sync-user-to-supabase";
 import { validateCustomFields } from "../hooks/validate-custom-fields";
 
@@ -70,7 +71,10 @@ export const Users: CollectionConfig = {
       "Supabase invite and grants staff access; for an existing user use " +
       "“Grant staff access”. User tags (incl. the plan-name tag) are managed below.",
   },
-  hooks: { beforeChange: [inviteUserOnCreate, syncUserToSupabase] },
+  hooks: {
+    beforeChange: [inviteUserOnCreate, syncUserToSupabase],
+    afterChange: [notifyContactChange],
+  },
   access: {
     admin: canAccessAdmin,
     create: isAdmin,

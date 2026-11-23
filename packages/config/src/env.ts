@@ -95,6 +95,22 @@ export const serverEnvSchema = z.object({
    * token by Vercel Cron / pg_cron.
    */
   CRON_SECRET: z.string().min(1).optional(),
+
+  // --- Outgoing email (app notifications) — optional ---
+  /**
+   * SMTP server for the app's OWN emails, sent through Payload's nodemailer
+   * adapter (e.g. the "phone number changed" security notice). Supabase Auth
+   * sends its auth emails itself. Use the same SMTP provider as Supabase's
+   * custom SMTP. Unset → Payload logs these emails to the console instead.
+   * Locally: Mailpit's SMTP port (supabase/config.toml [inbucket] smtp_port).
+   */
+  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_PORT: z.coerce.number().int().positive().optional(),
+  SMTP_USER: z.string().min(1).optional(),
+  SMTP_PASS: z.string().min(1).optional(),
+  /** From address/name for app emails (default: no-reply@<app host>). */
+  SMTP_FROM_ADDRESS: z.email().optional(),
+  SMTP_FROM_NAME: z.string().min(1).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

@@ -2,7 +2,11 @@ import { expect, test } from "@playwright/test";
 
 import { fetchAuthUserByEmail, fetchProfile } from "./helpers/db";
 import { FOUNDER_STORAGE_STATE } from "./helpers/founder";
-import { signInWithPasswordUI, signUpAndConfirm } from "./helpers/mailpit";
+import {
+  fetchEmailText,
+  signInWithPasswordUI,
+  signUpAndConfirm,
+} from "./helpers/mailpit";
 
 /**
  * Admin account editing on /admin/collections/users/:id: changing a member's
@@ -64,6 +68,11 @@ test("admin edits a member's email, phone and password → member signs in", asy
   expect(renamed?.email_confirmed_at).toBeTruthy();
   const profile = await fetchProfile(authUser?.id ?? "");
   expect(profile).toMatchObject({ email: newEmail, phone: "+44 7700 900123" });
+  // The member is told about the phone change (payload/hooks/notify-contact-
+  // change.ts) at their new address.
+  expect(
+    await fetchEmailText(newEmail, "Your phone number was changed"),
+  ).toContain("ending in 0123");
 
   // Set a password from the sidebar panel (never stored in the CMS).
   await page.locator("#user-new-password").fill(newPassword);
@@ -72,6 +81,10 @@ test("admin edits a member's email, phone and password → member signs in", asy
   await expect(page.getByText("Password updated.")).toBeVisible({
     timeout: 30_000,
   });
+  // …and about the admin-set password (/api/cms/user-password).
+  expect(await fetchEmailText(newEmail, "Your password was changed")).toContain(
+    "An administrator set a new password",
+  );
 
   // The member signs in with the admin-set email + password.
   const signInCtx = await browser.newContext({

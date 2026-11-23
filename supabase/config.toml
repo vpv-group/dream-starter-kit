@@ -103,7 +103,9 @@ enabled = true
 # Port to use for the email testing server web interface.
 port = 54324
 # Uncomment to expose additional ports for testing user applications that send emails.
-# smtp_port = 54325
+# Mailpit's SMTP port: the app's own emails (SMTP_* in .env, Payload's
+# nodemailer adapter — e.g. the phone-changed notice) are delivered here locally.
+smtp_port = 54325
 # pop3_port = 54326
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
@@ -328,11 +330,16 @@ content_path = "./supabase/templates/email_change.html"
 subject = "Confirm it's you"
 content_path = "./supabase/templates/reauthentication.html"
 
-# Uncomment to customize notification email template
-# [auth.email.notification.password_changed]
-# enabled = true
-# subject = "Your password has been changed"
-# content_path = "./templates/password_changed_notification.html"
+# Security notification: emailed after a password change (the member's own
+# /profile change; see docs/AUTH.md -> Account settings). HOSTED projects:
+# Dashboard -> Authentication -> Emails -> Security notifications -> "Password
+# changed" — turn it on and paste the same template (README -> Deploy).
+# NB: notification content_path is relative to supabase/ (unlike the
+# [auth.email.template.*] paths above, which resolve from the repo root).
+[auth.email.notification.password_changed]
+enabled = true
+subject = "Your password was changed"
+content_path = "./templates/password_changed_notification.html"
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.

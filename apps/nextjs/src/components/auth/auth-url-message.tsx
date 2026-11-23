@@ -7,8 +7,8 @@ import { toast } from "@acme/ui/toast";
 import { parseAuthUrlMessage } from "~/lib/auth/url-message";
 
 /**
- * Shows Supabase Auth's redirect status (`?message=` / `#error_description=`,
- * see lib/auth/url-message.ts) as a top-center toast on whatever page GoTrue
+ * Shows auth status from the URL (GoTrue's `?message=` / `#error=`, the kit's
+ * `?notice=`; allowlisted copy only — see lib/auth/url-message.ts) as a top-center toast on whatever page GoTrue
  * landed on, then removes those params from the address bar. Mounted once in
  * the front-end root layout.
  */
@@ -23,12 +23,14 @@ export function AuthUrlMessage() {
     const result = parseAuthUrlMessage(search, hash);
     if (!result) return;
 
-    const show = result.kind === "error" ? toast.error : toast.success;
-    show(result.text, {
-      id: "auth-url-message",
-      position: "top-center",
-      duration: 10_000,
-    });
+    if (result.toast) {
+      const show = result.toast.kind === "error" ? toast.error : toast.success;
+      show(result.toast.text, {
+        id: "auth-url-message",
+        position: "top-center",
+        duration: 10_000,
+      });
+    }
     window.history.replaceState(
       window.history.state,
       "",

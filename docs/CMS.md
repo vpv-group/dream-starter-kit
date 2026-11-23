@@ -110,6 +110,7 @@ caller's Supabase session and JIT-provisions a `cms.users` row (linked by
 | `incrementReportCount`                          | Denormalizes `reportCount` onto the reported doc                                                                                      |
 | `invite-user`                                   | On staff-created Users rows: Supabase invite email + `is_staff` flag                                                                  |
 | `sync-user-to-supabase`                         | On admin Users updates: write email / display name / phone / job title through to Supabase Auth + `profiles`                           |
+| `notify-contact-change`                         | On Users updates (member sync or admin edit): email the member a masked "phone number changed" security notice (best-effort) |
 | `sync-plan-to-stripe` / `sync-coupon-to-stripe` | afterChange → create/update Stripe product, **recreate + archive** immutable prices/coupons; status lands on `syncStatus`/`syncError` |
 | `validate-custom-fields`                        | Validates `users.customFields` against the `profile-fields` global                                                                    |
 
