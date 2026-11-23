@@ -14,6 +14,7 @@ import { useSession } from "@acme/api";
 import {
   accountErrorMessage,
   changeEmailSchema,
+  isReauthenticationInvalid,
   isWorkspaceMode,
   makeChangePasswordSchema,
   signOut,
@@ -321,15 +322,20 @@ function EmailSection() {
   );
 }
 
-/** Password: change, with the emailed reauthentication code when required. */
+/**
+ * Password: "Change password" first calls `reauthenticate()` (emails a 6-digit
+ * code), asks for the code, then shows the new/confirm fields and sends
+ * `updateUser({ password, nonce })` — same flow as the web dialog.
+ */
 function PasswordSection({ minLength }: { minLength: number }) {
+  const { user } = useSession();
   const schema = useMemo(
     () => makeChangePasswordSchema(minLength),
     [minLength],
   );
   const changePassword = useChangePassword();
-  const resendCode = useSendReauthenticationCode();
-  const [pendingPassword, setPendingPassword] = useState<string | null>(null);
+  const sendCode = useSendReauthenticationCode();
+  const [step, setStep] = useState<"idle" | "code" | "password">("idle");
   const [code, setCode] = useState("");
   const {
     control,
@@ -341,22 +347,31 @@ function PasswordSection({ minLength }: { minLength: number }) {
     defaultValues: { password: "", confirmPassword: "" },
   });
 
-  function done() {
+  function close() {
     reset();
-    setPendingPassword(null);
     setCode("");
-    Alert.alert("Password updated", "Use your new password next time.");
+    setStep("idle");
+  }
+
+  async function requestCode() {
+    try {
+      await sendCode.mutateAsync();
+      setStep("code");
+    } catch (e) {
+      Alert.alert("Couldn’t send code", accountErrorMessage(e, "Try again."));
+    }
   }
 
   async function onSubmit({ password }: ChangePasswordInput) {
     try {
-      const result = await changePassword.mutateAsync({ password });
-      if (result.status === "needs_reauth") {
-        setPendingPassword(password);
-        return;
+      await changePassword.mutateAsync({ password, nonce: code });
+      close();
+      Alert.alert("Password updated", "Use your new password next time.");
+    } catch (e) {
+      if (isReauthenticationInvalid(e)) {
+        setCode("");
+        setStep("code");
       }
-      done();
-    } catch (e) {
       Alert.alert(
         "Couldn’t change password",
         accountErrorMessage(e, "Try again."),
@@ -364,29 +379,29 @@ function PasswordSection({ minLength }: { minLength: number }) {
     }
   }
 
-  async function onConfirm() {
-    if (!pendingPassword) return;
-    try {
-      await changePassword.mutateAsync({
-        password: pendingPassword,
-        nonce: code.trim(),
-      });
-      done();
-    } catch (e) {
-      setCode("");
-      Alert.alert(
-        "Couldn’t change password",
-        accountErrorMessage(e, "Try again."),
-      );
-    }
-  }
-
-  if (pendingPassword) {
+  if (step === "idle") {
     return (
       <View className="gap-3">
         <SectionTitle>Password</SectionTitle>
         <Text className="text-muted-foreground text-sm">
-          For your security, enter the 6-digit code we just emailed you.
+          For your security we’ll email you a code first.
+        </Text>
+        <Button
+          title="Change password"
+          variant="outline"
+          loading={sendCode.isPending}
+          onPress={() => void requestCode()}
+        />
+      </View>
+    );
+  }
+
+  if (step === "code") {
+    return (
+      <View className="gap-3">
+        <SectionTitle>Check your email</SectionTitle>
+        <Text className="text-muted-foreground text-sm">
+          We sent a 6-digit code to {user?.email}. Enter it to confirm it’s you.
         </Text>
         <Input
           value={code}
@@ -395,43 +410,27 @@ function PasswordSection({ minLength }: { minLength: number }) {
           autoComplete="one-time-code"
           textContentType="oneTimeCode"
           placeholder="123456"
+          autoFocus
         />
         <Button
-          title="Confirm"
-          disabled={code.length !== 6 || changePassword.isPending}
-          loading={changePassword.isPending}
-          onPress={() => void onConfirm()}
+          title="Continue"
+          disabled={code.length !== 6}
+          onPress={() => setStep("password")}
         />
         <Button
           title="Resend code"
           variant="outline"
-          loading={resendCode.isPending}
-          onPress={() =>
-            void resendCode
-              .mutateAsync()
-              .catch((e: unknown) =>
-                Alert.alert(
-                  "Couldn’t send code",
-                  accountErrorMessage(e, "Try again."),
-                ),
-              )
-          }
+          loading={sendCode.isPending}
+          onPress={() => void requestCode()}
         />
-        <Button
-          title="Cancel"
-          variant="outline"
-          onPress={() => {
-            setPendingPassword(null);
-            setCode("");
-          }}
-        />
+        <Button title="Cancel" variant="outline" onPress={close} />
       </View>
     );
   }
 
   return (
     <View className="gap-3">
-      <SectionTitle>Password</SectionTitle>
+      <SectionTitle>Change password</SectionTitle>
       {(["password", "confirmPassword"] as const).map((name) => (
         <View key={name} className="gap-1">
           <Text className="text-sm font-medium">
@@ -460,10 +459,10 @@ function PasswordSection({ minLength }: { minLength: number }) {
       </Text>
       <Button
         title="Update password"
-        variant="outline"
         loading={changePassword.isPending}
         onPress={() => void handleSubmit(onSubmit)()}
       />
+      <Button title="Cancel" variant="outline" onPress={close} />
     </View>
   );
 }

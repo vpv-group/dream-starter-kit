@@ -271,6 +271,16 @@ export function isReauthenticationNeeded(error: unknown): boolean {
   );
 }
 
+/** True for GoTrue's "that reauthentication code is wrong or expired" error. */
+export function isReauthenticationInvalid(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "reauthentication_not_valid"
+  );
+}
+
 /**
  * Human message for an account-settings auth error, keyed on GoTrue's stable
  * error codes (falls back to the error's own message).

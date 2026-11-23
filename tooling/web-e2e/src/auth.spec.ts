@@ -45,7 +45,7 @@ test("signing up + entering the email code manually lands on the dashboard", asy
   await page.getByRole("button", { name: "Enter code manually" }).click();
   const { code } = await fetchAuthEmail(email);
   expect(code).toBeTruthy();
-  await page.getByPlaceholder("Enter code").fill(code ?? "");
+  await page.getByLabel("Login code").fill(code ?? "");
   await page.getByRole("button", { name: "Continue with login code" }).click();
 
   // verifyOtp + hard nav through /welcome; allow for cold compiles under load.

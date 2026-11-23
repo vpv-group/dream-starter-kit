@@ -11,6 +11,11 @@ import { toast } from "@acme/ui/toast";
 import { Button } from "~/components/ui/button";
 import { Field, FieldDescription, FieldGroup } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "~/components/ui/input-otp";
 import { authCallbackUrl } from "~/lib/site-url";
 import { createClient } from "~/lib/supabase/client";
 import { authErrorMessage, localMailpitUrl } from "~/lib/supabase/config";
@@ -144,15 +149,24 @@ export function CheckEmailForm({
           <form onSubmit={(e) => void onVerifyCode(e)}>
             <FieldGroup>
               <Field>
-                <Input
-                  aria-label="Login code"
-                  placeholder="Enter code"
-                  autoComplete="one-time-code"
-                  inputMode="numeric"
-                  className="text-center"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                />
+                <div className="flex justify-center">
+                  <InputOTP
+                    maxLength={6}
+                    value={code}
+                    onChange={setCode}
+                    aria-label="Login code"
+                    autoFocus
+                  >
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
               </Field>
               <Field>
                 <Button type="submit" disabled={pending || !code.trim()}>
