@@ -184,6 +184,52 @@ enable_signup = false
 
 New staff are still invited from `/admin → Users → Create New`.
 
+## Account settings (`/profile` + `/admin` Users)
+
+Members manage their own account on **`/profile`** (web) and the native
+**Profile** screen; admins manage anyone's from **`/admin/collections/users/:id`**.
+Shared logic lives in `@acme/app` (`useUpdateProfile`, `useChangeEmail`,
+`useChangePassword`, validators in `validators/auth.ts`), so web and native
+behave the same.
+
+| What | Member (`/profile`) | Admin (`/admin` → Users) |
+| --- | --- | --- |
+| Display name, job title, avatar | `profiles` (RLS) + `user_metadata`, then synced to `cms.users` | Edit the CMS fields → written through to `profiles` + `user_metadata` |
+| Phone (contact only) | Same as above — `profiles.phone`, **not** a Supabase phone login (no SMS/OTP) | Contact tab → written through to `profiles.phone` |
+| Email | `supabase.auth.updateUser({ email })` — **secure email change** | `auth.admin.updateUserById(id, { email, email_confirm: true })` — applies immediately, no emails (admin-only field) |
+| Password | `supabase.auth.updateUser({ password })` — **secure password change** | Sidebar **Password** panel → `POST /api/cms/user-password` (admin role; never stored in the CMS) |
+
+**Secure email change** (`double_confirm_changes = true` locally; on by default
+on hosted Supabase). Supabase emails a confirmation link to **both** the current
+and the new address, and `auth.users.email` changes only after **both** are
+confirmed — until then the pending address is `user.new_email`, which `/profile`
+shows with a *Resend* action. The kit's
+[`email_change.html`](../supabase/templates/email_change.html) template links to
+`/confirm-email?token_hash=…&type=email_change`: the first link shows "One more
+step", the second completes the change and returns to `/profile`. The
+`on_auth_user_updated` trigger mirrors the new email into `profiles.email`, and
+the signup mirror (`ensureCmsUser`) brings `cms.users.email` in line — Supabase
+Auth is always the source of truth for the login email.
+
+**Secure password change** (`secure_password_change = true` locally; turn on
+**Authentication → Providers → Email → Secure password change** on hosted). A
+session older than 24 hours is rejected with `reauthentication_needed`; the UI
+then calls `supabase.auth.reauthenticate()` (emails a 6-digit code — template
+[`reauthentication.html`](../supabase/templates/reauthentication.html)) and
+retries with `updateUser({ password, nonce })`. Users who signed up without a
+password (magic link / OAuth) can set one here.
+
+**Admin write-through** (`payload/hooks/sync-user-to-supabase.ts`): a
+`beforeChange` hook on the Users collection diffs `email`, `displayName`,
+`phone` and `jobTitle` on admin updates and applies them with the service-role
+client; a Supabase error (e.g. the email is taken) aborts the save with a toast.
+Server-side writes whose values came *from* Supabase (the mirror, the SSO
+bridge) don't trigger it (`context.skipSupabaseSync`, or no `req.user`).
+
+**Hosted setup:** paste the **Change Email Address** and **Reauthentication**
+templates into **Authentication → Emails** (see README → Deploy), and keep
+**Secure email change** on.
+
 ## Auth events
 
 `public.auth_events` records, per user, every **auth email** Supabase sends

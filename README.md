@@ -422,7 +422,7 @@ app needs — including `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_K
 
    Hosted projects have **email confirmations ON** by default — the kit's sign-up flow
    handles this (`/check-email`, link or manual code), and local dev matches
-   (`enable_confirmations = true` in `supabase/config.toml`). Mirror the kit's two email
+   (`enable_confirmations = true` in `supabase/config.toml`). Mirror the kit's email
    templates in **Authentication → Emails**:
    - **Confirm signup** ← [`supabase/templates/confirmation.html`](./supabase/templates/confirmation.html)
      — links to `/confirm-email?token_hash=…` (works for original **and re-sent**
@@ -438,6 +438,16 @@ app needs — including `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_K
      (Teams / Both account models): it switches to "{inviter} invited you to
      {workspace}" copy from the invite's metadata and carries `redirect_to` so the
      invitee lands in that workspace. Re-paste it whenever the file changes.
+   - **Change Email Address** ← [`supabase/templates/email_change.html`](./supabase/templates/email_change.html)
+     — sent to **both** the old and new address when a member changes their email on
+     `/profile` (keep **Secure email change** on); links to
+     `/confirm-email?token_hash=…&type=email_change`. Also used by the paywall's
+     anonymous → permanent account conversion.
+   - **Reauthentication** ← [`supabase/templates/reauthentication.html`](./supabase/templates/reauthentication.html)
+     — the 6-digit code a member enters to change their password when their session is
+     older than 24h. Turn on **Authentication → Providers → Email → Secure password
+     change** to match local (`secure_password_change = true`). See
+     [docs/AUTH.md → Account settings](./docs/AUTH.md).
 
    Also consider custom SMTP (**Authentication → Emails → SMTP**): Supabase's built-in
    sender is heavily rate-limited (~2 emails/hour) and meant for testing only — set it

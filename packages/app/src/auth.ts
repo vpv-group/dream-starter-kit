@@ -194,6 +194,111 @@ export async function updatePassword(
   if (error) throw error;
 }
 
+// ---------------------------------------------------------------------------
+// Account settings (/profile on web + native) — docs/AUTH.md → Account settings
+// ---------------------------------------------------------------------------
+
+/**
+ * Ask Supabase to change the signed-in user's email. Nothing changes yet: with
+ * "Secure email change" ON (the hosted default; `double_confirm_changes` locally)
+ * Supabase emails a confirmation link to BOTH the current and the new address,
+ * and `auth.users.email` flips only once both are confirmed (until then the new
+ * address sits in `user.new_email`). The kit's email_change template links to
+ * /confirm-email, which verifies each link; `emailRedirectTo` is where it
+ * returns the user afterwards.
+ */
+export async function requestEmailChange(
+  client: AppSupabaseClient,
+  email: string,
+  opts?: { emailRedirectTo?: string },
+): Promise<void> {
+  const { error } = await client.auth.updateUser(
+    { email },
+    opts?.emailRedirectTo
+      ? { emailRedirectTo: opts.emailRedirectTo }
+      : undefined,
+  );
+  if (error) throw error;
+}
+
+/** Re-send the pending email-change confirmation(s) for `newEmail`. */
+export async function resendEmailChange(
+  client: AppSupabaseClient,
+  newEmail: string,
+  opts?: { emailRedirectTo?: string },
+): Promise<void> {
+  const { error } = await client.auth.resend({
+    type: "email_change",
+    email: newEmail,
+    options: opts?.emailRedirectTo
+      ? { emailRedirectTo: opts.emailRedirectTo }
+      : undefined,
+  });
+  if (error) throw error;
+}
+
+/**
+ * Change the signed-in user's password. With "Secure password change" ON, a
+ * session older than 24h is rejected with `reauthentication_needed` — call
+ * {@link sendReauthenticationCode}, then retry with the emailed code as `nonce`.
+ */
+export async function changePassword(
+  client: AppSupabaseClient,
+  password: string,
+  nonce?: string,
+): Promise<void> {
+  const { error } = await client.auth.updateUser(
+    nonce ? { password, nonce } : { password },
+  );
+  if (error) throw error;
+}
+
+/** Email the signed-in user a one-time reauthentication code (the nonce). */
+export async function sendReauthenticationCode(
+  client: AppSupabaseClient,
+): Promise<void> {
+  const { error } = await client.auth.reauthenticate();
+  if (error) throw error;
+}
+
+/** True for GoTrue's "this change needs a reauthentication nonce" error. */
+export function isReauthenticationNeeded(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "reauthentication_needed"
+  );
+}
+
+/**
+ * Human message for an account-settings auth error, keyed on GoTrue's stable
+ * error codes (falls back to the error's own message).
+ */
+export function accountErrorMessage(error: unknown, fallback: string): string {
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? (error as { code?: unknown }).code
+      : undefined;
+  switch (code) {
+    case "email_exists":
+      return "That email address is already in use.";
+    case "same_password":
+      return "Choose a password different from your current one.";
+    case "weak_password":
+      return "That password is too weak. Try a longer one.";
+    case "reauthentication_not_valid":
+      return "That code is invalid or expired. Request a new one.";
+    case "over_email_send_rate_limit":
+    case "over_request_rate_limit":
+      return "Too many requests. Wait a moment and try again.";
+    case "email_address_invalid":
+      return "Enter a valid email address.";
+    default:
+      return error instanceof Error && error.message ? error.message : fallback;
+  }
+}
+
 export async function signOut(client: AppSupabaseClient): Promise<void> {
   const { error } = await client.auth.signOut();
   if (!error) return;

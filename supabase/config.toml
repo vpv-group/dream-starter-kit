@@ -257,7 +257,10 @@ double_confirm_changes = true
 # `supabase stop && supabase start`, not just `db reset`.
 enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
-secure_password_change = false
+# ON (Supabase's recommended "Secure password change"): a session older than 24h
+# must pass the emailed reauthentication code as `nonce` to updateUser — the
+# /profile password form handles that (see docs/AUTH.md -> Account settings).
+secure_password_change = true
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
 max_frequency = "1s"
 # Number of characters used in the email OTP.
@@ -306,6 +309,24 @@ content_path = "./supabase/templates/invite.html"
 [auth.email.template.magic_link]
 subject = "Your sign-in link"
 content_path = "./supabase/templates/magic_link.html"
+
+# Email-change confirmation (supabase.auth.updateUser({ email }) from /profile and
+# the paywall's anon->permanent conversion). With double_confirm_changes ON it is
+# sent to BOTH the old and the new address; links to /confirm-email?token_hash=…
+# &type=email_change (explicit verifyOtp, not GoTrue's redirect link).
+# HOSTED projects must mirror this template in the Dashboard (Authentication ->
+# Emails -> Change Email Address) — see README -> Deploy.
+[auth.email.template.email_change]
+subject = "Confirm your email change"
+content_path = "./supabase/templates/email_change.html"
+
+# Reauthentication code (supabase.auth.reauthenticate()) — the nonce a stale
+# session needs to change its password while secure_password_change is ON.
+# HOSTED projects must mirror this template in the Dashboard (Authentication ->
+# Emails -> Reauthentication) — see README -> Deploy.
+[auth.email.template.reauthentication]
+subject = "Confirm it's you"
+content_path = "./supabase/templates/reauthentication.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]

@@ -1,17 +1,30 @@
+import type { ComponentProps } from "react";
+import { useMemo, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { Link, Stack } from "expo-router";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { Controller, useForm } from "react-hook-form";
 
-import type { UpdateProfileInput } from "@acme/app";
+import type {
+  ChangeEmailInput,
+  ChangePasswordInput,
+  UpdateProfileInput,
+} from "@acme/app";
 import { useSession } from "@acme/api";
 import {
+  accountErrorMessage,
+  changeEmailSchema,
   isWorkspaceMode,
+  makeChangePasswordSchema,
   signOut,
   updateProfileSchema,
   useAuthConfig,
+  useChangeEmail,
+  useChangePassword,
   useDeleteAccount,
   useProfile,
+  useResendEmailChange,
+  useSendReauthenticationCode,
   useUpdateProfile,
   useUserTags,
 } from "@acme/app";
@@ -19,39 +32,40 @@ import { Button } from "@acme/ui-native/button";
 import { Input } from "@acme/ui-native/input";
 import { Text } from "@acme/ui-native/text";
 
+import { clientEnv } from "~/lib/env";
 import { supabase } from "~/lib/supabase";
 
 const msg = (e: unknown) =>
   e instanceof Error ? e.message : "Something went wrong";
 
+// Email-change links open the web app's /confirm-email (the email template
+// uses the Supabase Site URL), which then returns here: /profile on the web.
+const emailRedirectTo = clientEnv.CMS_URL
+  ? `${clientEnv.CMS_URL.replace(/\/+$/, "")}/profile`
+  : undefined;
+
+function SectionTitle({ children }: { children: string }) {
+  return <Text className="mt-4 text-base font-semibold">{children}</Text>;
+}
+
+function FieldErrorText({ message }: { message?: string }) {
+  return message ? (
+    <Text className="text-destructive text-sm">{message}</Text>
+  ) : null;
+}
+
+/**
+ * Account settings — the native twin of the web /profile page: profile
+ * metadata (name, title, phone, avatar), sign-in email (secure change →
+ * confirm on both addresses), password (with reauthentication code when
+ * Supabase asks), tags, sign out and delete. Logic lives in @acme/app.
+ */
 export default function Profile() {
   const { user } = useSession();
-  const profile = useProfile();
-  const updateProfile = useUpdateProfile();
   const deleteAccount = useDeleteAccount();
   const tags = useUserTags();
   const authConfig = useAuthConfig();
-
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<UpdateProfileInput>({
-    resolver: standardSchemaResolver(updateProfileSchema),
-    values: {
-      displayName: profile.data?.display_name ?? "",
-      avatarUrl: profile.data?.avatar_url ?? "",
-    },
-  });
-
-  async function onSave(values: UpdateProfileInput) {
-    try {
-      await updateProfile.mutateAsync(values);
-      Alert.alert("Saved", "Your profile was updated.");
-    } catch (e) {
-      Alert.alert("Save failed", msg(e));
-    }
-  }
+  const isAnonymous = Boolean(user?.is_anonymous);
 
   function onDelete() {
     Alert.alert(
@@ -79,92 +93,377 @@ export default function Profile() {
     <ScrollView
       className="bg-background flex-1"
       contentContainerClassName="gap-4 p-6"
+      keyboardShouldPersistTaps="handled"
     >
       <Stack.Screen options={{ title: "Profile" }} />
       <Text className="text-muted-foreground">{user?.email}</Text>
 
-      <View className="gap-1">
-        <Text className="text-sm font-medium">Display name</Text>
-        <Controller
-          control={control}
-          name="displayName"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input value={value} onChangeText={onChange} onBlur={onBlur} />
-          )}
+      <ProfileSection />
+      {!isAnonymous && (
+        <>
+          <EmailSection />
+          <PasswordSection minLength={authConfig.minPasswordLength} />
+        </>
+      )}
+
+      <SectionTitle>Tags</SectionTitle>
+      {tags.data && tags.data.length > 0 ? (
+        <View className="flex-row flex-wrap gap-2">
+          {tags.data.map((tag) => (
+            <View
+              key={tag.id}
+              className="bg-secondary rounded-full px-3 py-1"
+              style={tag.color ? { backgroundColor: tag.color } : undefined}
+            >
+              <Text className="text-secondary-foreground text-xs">
+                {tag.name}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <Text className="text-muted-foreground text-sm">
+          {tags.isLoading ? "Loading…" : "No tags yet."}
+        </Text>
+      )}
+
+      <View className="mt-4 gap-3">
+        {isWorkspaceMode(authConfig) ? (
+          <Link href="/workspaces" asChild>
+            <Button title={`${authConfig.workspaceLabel}s`} variant="outline" />
+          </Link>
+        ) : null}
+        <Button
+          title="Sign out"
+          variant="outline"
+          onPress={() => void signOut(supabase)}
         />
-        {errors.displayName && (
-          <Text className="text-destructive text-sm">
-            {errors.displayName.message}
-          </Text>
-        )}
-      </View>
-
-      <View className="gap-1">
-        <Text className="text-sm font-medium">Avatar URL</Text>
-        <Controller
-          control={control}
-          name="avatarUrl"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input
-              placeholder="https://…"
-              autoCapitalize="none"
-              value={value ?? ""}
-              onChangeText={onChange}
-              onBlur={onBlur}
-            />
-          )}
+        <Button
+          title="Delete account"
+          variant="destructive"
+          loading={deleteAccount.isPending}
+          onPress={onDelete}
         />
-        {errors.avatarUrl && (
-          <Text className="text-destructive text-sm">
-            {errors.avatarUrl.message}
-          </Text>
-        )}
       </View>
+    </ScrollView>
+  );
+}
 
-      <View className="gap-1">
-        <Text className="text-sm font-medium">Tags</Text>
-        {tags.data && tags.data.length > 0 ? (
-          <View className="flex-row flex-wrap gap-2">
-            {tags.data.map((tag) => (
-              <View
-                key={tag.id}
-                className="bg-secondary rounded-full px-3 py-1"
-                style={tag.color ? { backgroundColor: tag.color } : undefined}
-              >
-                <Text className="text-secondary-foreground text-xs">
-                  {tag.name}
-                </Text>
-              </View>
-            ))}
-          </View>
-        ) : (
-          <Text className="text-muted-foreground text-sm">
-            {tags.isLoading ? "Loading…" : "No tags yet."}
-          </Text>
-        )}
-      </View>
+/** Display name, job title, contact phone, avatar → profiles (+ CMS sync). */
+function ProfileSection() {
+  const profile = useProfile();
+  const updateProfile = useUpdateProfile();
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<UpdateProfileInput>({
+    resolver: standardSchemaResolver(updateProfileSchema),
+    values: {
+      displayName: profile.data?.display_name ?? "",
+      avatarUrl: profile.data?.avatar_url ?? "",
+      title: profile.data?.title ?? "",
+      phone: profile.data?.phone ?? "",
+    },
+  });
 
+  async function onSave(values: UpdateProfileInput) {
+    try {
+      await updateProfile.mutateAsync(values);
+      Alert.alert("Saved", "Your profile was updated.");
+    } catch (e) {
+      Alert.alert("Save failed", msg(e));
+    }
+  }
+
+  const fields: {
+    name: keyof UpdateProfileInput;
+    label: string;
+    placeholder?: string;
+    props?: Partial<ComponentProps<typeof Input>>;
+  }[] = [
+    { name: "displayName", label: "Display name" },
+    { name: "title", label: "Job title", placeholder: "e.g. Product designer" },
+    {
+      name: "phone",
+      label: "Phone (contact only)",
+      placeholder: "+1 555 010 0199",
+      props: { keyboardType: "phone-pad", autoComplete: "tel" },
+    },
+    {
+      name: "avatarUrl",
+      label: "Avatar URL",
+      placeholder: "https://…",
+      props: { autoCapitalize: "none", keyboardType: "url" },
+    },
+  ];
+
+  return (
+    <View className="gap-3">
+      <SectionTitle>Profile</SectionTitle>
+      {fields.map((f) => (
+        <View key={f.name} className="gap-1">
+          <Text className="text-sm font-medium">{f.label}</Text>
+          <Controller
+            control={control}
+            name={f.name}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                placeholder={f.placeholder}
+                value={value ?? ""}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                {...f.props}
+              />
+            )}
+          />
+          <FieldErrorText message={errors[f.name]?.message} />
+        </View>
+      ))}
       <Button
-        title="Save"
+        title="Save profile"
         loading={updateProfile.isPending}
         onPress={() => void handleSubmit(onSave)()}
       />
-      {isWorkspaceMode(authConfig) ? (
-        <Link href="/workspaces" asChild>
-          <Button title={`${authConfig.workspaceLabel}s`} variant="outline" />
-        </Link>
+    </View>
+  );
+}
+
+/** Sign-in email: request a secure change, show/resend a pending one. */
+function EmailSection() {
+  const { user } = useSession();
+  const changeEmail = useChangeEmail({ emailRedirectTo });
+  const resend = useResendEmailChange({ emailRedirectTo });
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors },
+  } = useForm<ChangeEmailInput>({
+    resolver: standardSchemaResolver(changeEmailSchema),
+    defaultValues: { email: "" },
+  });
+
+  async function onSubmit({ email }: ChangeEmailInput) {
+    if (email.trim().toLowerCase() === user?.email?.toLowerCase()) {
+      setError("email", { message: "That’s already your email address." });
+      return;
+    }
+    try {
+      await changeEmail.mutateAsync(email);
+      reset();
+      Alert.alert(
+        "Check your inboxes",
+        "We emailed a confirmation link to your current and your new address. Open both to finish the change.",
+      );
+    } catch (e) {
+      Alert.alert(
+        "Couldn’t change email",
+        accountErrorMessage(e, "Try again."),
+      );
+    }
+  }
+
+  return (
+    <View className="gap-3">
+      <SectionTitle>Email</SectionTitle>
+      {user?.new_email ? (
+        <View className="border-border gap-2 rounded-lg border p-3">
+          <Text className="text-sm">
+            Waiting for confirmation: open the links we sent to {user.email} and{" "}
+            {user.new_email}.
+          </Text>
+          <Button
+            title="Resend confirmation"
+            variant="outline"
+            loading={resend.isPending}
+            onPress={() =>
+              void resend
+                .mutateAsync()
+                .then(() => Alert.alert("Sent", "Confirmation sent again."))
+                .catch((e: unknown) =>
+                  Alert.alert(
+                    "Couldn’t resend",
+                    accountErrorMessage(e, "Try again."),
+                  ),
+                )
+            }
+          />
+        </View>
       ) : null}
+      <View className="gap-1">
+        <Text className="text-sm font-medium">New email</Text>
+        <Controller
+          control={control}
+          name="email"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <Input
+              value={value}
+              onChangeText={onChange}
+              onBlur={onBlur}
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+              placeholder="you@example.com"
+            />
+          )}
+        />
+        <FieldErrorText message={errors.email?.message} />
+      </View>
       <Button
-        title="Sign out"
+        title="Change email"
         variant="outline"
-        onPress={() => void signOut(supabase)}
+        loading={changeEmail.isPending}
+        onPress={() => void handleSubmit(onSubmit)()}
       />
+    </View>
+  );
+}
+
+/** Password: change, with the emailed reauthentication code when required. */
+function PasswordSection({ minLength }: { minLength: number }) {
+  const schema = useMemo(
+    () => makeChangePasswordSchema(minLength),
+    [minLength],
+  );
+  const changePassword = useChangePassword();
+  const resendCode = useSendReauthenticationCode();
+  const [pendingPassword, setPendingPassword] = useState<string | null>(null);
+  const [code, setCode] = useState("");
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ChangePasswordInput>({
+    resolver: standardSchemaResolver(schema),
+    defaultValues: { password: "", confirmPassword: "" },
+  });
+
+  function done() {
+    reset();
+    setPendingPassword(null);
+    setCode("");
+    Alert.alert("Password updated", "Use your new password next time.");
+  }
+
+  async function onSubmit({ password }: ChangePasswordInput) {
+    try {
+      const result = await changePassword.mutateAsync({ password });
+      if (result.status === "needs_reauth") {
+        setPendingPassword(password);
+        return;
+      }
+      done();
+    } catch (e) {
+      Alert.alert(
+        "Couldn’t change password",
+        accountErrorMessage(e, "Try again."),
+      );
+    }
+  }
+
+  async function onConfirm() {
+    if (!pendingPassword) return;
+    try {
+      await changePassword.mutateAsync({
+        password: pendingPassword,
+        nonce: code.trim(),
+      });
+      done();
+    } catch (e) {
+      setCode("");
+      Alert.alert(
+        "Couldn’t change password",
+        accountErrorMessage(e, "Try again."),
+      );
+    }
+  }
+
+  if (pendingPassword) {
+    return (
+      <View className="gap-3">
+        <SectionTitle>Password</SectionTitle>
+        <Text className="text-muted-foreground text-sm">
+          For your security, enter the 6-digit code we just emailed you.
+        </Text>
+        <Input
+          value={code}
+          onChangeText={(v) => setCode(v.replace(/\D/g, "").slice(0, 6))}
+          keyboardType="number-pad"
+          autoComplete="one-time-code"
+          textContentType="oneTimeCode"
+          placeholder="123456"
+        />
+        <Button
+          title="Confirm"
+          disabled={code.length !== 6 || changePassword.isPending}
+          loading={changePassword.isPending}
+          onPress={() => void onConfirm()}
+        />
+        <Button
+          title="Resend code"
+          variant="outline"
+          loading={resendCode.isPending}
+          onPress={() =>
+            void resendCode
+              .mutateAsync()
+              .catch((e: unknown) =>
+                Alert.alert(
+                  "Couldn’t send code",
+                  accountErrorMessage(e, "Try again."),
+                ),
+              )
+          }
+        />
+        <Button
+          title="Cancel"
+          variant="outline"
+          onPress={() => {
+            setPendingPassword(null);
+            setCode("");
+          }}
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View className="gap-3">
+      <SectionTitle>Password</SectionTitle>
+      {(["password", "confirmPassword"] as const).map((name) => (
+        <View key={name} className="gap-1">
+          <Text className="text-sm font-medium">
+            {name === "password" ? "New password" : "Confirm new password"}
+          </Text>
+          <Controller
+            control={control}
+            name={name}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                secureTextEntry
+                autoCapitalize="none"
+                autoComplete="new-password"
+                textContentType="newPassword"
+              />
+            )}
+          />
+          <FieldErrorText message={errors[name]?.message} />
+        </View>
+      ))}
+      <Text className="text-muted-foreground text-xs">
+        At least {minLength} characters.
+      </Text>
       <Button
-        title="Delete account"
-        variant="destructive"
-        loading={deleteAccount.isPending}
-        onPress={onDelete}
+        title="Update password"
+        variant="outline"
+        loading={changePassword.isPending}
+        onPress={() => void handleSubmit(onSubmit)()}
       />
-    </ScrollView>
+    </View>
   );
 }

@@ -19,7 +19,18 @@ export {
   favoriteKey,
   type ToggleFavoriteInput,
 } from "./hooks/use-favorites";
-export { useProfile, useUpdateProfile } from "./hooks/use-profile";
+export {
+  useProfile,
+  useUpdateProfile,
+  syncProfileToCms,
+} from "./hooks/use-profile";
+export {
+  useChangeEmail,
+  useResendEmailChange,
+  useChangePassword,
+  useSendReauthenticationCode,
+} from "./hooks/use-account";
+export type { ChangePasswordResult } from "./hooks/use-account";
 export { useDeleteAccount, SoleOwnerError } from "./hooks/use-delete-account";
 export { useUserTags } from "./hooks/use-tags";
 export type { UserTag } from "./hooks/use-tags";

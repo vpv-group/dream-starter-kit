@@ -1,0 +1,41 @@
+<!--
+  Supabase "Change email address" template.
+
+  Sent when a user calls supabase.auth.updateUser({ email }) — from /profile
+  (web + native) and from the paywall's anonymous→permanent conversion. With
+  "Secure email change" ON (config.toml `double_confirm_changes = true`, the
+  hosted default) GoTrue sends this template TWICE — once to the current
+  address ({{ .Email }}) and once to the new one ({{ .NewEmail }}) — each with
+  that recipient's own {{ .TokenHash }}, so one template serves both. The
+  change only takes effect once BOTH links are confirmed. (Anonymous users have
+  no current address, so they only get the new-address email.)
+
+  Links to /confirm-email?token_hash=…&type=email_change, verified by an
+  explicit verifyOtp call from the page — NOT {{ .ConfirmationURL }}, whose
+  one-time token gets burned by mail-scanner prefetch / navigation restarts
+  (same reasoning as confirmation.html). redirect_to carries the caller's
+  emailRedirectTo so the page can return the user where they started.
+
+  Hosted Supabase does not read this file — paste the same markup into the
+  Dashboard (Authentication -> Emails -> Change Email Address). See README -> Deploy.
+-->
+<h2>Confirm your email change</h2>
+
+<p>
+  We received a request to change the email address on your account from
+  <strong>{{ .Email }}</strong> to <strong>{{ .NewEmail }}</strong>.
+</p>
+<p>Follow this link to confirm the change:</p>
+<p>
+  <a
+    href="{{ .SiteURL }}/confirm-email?token_hash={{ .TokenHash }}&type=email_change&redirect_to={{ .RedirectTo }}"
+    >Confirm email change</a
+  >
+</p>
+
+<p>Or use this code: <strong>{{ .Token }}</strong></p>
+
+<p>
+  If you didn’t request this change, don’t confirm it — your email address
+  stays the same — and consider changing your password.
+</p>

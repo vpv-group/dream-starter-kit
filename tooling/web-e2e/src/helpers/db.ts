@@ -19,6 +19,9 @@ interface ProfileRow {
   id: string;
   display_name: string | null;
   is_staff: boolean;
+  email: string | null;
+  phone: string | null;
+  title: string | null;
 }
 
 interface ContentFavoriteRow {
@@ -57,7 +60,7 @@ export async function fetchProfile(
   id: string,
 ): Promise<ProfileRow | undefined> {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/profiles?id=eq.${id}&select=id,display_name,is_staff`,
+    `${SUPABASE_URL}/rest/v1/profiles?id=eq.${id}&select=id,display_name,is_staff,email,phone,title`,
     { headers: serviceHeaders() },
   );
   if (!res.ok) {

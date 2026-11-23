@@ -25,12 +25,22 @@ interface MailpitMessage {
  */
 export async function fetchAuthEmail(
   email: string,
-  { timeoutMs = 15_000 }: { timeoutMs?: number } = {},
+  {
+    timeoutMs = 15_000,
+    subject,
+  }: {
+    timeoutMs?: number;
+    /** Only match messages with this subject (e.g. "Confirm your email change"). */
+    subject?: string;
+  } = {},
 ): Promise<{ link: string; code: string | null }> {
   const deadline = Date.now() + timeoutMs;
+  const query = subject
+    ? `to:"${email}" subject:"${subject}"`
+    : `to:"${email}"`;
   for (;;) {
     const search = await fetch(
-      `${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:"${email}"`)}`,
+      `${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(query)}`,
     );
     if (search.ok) {
       // Mailpit returns newest-first.

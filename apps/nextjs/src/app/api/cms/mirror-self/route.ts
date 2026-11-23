@@ -1,9 +1,10 @@
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { slidingWindow } from "@acme/config";
 
 import { ensureCmsUser, ensureFreeTag } from "~/lib/cms/mirror-user";
-import { createClient } from "~/lib/supabase/server";
+import { getRequestClient } from "~/lib/supabase/request-client";
 
 // Per-user budget: each call runs a Payload find + up to three service-role tag
 // queries, so an unbounded caller could hammer the small serverless pool. In
@@ -39,20 +40,18 @@ function rateLimit(userId: string): boolean {
  * client calls this right after the session is established. See lib/cms/mirror-
  * user.ts and the (app) layout backstop.
  *
- * Authenticated by the caller's OWN Supabase session — it only ever mirrors the
- * authenticated user, so there is nothing to authorize beyond "is signed in".
+ * Authenticated by the caller's OWN Supabase session (cookie on web, Bearer
+ * token from Expo) — it only ever mirrors the authenticated user, so there is
+ * nothing to authorize beyond "is signed in".
  */
 export const dynamic = "force-dynamic";
 
-export async function POST() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+export async function POST(req: NextRequest) {
+  const auth = await getRequestClient(req);
+  if (!auth) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+  const { user, supabase } = auth;
 
   // Anonymous sessions are real auth.users under the anon-first identity model,
   // but they must NOT be mirrored: cms.users is for real members/staff, and a
@@ -70,6 +69,35 @@ export async function POST() {
     );
   }
 
+  // `{ syncProfile: true }` (sent by @acme/app's useUpdateProfile after a
+  // /profile save): copy the member's just-edited profile fields over the CMS
+  // row. Read from `profiles` through the caller's OWN RLS client — never
+  // trusted from the request body.
+  const body = (await req.json().catch(() => null)) as {
+    syncProfile?: unknown;
+  } | null;
+  let syncProfile:
+    | {
+        displayName: string | null;
+        phone: string | null;
+        jobTitle: string | null;
+      }
+    | undefined;
+  if (body?.syncProfile === true) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("display_name, phone, title")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile) {
+      syncProfile = {
+        displayName: profile.display_name,
+        phone: profile.phone,
+        jobTitle: profile.title,
+      };
+    }
+  }
+
   await ensureCmsUser({
     id: user.id,
     email: user.email,
@@ -77,6 +105,7 @@ export async function POST() {
       (user.user_metadata.display_name as string | undefined) ??
       (user.user_metadata.name as string | undefined),
     metadata: user.user_metadata,
+    syncProfile,
   });
   await ensureFreeTag(user.id);
 
