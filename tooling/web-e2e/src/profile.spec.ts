@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test";
 import { fetchAuthUserByEmail, fetchProfile } from "./helpers/db";
 import {
   fetchAuthEmail,
+  fetchEmailCode,
   signInWithPasswordUI,
   signUpAndConfirm,
 } from "./helpers/mailpit";
@@ -16,9 +17,9 @@ import {
  * /confirm-email?type=email_change).
  *
  * Each test signs up its own fresh, confirmed member (unique email), so the
- * suite is order-independent. Not covered here: the reauthentication-code
- * path of a password change — Supabase only asks for it when the session is
- * older than 24h, which a fresh e2e session never is.
+ * suite is order-independent. The password dialog always asks for the
+ * emailed reauthentication code first (GoTrue itself only verifies it for
+ * sessions older than 24h, which a fresh e2e session never is).
  */
 test.describe.configure({ mode: "default" });
 
@@ -76,7 +77,7 @@ test("an invalid phone number is rejected client-side", async ({ page }) => {
   await expect(page.getByText("Enter a valid phone number")).toBeVisible();
 });
 
-test("change password, then sign in with the new one", async ({
+test("change password: emailed reauthentication code first, then sign in with the new one", async ({
   page,
   browser,
 }) => {
@@ -85,16 +86,34 @@ test("change password, then sign in with the new one", async ({
   await signUpAndConfirm(page, { name: "Password Tester", email });
   await openProfile(page);
 
-  await page.getByLabel("New password", { exact: true }).fill("short");
-  await page.getByLabel("Confirm new password").fill("short");
-  await page.getByRole("button", { name: "Update password" }).click();
-  await expect(page.getByText(/Use at least \d+ characters/)).toBeVisible();
+  // Opening the dialog calls reauthenticate(), which emails a 6-digit code;
+  // the password fields only appear once a code is entered.
+  await page.getByRole("button", { name: "Change password" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByRole("heading", { name: "Check your email" }),
+  ).toBeVisible();
+  await expect(dialog.getByText(email)).toBeVisible();
+  await expect(dialog.getByLabel("New password")).toHaveCount(0);
+
+  const code = await fetchEmailCode(email, "Confirm it's you");
+  // A complete code advances to the password step (same as "Continue").
+  await dialog.getByLabel("Confirmation code").fill(code);
+  await expect(
+    dialog.getByRole("heading", { name: "Change password" }),
+  ).toBeVisible();
+
+  await dialog.getByLabel("New password", { exact: true }).fill("short");
+  await dialog.getByLabel("Confirm new password").fill("short");
+  await dialog.getByRole("button", { name: "Update password" }).click();
+  await expect(dialog.getByText(/Use at least \d+ characters/)).toBeVisible();
 
   const newPassword = "a-much-better-passw0rd";
-  await page.getByLabel("New password", { exact: true }).fill(newPassword);
-  await page.getByLabel("Confirm new password").fill(newPassword);
-  await page.getByRole("button", { name: "Update password" }).click();
+  await dialog.getByLabel("New password", { exact: true }).fill(newPassword);
+  await dialog.getByLabel("Confirm new password").fill(newPassword);
+  await dialog.getByRole("button", { name: "Update password" }).click();
   await expect(page.getByText("Password updated")).toBeVisible();
+  await expect(dialog).toBeHidden();
 
   const fresh = await browser.newContext({
     storageState: { cookies: [], origins: [] },
@@ -181,4 +200,23 @@ test("an invalid email-change link shows the expired state", async ({
     page.getByRole("heading", { name: "Link invalid or expired" }),
   ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(/email-change link is invalid/)).toBeVisible();
+});
+
+test("a GoTrue redirect message (default templates) shows as a top-center toast", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  // What Supabase's default email-change template redirects to after the
+  // first of the two links (lib/auth/url-message.ts).
+  const msg =
+    "Confirmation+link+accepted.+Please+proceed+to+confirm+link+sent+to+the+other+email";
+  await page.goto(`/?message=${msg}#message=${msg}&sb=`);
+
+  const toaster = page.locator(
+    '[data-sonner-toaster][data-y-position="top"][data-x-position="center"]',
+  );
+  await expect(
+    toaster.getByText(/Confirmation link accepted\. Open the link we sent/),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect.poll(() => page.url()).not.toMatch(/message=|sb=/);
 });

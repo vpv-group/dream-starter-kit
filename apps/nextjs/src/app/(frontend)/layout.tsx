@@ -15,6 +15,7 @@ import { themeDetectorScript, ThemeProvider } from "@acme/ui/theme";
 import { Toaster } from "@acme/ui/toast";
 
 import { Providers } from "~/app/providers";
+import { AuthUrlMessage } from "~/components/auth/auth-url-message";
 import { ThemeStyle } from "~/components/theme-style";
 import { getBranding } from "~/lib/payload";
 import { getSiteUrl } from "~/lib/site-url";
@@ -149,6 +150,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
         <ThemeProvider>
           <Providers>{props.children}</Providers>
           <Toaster />
+          <AuthUrlMessage />
         </ThemeProvider>
       </body>
     </html>

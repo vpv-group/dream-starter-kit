@@ -197,7 +197,7 @@ behave the same.
 | Display name, job title, avatar | `profiles` (RLS) + `user_metadata`, then synced to `cms.users` | Edit the CMS fields → written through to `profiles` + `user_metadata` |
 | Phone (contact only) | Same as above — `profiles.phone`, **not** a Supabase phone login (no SMS/OTP) | Contact tab → written through to `profiles.phone` |
 | Email | `supabase.auth.updateUser({ email })` — **secure email change** | `auth.admin.updateUserById(id, { email, email_confirm: true })` — applies immediately, no emails (admin-only field) |
-| Password | `supabase.auth.updateUser({ password })` — **secure password change** | Sidebar **Password** panel → `POST /api/cms/user-password` (admin role; never stored in the CMS) |
+| Password | **Change password** dialog: `reauthenticate()` emails a code → then `updateUser({ password, nonce })` | Sidebar **Password** panel → `POST /api/cms/user-password` (admin role; never stored in the CMS) |
 
 **Secure email change** (`double_confirm_changes = true` locally; on by default
 on hosted Supabase). Supabase emails a confirmation link to **both** the current
@@ -211,13 +211,19 @@ step", the second completes the change and returns to `/profile`. The
 the signup mirror (`ensureCmsUser`) brings `cms.users.email` in line — Supabase
 Auth is always the source of truth for the login email.
 
-**Secure password change** (`secure_password_change = true` locally; turn on
-**Authentication → Providers → Email → Secure password change** on hosted). A
-session older than 24 hours is rejected with `reauthentication_needed`; the UI
-then calls `supabase.auth.reauthenticate()` (emails a 6-digit code — template
-[`reauthentication.html`](../supabase/templates/reauthentication.html)) and
-retries with `updateUser({ password, nonce })`. Users who signed up without a
-password (magic link / OAuth) can set one here.
+**Password change** (`secure_password_change = true` locally; turn on
+**Authentication → Providers → Email → Secure password change** on hosted).
+The card shows a **Change password** button; the dialog (a step-by-step form on
+native) first calls `supabase.auth.reauthenticate()`, which emails a 6-digit
+code (template [`reauthentication.html`](../supabase/templates/reauthentication.html)),
+and shows the new/confirm password fields only after the code is entered. The
+code is sent as the `nonce` in `updateUser({ password, nonce })`. GoTrue
+verifies the nonce only for sessions older than 24 hours — a wrong or expired
+code then returns `reauthentication_not_valid` and the dialog goes back to the
+code step. For a fresh session Supabase accepts the password without checking
+the code, so there the step confirms the user can read the inbox but is not
+enforced on the server. Users who signed up without a password (magic link /
+OAuth) can set one here.
 
 **Admin write-through** (`payload/hooks/sync-user-to-supabase.ts`): a
 `beforeChange` hook on the Users collection diffs `email`, `displayName`,
@@ -229,6 +235,15 @@ bridge) don't trigger it (`context.skipSupabaseSync`, or no `req.user`).
 **Hosted setup:** paste the **Change Email Address** and **Reauthentication**
 templates into **Authentication → Emails** (see README → Deploy), and keep
 **Secure email change** on.
+
+**Default-template fallback.** A project still on Supabase's default templates
+sends GoTrue redirect-style links: the first email-change link redirects to the
+Site URL with `?message=Confirmation+link+accepted…#message=…&sb=`, and a failed
+link with `#error_description=…`. `<AuthUrlMessage />` (front-end root layout,
+`lib/auth/url-message.ts`) shows that status as a top-center toast on whatever
+page GoTrue lands on and strips the params. Pasting the kit templates is still
+preferred — the link then opens `/confirm-email` and its full "One more step"
+page.
 
 ## Auth events
 

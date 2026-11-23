@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { accountErrorMessage, isReauthenticationNeeded } from "../auth";
+import {
+  accountErrorMessage,
+  isReauthenticationInvalid,
+  isReauthenticationNeeded,
+} from "../auth";
 import {
   changeEmailSchema,
   makeChangePasswordSchema,
@@ -94,6 +98,16 @@ describe("account-settings error helpers", () => {
     expect(isReauthenticationNeeded({ code: "same_password" })).toBe(false);
     expect(isReauthenticationNeeded(new Error("x"))).toBe(false);
     expect(isReauthenticationNeeded(null)).toBe(false);
+  });
+
+  it("detects GoTrue's invalid reauthentication-code error", () => {
+    expect(
+      isReauthenticationInvalid({ code: "reauthentication_not_valid" }),
+    ).toBe(true);
+    expect(isReauthenticationInvalid({ code: "reauthentication_needed" })).toBe(
+      false,
+    );
+    expect(isReauthenticationInvalid(undefined)).toBe(false);
   });
 
   it("maps known error codes to friendly messages", () => {

@@ -16,6 +16,41 @@ interface MailpitMessage {
   HTML: string;
 }
 
+/** Poll Mailpit for the newest message to `email` (optionally by subject). */
+async function fetchLatestMessage(
+  email: string,
+  timeoutMs: number,
+  subject?: string,
+): Promise<MailpitMessage> {
+  const deadline = Date.now() + timeoutMs;
+  const query = subject
+    ? `to:"${email}" subject:"${subject}"`
+    : `to:"${email}"`;
+  for (;;) {
+    const search = await fetch(
+      `${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(query)}`,
+    );
+    if (search.ok) {
+      // Mailpit returns newest-first.
+      const { messages } = (await search.json()) as MailpitSearchResult;
+      const id = messages[0]?.ID;
+      if (id) {
+        const res = await fetch(`${MAILPIT_URL}/api/v1/message/${id}`);
+        if (!res.ok) {
+          throw new Error(`Mailpit message fetch failed: ${res.status}`);
+        }
+        return (await res.json()) as MailpitMessage;
+      }
+    }
+    if (Date.now() > deadline) {
+      throw new Error(
+        `No email for ${email} arrived in Mailpit (${MAILPIT_URL}) within ${timeoutMs}ms. Is \`supabase start\` running with email confirmations on?`,
+      );
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+}
+
 /**
  * Poll Mailpit for the newest message to `email` and return its auth content:
  * the action link (the app's `/confirm-email?token_hash=…` /
@@ -34,34 +69,25 @@ export async function fetchAuthEmail(
     subject?: string;
   } = {},
 ): Promise<{ link: string; code: string | null }> {
-  const deadline = Date.now() + timeoutMs;
-  const query = subject
-    ? `to:"${email}" subject:"${subject}"`
-    : `to:"${email}"`;
-  for (;;) {
-    const search = await fetch(
-      `${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(query)}`,
-    );
-    if (search.ok) {
-      // Mailpit returns newest-first.
-      const { messages } = (await search.json()) as MailpitSearchResult;
-      const id = messages[0]?.ID;
-      if (id) {
-        const res = await fetch(`${MAILPIT_URL}/api/v1/message/${id}`);
-        if (!res.ok) {
-          throw new Error(`Mailpit message fetch failed: ${res.status}`);
-        }
-        const message = (await res.json()) as MailpitMessage;
-        return parseAuthEmail(message, email);
-      }
-    }
-    if (Date.now() > deadline) {
-      throw new Error(
-        `No email for ${email} arrived in Mailpit (${MAILPIT_URL}) within ${timeoutMs}ms. Is \`supabase start\` running with email confirmations on?`,
-      );
-    }
-    await new Promise((r) => setTimeout(r, 500));
-  }
+  return parseAuthEmail(
+    await fetchLatestMessage(email, timeoutMs, subject),
+    email,
+  );
+}
+
+/**
+ * The 6-digit code from the newest code-only email to `email` with `subject`
+ * (e.g. the "Confirm it's you" reauthentication email, which has no link).
+ */
+export async function fetchEmailCode(
+  email: string,
+  subject: string,
+  timeoutMs = 15_000,
+): Promise<string> {
+  const message = await fetchLatestMessage(email, timeoutMs, subject);
+  const code = /\b\d{6}\b/.exec(message.Text)?.[0];
+  if (!code) throw new Error(`Email "${subject}" to ${email} has no code.`);
+  return code;
 }
 
 function parseAuthEmail(
