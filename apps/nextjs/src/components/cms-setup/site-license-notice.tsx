@@ -1,13 +1,13 @@
-import { ShieldCheck } from "lucide-react";
+import { ExternalLink, ShieldCheck } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 
-const DOCS_URL =
-  "https://github.com/vpv-group/dream-starter-kit/blob/main/docs/MODULES.md#site-license";
+const TERMS_URL = "https://www.meetdream.com/legal";
 
 /**
- * Founder disclosure on /cms-setup (docs/MODULES.md → Site license): after
- * setup this site registers with meetdream.com for its free license key.
+ * Founder disclosure on /sign-up and /cms-setup (docs/MODULES.md → Site
+ * license): after setup this site registers with meetdream.com for its free
+ * license key, under the Dream Starter Kit terms.
  */
 export function SiteLicenseNotice({ domain }: { domain: string | null }) {
   return (
@@ -23,15 +23,20 @@ export function SiteLicenseNotice({ domain }: { domain: string | null }) {
               (<code>{domain}</code>)
             </>
           ) : null}{" "}
-          will be used to create a free Dream Starter Kit license key on
-          meetdream.com, so this site gets free kit updates for life. Admin and
-          staff emails are added as they join. No emails are sent to them.
-        </p>
-        <p>
-          Set <code>DREAM_TELEMETRY=off</code> to opt out.{" "}
-          <a href={DOCS_URL} target="_blank" rel="noreferrer">
-            Learn more
+          will be used to create a free Dream Starter Kit license key, so this
+          site gets free kit updates for life. By signing up, you agree to the
+          Dream Starter Kit terms at{" "}
+          <a
+            href={TERMS_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="text-foreground inline-flex items-center gap-1 underline underline-offset-4"
+          >
+            meetdream.com/legal
+            <ExternalLink aria-hidden className="size-3.5" />
+            <span className="sr-only">(opens in a new tab)</span>
           </a>
+          .
         </p>
       </AlertDescription>
     </Alert>
