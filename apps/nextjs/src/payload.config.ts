@@ -147,6 +147,9 @@ export default buildConfig({
       // default logout can't end the session. Replace it with one that signs out
       // of Supabase and returns to the host root. See payload/components/LogoutButton.tsx.
       logout: { Button: "~/payload/components/LogoutButton#LogoutButton" },
+      // Sidebar with accordion groups: one open at a time, and the group of
+      // the current page open on load. See payload/components/AdminNav.tsx.
+      Nav: "~/payload/components/AdminNav#AdminNav",
       // /admin/modules — install/update/remove modules (catalog, GitHub
       // URL, zip upload) by dispatching the module-ops workflow. See
       // payload/components/ModulesView.tsx (MODULES-PLAN.md §6).
