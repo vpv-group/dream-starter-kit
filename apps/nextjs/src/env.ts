@@ -80,7 +80,7 @@ export const env = createEnv({
     S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
     S3_BUCKET: z.string().min(1).optional(),
     // Module framework admin ops (docs/MODULES-PLAN.md §6). Without
-    // GITHUB_OPS_TOKEN the /admin/modules page is read-only (it shows
+    // GITHUB_OPS_TOKEN the admin Modules page is read-only (it shows
     // copy-paste CLI instructions instead of dispatching workflows).
     GITHUB_OPS_TOKEN: z.string().min(1).optional(),
     // owner/repo; defaults from the Vercel-injected repo metadata below.
@@ -90,7 +90,7 @@ export const env = createEnv({
       .optional(),
     VERCEL_GIT_REPO_OWNER: z.string().min(1).optional(),
     VERCEL_GIT_REPO_SLUG: z.string().min(1).optional(),
-    // Overrides the catalog the /admin/modules store reads. When unset it
+    // Overrides the catalog the admin Modules page reads. When unset it
     // defaults to `${DREAM_REGISTRY_URL}/catalog?schema=2` (see
     // lib/mod/dream-registry.ts) — a self-hoster who sets a value keeps it.
     MOD_CATALOG_URL: z.url().optional(),

@@ -17,7 +17,7 @@ const DOCS_URL =
  * Top of the /admin dashboard (Payload `beforeDashboard`): until module ops is
  * configured, explains how to set it up. Module ops opens PRs for module and
  * kit updates and is required for paid modules; without it the daily
- * workflow skips and /admin/modules is read-only. Server component — reads
+ * workflow skips and the Modules page is read-only. Server component — reads
  * server env, ships no client JS, renders nothing once configured.
  */
 export async function ModOpsSetupAlert() {
@@ -40,8 +40,9 @@ export async function ModOpsSetupAlert() {
           <p>
             Module ops opens pull requests for module and Dream Starter Kit
             updates, and installs modules from{" "}
-            <Link href="/admin/modules">Modules</Link>. Paid modules stay off
-            until it is set up. Until then the daily update check is skipped.
+            <Link href="/admin/collections/kit-modules">Modules</Link>. Paid
+            modules stay off until it is set up. Until then the daily update
+            check is skipped.
           </p>
           <ol className="mt-2 list-decimal space-y-1 pl-5">
             <li>

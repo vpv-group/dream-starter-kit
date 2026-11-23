@@ -182,3 +182,152 @@ html[data-theme="dark"] {
 [data-theme="dark"] .dream-brand-logo__dark {
   display: block;
 }
+
+/* ── 4. Modules page — list + right sidebar ─────────────────────────────────── */
+/*
+ * /admin/collections/kit-modules is Payload's list view plus module management
+ * (payload/components/KitModulesPanels.tsx). Its `afterList` slot renders the
+ * catalog/operations (`__main`) and an `<aside>` (`__sidebar`) as siblings of
+ * the list's `__wrap`; this grid puts the aside in a right column styled like
+ * Payload's document sidebar (border, width, gutters), and stacks it below
+ * the content on narrow screens.
+ */
+.collection-list--kit-modules {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--doc-sidebar-width, 300px);
+}
+.collection-list--kit-modules > .collection-list__wrap,
+.collection-list--kit-modules > .kit-modules-page__main {
+  grid-column: 1;
+  min-width: 0;
+}
+/* A wide table scrolls inside its column instead of running under the aside;
+ * the short columns get a smaller minimum than Payload's 150px so the default
+ * columns fit beside it with the nav open. */
+.collection-list--kit-modules .collection-list__tables {
+  overflow-x: auto;
+}
+.collection-list--kit-modules :is(#heading-version, .cell-version),
+.collection-list--kit-modules :is(#heading-enabled, .cell-enabled),
+.collection-list--kit-modules :is(#heading-slug, .cell-slug) {
+  min-width: 90px;
+}
+.collection-list--kit-modules :is(#heading-actions, .cell-actions) {
+  min-width: 0;
+}
+.kit-modules-page__sidebar {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--base) * 2);
+  padding: calc(var(--base) * 1.5) var(--sidebar-gutter-h-right, var(--base))
+    var(--spacing-view-bottom) var(--sidebar-gutter-h-left, var(--base));
+  border-left: 1px solid var(--theme-elevation-100);
+}
+.kit-modules-page__sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--base) * 0.75);
+}
+.kit-modules-page__sidebar-section h4,
+.kit-modules-page__section h3 {
+  margin: 0;
+}
+.kit-modules-page__sidebar-section .field-type {
+  margin: 0;
+}
+.kit-modules-page__main {
+  padding-bottom: var(--spacing-view-bottom);
+}
+.kit-modules-page__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base);
+  margin-top: calc(var(--base) * 2);
+}
+.kit-modules-page__muted {
+  margin: 0;
+  color: var(--theme-elevation-500);
+  font-size: 13px;
+}
+.kit-modules-cell {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.kit-modules-actions {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.kit-modules-remove.btn {
+  color: var(--theme-error-500);
+}
+.kit-modules-catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--base);
+}
+.kit-modules-catalog__card {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--base) * 0.5);
+  padding: var(--base);
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: var(--style-radius-m);
+  background: var(--theme-elevation-50);
+}
+.kit-modules-catalog__card p {
+  margin: 0;
+  color: var(--theme-elevation-650);
+}
+.kit-modules-catalog__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.kit-modules-catalog__action {
+  margin-top: auto;
+}
+.kit-modules-ops {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--base) * 0.5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kit-modules-ops li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Payload's .dropzone is a left-aligned row flexbox; fill it so the text and
+ * button center in the box. */
+.kit-modules-dropzone__inner {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--base) * 0.5);
+  padding: var(--base) 0;
+  text-align: center;
+  color: var(--theme-elevation-650);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1024px) {
+  .collection-list--kit-modules {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kit-modules-page__sidebar {
+    grid-column: 1;
+    grid-row: auto;
+    border-left: 0;
+    border-top: 1px solid var(--theme-elevation-100);
+    padding-left: var(--gutter-h);
+    padding-right: var(--gutter-h);
+  }
+}

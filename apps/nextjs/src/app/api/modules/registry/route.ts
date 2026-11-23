@@ -8,7 +8,7 @@ import { modulesLock } from "~/mod/lock.generated";
 import { modInstalled } from "~/mod/registry.data.generated";
 
 /**
- * Install state for the /admin/modules page: the BUNDLED lock (readable on
+ * Install state for the admin Modules page: the BUNDLED lock (readable on
  * serverless; a deploy containing a new version is the honest "Active"
  * signal), the generated registry, and the catalog URL. Staff-gated.
  */

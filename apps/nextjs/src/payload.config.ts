@@ -148,11 +148,12 @@ export default buildConfig({
       // of Supabase and returns to the host root. See payload/components/LogoutButton.tsx.
       logout: { Button: "~/payload/components/LogoutButton#LogoutButton" },
       // /admin/modules — install/update/remove modules (catalog, GitHub
-      // URL, zip upload) by dispatching the module-ops workflow. See
-      // payload/components/ModulesView.tsx (MODULES-PLAN.md §6).
+      // URL, zip upload) now lives on the Modules list itself
+      // (/admin/collections/kit-modules, see collections/KitModules.ts); this
+      // redirect keeps old links and bookmarks working.
       views: {
         modules: {
-          Component: "~/payload/components/ModulesView#ModulesView",
+          Component: "~/payload/components/ModulesRedirect#ModulesRedirect",
           path: "/modules",
         },
       },

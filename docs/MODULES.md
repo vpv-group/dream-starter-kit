@@ -197,10 +197,15 @@ tombstones the lock (pinned migration versions are never reused).
 
 ## Admin panel + automatic updates
 
-`/admin/modules` lists installed modules (from the **bundled** lock — an
-honest "this deploy contains it" signal), the curated catalog
-(`MOD_CATALOG_URL`, format: `docs/module-catalog.example.json`),
-install-from-GitHub and verified zip-upload forms, and live operations. Every
+The **Modules** page (`/admin/collections/kit-modules`; the old
+`/admin/modules` URL redirects there) is the installed-modules list itself:
+Payload's table of installed modules (enable/disable, search, columns), with
+per-row origin, update and license status, **Update** and **Remove**
+(confirmed in a modal; install state comes from the **bundled** lock — an
+honest "this deploy contains it" signal). Below it are the curated catalog
+(`MOD_CATALOG_URL`, format: `docs/module-catalog.example.json`) and live
+operations; the right sidebar holds the install-from-GitHub and verified
+zip-upload forms. Every
 mutation dispatches `.github/workflows/module-ops.yml`, which runs the same
 CLI on a runner, enforces **path confinement** (the op may only write
 `modules/<slug>/**` + known sync outputs), and opens a labeled PR. A daily
@@ -217,7 +222,7 @@ AND the `GITHUB_OPS_TOKEN` env (plus `GITHUB_REPO` off Vercel); enable
 
 **Without the token, module ops is off.** Every job in `module-ops.yml` is
 *skipped* (a preflight job leaves a notice explaining why) instead of failing,
-`/admin/modules` is read-only, and **paid modules are disabled everywhere**:
+the Modules page is read-only, and **paid modules are disabled everywhere**:
 the admin panel hides them and never contacts the registry, its API routes
 refuse `dream:` installs and paid updates (`403 paid_modules_disabled`), and
 the CLI refuses `pnpm mod add|update` of a registry module until
@@ -303,7 +308,7 @@ pnpm mod status --check        # update + license state per module
    the CLI. The workflow masks it in logs (`::add-mask::`); the CLI never
    prints it — it travels only in the `X-Dream-License-Key` header.
 4. Optional: `DREAM_REGISTRY_URL` points at a different registry. The
-   `/admin/modules` catalog defaults to `${DREAM_REGISTRY_URL}/catalog?schema=2`;
+   Modules page catalog defaults to `${DREAM_REGISTRY_URL}/catalog?schema=2`;
    a self-hoster who sets `MOD_CATALOG_URL` keeps their own catalog.
 
 **How it works.** `mod add dream:<slug>` sends
@@ -314,7 +319,7 @@ URL **immediately** (it expires in minutes), verifies its `sha256` before
 anything touches disk, and then runs the normal zip install path. The lock
 records a `{ type: "registry", registry, slug, version, sha256 }` source, so
 updates are the same pristine-base three-way merge as GitHub sources — local
-edits survive. In `/admin/modules`, paid catalog cards show "Included in
+edits survive. On the Modules page, paid catalog cards show "Included in
 \<plan\>" with **Install** when the key is entitled (dispatching
 `op: add, source: dream:<slug>` through the same PR pipeline) and
 **Get access** (the module's pricing page) when it isn't or no key is set;
