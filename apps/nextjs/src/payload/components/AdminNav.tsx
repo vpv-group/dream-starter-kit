@@ -107,10 +107,14 @@ export async function AdminNav(props: ServerProps & { req?: PayloadRequest }) {
     })),
   }));
 
-  const navPreferences = await getNavPreferences(req);
-  const preferredOpenGroup =
-    groups.find((group) => navPreferences?.groups?.[group.label]?.open)
-      ?.label ?? null;
+  // The group to open when no page in the nav is active (e.g. the dashboard):
+  // the one the user last opened, or, before they have toggled any group,
+  // the first one (Payload's default nav starts with every group open).
+  const savedGroups = (await getNavPreferences(req))?.groups ?? {};
+  const hasSavedGroups = groups.some((group) => group.label in savedGroups);
+  const preferredOpenGroup = hasSavedGroups
+    ? (groups.find((group) => savedGroups[group.label]?.open)?.label ?? null)
+    : (groups[0]?.label ?? null);
 
   const LogoutComponent = RenderServerComponent({
     clientProps,
