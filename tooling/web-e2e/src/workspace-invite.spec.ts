@@ -23,7 +23,7 @@ async function signUpOwner(page: Page, email: string, workspaceName: string) {
   await signUpToCheckEmail(page, { name: "Owner Person", email });
   await page.getByRole("button", { name: "Enter code manually" }).click();
   const { code } = await fetchAuthEmail(email);
-  await page.getByPlaceholder("Enter code").fill(code ?? "");
+  await page.getByLabel("Login code").fill(code ?? "");
   await page.getByRole("button", { name: "Continue with login code" }).click();
   await page.waitForURL(/\/onboarding\/workspace/, { timeout: 60_000 });
   await page.getByLabel("Workspace name").fill(workspaceName);
@@ -122,7 +122,7 @@ test("an invite link lets a new person join the workspace", async ({
   });
   await joiner.getByRole("button", { name: "Enter code manually" }).click();
   const { code } = await fetchAuthEmail(joinerEmail);
-  await joiner.getByPlaceholder("Enter code").fill(code ?? "");
+  await joiner.getByLabel("Login code").fill(code ?? "");
   await joiner
     .getByRole("button", { name: "Continue with login code" })
     .click();

@@ -26,7 +26,7 @@ test("a Teams-mode sign-up names a workspace and lands in it", async ({
   await page.getByRole("button", { name: "Enter code manually" }).click();
   const { code } = await fetchAuthEmail(email);
   expect(code).toBeTruthy();
-  await page.getByPlaceholder("Enter code").fill(code ?? "");
+  await page.getByLabel("Login code").fill(code ?? "");
   await page.getByRole("button", { name: "Continue with login code" }).click();
 
   // /welcome → Name your workspace (no membership yet, business mode).
