@@ -32,6 +32,11 @@ import { MetaTitleComponent as MetaTitleComponent_a8a977ebc872c5d5ea7ee689724c08
 import { MetaDescriptionComponent as MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { MetaImageComponent as MetaImageComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { PreviewComponent as PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
+import { KitModuleVersionCell as KitModuleVersionCell_8a0c373e25bcbfee5f621baab82768a1 } from '~/payload/components/KitModulesCells'
+import { KitModuleSourceCell as KitModuleSourceCell_8a0c373e25bcbfee5f621baab82768a1 } from '~/payload/components/KitModulesCells'
+import { KitModuleActionsCell as KitModuleActionsCell_8a0c373e25bcbfee5f621baab82768a1 } from '~/payload/components/KitModulesCells'
+import { KitModulesExtras as KitModulesExtras_81f5b03ca799d76d61a590d189379dcc } from '~/payload/components/KitModulesPanels'
+import { KitModulesNotices as KitModulesNotices_81f5b03ca799d76d61a590d189379dcc } from '~/payload/components/KitModulesPanels'
 import { FolderTypeField as FolderTypeField_2b8867833a34864a02ddf429b0728a40 } from '@payloadcms/next/client'
 import { RegenerateAllImages as RegenerateAllImages_5552ed3b6af65aa0c30dbc3814b71069 } from '~/payload/components/RegenerateAllImages'
 import { LogoutButton as LogoutButton_6c9a924bbf94f383766dffe3be60632c } from '~/payload/components/LogoutButton'
@@ -41,7 +46,7 @@ import { SeedGate as SeedGate_579c462e1297910adc75e16d2ce018f6 } from '~/payload
 import { ModOpsSetupAlert as ModOpsSetupAlert_a64136bce737fc32670ee2514b18a097 } from '~/payload/components/ModOpsSetupAlert'
 import { DreamSiteSync as DreamSiteSync_951a3f05120106343841bbe15f165aff } from '~/payload/components/DreamSiteSync'
 import { ThemeStyleProvider as ThemeStyleProvider_1ee7cf46bd3ef3bd11106074673f2adc } from '~/payload/components/ThemeStyleProvider'
-import { ModulesView as ModulesView_a1e44aff242861345c47d83048f2d37a } from '~/payload/components/ModulesView'
+import { ModulesRedirect as ModulesRedirect_283ec03cc3aca34104fd804a76e6c591 } from '~/payload/components/ModulesRedirect'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
 
@@ -81,6 +86,11 @@ export const importMap = {
   "@payloadcms/plugin-seo/client#MetaDescriptionComponent": MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860,
   "@payloadcms/plugin-seo/client#MetaImageComponent": MetaImageComponent_a8a977ebc872c5d5ea7ee689724c0860,
   "@payloadcms/plugin-seo/client#PreviewComponent": PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860,
+  "~/payload/components/KitModulesCells#KitModuleVersionCell": KitModuleVersionCell_8a0c373e25bcbfee5f621baab82768a1,
+  "~/payload/components/KitModulesCells#KitModuleSourceCell": KitModuleSourceCell_8a0c373e25bcbfee5f621baab82768a1,
+  "~/payload/components/KitModulesCells#KitModuleActionsCell": KitModuleActionsCell_8a0c373e25bcbfee5f621baab82768a1,
+  "~/payload/components/KitModulesPanels#KitModulesExtras": KitModulesExtras_81f5b03ca799d76d61a590d189379dcc,
+  "~/payload/components/KitModulesPanels#KitModulesNotices": KitModulesNotices_81f5b03ca799d76d61a590d189379dcc,
   "@payloadcms/next/client#FolderTypeField": FolderTypeField_2b8867833a34864a02ddf429b0728a40,
   "~/payload/components/RegenerateAllImages#RegenerateAllImages": RegenerateAllImages_5552ed3b6af65aa0c30dbc3814b71069,
   "~/payload/components/LogoutButton#LogoutButton": LogoutButton_6c9a924bbf94f383766dffe3be60632c,
@@ -90,7 +100,7 @@ export const importMap = {
   "~/payload/components/ModOpsSetupAlert#ModOpsSetupAlert": ModOpsSetupAlert_a64136bce737fc32670ee2514b18a097,
   "~/payload/components/DreamSiteSync#DreamSiteSync": DreamSiteSync_951a3f05120106343841bbe15f165aff,
   "~/payload/components/ThemeStyleProvider#ThemeStyleProvider": ThemeStyleProvider_1ee7cf46bd3ef3bd11106074673f2adc,
-  "~/payload/components/ModulesView#ModulesView": ModulesView_a1e44aff242861345c47d83048f2d37a,
+  "~/payload/components/ModulesRedirect#ModulesRedirect": ModulesRedirect_283ec03cc3aca34104fd804a76e6c591,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,
   "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24
 }
