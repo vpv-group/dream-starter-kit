@@ -5,6 +5,7 @@ import { fetchAuthUserByEmail, fetchProfile } from "./helpers/db";
 import {
   fetchAuthEmail,
   fetchEmailCode,
+  fetchEmailText,
   signInWithPasswordUI,
   signUpAndConfirm,
 } from "./helpers/mailpit";
@@ -25,6 +26,12 @@ test.describe.configure({ mode: "default" });
 
 const uniqueEmail = (tag: string) =>
   `e2e+${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@example.com`;
+
+/** Sonner's top-center toaster (account confirmations land there). */
+const topCenterToasts = (page: Page) =>
+  page.locator(
+    '[data-sonner-toaster][data-y-position="top"][data-x-position="center"]',
+  );
 
 async function openProfile(page: Page) {
   await page.goto("/profile");
@@ -47,7 +54,14 @@ test("edit profile metadata (name, job title, phone) and keep it after reload", 
   await page.getByLabel("Job title").fill("Analyst");
   await page.getByLabel("Phone").fill("+1 (555) 010-0199");
   await page.getByRole("button", { name: "Save profile" }).click();
-  await expect(page.getByText("Profile saved")).toBeVisible();
+  // A phone change is confirmed prominently + by email (security notice,
+  // payload/hooks/notify-contact-change.ts via SMTP → Mailpit).
+  await expect(
+    topCenterToasts(page).getByText("Phone number changed"),
+  ).toBeVisible();
+  const notice = await fetchEmailText(email, "Your phone number was changed");
+  expect(notice).toContain("A phone number ending in 0199 was added");
+  expect(notice).not.toContain("010-0199");
 
   await page.reload();
   await expect(page.getByLabel("Display name")).toHaveValue("Ada Lovelace");
@@ -112,7 +126,14 @@ test("change password: emailed reauthentication code first, then sign in with th
   await dialog.getByLabel("New password", { exact: true }).fill(newPassword);
   await dialog.getByLabel("Confirm new password").fill(newPassword);
   await dialog.getByRole("button", { name: "Update password" }).click();
-  await expect(page.getByText("Password updated")).toBeVisible();
+  await expect(
+    topCenterToasts(page).getByText("Password changed"),
+  ).toBeVisible();
+  // Supabase's "Password changed" security notification
+  // (supabase/templates/password_changed_notification.html).
+  expect(await fetchEmailText(email, "Your password was changed")).toContain(
+    "was just changed",
+  );
   await expect(dialog).toBeHidden();
 
   const fresh = await browser.newContext({
@@ -162,12 +183,18 @@ test("secure email change: confirm on both addresses, then sign in with the new 
   await fresh.close();
   expect((await fetchAuthUserByEmail(oldEmail))?.email).toBe(oldEmail);
 
-  // Second link completes it and returns to /profile showing the new email.
+  // Second link completes it and returns to /profile showing the new email,
+  // confirmed by the "Email address changed" toast (?notice=email-changed,
+  // stripped from the URL once shown).
   await page.goto(toNew.link);
   await page.waitForURL(/\/profile/, { timeout: 60_000 });
   await expect(page.getByTestId("current-email")).toHaveText(newEmail, {
     timeout: 30_000,
   });
+  await expect(
+    topCenterToasts(page).getByText(/Email address changed/),
+  ).toBeVisible();
+  await expect.poll(() => page.url()).not.toContain("notice=");
 
   const user = await fetchAuthUserByEmail(newEmail);
   expect(user).toBeDefined();
@@ -219,4 +246,15 @@ test("a GoTrue redirect message (default templates) shows as a top-center toast"
     toaster.getByText(/Confirmation link accepted\. Open the link we sent/),
   ).toBeVisible({ timeout: 30_000 });
   await expect.poll(() => page.url()).not.toMatch(/message=|sb=/);
+});
+
+test("arbitrary ?message= text is never shown as a toast", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto(
+    "/?message=Call+us+at+555-0100+to+verify#message=Call+us&sb=",
+  );
+  await expect
+    .poll(() => page.url(), { timeout: 30_000 })
+    .not.toContain("message=");
+  await expect(page.getByText(/Call us/)).toHaveCount(0);
 });

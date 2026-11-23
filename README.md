@@ -448,10 +448,16 @@ app needs — including `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_K
      older than 24h. Turn on **Authentication → Providers → Email → Secure password
      change** to match local (`secure_password_change = true`). See
      [docs/AUTH.md → Account settings](./docs/AUTH.md).
+   - **Security notifications → Password changed** ← [`supabase/templates/password_changed_notification.html`](./supabase/templates/password_changed_notification.html)
+     — turn it on (local: `[auth.email.notification.password_changed]`); it tells a
+     member their password was just changed.
 
    Also consider custom SMTP (**Authentication → Emails → SMTP**): Supabase's built-in
    sender is heavily rate-limited (~2 emails/hour) and meant for testing only — set it
-   up before relying on workspace invites, which each send an email.
+   up before relying on workspace invites, which each send an email. Set the same
+   provider's credentials as the app's `SMTP_*` env (`.env.example` → "Outgoing
+   email") for the emails the app sends itself (phone-changed and admin
+   password-reset notices).
 
    > **Signed up before configuring the URLs?** The first confirmation link will have
    > redirected to `localhost` (or expired on a retry) — the account is fine. The

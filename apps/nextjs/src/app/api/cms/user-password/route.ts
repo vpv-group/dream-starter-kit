@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 import { makePasswordSchema } from "@acme/app";
 
 import { getPayloadClient } from "~/lib/cms/payload-client";
+import { passwordSetByAdminEmail } from "~/lib/email/security-notices";
 import { getAuthSettings } from "~/lib/payload";
 import { createAdminClient } from "~/lib/supabase/admin";
 
@@ -79,5 +80,22 @@ export async function POST(request: Request) {
   payload.logger.info(
     `[user-password] admin ${String(user.id)} set the password for ${supabaseUserId}`,
   );
+
+  // Tell the account owner (Supabase's own "password changed" notice covers a
+  // member's self-service change, not an admin reset). Best-effort.
+  if (doc.email) {
+    try {
+      await payload.sendEmail({
+        to: doc.email,
+        ...passwordSetByAdminEmail({ email: doc.email }),
+      });
+    } catch (e) {
+      payload.logger.error(
+        `[user-password] notice email failed for ${supabaseUserId}: ${
+          e instanceof Error ? e.message : String(e)
+        }`,
+      );
+    }
+  }
   return NextResponse.json({ ok: true });
 }

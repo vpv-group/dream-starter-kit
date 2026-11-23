@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { postgresAdapter } from "@payloadcms/db-postgres";
+import { nodemailerAdapter } from "@payloadcms/email-nodemailer";
 import { formBuilderPlugin } from "@payloadcms/plugin-form-builder";
 import { nestedDocsPlugin } from "@payloadcms/plugin-nested-docs";
 import { seoPlugin } from "@payloadcms/plugin-seo";
@@ -9,11 +10,13 @@ import { s3Storage } from "@payloadcms/storage-s3";
 import { buildConfig } from "payload";
 import sharp from "sharp";
 
+import type { SmtpEnv } from "./lib/email/smtp";
 import type { S3ConfigSource } from "./lib/s3-config";
 import { resolveCmsCredentials } from "./lib/cms/derived-credentials";
 import { generateMediaFileURL } from "./lib/cms/media-url";
 import { noDocumentLock } from "./lib/cms/no-document-lock";
 import { pgConnectionOptions } from "./lib/db/bootstrap-core";
+import { resolveSmtpConfig } from "./lib/email/smtp";
 import { resolveS3Config } from "./lib/s3-config";
 import {
   modCollections,
@@ -74,6 +77,11 @@ const cmsCredentials = resolveCmsCredentials();
 // Postgres") before throwing; silence the logger for that expected failure so
 // build output stays clean. NEXT_PHASE is set by Next itself during the build.
 const buildPhase = process.env.NEXT_PHASE === "phase-production-build";
+
+// Outgoing email for the app's own notices (e.g. the phone-changed security
+// email, payload/hooks/notify-contact-change.ts) via SMTP_* — see
+// lib/email/smtp.ts. Unset → Payload's default: emails are logged, not sent.
+const smtp = resolveSmtpConfig(process.env as SmtpEnv);
 
 // S3 (Supabase Storage) config — dedicated keys or derived Supabase
 // session-token mode (see lib/s3-config.ts). Falls back to empty credentials
@@ -315,6 +323,7 @@ export default buildConfig({
     migrationDir: path.resolve(dirname, "payload/migrations"),
   }),
   sharp,
+  ...(smtp ? { email: nodemailerAdapter(smtp) } : {}),
   plugins: [
     s3Storage({
       // photos + audio are upload collections in their own right (the app's

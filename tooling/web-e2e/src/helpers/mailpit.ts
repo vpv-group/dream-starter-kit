@@ -76,6 +76,18 @@ export async function fetchAuthEmail(
 }
 
 /**
+ * The plain-text body of the newest email to `email` with `subject` — for
+ * notice emails with no link or code (e.g. "Your phone number was changed").
+ */
+export async function fetchEmailText(
+  email: string,
+  subject: string,
+  timeoutMs = 15_000,
+): Promise<string> {
+  return (await fetchLatestMessage(email, timeoutMs, subject)).Text;
+}
+
+/**
  * The 6-digit code from the newest code-only email to `email` with `subject`
  * (e.g. the "Confirm it's you" reauthentication email, which has no link).
  */

@@ -49,9 +49,22 @@ export function ProfileDetailsCard() {
   });
 
   async function onSave(values: UpdateProfileInput) {
+    const phoneChanged =
+      (values.phone ?? "").trim() !== (profile.data?.phone ?? "").trim();
     try {
       await updateProfile.mutateAsync(values);
-      toast.success("Profile saved");
+      if (phoneChanged) {
+        // Security-relevant: confirm it prominently (an email notice is sent
+        // too — payload/hooks/notify-contact-change.ts).
+        toast.success(
+          values.phone?.trim()
+            ? "Phone number changed"
+            : "Phone number removed",
+          { position: "top-center" },
+        );
+      } else {
+        toast.success("Profile saved");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed");
     }

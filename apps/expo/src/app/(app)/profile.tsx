@@ -42,7 +42,7 @@ const msg = (e: unknown) =>
 // Email-change links open the web app's /confirm-email (the email template
 // uses the Supabase Site URL), which then returns here: /profile on the web.
 const emailRedirectTo = clientEnv.CMS_URL
-  ? `${clientEnv.CMS_URL.replace(/\/+$/, "")}/profile`
+  ? `${clientEnv.CMS_URL.replace(/\/+$/, "")}/profile?notice=email-changed`
   : undefined;
 
 function SectionTitle({ children }: { children: string }) {
@@ -169,9 +169,20 @@ function ProfileSection() {
   });
 
   async function onSave(values: UpdateProfileInput) {
+    const phoneChanged =
+      (values.phone ?? "").trim() !== (profile.data?.phone ?? "").trim();
     try {
       await updateProfile.mutateAsync(values);
-      Alert.alert("Saved", "Your profile was updated.");
+      if (phoneChanged) {
+        Alert.alert(
+          values.phone?.trim()
+            ? "Phone number changed"
+            : "Phone number removed",
+          "Your contact number was updated.",
+        );
+      } else {
+        Alert.alert("Saved", "Your profile was updated.");
+      }
     } catch (e) {
       Alert.alert("Save failed", msg(e));
     }
@@ -366,7 +377,10 @@ function PasswordSection({ minLength }: { minLength: number }) {
     try {
       await changePassword.mutateAsync({ password, nonce: code });
       close();
-      Alert.alert("Password updated", "Use your new password next time.");
+      Alert.alert(
+        "Password changed",
+        "Use your new password the next time you sign in.",
+      );
     } catch (e) {
       if (isReauthenticationInvalid(e)) {
         setCode("");

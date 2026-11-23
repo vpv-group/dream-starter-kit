@@ -36,6 +36,7 @@
     "@hookform/resolvers": "catalog:",
     "@marsidev/react-turnstile": "^1.6.3",
     "@payloadcms/db-postgres": "catalog:",
+    "@payloadcms/email-nodemailer": "catalog:",
     "@payloadcms/live-preview-react": "catalog:",
     "@payloadcms/next": "catalog:",
     "@payloadcms/plugin-form-builder": "catalog:",

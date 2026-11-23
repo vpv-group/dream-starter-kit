@@ -32,8 +32,13 @@ import {
 import { Input } from "~/components/ui/input";
 import { getSiteUrl } from "~/lib/site-url";
 
-/** Where the email-change confirmation link returns the user (via /confirm-email). */
-const returnTo = () => `${getSiteUrl()}/profile`;
+/**
+ * Where the email-change confirmation returns the user once BOTH links are
+ * confirmed (via /confirm-email, or GoTrue's redirect with default templates).
+ * `notice=email-changed` makes <AuthUrlMessage /> show the "Email address
+ * changed" toast (lib/auth/url-message.ts).
+ */
+const returnTo = () => `${getSiteUrl()}/profile?notice=email-changed`;
 
 /**
  * Change the sign-in email. Supabase's secure email change emails a link to
