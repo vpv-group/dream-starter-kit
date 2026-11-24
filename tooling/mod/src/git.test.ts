@@ -3,7 +3,13 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { commitModuleTree, currentBase, git, rerootLegacyBase } from "./git";
+import {
+  commitModuleTree,
+  currentBase,
+  git,
+  rerootLegacyBase,
+  supportsMergeBase,
+} from "./git";
 
 const repos: string[] = [];
 afterEach(() => {
@@ -84,5 +90,14 @@ describe("commitModuleTree without a git identity", () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+});
+
+describe("supportsMergeBase", () => {
+  it("requires git 2.40 for merge-tree --merge-base", () => {
+    expect(supportsMergeBase([2, 39])).toBe(false);
+    expect(supportsMergeBase([2, 40])).toBe(true);
+    expect(supportsMergeBase([3, 0])).toBe(true);
+    expect(supportsMergeBase(null)).toBe(true);
   });
 });

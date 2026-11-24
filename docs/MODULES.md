@@ -246,6 +246,11 @@ pnpm mod sync                     # after ANY change under modules/
 Updates are a three-way merge (base = `refs/mod-base/<slug>` pinned in the
 lock, ours = your possibly-modified copy, theirs = upstream) — local edits
 survive clean updates; conflicts get standard markers + `--continue`.
+Each update chains the new pristine base onto the previous one (old bases
+stay reachable, and `git push origin 'refs/mod-base/*:refs/mod-base/*'` is a
+fast-forward). `update` needs **git 2.40+** (`git merge-tree --merge-base`);
+on older git — including Apple's bundled 2.39 — it stops before changing
+anything (macOS: `brew install git`).
 
 ### Where modules come from (registry-first)
 

@@ -18,6 +18,7 @@ import type { ModLockEntry, ModSource } from "./lock";
 import type { CatalogModule } from "./registry";
 import type { Source, SourcePlan } from "./source-plan";
 import {
+  assertMergeTreeSupport,
   checkoutModuleTree,
   commitModuleTree,
   currentBase,
@@ -308,6 +309,55 @@ function sha256File(file: string): string {
 }
 
 /**
+ * The three-way-merge step of `mod update`: base = the pinned pristine
+ * snapshot, ours = modules/<slug>/ as it is now (local edits included),
+ * theirs = the new upstream tree at `upstreamDir`. Writes the merged tree
+ * (conflict markers included) into modules/<slug>/ and advances
+ * refs/mod-base/<slug>.
+ *
+ * `theirs` doubles as the new pristine base, so it is committed with the
+ * previous base as its parent: the ref only ever moves forward (all old bases
+ * stay reachable, and `git push origin 'refs/mod-base/*'` fast-forwards). On
+ * any failure modules/<slug>/ is restored and the ref is left alone.
+ */
+export function mergeUpstream(
+  repoRoot: string,
+  slug: string,
+  upstreamDir: string,
+  version: string,
+  pinnedBase: string,
+): { baseCommit: string; conflicts: string[] } {
+  const base = rerootLegacyBase(repoRoot, slug, pinnedBase);
+  const ours = commitModuleTree(repoRoot, slug, `ours: ${slug}`);
+
+  const moduleDir = toAbs(repoRoot, `modules/${slug}`);
+  const backup = mkdtempSync(path.join(tmpdir(), "mod-backup-"));
+  cpSync(moduleDir, path.join(backup, slug), { recursive: true });
+  try {
+    // theirs = new upstream, staged at the same path
+    rmSync(moduleDir, { recursive: true, force: true });
+    cpSync(upstreamDir, moduleDir, { recursive: true });
+    const theirs = commitModuleTree(
+      repoRoot,
+      slug,
+      `mod-base: ${slug} v${version}`,
+      base,
+    );
+
+    const merged = mergeTrees(repoRoot, base, ours, theirs);
+    checkoutModuleTree(repoRoot, slug, merged.tree);
+    git(repoRoot, ["update-ref", `refs/mod-base/${slug}`, theirs]);
+    return { baseCommit: theirs, conflicts: merged.conflicts };
+  } catch (err) {
+    rmSync(moduleDir, { recursive: true, force: true });
+    cpSync(path.join(backup, slug), moduleDir, { recursive: true });
+    throw err;
+  } finally {
+    rmSync(backup, { recursive: true, force: true });
+  }
+}
+
+/**
  * `pnpm mod update <slug> [--to vX.Y.Z] [--from <source>] [--continue]`
  *
  * Registry-first: a module the registry lists updates from it (and its lock
@@ -327,7 +377,22 @@ export async function update(
   if (!entry) throw new Error(`"${slug}" is not installed`);
 
   if (opts.cont) {
-    // Conflicts were resolved by hand — finish bookkeeping.
+    // Conflicts were resolved by hand — finish bookkeeping. The stopped
+    // update already advanced the lock to the new chained base; re-point the
+    // ref at it in case a forced fetch of refs/mod-base/* moved it since.
+    if (entry.baseCommit) {
+      try {
+        git(repoRoot, [
+          "update-ref",
+          `refs/mod-base/${slug}`,
+          entry.baseCommit,
+        ]);
+      } catch {
+        console.warn(
+          `warning: lock baseCommit ${entry.baseCommit} for "${slug}" is not in this clone; refs/mod-base/${slug} left as is.`,
+        );
+      }
+    }
     await validateAndSync(repoRoot);
     console.log(`Update of ${slug} completed.`);
     return;
@@ -361,6 +426,7 @@ export async function update(
       `"${slug}" has a ${typeof entry.source === "string" ? entry.source : entry.source.type} origin — update it with --from <github-url|dream:${slug}>`,
     );
   }
+  assertMergeTreeSupport(); // before fetching or touching modules/<slug>/
 
   const { fetched, used } = await fetchPlanned(repoRoot, plan);
   const { slug: fetchedSlug, version: newVersion } = readManifestBasics(
@@ -378,32 +444,18 @@ export async function update(
       `no pristine base for "${slug}" — refs/mod-base/${slug} is missing and the lock has no baseCommit`,
     );
   }
-  const base = rerootLegacyBase(repoRoot, slug, pinnedBase);
 
-  // ours = current vendored tree (with any local modifications)
-  const ours = commitModuleTree(repoRoot, slug, `ours: ${slug}`);
-
-  // theirs = new upstream, staged at the same path
-  const backup = mkdtempSync(path.join(tmpdir(), "mod-backup-"));
-  cpSync(toAbs(repoRoot, `modules/${slug}`), path.join(backup, slug), {
-    recursive: true,
-  });
-  rmSync(toAbs(repoRoot, `modules/${slug}`), {
-    recursive: true,
-    force: true,
-  });
-  cpSync(fetched.dir, toAbs(repoRoot, `modules/${slug}`), {
-    recursive: true,
-  });
-  const theirs = commitModuleTree(repoRoot, slug, `theirs: ${slug}`);
-
-  const merged = mergeTrees(repoRoot, base, ours, theirs);
-  checkoutModuleTree(repoRoot, slug, merged.tree);
-  rmSync(backup, { recursive: true, force: true });
-
-  // The new pristine base is the upstream tree regardless of merge outcome.
-  git(repoRoot, ["update-ref", `refs/mod-base/${slug}`, theirs]);
-  entry.baseCommit = theirs;
+  const merged = mergeUpstream(
+    repoRoot,
+    slug,
+    fetched.dir,
+    newVersion,
+    pinnedBase,
+  );
+  // The new pristine base is the upstream tree regardless of merge outcome,
+  // so the lock is final here even when conflicts stop the update: `--continue`
+  // only re-validates and syncs once the markers are resolved.
+  entry.baseCommit = merged.baseCommit;
   entry.version = newVersion;
   entry.source = lockSource(
     used,
