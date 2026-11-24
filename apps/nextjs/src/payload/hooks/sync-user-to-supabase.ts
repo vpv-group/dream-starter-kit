@@ -5,6 +5,7 @@ import type { User } from "@acme/cms";
 
 // Relative (not `~/`) so the unit test can vi.mock it.
 import { createAdminClient } from "../../lib/supabase/admin";
+import { hasStaffRole } from "../access";
 
 /** `req.context` flag: set by server-side writers whose values came FROM Supabase. */
 export const SKIP_SUPABASE_SYNC = "skipSupabaseSync";
@@ -26,6 +27,14 @@ const norm = (v: unknown): string | null =>
  *    title` (service role — the same columns the member edits on /profile) and
  *    `user_metadata.display_name / phone` (the app's sidebar + menus read it;
  *    GoTrue merges user_metadata).
+ *  - `roles` → `profiles.is_staff` (true iff admin/editor/author). Roles are
+ *    the single source of truth for CMS access: the SSO bridge gates on
+ *    `is_staff`, so it must follow them. Written on EVERY admin save that
+ *    carries `roles` (not only on a change), so re-saving a user also heals
+ *    a legacy row whose flag drifted. Only admins may edit `roles` (field
+ *    access in collections/Users.ts); the hook re-checks for defense in
+ *    depth. An admin can't drop their own `admin` role — with `is_staff`
+ *    following the roles that would lock them out of /admin on the spot.
  *
  * Passwords never live in the CMS — they're set from the "Password" panel
  * (components/UserPasswordField.tsx → /api/cms/user-password).
@@ -59,7 +68,30 @@ export const syncUserToSupabase: CollectionBeforeChangeHook<User> = async ({
   const nameChanged = changed("displayName");
   const phoneChanged = changed("phone");
   const titleChanged = changed("jobTitle");
-  if (!emailChanged && !nameChanged && !phoneChanged && !titleChanged) {
+
+  const actorIsAdmin = req.user.roles.includes("admin");
+  const nextRoles =
+    actorIsAdmin && Array.isArray(data.roles) ? data.roles : null;
+  const syncStaff = nextRoles !== null;
+  if (
+    nextRoles &&
+    String(req.user.id) === String(originalDoc?.id) &&
+    originalDoc?.roles.includes("admin") &&
+    !nextRoles.includes("admin")
+  ) {
+    throw new APIError(
+      "You can't remove your own admin role — ask another admin to do it.",
+      400,
+    );
+  }
+
+  if (
+    !emailChanged &&
+    !nameChanged &&
+    !phoneChanged &&
+    !titleChanged &&
+    !syncStaff
+  ) {
     return data;
   }
 
@@ -108,6 +140,7 @@ export const syncUserToSupabase: CollectionBeforeChangeHook<User> = async ({
     display_name?: string;
     phone?: string | null;
     title?: string | null;
+    is_staff?: boolean;
   } = {};
   // display_name is NOT NULL-ish in practice (handle_new_user always sets it):
   // a cleared CMS display name keeps the profile's current one.
@@ -115,6 +148,7 @@ export const syncUserToSupabase: CollectionBeforeChangeHook<User> = async ({
   if (nameChanged && displayName) profile.display_name = displayName;
   if (phoneChanged) profile.phone = norm(data.phone);
   if (titleChanged) profile.title = norm(data.jobTitle);
+  if (nextRoles) profile.is_staff = hasStaffRole(nextRoles);
   if (Object.keys(profile).length) {
     const { error } = await admin
       .from("profiles")
@@ -134,6 +168,7 @@ export const syncUserToSupabase: CollectionBeforeChangeHook<User> = async ({
       nameChanged && "displayName",
       phoneChanged && "phone",
       titleChanged && "jobTitle",
+      syncStaff && `is_staff=${String(profile.is_staff)}`,
     ]
       .filter(Boolean)
       .join(", ")}`,
