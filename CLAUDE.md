@@ -293,11 +293,15 @@ the same in `/admin` → Users, written through to Supabase by
 **default-deny**: only users with `profiles.is_staff = true` get in — **the bridge
 authenticates staff only for now**; member-scoped collections carry correct
 owner-scoped access rules, but opening `/cms-api` to member sessions is a documented
-follow-up. The first signup is auto-flagged (and JIT-provisioned `admin`); further
-staff are **invited from `/admin` → Users → Create New** — a collection hook
-(`payload/hooks/invite-user.ts`) emails a Supabase invite and flags `is_staff` via
-the service-role client (`lib/supabase/admin.ts`, server-only — the pattern golden
-rule #2 allows); the invitee sets a password on `/accept-invite`. Users are
+follow-up. **`is_staff` follows the CMS roles** — admin/editor/author ⇒ `true`,
+member only ⇒ `false` — written through on every admin save of a user
+(`sync-user-to-supabase.ts`); there is no separate "grant staff" step, and an admin
+can't drop their own `admin` role. The first signup is auto-flagged (and
+JIT-provisioned `admin`); further users are **invited from `/admin` → Users →
+Create New** — a collection hook (`payload/hooks/invite-user.ts`) emails a Supabase
+invite and sets `is_staff` from the chosen roles via the service-role client
+(`lib/supabase/admin.ts`, server-only — the pattern golden rule #2 allows); the
+invitee sets a password on `/accept-invite`. Users are
 soft-deleted (`trash: true`): the bridge rejects trashed rows and the mirror won't
 resurrect them — restore from the admin Trash view. The bridge itself runs in the
 Next.js server — it reads `profiles` via the user's own RLS session and writes

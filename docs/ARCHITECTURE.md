@@ -326,11 +326,14 @@ How the two backends stay separate:
   CMS request from the caller's existing **Supabase** session and provisions a `cms.users`
   row on first access, linked by `supabaseUserId`. Authorization is **default-deny**: only
   app users flagged **`profiles.is_staff`** may enter the CMS (the first signup is
-  auto-flagged staff), and a column-level `revoke` stops users self-escalating. Further
-  editors are **invited from the admin** (`/admin` → Users → Create New): a collection
-  hook (`payload/hooks/invite-user.ts`) sends `auth.admin.inviteUserByEmail` and flags
-  `is_staff` via a server-only service-role client (`lib/supabase/admin.ts`) — the one
-  sanctioned service-role use in the web app; the invitee lands on `/accept-invite`,
+  auto-flagged staff), and a column-level `revoke` stops users self-escalating. The flag
+  follows the CMS **roles** (admin/editor/author ⇒ staff, member ⇒ not): an admin
+  changes a user's role and the `sync-user-to-supabase` hook writes `is_staff` through
+  on save. Further users are **invited from the admin** (`/admin` → Users → Create New):
+  a collection hook (`payload/hooks/invite-user.ts`) sends `auth.admin.inviteUserByEmail`
+  and sets `is_staff` from the chosen roles via a server-only service-role client
+  (`lib/supabase/admin.ts`) — the one sanctioned service-role use in the web app; the
+  invitee lands on `/accept-invite`,
   which verifies the emailed `token_hash` (custom invite template — keeps the one-time
   token out of the redirect chain, where prefetchers/navigation restarts would burn it;
   the default template's implicit-flow hash tokens are handled as a fallback) and sets
