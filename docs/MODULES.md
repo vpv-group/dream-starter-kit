@@ -255,7 +255,10 @@ auto-merge.
 a fine-grained PAT on this repo with read & write access to Contents, Pull
 requests, Actions and Workflows; set it as the `MOD_OPS_TOKEN` repo secret
 AND the `GITHUB_OPS_TOKEN` env (plus `GITHUB_REPO` off Vercel); enable
-“Allow auto-merge” in the repo settings.
+“Allow auto-merge” in the repo settings. If you install modules from
+**private GitHub repos**, give the same PAT read access (Contents: read) to
+each of them too; otherwise `mod update` can't list their tags and the run
+fails with "Can't read the module's repository" (GitHub answers 403).
 
 **Without the token, module ops is off.** Every job in `module-ops.yml` is
 _skipped_ (a preflight job leaves a notice explaining why) instead of failing,
