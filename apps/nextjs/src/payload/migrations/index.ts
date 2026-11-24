@@ -25,6 +25,7 @@ import * as migration_20261117_212755_dream_brand_serif_default from './20261117
 import * as migration_20261117_222758_sync_snapshot_after_module_rename from './20261117_222758_sync_snapshot_after_module_rename';
 import * as migration_20261118_231216_workspaces_account_model from './20261118_231216_workspaces_account_model';
 import * as migration_20261122_193348_dream_site from './20261122_193348_dream_site';
+import * as migration_20261124_153215_module_settings from './20261124_153215_module_settings';
 
 export const migrations = [
   {
@@ -160,6 +161,11 @@ export const migrations = [
   {
     up: migration_20261122_193348_dream_site.up,
     down: migration_20261122_193348_dream_site.down,
-    name: '20261122_193348_dream_site'
+    name: '20261122_193348_dream_site',
+  },
+  {
+    up: migration_20261124_153215_module_settings.up,
+    down: migration_20261124_153215_module_settings.down,
+    name: '20261124_153215_module_settings'
   },
 ];

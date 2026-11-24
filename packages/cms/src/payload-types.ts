@@ -292,6 +292,9 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
+  /**
+   * Login email. Changing it updates the Supabase account immediately (no confirmation email) — members change their own on /profile.
+   */
   email?: string | null;
   name?: string | null;
   /**
@@ -366,7 +369,7 @@ export interface User {
     | boolean
     | null;
   /**
-   * Required before any SMS send.
+   * Contact phone (not a login). Required before any SMS send. Synced with the member's profile on save.
    */
   phone?: string | null;
   dateOfBirth?: string | null;
@@ -2843,6 +2846,183 @@ export interface KitModule {
    * The app shell depends on this module's mounts (e.g. the home screen) — disabling it will break core navigation.
    */
   system?: boolean | null;
+  accessCheck?: string | null;
+  settingsCopied?: boolean | null;
+  mod_billing?: {
+    heading?: string | null;
+    showFreeTier?: boolean | null;
+    subheading?: string | null;
+    /**
+     * Which billing cadence the pricing page preselects.
+     */
+    billingToggleDefault?: ("monthly" | "annual") | null;
+    /**
+     * Pick up to three paid plans to feature, in display order. Empty = all active plans by display order.
+     */
+    featuredPlans?: (number | ModBillingPlan)[] | null;
+    freeTier?: {
+      name?: string | null;
+      description?: string | null;
+      ctaLabel?: string | null;
+      /**
+       * Where the Free tier CTA goes (defaults to /sign-up).
+       */
+      link?: {
+        /**
+         * Internal path (e.g. /pricing) or full external URL (https://example.com).
+         */
+        url?: string | null;
+        newTab?: boolean | null;
+      };
+      features?:
+        | {
+            text: string;
+            included?: boolean | null;
+            id?: string | null;
+          }[]
+        | null;
+    };
+    showEnterpriseTier?: boolean | null;
+    /**
+     * A non-self-serve “Contact Sales” tier. The CTA points to the link below (e.g. a mailto:, a booking link, or a contact page) — no Stripe.
+     */
+    enterpriseTier?: {
+      name?: string | null;
+      description?: string | null;
+      ctaLabel?: string | null;
+      /**
+       * Where the Enterprise CTA goes (e.g. mailto:sales@example.com or /contact).
+       */
+      link?: {
+        /**
+         * Internal path (e.g. /pricing) or full external URL (https://example.com).
+         */
+        url?: string | null;
+        newTab?: boolean | null;
+      };
+      features?:
+        | {
+            text: string;
+            included?: boolean | null;
+            id?: string | null;
+          }[]
+        | null;
+    };
+    /**
+     * Approved review shown as the testimonial on the checkout page (its body, rating, author name/avatar and optional author title).
+     */
+    featuredReview?: (number | null) | Review;
+    /**
+     * Fine print shown under the pricing grid.
+     */
+    disclaimer?: string | null;
+  };
+  mod_chat?: {
+    /**
+     * How many prior messages of a thread are sent to the model.
+     */
+    maxHistoryMessages?: number | null;
+    /**
+     * Applied to every conversation across every channel.
+     */
+    universalPrompt?: string | null;
+    /**
+     * Appended to the universal prompt only on the selected channels. Leave channels empty to apply everywhere.
+     */
+    channelPrompts?:
+      | {
+          label?: string | null;
+          channels?:
+            | (
+                | "web"
+                | "native"
+                | "slack"
+                | "sms-sendblue"
+                | "telegram"
+                | "whatsapp"
+                | "discord"
+                | "teams"
+                | "google-chat"
+                | "messenger"
+                | "email"
+                | "twilio-sms"
+                | "github"
+                | "linear"
+              )[]
+            | null;
+          prompt: string;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * When on, each message is routed to a matching skill persona (manage them under Modules → Chat Skills).
+     */
+    skillsFeatureEnabled?: boolean | null;
+    /**
+     * Minimum keyword score to route to a skill before the LLM fallback is considered.
+     */
+    keywordThreshold?: number | null;
+    /**
+     * When keyword routing is inconclusive, ask a small model to classify among the top candidates.
+     */
+    useLlmFallback?: boolean | null;
+    llmFallbackModel?:
+      | (
+          | "anthropic/claude-sonnet-4.5"
+          | "anthropic/claude-opus-4.1"
+          | "anthropic/claude-haiku-4.5"
+        )
+      | null;
+    /**
+     * Turns an active skill stays selected before re-routing.
+     */
+    stickinessTurns?: number | null;
+    transcriptionEnabled?: boolean | null;
+    /**
+     * A "provider/model" id. Only openai/* is wired up (needs OPENAI_API_KEY).
+     */
+    transcriptionModel?: string | null;
+    /**
+     * Max upload size for a voice clip.
+     */
+    maxAudioMB?: number | null;
+    adapter_chat_adapter_sendblue?: {
+      /**
+       * Process Sendblue webhooks. Requires SENDBLUE_API_KEY/SECRET/FROM_NUMBER.
+       */
+      enabled?: boolean | null;
+      /**
+       * Max outbound messages per from-number per day (0 = unlimited).
+       */
+      dailyOutboundQuota?: number | null;
+    };
+    adapter_chat_adapter_slack?: {
+      /**
+       * Process Slack events. Requires SLACK_BOT_TOKEN + SLACK_SIGNING_SECRET.
+       */
+      enabled?: boolean | null;
+    };
+  };
+  mod_docs?: {
+    /**
+     * Public repo as owner/name (e.g. vercel/next.js).
+     */
+    githubRepo?: string | null;
+    githubBranch?: string | null;
+    /**
+     * Folder within the repo to sync (*.md/*.mdx).
+     */
+    githubPath?: string | null;
+    /**
+     * Save with this checked to pull the latest docs from GitHub.
+     */
+    syncNow?: boolean | null;
+    /**
+     * Result of the last sync.
+     */
+    syncStatus?: string | null;
+    syncError?: string | null;
+  };
   updatedAt: string;
   createdAt: string;
 }
@@ -2867,6 +3047,10 @@ export interface NavItem {
    */
   icon?: string | null;
   platforms?: ("web" | "native")[] | null;
+  /**
+   * Staff only = shown only to users with staff access (profiles.is_staff), on web and native. A module can also hide its entries for users it doesn't allow (its own access setting).
+   */
+  audience?: ("everyone" | "staff") | null;
   enabled?: boolean | null;
   updatedAt: string;
   createdAt: string;
@@ -4477,6 +4661,103 @@ export interface KitModulesSelect<T extends boolean = true> {
   version?: T;
   enabled?: T;
   system?: T;
+  accessCheck?: T;
+  settingsCopied?: T;
+  mod_billing?:
+    | T
+    | {
+        heading?: T;
+        showFreeTier?: T;
+        subheading?: T;
+        billingToggleDefault?: T;
+        featuredPlans?: T;
+        freeTier?:
+          | T
+          | {
+              name?: T;
+              description?: T;
+              ctaLabel?: T;
+              link?:
+                | T
+                | {
+                    url?: T;
+                    newTab?: T;
+                  };
+              features?:
+                | T
+                | {
+                    text?: T;
+                    included?: T;
+                    id?: T;
+                  };
+            };
+        showEnterpriseTier?: T;
+        enterpriseTier?:
+          | T
+          | {
+              name?: T;
+              description?: T;
+              ctaLabel?: T;
+              link?:
+                | T
+                | {
+                    url?: T;
+                    newTab?: T;
+                  };
+              features?:
+                | T
+                | {
+                    text?: T;
+                    included?: T;
+                    id?: T;
+                  };
+            };
+        featuredReview?: T;
+        disclaimer?: T;
+      };
+  mod_chat?:
+    | T
+    | {
+        maxHistoryMessages?: T;
+        universalPrompt?: T;
+        channelPrompts?:
+          | T
+          | {
+              label?: T;
+              channels?: T;
+              prompt?: T;
+              id?: T;
+            };
+        skillsFeatureEnabled?: T;
+        keywordThreshold?: T;
+        useLlmFallback?: T;
+        llmFallbackModel?: T;
+        stickinessTurns?: T;
+        transcriptionEnabled?: T;
+        transcriptionModel?: T;
+        maxAudioMB?: T;
+        adapter_chat_adapter_sendblue?:
+          | T
+          | {
+              enabled?: T;
+              dailyOutboundQuota?: T;
+            };
+        adapter_chat_adapter_slack?:
+          | T
+          | {
+              enabled?: T;
+            };
+      };
+  mod_docs?:
+    | T
+    | {
+        githubRepo?: T;
+        githubBranch?: T;
+        githubPath?: T;
+        syncNow?: T;
+        syncStatus?: T;
+        syncError?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }
@@ -4492,6 +4773,7 @@ export interface NavItemsSelect<T extends boolean = true> {
   href?: T;
   icon?: T;
   platforms?: T;
+  audience?: T;
   enabled?: T;
   updatedAt?: T;
   createdAt?: T;

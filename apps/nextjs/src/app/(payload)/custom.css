@@ -22,6 +22,8 @@
 
 @source "../../components";
 @source "../../payload/components";
+/* Module settings components rendered on their module's page (./admin). */
+@source "../../../../../modules";
 
 /* Payload toggles dark mode via [data-theme="dark"] (not the front end's .dark) */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

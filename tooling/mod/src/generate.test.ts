@@ -7,8 +7,11 @@ import {
   applyEnvExampleBlock,
   buildAllGeneratedFiles,
   buildEnvExampleBlock,
+  buildExpoRegistry,
+  buildNextAdminRegistry,
   buildNextClientRegistry,
   buildNextDataRegistry,
+  buildNextPayloadRegistry,
   buildNextServerRegistry,
   buildStubs,
   buildTranspileJson,
@@ -224,5 +227,72 @@ describe("migration version assignment", () => {
     const taken = new Set(["20260609000001"]);
     const now = new Date(Date.UTC(2026, 5, 11, 12, 0, 0));
     expect(nextVersion(taken, now)).toBe("20260611120000");
+  });
+});
+
+describe("module access + admin settings", () => {
+  const crm = loaded({
+    slug: "crm",
+    name: "CRM",
+    version: "1.1.0",
+    kitCompat: ">=2.0.0 <3",
+    nav: {
+      web: [{ title: "CRM", href: "/a/crm", order: 20, audience: "staff" }],
+      native: [{ title: "CRM", href: "/a/crm", order: 20 }],
+    },
+    routes: {
+      web: [{ path: "", component: "CrmPage" }],
+      native: [{ path: "", component: "CrmScreen" }],
+    },
+    access: { check: "mod_crm_access_ok" },
+    admin: { settingsComponent: true },
+  });
+
+  it("gates the web layout with the access check", () => {
+    const layout = buildStubs([crm]).find((f) =>
+      f.path.endsWith("/a/crm/layout.tsx"),
+    );
+    expect(layout?.content).toContain(
+      'if (!(await hasModuleAccess("mod_crm_access_ok"))) redirect("/a");',
+    );
+    expect(layout?.content).toContain(
+      'import { notFound, redirect } from "next/navigation";',
+    );
+    // Ungated modules keep the plain enabled-only layout.
+    const plain = buildStubs([chat]).find((f) =>
+      f.path.endsWith("/a/chat/layout.tsx"),
+    );
+    expect(plain?.content).not.toContain("hasModuleAccess");
+  });
+
+  it("wraps native screens in the access gate", () => {
+    const screen = buildStubs([crm]).find(
+      (f) => f.path === "apps/expo/src/app/(app)/a/crm/index.tsx",
+    );
+    expect(screen?.content).toContain(
+      'export default withModuleAccess("mod_crm_access_ok", CrmScreen);',
+    );
+  });
+
+  it("bakes the access check and staff-only nav defaults into the registries", () => {
+    const data = buildNextDataRegistry([crm]);
+    expect(data).toContain('accessCheck: "mod_crm_access_ok"');
+    expect(data).toContain('audience: "staff"');
+    expect(buildExpoRegistry([crm])).toContain(
+      'accessCheck: "mod_crm_access_ok"',
+    );
+  });
+
+  it("lists ./admin settings components for the module page", () => {
+    expect(buildNextPayloadRegistry([crm])).toContain('{ slug: "crm" },');
+    const admin = buildNextAdminRegistry([crm]);
+    expect(admin.startsWith('"use client";')).toBe(true);
+    expect(admin).toContain(
+      'import { AdminSettings as admin_crm } from "@acme/mod-crm/admin";',
+    );
+    expect(admin).toContain('"crm": admin_crm,');
+    expect(buildNextAdminRegistry([chat])).toContain(
+      "modAdminComponents: Record<string, ComponentType> = {};",
+    );
   });
 });

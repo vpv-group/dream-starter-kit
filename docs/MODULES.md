@@ -29,8 +29,8 @@ without touching unrelated code. Design rationale lives in
 
 **The governing constraint:** Next.js and Expo are statically bundled and
 serverless has a read-only filesystem. There is no runtime plugin loading —
-*installing a module means code lands in the git repo, CI gates it, the
-deploy rolls, and the boot-time bootstrap applies migrations.* The framework
+_installing a module means code lands in the git repo, CI gates it, the
+deploy rolls, and the boot-time bootstrap applies migrations._ The framework
 makes that pipeline feel like one click.
 
 ## The model in one paragraph
@@ -68,29 +68,30 @@ modules/<slug>/
 
 ### Bundle safety (the hard rules)
 
-| Entry          | May import                                              | Guarded by |
-| -------------- | -------------------------------------------------------- | ---------- |
-| `.` (barrel)   | zod, react-query, `@acme/api`, `@acme/config`, `@acme/cms` types | RN-safe by construction; expo lint bans the rest |
-| `./web`        | `@acme/ui`, next/* — **client-safe only**                 | the client registry imports it for widgets — server imports here leak into client chunks |
-| `./web-server` | payload Local API, node — RSC pages (`rsc: true` routes)  | never imported client-side |
-| `./native`     | `@acme/ui-native`, expo-*                                 | the only module code Metro ever sees (plus `.`) |
-| `./server`     | anything server-side; first line `import "server-only"`   | poison pill + dispatcher-only imports |
-| `./payload`    | `payload`, `@acme/mod-kit/payload`                        | unreachable from clients |
+| Entry          | May import                                                       | Guarded by                                                                               |
+| -------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `.` (barrel)   | zod, react-query, `@acme/api`, `@acme/config`, `@acme/cms` types | RN-safe by construction; expo lint bans the rest                                         |
+| `./web`        | `@acme/ui`, next/* — **client-safe only**                        | the client registry imports it for widgets — server imports here leak into client chunks |
+| `./web-server` | payload Local API, node — RSC pages (`rsc: true` routes)         | never imported client-side                                                               |
+| `./native`     | `@acme/ui-native`, expo-*                                        | the only module code Metro ever sees (plus `.`)                                          |
+| `./server`     | anything server-side; first line `import "server-only"`          | poison pill + dispatcher-only imports                                                    |
+| `./payload`    | `payload`, `@acme/mod-kit/payload`                               | unreachable from clients                                                                 |
+| `./admin`      | `@acme/ui`, the module's barrel — **client component**           | imported only by Payload's admin import map (module page)                                |
 
 The CI `expo export` smoke check is the backstop: a server import leaking into
 the native graph fails the PR.
 
 ## Namespacing (collisions hard-fail `mod sync`)
 
-| Thing | Rule | Example |
-|---|---|---|
-| slug / package | `^[a-z][a-z0-9-]{1,30}$` / `@acme/mod-<slug>` | `chat` |
-| Supabase tables | `mod_<slug_snake>` or `mod_<slug_snake>_*`, RLS required | `mod_chat_threads` |
-| Payload slugs | `mod-<slug>-*` (labels stay clean) | `mod-billing-plans` |
-| Web routes | `/a/<slug>/…` default; validated `mount` overrides | billing mounts `/billing` |
-| Server API | `/api/mod/<slug>/…` | `POST /api/mod/chat/stream` |
-| Edge functions | `<slug>-*` | `reminders-process` |
-| Env vars | `MOD_<SLUG>_*` (client keys get `NEXT_PUBLIC_`/`EXPO_PUBLIC_` added by codegen) | `MOD_CHAT_MAX_TOKENS` |
+| Thing           | Rule                                                                            | Example                     |
+| --------------- | ------------------------------------------------------------------------------- | --------------------------- |
+| slug / package  | `^[a-z][a-z0-9-]{1,30}$` / `@acme/mod-<slug>`                                   | `chat`                      |
+| Supabase tables | `mod_<slug_snake>` or `mod_<slug_snake>_*`, RLS required                        | `mod_chat_threads`          |
+| Payload slugs   | `mod-<slug>-*` (labels stay clean)                                              | `mod-billing-plans`         |
+| Web routes      | `/a/<slug>/…` default; validated `mount` overrides                              | billing mounts `/billing`   |
+| Server API      | `/api/mod/<slug>/…`                                                             | `POST /api/mod/chat/stream` |
+| Edge functions  | `<slug>-*`                                                                      | `reminders-process`         |
+| Env vars        | `MOD_<SLUG>_*` (client keys get `NEXT_PUBLIC_`/`EXPO_PUBLIC_` added by codegen) | `MOD_CHAT_MAX_TOKENS`       |
 
 A best-effort SQL lint verifies migrations only DDL tables the manifest
 declares and never touch `auth.*`/`storage.*`/role/grant DDL. DML is only
@@ -133,7 +134,7 @@ its own `process.env.MOD_<SLUG>_*` keys without tripping
   mount override), plus a per-module `layout.tsx` that 404s when disabled;
 - **migrations**: module SQL is version-pinned (`modules/.mod-lock.json`)
   and copied into `supabase/migrations/`; Payload migrations are copied into
-  the host migrationDir (local CLI) *and* merged into `prodMigrations` (prod);
+  the host migrationDir (local CLI) _and_ merged into `prodMigrations` (prod);
 - **app deps**: `@acme/mod-<slug>` entries in both apps' package.json;
 - the `.env.example` fenced block.
 
@@ -148,19 +149,56 @@ endpoints (Stripe webhooks) belong in edge functions or Payload plugin
 endpoints instead.
 
 **Menus are CMS-driven** (`kit-modules` + `nav-items` collections,
-**Modules** admin group): manifest nav entries are *defaults*, seeded by the
+**Modules** admin group): manifest nav entries are _defaults_, seeded by the
 boot reconcile (`lib/mod/reconcile-nav.ts`); staff rename/drag-reorder/re-icon/
 toggle in `/admin` and the web sidebar + native `useNavMenu()` follow without a
 redeploy. Disabling a module in `kit-modules` hides its menu items,
 404s its pages and API, and removes its dashboard widgets — without
 uninstalling.
 
-**Settings screens** (§ per-module config): export `settings =
-defineModuleSettings({ slug, name, fields })` from `./payload` and set
-`cms.hasSettings: true`. The screen appears under the **Modules** admin group
-(versioned, staff-read/admin-update; `publicRead` for client-consumed toggles).
-Server code reads it with `getModuleSettings(payload, settings)` — defaults
-apply before the screen is ever saved. Secrets stay in the zod env schema.
+**Settings live on the module's page** (**Modules** in `/admin` →
+the module, i.e. `/admin/collections/kit-modules/<id>`; link to it with
+`/admin/module-settings/<slug>`, which resolves the id). A module puts
+settings there in either or both of two ways:
+
+- **Payload fields:** export `settings = defineModuleSettings({ slug, name,
+fields })` from `./payload` and set `cms.hasSettings: true`. The fields
+  render as a "Settings" group on the module's page, stored on its
+  `kit-modules` row (group `mod_<slug>`). They are staff-readable
+  (`publicRead` for client-consumed toggles) and admin-editable. Server code
+  reads them with `getModuleSettings(payload, settings)` (defaults apply
+  before the page is ever saved) and writes them with
+  `updateModuleSettings(payload, settings, data, { req })`. `afterChange`
+  hooks set on `settings.global.hooks` run when the module's page is saved,
+  with the module's settings as `doc`. Secrets stay in the zod env schema.
+  - **Upgrading from kit ≤2.1:** settings used to be a separate global at
+    `/admin/globals/mod-<slug>-settings`. On first boot the reconcile copies
+    a saved global onto the module's row once (`settingsCopied`); the old
+    URL redirects to the module page. The legacy globals stay registered,
+    hidden, for one release.
+- **A settings component:** for settings that live in the module's own
+  Supabase tables, set `admin.settingsComponent: true` and export a client
+  `AdminSettings` component from a `./admin` entry. It renders on the
+  module's page inside the admin's Supabase + react-query providers
+  (`ModAdminProviders`), so the module's own hooks work as the signed-in
+  staff user. RLS still decides what they can do. Tailwind classes in
+  `modules/**` are picked up by the admin stylesheet.
+
+**Access** (who may use a module): staff can set any menu item to
+**Staff only** (`nav-items` `audience`; manifest nav entries may default it
+with `audience: "staff"`). That hides the entry, on web and native, from
+users without `profiles.is_staff`. For a module-wide rule, set
+`access: { check: "mod_<slug>_<fn>" }`: a no-arg SQL function returning
+boolean for the current user. Then:
+
+- its menu entries are dropped (server-side on web, in `useNavMenu()` on
+  native) when the check is false;
+- its generated web layout redirects to `/a`;
+- its native screens are wrapped in `withModuleAccess`, which sends the user
+  home.
+
+Checks fail closed. The UX gate is not the security boundary — the
+module's RLS must enforce the same rule on its data.
 
 **Services** (cross-module): declare `requires: ["notifications"]` and
 import the provider's exported APIs directly — e.g.
@@ -216,7 +254,7 @@ AND the `GITHUB_OPS_TOKEN` env (plus `GITHUB_REPO` off Vercel); enable
 “Allow auto-merge” in the repo settings.
 
 **Without the token, module ops is off.** Every job in `module-ops.yml` is
-*skipped* (a preflight job leaves a notice explaining why) instead of failing,
+_skipped_ (a preflight job leaves a notice explaining why) instead of failing,
 `/admin/modules` is read-only, and **paid modules are disabled everywhere**:
 the admin panel hides them and never contacts the registry, its API routes
 refuse `dream:` installs and paid updates (`403 paid_modules_disabled`), and
@@ -231,7 +269,7 @@ refreshes the open one. No license key is needed. These PRs **never
 auto-merge**: review them and land them with a **merge commit, never a
 squash** (docs/UPDATING.md). Conflicts are committed as markers and the PR is
 labeled `kit-update-conflicts`. Turn the check off with `KIT_AUTO_UPDATE=off`,
-or run it on demand with *Run workflow* → `op: kit-update`. It is skipped in
+or run it on demand with _Run workflow_ → `op: kit-update`. It is skipped in
 the kit repository itself.
 
 ## Site license
@@ -388,13 +426,13 @@ in `docs/UPDATING.md`, then deploy).
 
 **By hand (settings that live outside the repo):**
 
-| Before | After | Where |
-| --- | --- | --- |
-| `EXT_OPS_TOKEN` | `MOD_OPS_TOKEN` | GitHub repo secret |
-| `EXT_AUTO_UPDATE`, `EXT_AUTO_MERGE` | `MOD_AUTO_UPDATE`, `MOD_AUTO_MERGE` | GitHub repo variables |
-| `EXT_CATALOG_URL` | `MOD_CATALOG_URL` | Vercel / `.env` |
-| `EXT_<SLUG>_*` (and `NEXT_PUBLIC_`/`EXPO_PUBLIC_` forms) | `MOD_<SLUG>_*` | Vercel / `.env` / EAS |
-| `/admin/extensions` | `/admin/modules` | bookmarks |
+| Before                                                   | After                               | Where                 |
+| -------------------------------------------------------- | ----------------------------------- | --------------------- |
+| `EXT_OPS_TOKEN`                                          | `MOD_OPS_TOKEN`                     | GitHub repo secret    |
+| `EXT_AUTO_UPDATE`, `EXT_AUTO_MERGE`                      | `MOD_AUTO_UPDATE`, `MOD_AUTO_MERGE` | GitHub repo variables |
+| `EXT_CATALOG_URL`                                        | `MOD_CATALOG_URL`                   | Vercel / `.env`       |
+| `EXT_<SLUG>_*` (and `NEXT_PUBLIC_`/`EXPO_PUBLIC_` forms) | `MOD_<SLUG>_*`                      | Vercel / `.env` / EAS |
+| `/admin/extensions`                                      | `/admin/modules`                    | bookmarks             |
 
 **Modules you added yourself** (anything not shipped with the kit) need the same
 rename before they build again: move the folder to `modules/<slug>`, rename the

@@ -121,6 +121,16 @@ export default buildConfig({
         },
       ],
     },
+    // Always in the import map: module pages render modules' own settings
+    // components through this one wrapper (payload/components/
+    // ModuleAdminSettings.tsx), so installing a module never needs a new
+    // import-map entry.
+    dependencies: {
+      moduleAdminSettings: {
+        path: "~/payload/components/ModuleAdminSettings#ModuleAdminSettings",
+        type: "component",
+      },
+    },
     components: {
       // Dream brand marks in the admin chrome: the icon in the breadcrumb
       // (step-nav home) and the logo on the login/reset/unauthorized screens.
@@ -142,7 +152,12 @@ export default buildConfig({
       // Wraps every admin route and injects the site-wide shadcn theme as a
       // <style> (from the theme-settings global) so the admin chrome follows the
       // same theme as the front end. See payload/components/ThemeStyleProvider.tsx.
-      providers: ["~/payload/components/ThemeStyleProvider#ThemeStyleProvider"],
+      providers: [
+        "~/payload/components/ThemeStyleProvider#ThemeStyleProvider",
+        // Supabase + react-query for module settings components on their
+        // module's page (manifest admin.settingsComponent).
+        "~/payload/components/ModAdminProviders#ModAdminProviders",
+      ],
       // CMS auth is SSO from the Supabase session (no payload-token), so the
       // default logout can't end the session. Replace it with one that signs out
       // of Supabase and returns to the host root. See payload/components/LogoutButton.tsx.
@@ -154,6 +169,12 @@ export default buildConfig({
         modules: {
           Component: "~/payload/components/ModulesView#ModulesView",
           path: "/modules",
+        },
+        // /admin/module-settings/<slug> → the module's page (its settings).
+        moduleSettings: {
+          Component:
+            "~/payload/components/ModuleSettingsRedirect#ModuleSettingsRedirect",
+          path: "/module-settings/:slug",
         },
       },
     },

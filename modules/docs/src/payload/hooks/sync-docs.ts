@@ -1,9 +1,11 @@
 import type { GlobalAfterChangeHook } from "payload";
 
+import { settingsGroupName, updateModuleSettings } from "@acme/mod-kit/payload";
+
 import type { DocsSettings } from "../settings";
 
 /**
- * When an admin saves mod-docs-settings with "Sync now" checked, pull docs
+ * When an admin saves the Docs settings (Modules → Docs) with "Sync now" checked, pull docs
  * from GitHub, then write the result back (and untick syncNow). The write-back
  * re-fires this hook, so it's guarded with context.skipDocsSync to avoid a
  * loop (billing's sync-plan-to-stripe uses the same pattern). Failures land on
@@ -30,12 +32,12 @@ export const syncDocsAfterChange: GlobalAfterChangeHook = async ({
     syncError = e instanceof Error ? e.message : String(e);
   }
 
-  await req.payload.updateGlobal({
-    slug: "mod-docs-settings",
-    data: { syncNow: false, syncStatus, syncError },
-    context: { skipDocsSync: true },
-    req,
-  });
+  await updateModuleSettings(
+    req.payload,
+    { slug: "docs", groupName: settingsGroupName("docs") },
+    { syncNow: false, syncStatus, syncError },
+    { req, context: { skipDocsSync: true } },
+  );
 
   return { ...settings, syncNow: false, syncStatus, syncError };
 };

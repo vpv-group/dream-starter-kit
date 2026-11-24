@@ -137,6 +137,16 @@ export function validateManifest(m: ModuleManifest): string[] {
     errors.push(`[${m.slug}] cannot require itself`);
   }
 
+  // The access gate is one of the module's own SQL functions.
+  if (
+    m.access.check !== undefined &&
+    !startsWithPrefix(m.access.check, prefix)
+  ) {
+    errors.push(
+      `[${m.slug}] access.check "${m.access.check}" must be a "${prefix}_*" SQL function`,
+    );
+  }
+
   // Platform consistency: declaring native surface requires the native platform.
   if (!m.platforms.native) {
     if (m.nav.native.length > 0 || m.routes.native.length > 0)

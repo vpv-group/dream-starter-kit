@@ -1,6 +1,85 @@
-import type { CollectionConfig } from "payload";
+import type {
+  CollectionAfterChangeHook,
+  CollectionConfig,
+  Field,
+  GlobalAfterChangeHook,
+} from "payload";
 
-import { anyone, isAdmin } from "../access";
+import {
+  modAdminSettings,
+  modSettings,
+} from "~/mod/registry.payload.generated";
+import { adminFieldAccess, anyone, isAdmin, staffFieldAccess } from "../access";
+
+/**
+ * Each module's settings render on ITS page here (Modules → <module>):
+ * a group of the module's own fields (`defineModuleSettings`), shown only on
+ * that module's row, and/or the module's own React settings component
+ * (manifest `admin.settingsComponent`, exported from its `./admin` entry).
+ * Fields are staff-readable (or public when the module opted in) and
+ * admin-editable, like the per-module globals they replace.
+ */
+const onlyFor =
+  (slug: string) =>
+  (data: Partial<Record<string, unknown>> | undefined): boolean =>
+    data?.slug === slug;
+
+const settingsFields: Field[] = Object.values(modSettings).map((s) => ({
+  name: s.groupName,
+  type: "group" as const,
+  label: "Settings",
+  admin: { condition: onlyFor(s.slug) },
+  access: {
+    read: s.publicRead ? () => true : staffFieldAccess,
+    update: adminFieldAccess,
+  },
+  fields: s.global.fields,
+}));
+
+const adminSettingsFields: Field[] = modAdminSettings.map((a) => ({
+  name: `admin_${a.slug.replace(/-/g, "_")}`,
+  type: "ui" as const,
+  admin: {
+    condition: onlyFor(a.slug),
+    components: {
+      Field: {
+        path: "~/payload/components/ModuleAdminSettings#ModuleAdminSettings",
+        clientProps: { slug: a.slug },
+      },
+    },
+  },
+}));
+
+/**
+ * Module settings hooks (a module sets them on its settings `global`, e.g.
+ * docs' "Sync now") run when that module's page is saved, with the module's
+ * settings as `doc` — the shape they had as a global. Skipped for the
+ * reconcile's one-time copy (`context.skipModuleSettingsHooks`).
+ */
+const runModuleSettingsHooks: CollectionAfterChangeHook<{
+  id: number;
+  slug: string;
+}> = async ({ doc, previousDoc, req, context }) => {
+  if (context.skipModuleSettingsHooks) return doc;
+  const settings = Object.values(modSettings).find((s) => s.slug === doc.slug);
+  if (!settings) return doc;
+  const hooks: GlobalAfterChangeHook[] =
+    settings.global.hooks?.afterChange ?? [];
+  const groupOf = (d: unknown): Record<string, unknown> =>
+    ((d as Record<string, unknown> | undefined)?.[settings.groupName] ??
+      {}) as Record<string, unknown>;
+  for (const hook of hooks) {
+    await hook({
+      doc: groupOf(doc),
+      previousDoc: groupOf(previousDoc),
+      data: groupOf(doc),
+      req,
+      context,
+      global: settings.global,
+    } as unknown as Parameters<GlobalAfterChangeHook>[0]);
+  }
+  return doc;
+};
 
 /**
  * Framework-owned registry of installed modules (docs/MODULES-PLAN.md
@@ -29,6 +108,7 @@ export const KitModules: CollectionConfig = {
     create: () => false,
     delete: () => false,
   },
+  hooks: { afterChange: [runModuleSettingsHooks] },
   fields: [
     {
       name: "slug",
@@ -67,5 +147,23 @@ export const KitModules: CollectionConfig = {
           "The app shell depends on this module's mounts (e.g. the home screen) — disabling it will break core navigation.",
       },
     },
+    {
+      // Framework-owned (manifest access.check): the SQL function that says
+      // whether the current user may use the module. Read by the web menu and
+      // the native menu (useNavMenu) to hide gated modules' entries.
+      name: "accessCheck",
+      type: "text",
+      admin: { readOnly: true, hidden: true },
+    },
+    {
+      // Set once the module's legacy settings global was copied onto this
+      // row (lib/mod/reconcile-nav.ts) — never copies twice.
+      name: "settingsCopied",
+      type: "checkbox",
+      defaultValue: false,
+      admin: { readOnly: true, hidden: true },
+    },
+    ...settingsFields,
+    ...adminSettingsFields,
   ],
 };

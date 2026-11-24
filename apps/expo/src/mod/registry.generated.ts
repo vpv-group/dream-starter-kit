@@ -15,6 +15,8 @@ export interface ModInstalled {
   version: string;
   /** True when the app shell depends on this module's mounts (e.g. the home screen). */
   system: boolean;
+  /** SQL function deciding if the current user may use the module (manifest access.check). */
+  accessCheck?: string;
 }
 
 export interface ModNavDefault {
@@ -24,6 +26,8 @@ export interface ModNavDefault {
   href: string;
   icon?: string;
   order: number;
+  /** Default audience; omitted = everyone. */
+  audience?: "everyone" | "staff";
 }
 
 export const modInstalled: ModInstalled[] = [

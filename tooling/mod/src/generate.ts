@@ -42,6 +42,7 @@ interface NavLiteral {
   href: string;
   icon?: string;
   order: number;
+  audience: "everyone" | "staff";
 }
 
 function navLiterals(
@@ -59,6 +60,7 @@ function navLiterals(
         href: entry.href,
         icon: entry.icon,
         order: entry.order,
+        audience: entry.audience,
       });
     });
   }
@@ -69,7 +71,7 @@ function renderNav(items: NavLiteral[], indent: string): string {
   if (items.length === 0) return "[]";
   const rows = items.map(
     (n) =>
-      `${indent}  { key: ${quote(n.key)}, module: ${quote(n.module)}, title: ${quote(n.title)}, href: ${quote(n.href)}, ${n.icon ? `icon: ${quote(n.icon)}, ` : ""}order: ${n.order} },`,
+      `${indent}  { key: ${quote(n.key)}, module: ${quote(n.module)}, title: ${quote(n.title)}, href: ${quote(n.href)}, ${n.icon ? `icon: ${quote(n.icon)}, ` : ""}order: ${n.order}${n.audience === "staff" ? `, audience: "staff"` : ""} },`,
   );
   return `[\n${rows.join("\n")}\n${indent}]`;
 }
@@ -78,7 +80,7 @@ function renderInstalled(mods: LoadedModule[]): string {
   if (mods.length === 0) return "[]";
   const rows = mods.map(
     ({ manifest: m }) =>
-      `  { slug: ${quote(m.slug)}, name: ${quote(m.name)}, version: ${quote(m.version)}, system: ${sysMod(m)} },`,
+      `  { slug: ${quote(m.slug)}, name: ${quote(m.name)}, version: ${quote(m.version)}, system: ${sysMod(m)}${m.access.check ? `, accessCheck: ${quote(m.access.check)}` : ""} },`,
   );
   return `[\n${rows.join("\n")}\n]`;
 }
@@ -89,6 +91,8 @@ const SHARED_TYPES = `export interface ModInstalled {
   version: string;
   /** True when the app shell depends on this module's mounts (e.g. the home screen). */
   system: boolean;
+  /** SQL function deciding if the current user may use the module (manifest access.check). */
+  accessCheck?: string;
 }
 
 export interface ModNavDefault {
@@ -98,6 +102,8 @@ export interface ModNavDefault {
   href: string;
   icon?: string;
   order: number;
+  /** Default audience; omitted = everyone. */
+  audience?: "everyone" | "staff";
 }
 `;
 
@@ -338,8 +344,46 @@ export const modPayloadMigrations: ModPayloadMigration[] = ${arr(migrations)};
 
 export const modSeedSteps: ModSeedStep[] = ${arr(seeds)};
 
-/** slug → settings definition (admin settings screens, §1.7). */
+/**
+ * slug → settings definition. The fields render on the module's page in
+ * /admin (kit-modules) — see payload/collections/KitModules.ts.
+ */
 export const modSettings: Record<string, ModuleSettings> = ${obj(settings)};
+
+/**
+ * Modules with their own admin settings component (manifest
+ * admin.settingsComponent) — rendered on the module's page in /admin through
+ * the kit's ModuleAdminSettings wrapper (registry.admin.generated.tsx).
+ */
+export const modAdminSettings: { slug: string }[] = ${arr(
+    mods
+      .filter((e) => e.manifest.admin.settingsComponent)
+      .map((e) => `  { slug: ${quote(e.manifest.slug)} },`),
+  )};
+`;
+}
+
+/**
+ * apps/nextjs/src/mod/registry.admin.generated.tsx — the modules' ./admin
+ * settings components by slug. A client module imported only by the /admin
+ * wrapper (payload/components/ModuleAdminSettings.tsx), so Payload's import
+ * map stays static however many modules are installed.
+ */
+export function buildNextAdminRegistry(mods: LoadedModule[]): string {
+  const adminMods = mods.filter((e) => e.manifest.admin.settingsComponent);
+  const imports = adminMods.map(
+    (e) =>
+      `import { AdminSettings as admin_${ident(e.manifest.slug)} } from "${e.packageName}/admin";`,
+  );
+  const rows = adminMods.map(
+    (e) => `  ${quote(e.manifest.slug)}: admin_${ident(e.manifest.slug)},`,
+  );
+  return `"use client";
+
+${ESLINT_OFF}${HEADER}import type { ComponentType } from "react";
+${imports.length > 0 ? `\n${imports.join("\n")}\n` : ""}
+/** slug → the module's \`./admin\` AdminSettings component. */
+export const modAdminComponents: Record<string, ComponentType> = ${rows.length === 0 ? "{}" : `{\n${rows.join("\n")}\n}`};
 `;
 }
 
@@ -519,9 +563,14 @@ export function buildStubs(mods: LoadedModule[]): GeneratedFile[] {
           path: `${baseDir}/layout.tsx`,
           slug,
           content: `${ESLINT_OFF}${HEADER}import type { ReactNode } from "react";
-import { notFound } from "next/navigation";
+import { ${m.access.check ? "notFound, redirect" : "notFound"} } from "next/navigation";
 
-import { isModuleEnabled } from "~/lib/mod/enabled";
+${
+  m.access.check
+    ? `import { hasModuleAccess } from "~/lib/mod/access";
+`
+    : ""
+}import { isModuleEnabled } from "~/lib/mod/enabled";
 
 /** Runtime enable/disable gate — disabling the module 404s its pages. */
 export default async function ModuleLayout({
@@ -529,7 +578,13 @@ export default async function ModuleLayout({
 }: {
   children: ReactNode;
 }) {
-  if (!(await isModuleEnabled(${quote(slug)}))) notFound();
+  if (!(await isModuleEnabled(${quote(slug)}))) notFound();${
+    m.access.check
+      ? `
+  // Access gate (manifest access.check) — users without access go home.
+  if (!(await hasModuleAccess(${quote(m.access.check)}))) redirect("/a");`
+      : ""
+  }
   return children;
 }
 `,
@@ -548,7 +603,15 @@ export default async function ModuleLayout({
         files.push({
           path: `${MOD_PATHS.expoAppGroup}/${file}.tsx`,
           slug,
-          content: `${ESLINT_OFF}${HEADER}export { ${r.component} as default } from "${e.packageName}/native";\n`,
+          content: m.access.check
+            ? `${ESLINT_OFF}${HEADER}import { ${r.component} } from "${e.packageName}/native";
+
+import { withModuleAccess } from "~/mod/access-gate";
+
+// Access gate (manifest access.check) — users without access go home.
+export default withModuleAccess(${quote(m.access.check)}, ${r.component});
+`
+            : `${ESLINT_OFF}${HEADER}export { ${r.component} as default } from "${e.packageName}/native";\n`,
         });
       }
     }
@@ -593,6 +656,10 @@ export function buildAllGeneratedFiles(mods: LoadedModule[]): GeneratedFile[] {
     {
       path: MOD_PATHS.nextPayloadRegistry,
       content: buildNextPayloadRegistry(mods),
+    },
+    {
+      path: MOD_PATHS.nextAdminRegistry,
+      content: buildNextAdminRegistry(mods),
     },
     { path: MOD_PATHS.nextEnv, content: buildNextEnv(mods) },
     { path: MOD_PATHS.nextTranspileJson, content: buildTranspileJson(mods) },
