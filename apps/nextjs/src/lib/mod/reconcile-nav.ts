@@ -1,6 +1,7 @@
 import type { Payload } from "payload";
 
 import { modInstalled, modNavDefaults } from "~/mod/registry.data.generated";
+import { modSettings } from "~/mod/registry.payload.generated";
 import { CORE_NAV_ITEMS } from "./core-nav";
 
 /**
@@ -30,11 +31,16 @@ interface DesiredNavItem {
   platforms: ("web" | "native")[];
   /** Module slug — undefined for core entries. */
   module?: string;
+  /** Default audience (manifest nav `audience`); staff own it afterwards. */
+  audience: "everyone" | "staff";
 }
 
 /** Merge a module's web + native nav defaults into per-href menu rows. */
 export function desiredNavItems(): DesiredNavItem[] {
-  const items: DesiredNavItem[] = CORE_NAV_ITEMS.map((c) => ({ ...c }));
+  const items: DesiredNavItem[] = CORE_NAV_ITEMS.map((c) => ({
+    audience: "everyone" as const,
+    ...c,
+  }));
 
   const byKey = new Map<string, DesiredNavItem>();
   for (const [platform, entries] of [
@@ -57,6 +63,7 @@ export function desiredNavItems(): DesiredNavItem[] {
         order: entry.order,
         platforms: [platform],
         module: entry.module,
+        audience: entry.audience ?? "everyone",
       };
       byKey.set(key, item);
       items.push(item);
@@ -85,6 +92,7 @@ export async function reconcileModules(payload: Payload): Promise<void> {
           name: mod.name,
           version: mod.version,
           system: mod.system,
+          accessCheck: mod.accessCheck ?? null,
           enabled: true,
         },
         overrideAccess: true,
@@ -93,14 +101,21 @@ export async function reconcileModules(payload: Payload): Promise<void> {
     } else if (
       row.version !== mod.version ||
       row.name !== mod.name ||
-      row.system !== mod.system
+      row.system !== mod.system ||
+      (row.accessCheck ?? null) !== (mod.accessCheck ?? null)
     ) {
       // Framework-owned metadata only — `enabled` is staff-owned.
       const updated = await payload.update({
         collection: "kit-modules",
         id: row.id,
-        data: { version: mod.version, name: mod.name, system: mod.system },
+        data: {
+          version: mod.version,
+          name: mod.name,
+          system: mod.system,
+          accessCheck: mod.accessCheck ?? null,
+        },
         overrideAccess: true,
+        context: { skipModuleSettingsHooks: true },
       });
       modRowBySlug.set(mod.slug, updated);
     }
@@ -114,6 +129,38 @@ export async function reconcileModules(payload: Payload): Promise<void> {
       });
       modRowBySlug.delete(row.slug);
     }
+  }
+
+  // --- module settings: one-time copy off the legacy globals ------------
+  // Before kit 2.2 each module's settings were a global
+  // (`mod-<slug>-settings`); they now live on the module's kit-modules row.
+  // Copy a saved global over once, then mark the row so it never re-copies.
+  for (const settings of Object.values(modSettings)) {
+    const row = modRowBySlug.get(settings.slug);
+    if (!row || row.settingsCopied) continue;
+    let values: Record<string, unknown> | null = null;
+    try {
+      const legacy = (await payload.findGlobal({
+        slug: settings.globalSlug as never,
+        depth: 0,
+        overrideAccess: true,
+      })) as Record<string, unknown>;
+      // A never-saved global has no updatedAt — nothing worth copying.
+      if (legacy.updatedAt) values = stripGlobalMeta(legacy);
+    } catch {
+      values = null;
+    }
+    const updated = await payload.update({
+      collection: "kit-modules",
+      id: row.id,
+      data: {
+        settingsCopied: true,
+        ...(values ? { [settings.groupName]: values } : {}),
+      },
+      overrideAccess: true,
+      context: { skipModuleSettingsHooks: true },
+    });
+    modRowBySlug.set(settings.slug, updated);
   }
 
   // --- nav-items rows ------------------------------------------------------
@@ -152,6 +199,7 @@ export async function reconcileModules(payload: Payload): Promise<void> {
           href: item.href,
           icon: item.icon,
           platforms: item.platforms,
+          audience: item.audience,
           enabled: true,
           ...(modRowId !== undefined ? { module: modRowId } : {}),
         },
@@ -165,4 +213,17 @@ export async function reconcileModules(payload: Payload): Promise<void> {
       );
     }
   }
+}
+
+/** A global document minus Payload's own bookkeeping keys. */
+export function stripGlobalMeta(
+  doc: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(doc)) {
+    if (["id", "globalType", "createdAt", "updatedAt", "_status"].includes(key))
+      continue;
+    out[key] = value;
+  }
+  return out;
 }

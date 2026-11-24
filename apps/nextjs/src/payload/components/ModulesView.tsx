@@ -297,7 +297,11 @@ export function ModulesView() {
                   )}
                 </td>
                 <td style={{ whiteSpace: "nowrap" }}>
-                  <a href={`/admin/collections/kit-modules`}>enable/disable</a>
+                  <a href={`/admin/module-settings/${mod.slug}`}>settings</a>
+                  {" · "}
+                  <a href={`/admin/module-settings/${mod.slug}`}>
+                    enable/disable
+                  </a>
                   {" · "}
                   <a href={`/admin/collections/nav-items`}>menu</a>
                   {registry.opsConfigured &&

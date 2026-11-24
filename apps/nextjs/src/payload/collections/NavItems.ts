@@ -71,6 +71,19 @@ export const NavItems: CollectionConfig = {
       ],
       defaultValue: ["web", "native"],
     },
+    {
+      name: "audience",
+      type: "select",
+      defaultValue: "everyone",
+      options: [
+        { label: "Everyone signed in", value: "everyone" },
+        { label: "Staff only", value: "staff" },
+      ],
+      admin: {
+        description:
+          "Staff only = shown only to users with staff access (profiles.is_staff), on web and native. A module can also hide its entries for users it doesn't allow (its own access setting).",
+      },
+    },
     { name: "enabled", type: "checkbox", defaultValue: true },
   ],
 };
