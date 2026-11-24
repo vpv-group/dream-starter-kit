@@ -35,6 +35,7 @@ import { PreviewComponent as PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860 }
 import { FolderTypeField as FolderTypeField_2b8867833a34864a02ddf429b0728a40 } from '@payloadcms/next/client'
 import { RegenerateAllImages as RegenerateAllImages_5552ed3b6af65aa0c30dbc3814b71069 } from '~/payload/components/RegenerateAllImages'
 import { DreamSiteRegister as DreamSiteRegister_8fdc7ad44850bf64e6cb11d7cb127820 } from '~/payload/components/DreamSiteRegister'
+import { DreamSiteLicenseKey as DreamSiteLicenseKey_0c606955d15c3b75745277b5df780630 } from '~/payload/components/DreamSiteLicenseKey'
 import { LogoutButton as LogoutButton_6c9a924bbf94f383766dffe3be60632c } from '~/payload/components/LogoutButton'
 import { BrandIcon as BrandIcon_7f003298658d3b7c758be66cf37cc99a } from '~/payload/components/BrandIcon'
 import { BrandLogo as BrandLogo_11d3156590230f2611ead54e0eaf3582 } from '~/payload/components/BrandLogo'
@@ -85,6 +86,7 @@ export const importMap = {
   "@payloadcms/next/client#FolderTypeField": FolderTypeField_2b8867833a34864a02ddf429b0728a40,
   "~/payload/components/RegenerateAllImages#RegenerateAllImages": RegenerateAllImages_5552ed3b6af65aa0c30dbc3814b71069,
   "~/payload/components/DreamSiteRegister#DreamSiteRegister": DreamSiteRegister_8fdc7ad44850bf64e6cb11d7cb127820,
+  "~/payload/components/DreamSiteLicenseKey#DreamSiteLicenseKey": DreamSiteLicenseKey_0c606955d15c3b75745277b5df780630,
   "~/payload/components/LogoutButton#LogoutButton": LogoutButton_6c9a924bbf94f383766dffe3be60632c,
   "~/payload/components/BrandIcon#BrandIcon": BrandIcon_7f003298658d3b7c758be66cf37cc99a,
   "~/payload/components/BrandLogo#BrandLogo": BrandLogo_11d3156590230f2611ead54e0eaf3582,
