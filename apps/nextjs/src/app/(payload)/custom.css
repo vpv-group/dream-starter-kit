@@ -25,6 +25,41 @@
 /* Module settings components rendered on their module's page (./admin). */
 @source "../../../../../modules";
 
+/*
+ * Module settings components (manifest admin.settingsComponent) are app UI
+ * built for preflight. Give them its essentials, scoped to their wrapper
+ * (payload/components/ModuleAdminSettings.tsx) so Payload's own reset is
+ * untouched. In the base layer, so Tailwind utilities still win.
+ */
+@layer base {
+  .mod-admin-settings,
+  .mod-admin-settings *,
+  .mod-admin-settings ::before,
+  .mod-admin-settings ::after {
+    box-sizing: border-box;
+    border: 0 solid var(--border);
+  }
+  .mod-admin-settings :where(button, input, select, textarea) {
+    font: inherit;
+    color: inherit;
+    background-color: transparent;
+  }
+  .mod-admin-settings :where(button) {
+    cursor: pointer;
+  }
+  .mod-admin-settings :where(h1, h2, h3, h4, h5, h6, p, ul, ol, figure) {
+    margin: 0;
+  }
+  .mod-admin-settings :where(h1, h2, h3, h4, h5, h6) {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+  .mod-admin-settings :where(ul, ol) {
+    list-style: none;
+    padding: 0;
+  }
+}
+
 /* Payload toggles dark mode via [data-theme="dark"] (not the front end's .dark) */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
