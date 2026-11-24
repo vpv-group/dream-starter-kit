@@ -1,5 +1,4 @@
 import { UserTagsManager as UserTagsManager_64b519a6bf17065a9701fc17ac4b5fce } from '~/payload/components/UserTagsManager'
-import { GrantStaffButton as GrantStaffButton_83e8612b2df5e03b420d054ae94fab87 } from '~/payload/components/GrantStaffButton'
 import { UserPasswordField as UserPasswordField_89fff7251071bdfb261f5f1d464259b0 } from '~/payload/components/UserPasswordField'
 import { FolderTableCell as FolderTableCell_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 import { FolderField as FolderField_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
@@ -52,7 +51,6 @@ import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc056
 /** @type import('payload').ImportMap */
 export const importMap = {
   "~/payload/components/UserTagsManager#UserTagsManager": UserTagsManager_64b519a6bf17065a9701fc17ac4b5fce,
-  "~/payload/components/GrantStaffButton#GrantStaffButton": GrantStaffButton_83e8612b2df5e03b420d054ae94fab87,
   "~/payload/components/UserPasswordField#UserPasswordField": UserPasswordField_89fff7251071bdfb261f5f1d464259b0,
   "@payloadcms/next/rsc#FolderTableCell": FolderTableCell_f9c02e79a4aed9a3924487c0cd4cafb1,
   "@payloadcms/next/rsc#FolderField": FolderField_f9c02e79a4aed9a3924487c0cd4cafb1,

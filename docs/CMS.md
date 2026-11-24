@@ -44,6 +44,13 @@ caller's Supabase session and JIT-provisions a `cms.users` row (linked by
 - `users.roles[]` (WordPress-style): **admin** (everything, incl. Users/roles and
   Commerce), **editor** (staff: content + moderation), **author** (may enter
   `/admin`), **member** (app user; no admin access).
+- **Roles decide staff access.** `profiles.is_staff` is derived from the roles —
+  `true` iff the user holds admin, editor or author — and written through to
+  Supabase on every admin save of a user (`sync-user-to-supabase` hook), so there
+  is no separate "grant" step. Only admins can edit `roles`, and an admin can't
+  remove their own `admin` role (it would lock them out). A row with no staff
+  role is refused by the SSO bridge even if a stale `is_staff` says otherwise;
+  re-saving the user re-syncs the flag.
 - Every app signup is mirrored in as a `member` by `ensureCmsUser`
   (`lib/cms/mirror-user.ts`), so the admin Users page lists **all** app users, not
   just staff (the SSO bridge only JIT-provisions staff). Because a session can first
@@ -60,8 +67,11 @@ caller's Supabase session and JIT-provisions a `cms.users` row (linked by
   staff-only today** (member-scoped collections already carry owner-scoped rules
   for the documented member-auth follow-up).
 - The **first signup** is auto-flagged staff (DB trigger) and JIT-provisioned
-  `admin`. Further staff are invited from `/admin → Users → Create New`
-  (`payload/hooks/invite-user.ts` sends a Supabase invite + flags `is_staff`).
+  `admin`. Further users are invited from `/admin → Users → Create New`
+  (`payload/hooks/invite-user.ts` sends a Supabase invite and sets `is_staff`
+  from the chosen roles — pick Admin/Editor/Author for a staff invite; a
+  Member-only invite is an app user). To promote an existing user, change their
+  role and save.
 - Users are **soft-deleted** (`trash: true`); the bridge rejects trashed rows —
   restore from the admin Trash view.
 - **Account editing** (docs/AUTH.md → Account settings): admin edits to a user's
@@ -108,9 +118,9 @@ caller's Supabase session and JIT-provisions a `cms.users` row (linked by
 | `requireCommentsEnabled`                        | Rejects comments whose target has `commentsEnabled: false`                                                                            |
 | `uniquePolymorphic(...)`                        | One row per owner + polymorphic target (open reports)                                                                                 |
 | `incrementReportCount`                          | Denormalizes `reportCount` onto the reported doc                                                                                      |
-| `invite-user`                                   | On staff-created Users rows: Supabase invite email + `is_staff` flag                                                                  |
-| `sync-user-to-supabase`                         | On admin Users updates: write email / display name / phone / job title through to Supabase Auth + `profiles`                          |
-| `notify-contact-change`                         | On Users updates (member sync or admin edit): email the member a masked "phone number changed" security notice (best-effort)          |
+| `invite-user`                                   | On staff-created Users rows: Supabase invite email + `is_staff` from the chosen roles                                                 |
+| `sync-user-to-supabase`                         | On admin Users updates: write email / display name / phone / job title through to Supabase Auth + `profiles`                           |
+| `notify-contact-change`                         | On Users updates (member sync or admin edit): email the member a masked "phone number changed" security notice (best-effort) |
 | `sync-plan-to-stripe` / `sync-coupon-to-stripe` | afterChange → create/update Stripe product, **recreate + archive** immutable prices/coupons; status lands on `syncStatus`/`syncError` |
 | `validate-custom-fields`                        | Validates `users.customFields` against the `profile-fields` global                                                                    |
 
@@ -290,10 +300,11 @@ global, staff-managed `tags`); **Contact tab** (phone, DOB, timezone, language,
 address); **Preferences tab** (push/SMS/marketing opt-ins,
 `notificationPreferences`, `onboardingCompleted`, `lastActiveAt`); **Billing
 tab** (read-only `stripeCustomerID`); joins
-`subscriptions`/`enrollments`/`devices`; UI fields `tagsManager`,
-`grantStaff` and the admin-only `passwordManager`. `email` is admin-only to
-update and, like `displayName`/`phone`/`jobTitle`, writes through to Supabase on
-save (`sync-user-to-supabase` hook). **Access:** admin panel
+`subscriptions`/`enrollments`/`devices`; UI fields `tagsManager` and the
+admin-only `passwordManager`. `email` is admin-only to update and, like
+`displayName`/`phone`/`jobTitle`, writes through to Supabase on save
+(`sync-user-to-supabase` hook); `roles` (admin-only) writes through as
+`profiles.is_staff`. **Access:** admin panel
 `canAccessAdmin`; create `isAdmin` (triggers the invite hook); read/update
 `isAdminOrSelf`; delete `isAdmin`. Trash (soft delete; bridge rejects trashed).
 

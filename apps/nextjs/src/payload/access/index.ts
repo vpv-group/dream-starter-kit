@@ -12,7 +12,20 @@ import type { Access, FieldAccess, PayloadRequest } from "payload";
  */
 
 const STAFF_ROLES = ["admin", "editor"];
-const ADMIN_PANEL_ROLES = ["admin", "editor", "author"];
+
+/**
+ * Roles that may enter /admin. These are also the roles that carry staff
+ * access: `profiles.is_staff` is derived from them (true iff the user holds
+ * at least one), written through on every admin save of a user
+ * (hooks/sync-user-to-supabase.ts) and at invite time (hooks/invite-user.ts).
+ */
+export const ADMIN_PANEL_ROLES = ["admin", "editor", "author"] as const;
+
+/** True iff `roles` includes admin, editor or author — i.e. `is_staff`. */
+export const hasStaffRole = (roles?: readonly string[] | null): boolean =>
+  Boolean(
+    roles?.some((r) => (ADMIN_PANEL_ROLES as readonly string[]).includes(r)),
+  );
 
 type ReqUser = PayloadRequest["user"];
 
@@ -33,13 +46,13 @@ export const isStaff: Access = ({ req: { user } }) =>
 /**
  * Admin-panel gate (`access.admin` on `users`): admin, editor or author may
  * open /admin. Layered on top of the SSO strategy's `profiles.is_staff` gate —
- * both must pass.
+ * both must pass (they agree by construction: `is_staff` follows the roles).
  */
 export const canAccessAdmin = ({
   req: { user },
 }: {
   req: PayloadRequest;
-}): boolean => hasRole(user, ADMIN_PANEL_ROLES);
+}): boolean => hasStaffRole(user?.roles);
 
 /** Admins see everyone; everyone else only their own `users` row. */
 export const isAdminOrSelf: Access = ({ req: { user } }) => {

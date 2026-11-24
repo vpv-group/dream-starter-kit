@@ -32,7 +32,8 @@ import { inviteTokenFromRedirect } from "~/lib/workspaces/pending-token";
  * haven't customized the template.
  *
  * Once a session exists the invitee sets a password. Staff invitees enter
- * /admin (`profiles.is_staff` was flagged when the invite was sent). Workspace
+ * /admin (`profiles.is_staff` was set from the roles chosen when the invite
+ * was sent — admin/editor/author); member invitees go to the app. Workspace
  * invitees (docs/WORKSPACES.md) arrive with `redirect_to=/invite/{token}` from
  * the template and are sent to `/welcome?invite={token}`, which joins them.
  */

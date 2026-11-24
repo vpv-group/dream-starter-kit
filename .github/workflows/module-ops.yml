@@ -83,7 +83,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.op != 'kit-update' && needs.preflight.outputs.has_token == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           token: ${{ secrets.MOD_OPS_TOKEN }}
           fetch-depth: 0
@@ -93,8 +93,8 @@ jobs:
         run: |
           git fetch origin '+refs/mod-base/*:refs/mod-base/*' || true
           git fetch origin '+refs/ext-base/*:refs/ext-base/*' || true
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
@@ -141,8 +141,25 @@ jobs:
               pnpm mod remove "${{ inputs.slug }}" "${ARGS[@]}" | tee /tmp/mod-op.log
               ;;
           esac
-          pnpm db:gen-types || true
-          pnpm cms:gen-types || true
+
+      # `pnpm db:gen-types` reads the LOCAL database, and modules query their
+      # own tables through the typed client, so the new/changed module's
+      # migrations must be applied before types are generated. Same pinned
+      # CLI as ci.yml (see the version note there).
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.105.0
+
+      - name: Regenerate types + typecheck
+        run: |
+          set -euo pipefail
+          supabase start -x studio,logflare,vector,edge-runtime
+          # No `|| true`: the script's `>` redirect empties
+          # packages/api/src/types.ts before the CLI runs, so a failure here
+          # must stop the job instead of committing an empty types file.
+          pnpm db:gen-types
+          pnpm cms:gen-types
           pnpm typecheck
 
       - name: Path confinement check
@@ -151,7 +168,18 @@ jobs:
           # lockfiles — a module can't smuggle a modified proxy.ts or
           # workflow into the PR (MODULES-PLAN.md §7).
           git add -A
-          BAD=$(git diff --cached --name-only | grep -vE '^(modules/|modules\.lock|pnpm-lock\.yaml|\.env\.example|supabase/(migrations|functions)/|apps/nextjs/(mod-packages\.generated\.json|src/(mod/|payload/migrations/|app/\(frontend\)/.*x/|app/\(frontend\)/\(app\)/(a|billing)/|app/\(frontend\)/\(public\)/pricing/))|apps/expo/src/(mod/|app/\(app\)/)|packages/(api|cms)/src/)' || true)
+          BAD=$(git diff --cached --name-only | grep -vE '^(modules/|modules\.lock|pnpm-lock\.yaml|\.env\.example|supabase/(migrations|functions)/|apps/nextjs/(mod-packages\.generated\.json|src/(lib/db/supabase-migrations\.generated\.json|mod/|payload/migrations/|app/\(frontend\)/.*x/|app/\(frontend\)/\(app\)/(a|billing)/|app/\(frontend\)/\(public\)/pricing/))|apps/expo/(package\.json|src/(mod/|app/\(app\)/))|apps/nextjs/package\.json|packages/(api|cms)/src/)' || true)
+          # `mod sync` adds/removes the module's workspace dependency in both
+          # apps' package.json, so those two files are allowed, but ONLY for
+          # "@acme/mod-<slug>": "workspace:*" lines: any other change to them
+          # (a new npm dependency, a script) still fails the check.
+          for f in apps/nextjs/package.json apps/expo/package.json; do
+            if git diff --cached -U0 -- "$f" | grep -E '^[+-] ' \
+                | grep -vqE '^[+-] +"@acme/mod-[a-z0-9-]+": "workspace:\*",?$'; then
+              BAD="$BAD"$'\n'"$f (changes other than @acme/mod-* workspace dependencies)"
+            fi
+          done
+          BAD=$(echo "$BAD" | sed '/^$/d')
           if [ -n "$BAD" ]; then
             echo "Files outside the allowlist were modified:"; echo "$BAD"; exit 1
           fi
@@ -189,12 +217,12 @@ jobs:
     if: github.event_name == 'schedule' && needs.preflight.outputs.has_token == 'true' && vars.MOD_AUTO_UPDATE != 'off'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           token: ${{ secrets.MOD_OPS_TOKEN }}
           fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
@@ -235,7 +263,7 @@ jobs:
       UPSTREAM_URL: ${{ vars.KIT_UPSTREAM_URL || 'https://github.com/vpv-group/dream-starter-kit.git' }}
       GH_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           token: ${{ secrets.MOD_OPS_TOKEN }}
           fetch-depth: 0

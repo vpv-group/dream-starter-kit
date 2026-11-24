@@ -285,7 +285,7 @@ export interface UserAuthOperations {
   };
 }
 /**
- * All app users — members and staff. Creating a NEW email emails a Supabase invite and grants staff access; for an existing user use “Grant staff access”. User tags (incl. the plan-name tag) are managed below.
+ * All app users — members and staff. Creating a NEW email emails a Supabase invite. The role decides staff access: admin, editor and author can sign in to /admin; member is an app user only. User tags (incl. the plan-name tag) are managed below.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users".
@@ -306,7 +306,7 @@ export interface User {
    */
   supabaseUserId?: string | null;
   /**
-   * admin/editor/author may enter /admin (with staff access granted); member is an app user.
+   * admin/editor/author can sign in to /admin; member is an app user only. Saving updates their staff access.
    */
   roles: ("admin" | "editor" | "author" | "member")[];
   memberStatus?: ("active" | "invited" | "suspended" | "banned") | null;

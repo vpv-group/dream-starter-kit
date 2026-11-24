@@ -2,6 +2,7 @@ import type { AuthStrategy } from "payload";
 
 import { withCmsSchemaHeal } from "~/lib/cms/ensure-schema";
 import { createClient } from "~/lib/supabase/server";
+import { hasStaffRole } from "../access";
 
 /**
  * Supabase -> Payload SSO bridge.
@@ -14,8 +15,9 @@ import { createClient } from "~/lib/supabase/server";
  * Local API. So the kit's schema isolation (payload_cms touches only `cms`) holds.
  *
  * Authorization is default-deny: only app users flagged `is_staff` (the first signup,
- * plus anyone an admin promotes) are mapped to a Payload admin. Everyone else gets no
- * CMS access.
+ * plus anyone an admin gives an admin/editor/author role — `is_staff` follows the CMS
+ * roles, see hooks/sync-user-to-supabase.ts) are mapped to a Payload user. Everyone
+ * else gets no CMS access.
  */
 export const SUPABASE_STRATEGY_NAME = "supabase";
 
@@ -83,17 +85,10 @@ export const supabaseStrategy: AuthStrategy = {
     // admin Trash view — even if their profile is still flagged staff.
     if (cmsUser.deletedAt) return { user: null };
 
-    // A mirrored member who has since been granted staff (profiles.is_staff)
-    // gets a CMS staff role on first admin visit, so role-based access
-    // (access.admin, isStaff) lines up with the Supabase-side grant.
-    if (!cmsUser.roles.some((r) => ["admin", "editor", "author"].includes(r))) {
-      cmsUser = await payload.update({
-        collection: "users",
-        id: cmsUser.id,
-        data: { roles: [...cmsUser.roles, "editor"] },
-        overrideAccess: true,
-      });
-    }
+    // The CMS roles are the source of truth for staff access. A row with no
+    // admin/editor/author role is a member even if a stale `is_staff` flag
+    // says otherwise (re-saving the user in /admin re-syncs the flag).
+    if (!hasStaffRole(cmsUser.roles)) return { user: null };
 
     return { user: { ...cmsUser, collection: "users" as const } };
   },

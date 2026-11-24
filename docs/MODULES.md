@@ -241,7 +241,11 @@ honest "this deploy contains it" signal), the curated catalog
 install-from-GitHub and verified zip-upload forms, and live operations. Every
 mutation dispatches `.github/workflows/module-ops.yml`, which runs the same
 CLI on a runner, enforces **path confinement** (the op may only write
-`modules/<slug>/**` + known sync outputs), and opens a labeled PR. A daily
+`modules/<slug>/**` + known sync outputs), and opens a labeled PR. The op
+starts a local Supabase on the runner (a few minutes), so `db:gen-types`
+includes the module's tables before typecheck. The apps' `package.json`
+files are allowed only for `"@acme/mod-<slug>": "workspace:*"` lines; any
+other change to them fails the check. A daily
 schedule opens update PRs with auto-merge — CI green ⇒ merged ⇒ deployed ⇒
 migrations at boot. Brakes: `MOD_AUTO_UPDATE=off` / `MOD_AUTO_MERGE=off`
 (repo variables), per-module `pinned` in the lock; removals never
