@@ -222,6 +222,25 @@ describe("syncSite", () => {
     expect(state().licenseKey).toBeUndefined();
   });
 
+  it("uses the registry's human message, not the repeated code", async () => {
+    const { deps } = makeDeps({
+      replies: {
+        "/sites/register": {
+          status: 502,
+          body: {
+            error: "server_error",
+            code: "server_error",
+            message: "Could not issue the site key",
+          },
+        },
+      },
+    } as never);
+    expect(await syncSite(deps, { force: true })).toEqual({
+      status: "error",
+      message: "server_error: Could not issue the site key",
+    });
+  });
+
   it("reports an unreachable registry", async () => {
     const { deps, state } = makeDeps({
       fetchImpl: (() =>

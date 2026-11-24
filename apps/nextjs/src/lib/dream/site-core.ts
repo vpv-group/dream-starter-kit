@@ -123,9 +123,15 @@ async function call<T>(
   }
   const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (!res.ok) {
-    const code =
-      typeof json.code === "string" ? json.code : `http_${res.status}`;
-    const msg = typeof json.error === "string" ? json.error : "request failed";
+    // The registry's error shape is { error: code, code, message } — `error`
+    // repeats the machine code; the human sentence is in `message`.
+    const str = (v: unknown) => (typeof v === "string" && v ? v : null);
+    const code = str(json.code) ?? str(json.error) ?? `http_${res.status}`;
+    const errorText = str(json.error);
+    const msg =
+      str(json.message) ??
+      (errorText && errorText !== code ? errorText : null) ??
+      "request failed";
     throw new RegistryCallError(res.status, `${code}: ${msg}`);
   }
   return json as T;

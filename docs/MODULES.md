@@ -257,6 +257,13 @@ updates and free modules work without anyone creating or pasting a key:
    **/a/modules → Your sites** they choose **Use my plan on this site**. A
    site key never inherits a plan on its own.
 
+**No key yet?** Deployments set up before site licenses existed never ran
+the post-seed registration, and a failed attempt otherwise waits a day for
+its retry. While the global has no key, **System → Site License** shows a
+**Generate license key** button (admin-only;
+`POST /api/cms/dream-site/register`) that registers right away and shows
+the registry's error if it fails.
+
 The app uses `DREAM_LICENSE_KEY` when set and the site key otherwise. The
 `module-ops` workflow can't read the database, so to use paid modules, copy
 the key (top of `/admin`) into the `DREAM_LICENSE_KEY` repository secret.
