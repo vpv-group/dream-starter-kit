@@ -142,16 +142,45 @@ jobs:
               ;;
           esac
 
+      # An op can leave the repo unchanged, e.g. `update` when the module's
+      # newest tag is the version already installed (a release whose vX.Y.Z
+      # tag isn't pushed yet). End with a notice instead of a failed commit,
+      # and skip the slow type regeneration below.
+      - name: Check for changes
+        id: changes
+        env:
+          OP: ${{ inputs.op }}
+          SLUG: ${{ inputs.slug }}
+          SOURCE: ${{ inputs.source }}
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+          VERSION=""
+          if [ -n "$SLUG" ]; then
+            VERSION=$(jq -r --arg s "$SLUG" '.modules[$s].version // empty' modules.lock 2>/dev/null || true)
+          fi
+          MSG="pnpm mod $OP ${SLUG:-$SOURCE} changed nothing"
+          if [ -n "$VERSION" ]; then MSG="$MSG: $SLUG is already at $VERSION"; fi
+          if [ "$OP" = "update" ]; then
+            MSG="$MSG. An update installs the module's newest vX.Y.Z tag (or the version you asked for), so push the release tag first."
+          fi
+          echo "::notice title=Nothing to update::$MSG"
+
       # `pnpm db:gen-types` reads the LOCAL database, and modules query their
       # own tables through the typed client, so the new/changed module's
       # migrations must be applied before types are generated. Same pinned
       # CLI as ci.yml (see the version note there).
       - name: Setup Supabase CLI
+        if: steps.changes.outputs.changed == 'true'
         uses: supabase/setup-cli@v1
         with:
           version: 2.105.0
 
       - name: Regenerate types + typecheck
+        if: steps.changes.outputs.changed == 'true'
         run: |
           set -euo pipefail
           supabase start -x studio,logflare,vector,edge-runtime
@@ -163,6 +192,7 @@ jobs:
           pnpm typecheck
 
       - name: Path confinement check
+        if: steps.changes.outputs.changed == 'true'
         run: |
           # The op may only touch modules/**, the known sync outputs and
           # lockfiles — a module can't smuggle a modified proxy.ts or
@@ -185,6 +215,7 @@ jobs:
           fi
 
       - name: Push branch + open PR
+        if: steps.changes.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
         run: |
