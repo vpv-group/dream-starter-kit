@@ -50,8 +50,10 @@ export interface CatalogEntry {
   paid?: boolean;
   /** Dream registry catalog (schema 2) says "paid" | "free". */
   access?: "paid" | "free";
-  /** "Included in <plan>" on paid cards. */
+  /** "Included in <plan>" on paid cards (older registries: plans joined). */
   plan?: string;
+  /** The plans that include a paid module, one name each. */
+  plans?: string[];
   /** Where to buy access when not entitled. */
   pricingUrl?: string;
 }

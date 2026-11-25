@@ -1,7 +1,7 @@
 "use client";
 
 import type { ChangeEvent, FormEvent } from "react";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import {
   Banner,
@@ -172,6 +172,11 @@ function CatalogCard({ entry }: { entry: CatalogEntry }) {
   // Paid modules distribute through the Dream registry (`dream:<slug>`),
   // free ones from their public repo.
   const paid = isPaidEntry(entry);
+  // One pill per plan. Older registries only send `plan`, the names joined
+  // with " or " — split it back up.
+  const plans = entry.plans?.length
+    ? entry.plans
+    : (entry.plan?.split(" or ").filter(Boolean) ?? []);
   const source = paid ? `dream:${entry.slug}` : entry.repo;
   const installable = !paid || isEntitled(entry.slug);
 
@@ -233,12 +238,25 @@ function CatalogCard({ entry }: { entry: CatalogEntry }) {
         {entry.latest ? (
           <span className="kit-modules-catalog__version">{entry.latest}</span>
         ) : null}
-        {paid ? (
+        {paid && plans.length === 0 ? (
           <Pill pillStyle="light" size="small">
-            {entry.plan ? `Included in ${entry.plan}` : "Paid"}
+            Paid
           </Pill>
         ) : null}
       </header>
+      {paid && plans.length > 0 ? (
+        <div className="kit-modules-catalog__plans">
+          Included in{" "}
+          {plans.map((plan, i) => (
+            <Fragment key={plan}>
+              {i > 0 ? (i === plans.length - 1 ? " and " : ", ") : null}
+              <Pill pillStyle="light" size="small">
+                {plan}
+              </Pill>
+            </Fragment>
+          ))}
+        </div>
+      ) : null}
       {entry.description ? (
         <p className="kit-modules-catalog__desc">{entry.description}</p>
       ) : null}

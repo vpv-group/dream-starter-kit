@@ -286,12 +286,26 @@ html[data-theme="dark"] {
   border: 1px solid var(--theme-elevation-150);
   border-radius: var(--style-radius-m);
   background: var(--theme-elevation-0);
+  min-width: 0;
 }
 .kit-modules-catalog__head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: calc(var(--base) * 0.4);
+}
+/* "Included in [Plan A] and [Plan B]": text with one pill per plan. */
+.kit-modules-catalog__plans {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--base) * 0.25);
+  margin: 0;
+  color: var(--theme-elevation-800);
+  font-size: 0.9em;
+}
+.kit-modules-catalog__plans .pill {
+  max-width: 100%;
 }
 .kit-modules-catalog__version {
   color: var(--theme-elevation-500);
