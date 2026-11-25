@@ -126,7 +126,11 @@ export const clientEnvSchema = z.object({
   APP_URL: z.url(),
   /** Origin of the Payload REST API (the web app). Mobile reads content from here. */
   CMS_URL: z.url().optional(),
-  /** Cloudflare Turnstile site key (public) for the auth CAPTCHA. See docs/TURNSTILE.md. */
+  /**
+   * Cloudflare Turnstile site key (public) for the auth CAPTCHA — web:
+   * NEXT_PUBLIC_TURNSTILE_SITE_KEY, mobile: EXPO_PUBLIC_TURNSTILE_SITE_KEY.
+   * Optional: unset/empty makes the CAPTCHA provider inert. See docs/TURNSTILE.md.
+   */
   TURNSTILE_SITE_KEY: z.string().optional(),
 });
 

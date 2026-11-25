@@ -14,6 +14,7 @@ import { Button } from "@acme/ui-native/button";
 import { Input } from "@acme/ui-native/input";
 import { Text } from "@acme/ui-native/text";
 
+import { useCaptcha } from "~/lib/captcha";
 import { supabase } from "~/lib/supabase";
 
 const msg = (e: unknown) =>
@@ -21,6 +22,7 @@ const msg = (e: unknown) =>
 
 export default function ForgotPassword() {
   const settings = useAuthConfig();
+  const { takeToken } = useCaptcha();
   const {
     control,
     handleSubmit,
@@ -51,6 +53,7 @@ export default function ForgotPassword() {
         supabase,
         email,
         Linking.createURL("/auth-callback"),
+        { captchaToken: await takeToken() },
       );
       Alert.alert("Check your email", "We sent you a reset link.");
     } catch (e) {

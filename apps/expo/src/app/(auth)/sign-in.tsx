@@ -20,6 +20,7 @@ import { Input } from "@acme/ui-native/input";
 import { Text } from "@acme/ui-native/text";
 
 import { nativeOAuth, nativeSSO } from "~/lib/auth";
+import { useCaptcha } from "~/lib/captcha";
 import { supabase } from "~/lib/supabase";
 
 const msg = (e: unknown) =>
@@ -28,6 +29,8 @@ const msg = (e: unknown) =>
 export default function SignIn() {
   const settings = useAuthConfig();
   const m = settings.methods;
+  // One takeToken() per gated GoTrue call (tokens are single-use).
+  const { takeToken } = useCaptcha();
   const [oauth, setOauth] = useState<string | null>(null);
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
@@ -56,7 +59,9 @@ export default function SignIn() {
 
   async function onSubmit(values: SignInInput) {
     try {
-      await signInWithPassword(supabase, values);
+      await signInWithPassword(supabase, values, {
+        captchaToken: await takeToken(),
+      });
     } catch (e) {
       Alert.alert("Sign in failed", msg(e));
     }
@@ -70,6 +75,7 @@ export default function SignIn() {
         emailRedirectTo: Linking.createURL("/auth-callback"),
         // Sign-in must never create an account (that's the sign-up screen).
         shouldCreateUser: false,
+        captchaToken: await takeToken(),
       });
       Alert.alert("Check your email", "We sent you a magic link.");
     } catch (e) {
@@ -81,7 +87,10 @@ export default function SignIn() {
     const email = requireEmail();
     if (!email) return;
     try {
-      await signInWithOtp(supabase, email, { shouldCreateUser: false });
+      await signInWithOtp(supabase, email, {
+        shouldCreateUser: false,
+        captchaToken: await takeToken(),
+      });
       setOtpSent(true);
     } catch (e) {
       Alert.alert("Could not send code", msg(e));
@@ -118,7 +127,7 @@ export default function SignIn() {
       const params = ssoParamsForEmail(email, settings) ?? {
         domain: email.slice(email.lastIndexOf("@") + 1),
       };
-      await nativeSSO(params);
+      await nativeSSO(params, { captchaToken: await takeToken() });
     } catch (e) {
       Alert.alert("SSO sign-in failed", msg(e));
     } finally {

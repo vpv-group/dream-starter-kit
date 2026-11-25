@@ -64,6 +64,19 @@ describe("clientEnvSchema", () => {
     expect(env.SUPABASE_ANON_KEY).toBe("anon");
   });
 
+  it("carries the optional Turnstile site key (absent = CAPTCHA inert)", () => {
+    const base = {
+      SUPABASE_URL: "https://abc.supabase.co",
+      SUPABASE_ANON_KEY: "anon",
+      APP_URL: "https://example.com",
+    };
+    expect(parseClientEnv(base).TURNSTILE_SITE_KEY).toBeUndefined();
+    expect(
+      parseClientEnv({ ...base, TURNSTILE_SITE_KEY: "0xABC" })
+        .TURNSTILE_SITE_KEY,
+    ).toBe("0xABC");
+  });
+
   it("rejects a missing anon key", () => {
     expect(() =>
       parseClientEnv({
