@@ -234,7 +234,7 @@ pnpm mod create <slug>            # working scaffold (table+RLS, hooks, screens,
                                   #   widget, settings, ping route, tests)
 pnpm mod add <url[#vX.Y.Z]|.zip>  # vendor + validate + snapshot + lock + sync
 pnpm mod add dream:<slug>[@x.y.z] # paid module from the Dream registry (below)
-pnpm mod update <slug> [--to vX.Y.Z] [--continue]
+pnpm mod update <slug> [--to vX.Y.Z] [--from <url|dream:<slug>>] [--continue]
 pnpm mod remove <slug> [--keep-data]
 pnpm mod list | status [--json] [--check]
 pnpm mod eject <slug> --repo <url>
@@ -245,6 +245,16 @@ pnpm mod sync                     # after ANY change under modules/
 Updates are a three-way merge (base = `refs/mod-base/<slug>` pinned in the
 lock, ours = your possibly-modified copy, theirs = upstream) — local edits
 survive clean updates; conflicts get standard markers + `--continue`.
+`--from` switches where a module updates from (and records it in the lock),
+e.g. `pnpm mod update crm --from dream:crm` moves a CRM first added from its
+private GitHub repo onto the Dream registry. In `module-ops.yml`, put the new
+origin in the `source` input of an `update` run.
+
+**Install order across dependent modules.** `requires` names a slug, not a
+version, so a module that uses tables a dependency added in a later release
+(e.g. client-portal → CRM Cases, `crm` ≥ 1.2.0) fails validation with
+"… the installed crm@1.1.1 doesn't have it; update crm …". Update the
+dependency first, then add/update the dependent module.
 `remove` refuses while another installed module `requires` the target,
 generates the drop migrations (Supabase + a best-effort cms scaffold), and
 tombstones the lock (pinned migration versions are never reused).
@@ -290,7 +300,9 @@ AND the `GITHUB_OPS_TOKEN` env (plus `GITHUB_REPO` off Vercel); enable
 “Allow auto-merge” in the repo settings. If you install modules from
 **private GitHub repos**, give the same PAT read access (Contents: read) to
 each of them too; otherwise `mod update` can't list their tags and the run
-fails with "Can't read the module's repository" (GitHub answers 403).
+fails with "Can't read the module's repository" (GitHub answers 403). A
+module that's also in the Dream registry can instead switch to it:
+`pnpm mod update <slug> --from dream:<slug>` (no repo access needed).
 
 **Without the token, module ops is off.** Every job in `module-ops.yml` is
 _skipped_ (a preflight job leaves a notice explaining why) instead of failing,

@@ -246,11 +246,18 @@ function sha256File(file: string): string {
   return out.split(" ")[0] ?? "";
 }
 
-/** `pnpm mod update <slug> [--to vX.Y.Z] [--continue]` */
+/**
+ * `pnpm mod update <slug> [--to vX.Y.Z] [--from <source>] [--continue]`
+ *
+ * `--from` switches the module's origin for this and later updates — e.g. a
+ * module first added from its private GitHub repo can move to the Dream
+ * registry (`--from dream:crm`), which needs a license key instead of repo
+ * access. The source must serve the same slug; local edits still 3-way merge.
+ */
 export async function update(
   repoRoot: string,
   slug: string,
-  opts: { to?: string; cont?: boolean },
+  opts: { to?: string; from?: string; cont?: boolean },
 ): Promise<void> {
   const lock = readLock(repoRoot);
   const entry = lock.modules[slug];
@@ -263,29 +270,47 @@ export async function update(
     return;
   }
 
-  if (
-    typeof entry.source !== "object" ||
-    (entry.source.type !== "github" && entry.source.type !== "registry")
+  let src: Source;
+  if (opts.from) {
+    src = parseSource(opts.from);
+    if (src.kind === "zip") {
+      throw new Error(
+        `--from takes a GitHub url or dream:<slug> — a zip has no later versions to update from`,
+      );
+    }
+    // --to wins over a version embedded in the source (url#vX / dream:x@y).
+    if (opts.to) src.ref = opts.to;
+  } else if (
+    typeof entry.source === "object" &&
+    (entry.source.type === "github" || entry.source.type === "registry")
   ) {
+    src =
+      entry.source.type === "github"
+        ? { kind: "github", location: entry.source.repo, ref: opts.to }
+        : {
+            kind: "registry",
+            location: `dream:${entry.source.slug}`,
+            ref: opts.to,
+          };
+  } else {
     throw new Error(
-      `"${slug}" has a ${typeof entry.source === "string" ? entry.source : entry.source.type} origin — re-add it from its source to update`,
+      `"${slug}" has a ${typeof entry.source === "string" ? entry.source : entry.source.type} origin — update it with --from <github-url|dream:${slug}>`,
     );
   }
+  if (src.kind === "registry") {
+    // Omitted = the latest version compatible with this kit.
+    src.ref = src.ref?.replace(/^v/, "");
+  }
 
-  const fetched =
-    entry.source.type === "github"
-      ? await fetchSource(repoRoot, {
-          kind: "github",
-          location: entry.source.repo,
-          ref: opts.to,
-        })
-      : await fetchSource(repoRoot, {
-          kind: "registry",
-          location: `dream:${entry.source.slug}`,
-          // Omitted = the latest version compatible with this kit.
-          ref: opts.to?.replace(/^v/, ""),
-        });
-  const { version: newVersion } = readManifestBasics(fetched.dir);
+  const fetched = await fetchSource(repoRoot, src);
+  const { slug: fetchedSlug, version: newVersion } = readManifestBasics(
+    fetched.dir,
+  );
+  if (fetchedSlug !== slug) {
+    throw new Error(
+      `the source serves "${fetchedSlug}", not "${slug}" — aborting the update`,
+    );
+  }
 
   const pinnedBase = entry.baseCommit ?? currentBase(repoRoot, slug);
   if (!pinnedBase) {
@@ -321,13 +346,15 @@ export async function update(
   entry.baseCommit = theirs;
   entry.version = newVersion;
   entry.source =
-    entry.source.type === "github"
+    fetched.registry ??
+    (src.kind === "github"
       ? {
-          ...entry.source,
-          ref: fetched.ref ?? entry.source.ref,
-          commit: fetched.commit ?? entry.source.commit,
+          type: "github",
+          repo: src.location,
+          ref: fetched.ref ?? "",
+          commit: fetched.commit ?? "",
         }
-      : (fetched.registry ?? entry.source);
+      : entry.source);
   writeLock(repoRoot, lock);
 
   if (merged.conflicts.length > 0) {

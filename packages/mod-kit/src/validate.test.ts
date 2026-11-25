@@ -202,6 +202,31 @@ describe("validateManifestSet", () => {
     expect(errors[0]).toContain('requires "notifications"');
   });
 
+  it("points at a stale dependency when its newer table is missing", () => {
+    const crm = defineModule({
+      ...base,
+      slug: "crm",
+      version: "1.1.1",
+      database: { tables: ["mod_crm_contacts"] },
+    });
+    const portal = defineModule({
+      ...base,
+      slug: "client-portal",
+      requires: ["crm"],
+      database: {
+        dml: ["mod_crm_contacts", "mod_crm_cases"],
+        triggersOn: ["mod_crm_cases"],
+      },
+    });
+    const errors = validateManifestSet([crm, portal]);
+    expect(errors).toHaveLength(2);
+    for (const e of errors) {
+      expect(e).toContain('"mod_crm_cases"');
+      expect(e).toContain("installed crm@1.1.1");
+      expect(e).toContain("pnpm mod update crm");
+    }
+  });
+
   it("passes a valid set", () => {
     const notif = defineModule({ ...base, slug: "notifications" });
     const rem = defineModule({

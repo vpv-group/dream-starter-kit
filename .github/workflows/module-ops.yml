@@ -28,7 +28,7 @@ on:
         type: choice
         options: [add, update, remove, kit-update]
       source:
-        description: "add: GitHub url[#vX.Y.Z], signed zip URL, or dream:<slug>[@x.y.z]"
+        description: "add: GitHub url[#vX.Y.Z], signed zip URL, or dream:<slug>[@x.y.z]. update: optional new origin (e.g. dream:<slug>) to switch to"
         required: false
         type: string
       slug:
@@ -123,6 +123,7 @@ jobs:
           # need module ops itself: the CLI checks MOD_OPS_TOKEN).
           DREAM_LICENSE_KEY: ${{ secrets.DREAM_LICENSE_KEY }}
           MOD_OPS_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
+          UPDATE_FROM: ${{ inputs.op == 'update' && inputs.source || '' }}
         run: |
           set -euo pipefail
           case "${{ inputs.op }}" in
@@ -133,6 +134,9 @@ jobs:
             update)
               ARGS=()
               [ -n "${{ inputs.version }}" ] && ARGS+=(--to "${{ inputs.version }}")
+              # Optional: switch the module's origin (e.g. a private GitHub
+              # repo → the Dream registry, dream:<slug>).
+              [ -n "$UPDATE_FROM" ] && ARGS+=(--from "$UPDATE_FROM")
               # Merge conflicts exit non-zero but still make a PR (markers
               # and all). Any other failure (e.g. the module repo can't be
               # read) must fail here, not look like an update.
@@ -141,7 +145,7 @@ jobs:
                   echo "conflicts=true" >> "$GITHUB_OUTPUT"
                 else
                   if grep -q "returned error: 40[34]" /tmp/mod-op.log; then
-                    echo "::error title=Can't read the module's repository::GitHub refused access to ${{ inputs.slug }}'s source repo. For a private module repo, add it to the MOD_OPS_TOKEN fine-grained PAT's repository access with Contents: read (docs/MODULES.md → Founder setup)."
+                    echo "::error title=Can't read the module's repository::GitHub refused access to ${{ inputs.slug }}'s source repo. For a private module repo, add it to the MOD_OPS_TOKEN fine-grained PAT's repository access with Contents: read (docs/MODULES.md → Founder setup) — or, for a Dream registry module, re-run this update with source dream:${{ inputs.slug }} to switch it to the registry (license key, no repo access needed)."
                   fi
                   exit 1
                 fi
