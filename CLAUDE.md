@@ -33,11 +33,136 @@ clarity beat cleverness.
 | Shared UI tokens / primitives         |                                                                                   | `packages/ui`                             |
 | Env + constants                       | zod env schema, `DEFAULT_AI_MODEL`, etc.                                          | `packages/config`                         |
 | Payments                              | Stripe (web only) + webhook edge function                                         | `apps/nextjs`, `supabase/functions`       |
-| AI                                    | Vercel AI SDK v6 via the AI Gateway (Claude default)                              | server routes / edge fn                   |
+| AI                                    | Vercel AI SDK v7 via the AI Gateway (Claude default)                              | server routes / edge fn                   |
 | Build/ship                            | EAS (mobile), Vercel (web), Expo Push                                             | `eas.json`, Vercel                        |
 
 > Package scope is `@acme/*` (inherited from the template). It's renameable —
 > see the README. Don't rename mid-build.
+
+## Reference docs (read before changing that layer)
+
+Official docs for everything the kit uses. Before you change a layer, check its
+docs here instead of relying on memory: these products change faster than
+training data. Where a vendor offers a native feature on its free plan, prefer
+it to hand-rolled code (see **Vendor features** under Conventions).
+
+**Monorepo / language**
+
+- Turborepo — https://turborepo.dev/docs
+- pnpm — workspaces https://pnpm.io/workspaces · catalogs https://pnpm.io/catalogs
+- TypeScript — https://www.typescriptlang.org/docs/
+- Zod — https://zod.dev
+
+**Web**
+
+- Next.js — https://nextjs.org/docs
+  - caching: `revalidateTag` https://nextjs.org/docs/app/api-reference/functions/revalidateTag
+    (Next 16 takes a second `profile` argument) · `unstable_cache`
+    https://nextjs.org/docs/app/api-reference/functions/unstable_cache
+  - `after()` https://nextjs.org/docs/app/api-reference/functions/after ·
+    route handlers https://nextjs.org/docs/app/api-reference/file-conventions/route
+- React — https://react.dev
+- Tailwind CSS v4 — https://tailwindcss.com/docs
+- TanStack Query — https://tanstack.com/query/latest/docs
+- React Hook Form — https://react-hook-form.com/docs
+- Icons — Lucide https://lucide.dev · Tabler https://tabler.io/icons
+
+**shadcn/ui** — the web design system: the `components.json` setups in
+`packages/ui` and `apps/nextjs`, the `dashboard-01` app shell, the `login-05`
+auth flow, the sidebar, the tokens in `tooling/tailwind/theme.css`, and the
+Payload admin (via Payload's Tailwind + shadcn guide). `docs/DESIGN-SYSTEM.md`
+stays the kit's own rulebook; these are the upstream reference for primitives.
+Write components from the docs — never copy third-party template code.
+
+- Docs — https://ui.shadcn.com/docs
+- Installation (Next.js) — https://ui.shadcn.com/docs/installation/next
+- Monorepo — https://ui.shadcn.com/docs/monorepo
+- `components.json` — https://ui.shadcn.com/docs/components-json
+- CLI — https://ui.shadcn.com/docs/cli
+- Tailwind v4 — https://ui.shadcn.com/docs/tailwind-v4
+- Theming / CSS variables — https://ui.shadcn.com/docs/theming
+- Dark mode (Next.js) — https://ui.shadcn.com/docs/dark-mode/next
+- Components — https://ui.shadcn.com/docs/components · Sidebar
+  https://ui.shadcn.com/docs/components/sidebar
+- Blocks (`dashboard-01`, `login-05`) — https://ui.shadcn.com/blocks
+- Registry — https://ui.shadcn.com/docs/registry
+
+**Mobile**
+
+- Expo — https://docs.expo.dev/
+- Expo Router — https://docs.expo.dev/router/introduction/
+- EAS Build — https://docs.expo.dev/build/introduction/
+- Expo push — https://docs.expo.dev/push-notifications/overview/ · sending,
+  tickets and receipts https://docs.expo.dev/push-notifications/sending-notifications/
+- Expo + Supabase — https://docs.expo.dev/guides/using-supabase/
+- React Native — https://reactnative.dev/docs/getting-started
+- NativeWind — https://www.nativewind.dev/
+- react-native-reusables — https://reactnativereusables.com/
+
+**Supabase**
+
+- Docs — https://supabase.com/docs · CLI https://supabase.com/docs/reference/cli/introduction
+- supabase-js — https://supabase.com/docs/reference/javascript/introduction
+- SSR for Next.js — https://supabase.com/docs/guides/auth/server-side/creating-a-client
+- Row Level Security — https://supabase.com/docs/guides/database/postgres/row-level-security
+- RLS performance — https://supabase.com/kb/troubleshooting/rls-performance-and-best-practices-Z5Jjwv
+- Auth — https://supabase.com/docs/guides/auth · anonymous sign-ins
+  https://supabase.com/docs/guides/auth/auth-anonymous
+- Storage — https://supabase.com/docs/guides/storage
+- Cron (pg_cron) — https://supabase.com/docs/guides/cron
+- Queues (pgmq) — https://supabase.com/docs/guides/queues
+- Vault — https://supabase.com/docs/guides/database/vault
+- pg_net — https://supabase.com/docs/guides/database/extensions/pg_net
+- Database advisors (`supabase db advisors`) — https://supabase.com/docs/guides/observability/advisors
+- Connecting / pooling — https://supabase.com/docs/guides/database/connecting-to-postgres
+- Edge Functions (for modules) — https://supabase.com/docs/guides/functions
+- Pricing / free-plan limits — https://supabase.com/pricing
+- Postgres best-practice rules for agents — https://github.com/supabase-community/supabase-plugin
+
+**Payload CMS**
+
+- Docs — https://payloadcms.com/docs
+- Postgres adapter — https://payloadcms.com/docs/database/postgres
+- Migrations — https://payloadcms.com/docs/database/migrations
+- Transactions — https://payloadcms.com/docs/database/transactions
+- Indexes — https://payloadcms.com/docs/database/indexes
+- Access control — https://payloadcms.com/docs/access-control/overview
+- Hooks — https://payloadcms.com/docs/hooks/overview
+- Local API — https://payloadcms.com/docs/local-api/overview
+- Queries (depth, select, populate) — https://payloadcms.com/docs/queries/overview
+- Versions & drafts — https://payloadcms.com/docs/versions/overview
+- Trash — https://payloadcms.com/docs/trash/overview
+- Jobs Queue — https://payloadcms.com/docs/jobs-queue/overview
+- Custom views — https://payloadcms.com/docs/custom-components/custom-views
+- Rich text (Lexical) — https://payloadcms.com/docs/rich-text/overview
+- Storage adapters — https://payloadcms.com/docs/upload/storage-adapters
+- Plugins — form builder https://payloadcms.com/docs/plugins/form-builder ·
+  SEO https://payloadcms.com/docs/plugins/seo · nested docs
+  https://payloadcms.com/docs/plugins/nested-docs
+- Performance — https://payloadcms.com/docs/performance/overview
+- Drizzle (Payload's ORM, behind `payload.db.drizzle`) — https://orm.drizzle.team/docs/overview
+
+**Payments / AI / auth / MCP**
+
+- Stripe — https://docs.stripe.com · webhooks https://docs.stripe.com/webhooks ·
+  Checkout https://docs.stripe.com/payments/checkout · Billing
+  https://docs.stripe.com/billing · customer portal
+  https://docs.stripe.com/customer-management · testing https://docs.stripe.com/testing
+- AI SDK — https://ai-sdk.dev/docs · Vercel AI Gateway https://vercel.com/docs/ai-gateway
+- Cloudflare Turnstile — https://developers.cloudflare.com/turnstile/
+- MCP — spec https://modelcontextprotocol.io/specification · TypeScript SDK
+  https://github.com/modelcontextprotocol/typescript-sdk
+
+**Hosting / tooling**
+
+- Vercel — https://vercel.com/docs · function limits
+  https://vercel.com/docs/functions/limitations · pricing https://vercel.com/pricing
+- Vitest — https://vitest.dev
+- Playwright — https://playwright.dev/docs/intro
+- ESLint — https://eslint.org/docs/latest · Prettier https://prettier.io/docs
+- Mailpit — https://mailpit.axllent.org/docs/
+- Nodemailer — https://nodemailer.com
+- Claude Code — https://code.claude.com/docs
 
 ## The golden rules (do not violate)
 
@@ -523,6 +648,20 @@ fonts, logo files and how to swap in your own brand.
   migration; add a new one.
 - **Don't track create-t3-turbo upstream** (see `docs/ARCHITECTURE.md` → Keeping
   dependencies current): snapshot + cherry-pick only. The forked SHA is in `NOTICE`.
+- **Vendor features (free plan first, minimal setup).** This is an open-source
+  starter, so every default must work on each vendor's **free plan** and need no
+  manual dashboard setup beyond pasting API keys.
+  - Prefer a vendor's native feature over hand-rolled code when it is available
+    on the free plan. Examples: Supabase Cron, Queues and Vault; Payload's Jobs
+    Queue, indexes and versions; Next's tagged data cache.
+  - Anything that needs a paid plan must be optional and degrade gracefully.
+  - If a feature needs a secret or an endpoint, have the kit provision it
+    (derive it, store it in Vault, register it through the vendor API) rather
+    than adding a manual step.
+  - **One exception: compliance (SOC 2 / HIPAA) needs paid tiers.** That means
+    BAAs, the Supabase HIPAA add-on, PITR, and providers that will sign a BAA. A
+    compliance module validates those requirements itself; the kit's free-first
+    defaults stay as they are.
 
 ## Staying current with the kit (upstream sync)
 
