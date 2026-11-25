@@ -151,8 +151,15 @@ endpoints instead.
 **Menus are CMS-driven** (`kit-modules` + `nav-items` collections,
 **Modules** admin group): manifest nav entries are _defaults_, seeded by the
 boot reconcile (`lib/mod/reconcile-nav.ts`); staff rename/drag-reorder/re-icon/
-toggle in `/admin` and the web sidebar + native `useNavMenu()` follow without a
-redeploy. Disabling a module in `kit-modules` hides its menu items,
+toggle in `/admin` and the web sidebar follows without a redeploy. The
+native app has its own order on the same rows — **Navigation → iOS and
+Android App** sets the tab bar (3 or 4 tabs, plus a Search / More list of every item) and
+can hide rows on native (deep link only); the app loads it at launch and
+caches it offline (docs/CMS.md → `nav-items`). Native nav `href`s must be
+screens the module ships: a module's static native routes are rendered
+inside the tab slots from the generated `modNativeScreens` map, and its
+`mount: "index"` screen is served at `/home`. Disabling a module in
+`kit-modules` hides its menu items,
 404s its pages and API, and removes its dashboard widgets — without
 uninstalling.
 
@@ -191,7 +198,7 @@ users without `profiles.is_staff`. For a module-wide rule, set
 `access: { check: "mod_<slug>_<fn>" }`: a no-arg SQL function returning
 boolean for the current user. Then:
 
-- its menu entries are dropped (server-side on web, in `useNavMenu()` on
+- its menu entries are dropped (server-side on web, in `useNativeNav()` on
   native) when the check is false;
 - its generated web layout redirects to `/a`;
 - its native screens are wrapped in `withModuleAccess`, which sends the user

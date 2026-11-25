@@ -1003,6 +1003,18 @@ export async function seedCmsContent(
     },
   });
 
+  // Publish the iOS/Android tab bar (/admin → Navigation → iOS and Android
+  // App) with 4 tabs, so the native app and the web phone/tablet tab bar
+  // start from a published menu. Skips if staff already saved it.
+  steps.push({
+    label: "App tab bar",
+    run: async () => {
+      const { seedNativeNavigation } =
+        await import("../lib/mod/native-nav-seed");
+      await seedNativeNavigation(payload);
+    },
+  });
+
   // Seed steps contributed by installed modules (generated registry) —
   // they ride the same idempotent progress flow as the core steps.
   for (const modStep of modSeedSteps) {
