@@ -509,7 +509,20 @@ The screen has two sections:
   tab), so coming back from Search shows the app's mark; an SF Symbol /
   Material override replaces it. Hidden rows
   are reachable by deep link only. Save draft → Publish; the app reads only
-  the published version.
+  the published version. The first CMS seed publishes a **4-tab** menu with
+  every native row visible in default order (`lib/mod/native-nav-seed.ts`),
+  unless staff already saved one.
+
+  The **web app on phones and tablets** (below `lg`) shows the same menu as a
+  Liquid Glass bottom tab bar on every signed-in page (`/a/*` and the rest of
+  the app shell), with the same tab count, order and hidden rows; the top
+  header and the desktop sidebar are unchanged. Web differences: icons come
+  from the row's Tabler `icon` (the native SF/Material overrides don't
+  apply), and hrefs map to the web page (`/home` → `/a`, a module's
+  native-only path → its web nav entry, `/content/posts` → `/posts`). The
+  trailing round Search button turns the bar into a search field over a list
+  of every row plus Profile. See `lib/mod/web-tab-menu.ts` and
+  `components/glass-tab-bar.tsx`.
 
 Per-user rules, on both platforms:
 
@@ -541,7 +554,7 @@ app release; a brand-new module's screens still ship in a build.
 | `profile-fields`            | Admin-defined custom member fields (key, label, type, options, required, visibility, editableByMember, order) — drives `users.customFields` validation + profile UI                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `anyone`           | `isStaff` |
 | `image-generation-settings` | **System → Image Generation.** Workspace settings for AI image generation: `enabled` (kill switch), `model` (gateway image-model slug from the `@acme/config` catalog), `systemPrompt` (art direction). Resolution order at generation time: global → env → code default. Also a **post-generation audit** (`auditEnabled`, `auditMaxAttempts`, `auditFailureAction` publish/skip, `auditModel`, `auditInstructions`) and a **Regenerate all images** button (re-renders every image-enabled doc against the current settings; backed by the staff-only `/api/cms/regenerate-images` route)                                                                                                                                                                   | `isStaff`          | `isStaff` |
 | `authentication-settings`   | **System → Authentication.** Front-end auth config: an **orderable** login-method list (password · magic link · email OTP · Google · Apple · SAML SSO — drag to reorder, toggle on/off; first enabled = primary CTA), sign-up access (invite-only, email-domain allow/block, terms links + checkbox, post-login/signup redirects), security (min password length, Turnstile toggle), copy, and SAML SSO domain routing. A **UI + client-logic** layer — Supabase still gates what each method actually does. Read server-side via `getAuthSettings()` and over the public `GET /api/auth/config` (mobile). Drives `AuthFlow` (web) + the Expo auth screens. Full guide: [docs/AUTH.md](https://github.com/vpv-group/dream-starter-kit/blob/main/docs/AUTH.md) | `anyone`           | `isStaff` |
-| `native-navigation`         | **Hidden — edited from Navigation → iOS and Android App.** The native app tab bar: `tabCount` (3/4) and an ordered `items` array (`item` → `nav-items`, `hidden`, `sfSymbol`, `materialIcon`). Drafts → publish (`versions.drafts`); `GET /api/nav/native` reads the published version.                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `publishedOrStaff` | `isStaff` |
+| `native-navigation`         | **Hidden — edited from Navigation → iOS and Android App.** The native app tab bar: `tabCount` (3/4) and an ordered `items` array (`item` → `nav-items`, `hidden`, `sfSymbol`, `materialIcon`). Drafts → publish (`versions.drafts`); `GET /api/nav/native` and the web app's phone/tablet tab bar read the published version.                                                                                                                                                                                                                                                                                                                                                                                                                                 | `publishedOrStaff` | `isStaff` |
 
 ---
 

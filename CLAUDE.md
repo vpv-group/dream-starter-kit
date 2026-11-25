@@ -215,7 +215,8 @@ Rules that keep modules modular:
   afterwards. The web sidebar and the native tab bar are ordered separately
   (Navigation → Web App / iOS and Android App; the native side is the
   `native-navigation` global, loaded at launch by `useNativeNav` and cached
-  offline — docs/CMS.md).
+  offline — docs/CMS.md). The web app's phone/tablet bottom tab bar
+  (`components/glass-tab-bar.tsx`, below `lg`) renders that same native menu.
 - **Cross-module access** is declared: `requires: [...]` + `database.dml`
   whitelists; services are plain typed package exports (`notify()`,
   `usePremium()`).

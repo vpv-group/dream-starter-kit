@@ -1,0 +1,449 @@
+/*
+ * Liquid Glass bottom tab bar for the web app on phones and tablets
+ * (below `lg`). Built from the glass-ux spec (docs/DESIGN-SYSTEM.md →
+ * Bottom tab bar): the glass fill lives on ::before, a 0.5px hairline
+ * (four inset shadows) on ::after, so the element itself stays filter-free.
+ * The accent is the brand's --primary, like the native tab bar's tint.
+ */
+
+.root,
+.layer {
+  --tb-font:
+    -apple-system, system-ui, "SF Pro Text", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  --tb-primary: rgba(0, 0, 0, 0.88);
+  --tb-secondary: rgba(0, 0, 0, 0.56);
+  --tb-tertiary: rgba(0, 0, 0, 0.48);
+  --tb-quinary: rgba(0, 0, 0, 0.05);
+  --tb-accent: var(--primary);
+  --tb-focus: rgba(10, 132, 255, 0.6);
+
+  --glass-bg: rgba(245, 245, 247, 0.55);
+  --glass-backdrop: saturate(220%) blur(16px);
+  --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  --glass-stroke: #000;
+  --glass-stroke-alpha: 0.1;
+
+  --menu-bg: rgba(246, 246, 246, 0.72);
+  --menu-backdrop: blur(60px) saturate(210%);
+  --menu-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 8px 40px rgba(0, 0, 0, 0.25);
+  --menu-divider: rgba(0, 0, 0, 0.1);
+
+  --tab-selected-bg: rgba(0, 0, 0, 0.06);
+  --tb-bottom: max(20px, env(safe-area-inset-bottom));
+}
+
+:global(.dark) .root,
+:global(.dark) .layer {
+  --tb-primary: rgba(255, 255, 255, 0.92);
+  --tb-secondary: rgba(255, 255, 255, 0.64);
+  --tb-tertiary: rgba(255, 255, 255, 0.4);
+  --tb-quinary: rgba(255, 255, 255, 0.05);
+
+  --glass-bg: rgba(38, 38, 40, 0.6);
+  --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  --glass-stroke: #fff;
+  --glass-stroke-alpha: 0.25;
+
+  --menu-bg: rgba(40, 40, 40, 0.7);
+  --menu-backdrop: blur(60px) saturate(220%);
+  --menu-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 8px 40px rgba(0, 0, 0, 0.55);
+  --menu-divider: rgba(255, 255, 255, 0.1);
+
+  --tab-selected-bg: rgba(255, 255, 255, 0.1);
+}
+
+/* ── Glass material ───────────────────────────────────────────────── */
+.glass {
+  position: relative;
+  border-radius: 1000px;
+  isolation: isolate;
+}
+.glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-backdrop);
+  backdrop-filter: var(--glass-backdrop);
+  box-shadow: var(--glass-shadow);
+}
+.glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: var(--glass-stroke-alpha);
+  box-shadow:
+    inset 0.5px 0.5px var(--glass-stroke),
+    inset 0.5px -0.5px var(--glass-stroke),
+    inset -0.5px 0.5px var(--glass-stroke),
+    inset -0.5px -0.5px var(--glass-stroke);
+}
+.glass > * {
+  position: relative;
+  z-index: 3;
+}
+
+/* ── Bar layout ───────────────────────────────────────────────────── */
+.root {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--tb-bottom);
+  z-index: 40; /* above content, below sheets/dialogs (z-50) */
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding-inline: 16px;
+  pointer-events: none;
+  font-family: var(--tb-font);
+  color: var(--tb-primary);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+.root > * {
+  pointer-events: auto;
+}
+
+.tabbar {
+  display: flex;
+  height: 62px;
+  padding: 4px;
+}
+
+.indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  width: 0;
+  z-index: 2;
+  border-radius: 1000px;
+  background: var(--tab-selected-bg);
+  transition:
+    transform 0.45s cubic-bezier(0.2, 0.9, 0.25, 1.15),
+    width 0.45s cubic-bezier(0.2, 0.9, 0.25, 1.15),
+    opacity 0.2s;
+}
+.indicatorStatic {
+  transition: none;
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 76px;
+  height: 54px;
+  padding-top: 6px;
+  border-radius: 1000px;
+  color: var(--tb-primary);
+  font: 600 10px/12px var(--tb-font);
+  text-decoration: none;
+  outline: none;
+  transition:
+    color 0.2s,
+    transform 0.15s;
+}
+.tab svg {
+  width: 26px;
+  height: 26px;
+  stroke-width: 1.75;
+}
+.tab[aria-current="page"] {
+  color: var(--tb-accent);
+}
+.tab[aria-current="page"] svg {
+  stroke-width: 2.1;
+}
+.tabLabel {
+  max-width: 100%;
+  padding-inline: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.round {
+  display: flex;
+  flex: 0 0 62px;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--tb-primary);
+  cursor: pointer;
+  outline: none;
+  transition: transform 0.15s;
+}
+.round svg {
+  width: 26px;
+  height: 26px;
+  stroke-width: 1.75;
+}
+.roundAccent {
+  color: var(--tb-accent);
+}
+
+.tab:active,
+.round:active {
+  transform: scale(0.94);
+}
+.tab:focus-visible,
+.round:focus-visible {
+  box-shadow: 0 0 0 4px var(--tb-focus);
+}
+
+@media (max-width: 420px) {
+  .tab {
+    width: 64px;
+  }
+}
+
+/* ── Search mode: the bar becomes a search field ──────────────────── */
+.field {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  gap: 8px;
+  max-width: 520px;
+  height: 62px;
+  padding-inline: 20px 8px;
+  animation: grow 0.35s cubic-bezier(0.2, 0.9, 0.25, 1.1);
+}
+.field > svg {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  color: var(--tb-secondary);
+}
+.input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--tb-primary);
+  font: 400 17px/22px var(--tb-font);
+  outline: none;
+}
+.input::placeholder {
+  color: var(--tb-tertiary);
+}
+.input::-webkit-search-cancel-button {
+  display: none;
+}
+.clear {
+  display: flex;
+  flex: 0 0 36px;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--tb-secondary);
+  cursor: pointer;
+}
+.clear svg {
+  width: 18px;
+  height: 18px;
+}
+.clear:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--tb-focus);
+}
+
+.collapsed {
+  animation: pop 0.35s cubic-bezier(0.2, 0.9, 0.25, 1.1);
+}
+
+/* ── Search sheet (every menu entry, filtered) ────────────────────── */
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  font-family: var(--tb-font);
+  color: var(--tb-primary);
+}
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.12);
+  animation: fade 0.25s ease-out;
+}
+:global(.dark) .scrim {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* Same box as the search field: the bar's 16px gutters, minus the 62px
+   back button + 12px gap on the left, capped at the field's 520px. The bar
+   centres [button + field], so centring this box lands exactly on the field. */
+.sheet {
+  position: absolute;
+  left: calc(16px + 62px + 12px);
+  right: 16px;
+  bottom: calc(var(--tb-bottom) + 62px + 8px);
+  max-width: 520px;
+  margin-inline: auto;
+  border-radius: 26px;
+  isolation: isolate;
+  animation: rise 0.35s cubic-bezier(0.2, 0.9, 0.25, 1.1);
+}
+.sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-color: var(--menu-bg);
+  -webkit-backdrop-filter: var(--menu-backdrop);
+  backdrop-filter: var(--menu-backdrop);
+  box-shadow: var(--menu-shadow);
+}
+.sheetTitle {
+  margin: 0;
+  padding: 16px 20px 6px;
+  font: 700 13px/16px var(--tb-font);
+  color: var(--tb-secondary);
+}
+.list {
+  max-height: min(60vh, 460px);
+  margin: 0;
+  padding: 0 8px 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 52px;
+  padding: 0 12px;
+  border-radius: 14px;
+  color: inherit;
+  font: 400 17px/22px var(--tb-font);
+  text-decoration: none;
+  outline: none;
+}
+.row:hover,
+.row:focus-visible {
+  background: var(--tb-quinary);
+}
+.row:focus-visible {
+  outline: 4px solid var(--tb-focus);
+  outline-offset: -4px;
+}
+.row[aria-current="page"] {
+  font-weight: 600;
+}
+.tile {
+  display: flex;
+  flex: 0 0 34px;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  color: #fff;
+}
+.tile svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+}
+.empty {
+  padding: 20px;
+  text-align: center;
+  font-size: 15px;
+  color: var(--tb-secondary);
+}
+
+@keyframes grow {
+  from {
+    opacity: 0;
+    transform: scaleX(0.6);
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ── Accessibility ────────────────────────────────────────────────── */
+@media (prefers-contrast: more) {
+  .glass::before,
+  .sheet::before {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--background);
+  }
+  .glass::after {
+    box-shadow: none;
+    opacity: 1;
+    border: 1px solid var(--glass-stroke);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass::before,
+  .sheet::before {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--background);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .indicator,
+  .tab,
+  .round,
+  .field,
+  .collapsed,
+  .sheet,
+  .scrim {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* Tablets (md → lg) also show the expanded inset sidebar (the shadcn
+   `.peer` before us in the shell): centre the bar over the content column. */
+@media (min-width: 768px) {
+  :global(.peer[data-state="expanded"]) ~ .root,
+  :global(.peer[data-state="expanded"]) ~ .layer {
+    left: var(--sidebar-width);
+  }
+}
+
+/* Desktop keeps the sidebar; the bar is phones and tablets only. */
+@media (min-width: 1024px) {
+  .root,
+  .layer {
+    display: none;
+  }
+}

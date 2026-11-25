@@ -28,7 +28,7 @@ export function ChatScreen() {
   return (
     <DataStreamProvider>
       <ActiveChatProvider>
-        <div className="flex h-[calc(100dvh-var(--header-height)-1.5rem)] w-full flex-row overflow-hidden">
+        <div className="flex h-[calc(100dvh-var(--header-height)-1.5rem-var(--app-bottom-inset,0px))] w-full flex-row overflow-hidden">
           <aside className="hidden w-60 shrink-0 flex-col border-r lg:flex">
             <div className="p-2">
               <Button asChild className="w-full" size="sm" variant="outline">
