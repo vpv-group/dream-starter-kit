@@ -25,9 +25,10 @@ Commands:
   add <url[#vX.Y.Z]|.zip|dream:<slug>[@x.y.z]>
                              Vendor a module from GitHub, a zip, or the Dream
                              registry (paid modules — needs DREAM_LICENSE_KEY).
-  update <slug> [--to vX.Y.Z] [--continue]
+  update <slug> [--to vX.Y.Z] [--from <url|dream:<slug>>] [--continue]
                              Three-way merge a new upstream version over your
-                             (possibly modified) vendored copy.
+                             (possibly modified) vendored copy. --from switches
+                             the module's origin (e.g. GitHub → registry).
   remove <slug> [--keep-data]
                              Uninstall: drop migration(s), delete the package,
                              tombstone the lock, regenerate.
@@ -66,6 +67,7 @@ async function main(): Promise<void> {
       if (!args[0]) throw new Error("usage: pnpm mod update <slug>");
       await update(root, args[0], {
         to: flagValue("--to"),
+        from: flagValue("--from"),
         cont: flags.has("--continue"),
       });
       return;

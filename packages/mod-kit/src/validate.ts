@@ -265,20 +265,30 @@ export function validateManifestSet(manifests: ModuleManifest[]): string[] {
     // database.dml entries must be reachable: a table of a required module
     // or a core-whitelisted table — never an arbitrary table.
     const reachable = new Set<string>(CORE_DML_WHITELIST);
-    for (const dep of manifests.filter((x) => m.requires.includes(x.slug))) {
+    const deps = manifests.filter((x) => m.requires.includes(x.slug));
+    for (const dep of deps) {
       for (const t of dep.database.tables) reachable.add(t);
     }
+    // A missing table under a required module's prefix almost always means
+    // that dependency is installed at an older version (the table arrived in
+    // a later release) — say so, it's the actionable fix.
+    const staleDep = (t: string) => {
+      const dep = deps.find((d) => startsWithPrefix(t, tablePrefix(d.slug)));
+      return dep
+        ? ` — the installed ${dep.slug}@${dep.version} doesn't have it; update ${dep.slug} to a newer version first (pnpm mod update ${dep.slug})`
+        : "";
+    };
     for (const t of m.database.triggersOn) {
       if (t.startsWith("mod_") && !reachable.has(t)) {
         errors.push(
-          `[${m.slug}] database.triggersOn table "${t}" is not a table of a required module`,
+          `[${m.slug}] database.triggersOn table "${t}" is not a table of a required module${staleDep(t)}`,
         );
       }
     }
     for (const t of m.database.dml) {
       if (!reachable.has(t)) {
         errors.push(
-          `[${m.slug}] database.dml table "${t}" is neither a table of a required module nor core-whitelisted (${CORE_DML_WHITELIST.join(", ")})`,
+          `[${m.slug}] database.dml table "${t}" is neither a table of a required module nor core-whitelisted (${CORE_DML_WHITELIST.join(", ")})${staleDep(t)}`,
         );
       }
     }
