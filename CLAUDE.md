@@ -148,6 +148,27 @@ Chromium** (cached in `$PLAYWRIGHT_BROWSERS_PATH`). Every step is idempotent, so
 resumed sessions are fast. Don't re-do these steps by hand — if the stack seems
 down, just rerun the hook (or `pnpm dev:setup --profile cloud`).
 
+**Cloud environment Setup script (optional speed-up).** The hook above lives in the
+repo, so forks and clones get the full bootstrap with no extra setup. The
+environment's _Setup script_ is different: it's a per-environment setting on
+claude.ai (environment settings → Setup script), not a repo file, so whoever creates
+an environment pastes it in themselves. It runs before Claude Code starts and its
+result is cached, so pointing it at `scripts/cloud-setup.sh` (`pnpm install` plus
+one best-effort `pnpm dev:setup --profile cloud --no-dev-admin`) means new sessions
+start with dependencies, the pinned Supabase CLI, the Supabase Docker images and
+Chromium already in place. It leaves nothing live in the snapshot (stack stopped,
+no `.env`); the hook still builds the stack and database per session. The snippet
+doesn't depend on the repo's name:
+
+```bash
+#!/bin/bash
+# Finds the repo's setup script whatever the repo/fork is named.
+for f in "$PWD/scripts/cloud-setup.sh" /home/user/*/scripts/cloud-setup.sh; do
+  [ -f "$f" ] && exec bash "$f"
+done
+echo "scripts/cloud-setup.sh not found; the SessionStart hook will install everything instead"
+```
+
 Cloud-session quirks:
 
 - **`supabase start` must exclude edge-runtime** (`-x edge-runtime`): that container
