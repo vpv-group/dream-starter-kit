@@ -279,7 +279,7 @@ jobs:
             BODY="$BODY"$'\n\n'"⚠️ DATA LOSS: this PR includes a drop migration for the module's tables (unless --keep-data). It never auto-merges."
           fi
           if [ "$CONFLICTS" = "true" ]; then
-            FILES=$(grep -rlE '^(<<<<<<<|>>>>>>>) ' "modules/${{ inputs.slug }}" 2>/dev/null | head -40 | sed 's/.*/`&`/' | tr '\n' ' ')
+            FILES=$(grep -rlE '^(<<<<<<<|>>>>>>>) ' "modules/${{ inputs.slug }}" 2>/dev/null | head -40 | sed 's/.*/\x60&\x60/' | tr '\n' ' ')
             BODY="$BODY"$'\n\n'"⚠️ **Merge conflicts to resolve** (markers committed; types were not regenerated): ${FILES:-see the branch}. Resolve them, run \`pnpm mod update ${{ inputs.slug }} --continue\`, \`pnpm db:gen-types\` and \`pnpm cms:gen-types\`, then push. This PR never auto-merges."
           fi
           if grep -q "registers a Payload plugin\|hasPlugins: true" modules/*/module.config.ts 2>/dev/null; then
@@ -490,7 +490,7 @@ jobs:
           if [ -n "${CONFLICTS:-}" ]; then
             BODY="$BODY
 
-          ⚠️ **$(echo "$CONFLICTS" | wc -l) files have conflicts to resolve** (markers committed): $(echo "$CONFLICTS" | head -40 | sed 's/.*/`&`/' | tr '\n' ' ')$( [ "$(echo "$CONFLICTS" | wc -l)" -gt 40 ] && echo "…and more (search the branch for \`<<<<<<<\`)")
+          ⚠️ **$(echo "$CONFLICTS" | wc -l) files have conflicts to resolve** (markers committed): $(echo "$CONFLICTS" | head -40 | sed 's/.*/\x60&\x60/' | tr '\n' ' ')$( [ "$(echo "$CONFLICTS" | wc -l)" -gt 40 ] && echo "…and more (search the branch for \`<<<<<<<\`)")
           Generated files: take either side and regenerate. Migrations: keep both sides' files. \`pnpm-lock.yaml\`: re-run \`pnpm install\`."
           fi
           # Opened with MOD_OPS_TOKEN (so CI runs), labeled afterwards with
