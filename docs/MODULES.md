@@ -243,6 +243,14 @@ pnpm mod payload-migrate <slug> <desc>
 pnpm mod sync                     # after ANY change under modules/
 ```
 
+Locally, `add`, `update` and `remove` then **apply** the change to your running
+stack: `supabase migration up --local` (only the new migrations; your data stays),
+`pnpm db:gen-types` and `pnpm cms:gen-types`, so the module is ready to preview.
+Payload's dev push creates its collections when the dev server next boots. The
+apply step is skipped with `--no-apply`, in CI / GitHub Actions (module-ops.yml
+regenerates types on its runner), after a conflicted update, and when the local
+Supabase isn't running (it prints the catch-up command).
+
 Updates are a three-way merge (base = `refs/mod-base/<slug>` pinned in the
 lock, ours = your possibly-modified copy, theirs = upstream) — local edits
 survive clean updates; conflicts get standard markers + `--continue`.
@@ -387,7 +395,9 @@ The app uses `DREAM_LICENSE_KEY` when set and the site key otherwise. The
 the key (top of `/admin`) into the `DREAM_LICENSE_KEY` repository secret.
 
 **Privacy and opt-out.** The founder is told on `/sign-up` (the first account's
-sign-up only) before anything is sent. Registration sends only:
+sign-up only) and again on `/cms-setup`, right before the seed that triggers
+registration (`SiteLicenseNotice`, which lists each item below). Registration
+sends only:
 
 - the public domain;
 - admin and editor emails (up to 25);
