@@ -14,8 +14,10 @@ import type { SmtpEnv } from "./lib/email/smtp";
 import type { S3ConfigSource } from "./lib/s3-config";
 import { resolveCmsCredentials } from "./lib/cms/derived-credentials";
 import { generateMediaFileURL } from "./lib/cms/media-url";
+import { mergePayloadMigrations } from "./lib/cms/merge-migrations";
 import { noDocumentLock } from "./lib/cms/no-document-lock";
 import { CMS_CLI_PROCESS_ENV, cmsPoolSizing } from "./lib/cms/pool-sizing";
+import { isCronAuthorized } from "./lib/cron-secret";
 import { pgConnectionOptions } from "./lib/db/bootstrap-core";
 import { isGuardedPreview } from "./lib/db/preview-guard";
 import { resolveSmtpConfig } from "./lib/email/smtp";
@@ -250,6 +252,23 @@ export default buildConfig({
   // One shared, cross-collection folder tree ("Browse by Folder") for the
   // collections that enable `folders: true`.
   folders: { browseByFolder: true },
+  // Payload Jobs Queue. Scheduled publishing (`schedulePublish` on the content
+  // collections) queues its jobs here, and nothing ran them until a scheduler
+  // called the runner. Supabase Cron calls `GET /cms-api/payload-jobs/run`
+  // (and `/handle-schedules`) every minute with the cron bearer secret
+  // (lib/cron-secret.ts); signed-in staff may also trigger it from /admin.
+  // Never `autoRun` — it doesn't work on serverless (Payload docs).
+  jobs: {
+    access: {
+      run: ({ req }) =>
+        Boolean(req.user) ||
+        isCronAuthorized(req.headers.get("authorization"), {
+          CRON_SECRET: process.env.CRON_SECRET,
+          SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+        }),
+    },
+    deleteJobOnComplete: true,
+  },
   editor: lexicalEditor(),
   secret: cmsCredentials.secret ?? "",
   // Generated types are published from the @acme/cms package so the Expo app and
@@ -334,8 +353,10 @@ export default buildConfig({
     // the cms.payload_migrations ledger). After changing a collection, regenerate
     // with `pnpm cms:migrate:create` and commit the new file in payload/migrations.
     push: process.env.NODE_ENV !== "production",
-    // Core + module migrations merged by timestamp prefix; Payload's
-    // cms.payload_migrations ledger keys by name, so boot runs stay idempotent.
+    // Core + module migrations merged by timestamp prefix and DEDUPED by name:
+    // `mod sync` copies module migrations into the core dir, and Payload's
+    // migrate() reads its ledger once, so a duplicate name would run twice on a
+    // fresh database (see lib/cms/merge-migrations.ts).
     //
     // NOT registered during `next build`. In production mode the adapter runs
     // `prodMigrations` automatically the first time it connects (db-postgres
@@ -355,9 +376,7 @@ export default buildConfig({
     prodMigrations:
       buildPhase || guardedPreview
         ? undefined
-        : [...migrations, ...modPayloadMigrations].sort((a, b) =>
-            a.name.localeCompare(b.name),
-          ),
+        : mergePayloadMigrations(migrations, modPayloadMigrations),
     migrationDir: path.resolve(dirname, "payload/migrations"),
   }),
   sharp,

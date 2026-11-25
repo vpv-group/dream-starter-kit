@@ -60,6 +60,11 @@
       "sha256": "48a41e73a996c7e61d1189d253097afd81b83b4b0377e82a438a1c7679c79f37",
       "target": "20261125033155_mod_notifications_003_contract.sql"
     },
+    "notifications/004_delivery_fixes.sql": {
+      "version": "20261125230847",
+      "sha256": "c64d44fd528d3724fc893dea37a32749aa57b6338880bd57683cf2de75d40bc4",
+      "target": "20261125230847_mod_notifications_004_delivery_fixes.sql"
+    },
     "reminders/001_initial.sql": {
       "version": "20260612011541",
       "sha256": "2d8177544d43067d8cc08517c690cd70e835b3bcbfddfe1570675e1741296459",
@@ -69,6 +74,11 @@
       "version": "20261117192630",
       "sha256": "7a0679321ea8cd5f2a256b761f793954423ac7b0ef57d1b72fa1c0055d603b1c",
       "target": "20261117192630_mod_reminders_002_rename_to_mod_prefix.sql"
+    },
+    "reminders/003_claim.sql": {
+      "version": "20261125230848",
+      "sha256": "3c9086a6ff14674979d43e7fc1986f0b3fea80f71146378ba541f2e36e5e8db4",
+      "target": "20261125230848_mod_reminders_003_claim.sql"
     }
   }
 }

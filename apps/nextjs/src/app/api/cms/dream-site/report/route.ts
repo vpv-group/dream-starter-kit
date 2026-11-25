@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { env } from "~/env";
+import { isCronAuthorized, resolveCronSecret } from "~/lib/cron-secret";
 import { DAY_MS } from "~/lib/dream/site-core";
 
 /**
@@ -16,13 +17,17 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 async function handler(req: NextRequest): Promise<Response> {
-  if (!env.CRON_SECRET) {
+  const cronEnv = {
+    CRON_SECRET: env.CRON_SECRET,
+    SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+  if (!resolveCronSecret(cronEnv)) {
     return NextResponse.json(
-      { error: "CRON_SECRET is not configured" },
+      { error: "No cron secret: set CRON_SECRET or SUPABASE_SERVICE_ROLE_KEY" },
       { status: 503 },
     );
   }
-  if (req.headers.get("authorization") !== `Bearer ${env.CRON_SECRET}`) {
+  if (!isCronAuthorized(req.headers.get("authorization"), cronEnv)) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
   const { getPayloadClient } = await import("~/lib/cms/payload-client");

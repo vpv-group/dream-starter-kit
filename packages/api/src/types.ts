@@ -967,7 +967,9 @@ export type Database = {
       };
       mod_reminders: {
         Row: {
+          attempts: number;
           channel: string;
+          claimed_at: string | null;
           created_at: string;
           due_at: string;
           id: string;
@@ -975,7 +977,9 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          attempts?: number;
           channel?: string;
+          claimed_at?: string | null;
           created_at?: string;
           due_at: string;
           id?: string;
@@ -983,7 +987,9 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          attempts?: number;
           channel?: string;
+          claimed_at?: string | null;
           created_at?: string;
           due_at?: string;
           id?: string;
@@ -1324,6 +1330,44 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      mod_notifications_audience: {
+        Args: {
+          _audience: string;
+          _tag_names?: string[];
+          _user_ids?: string[];
+        };
+        Returns: {
+          user_id: string;
+        }[];
+      };
+      mod_notifications_audience_tokens: {
+        Args: {
+          _after?: string;
+          _audience: string;
+          _limit?: number;
+          _tag_names?: string[];
+          _user_ids?: string[];
+        };
+        Returns: {
+          id: string;
+          token: string;
+        }[];
+      };
+      mod_notifications_broadcast: {
+        Args: {
+          _audience?: string;
+          _body?: string;
+          _category: string;
+          _data?: Json;
+          _dedupe_key: string;
+          _source_module?: string;
+          _tag_names?: string[];
+          _title?: string;
+          _url?: string;
+          _user_ids?: string[];
+        };
+        Returns: number;
+      };
       mod_notifications_emit: {
         Args: {
           _actor?: string;
@@ -1354,9 +1398,22 @@ export type Database = {
         };
         Returns: undefined;
       };
+      mod_notifications_register_push_token: {
+        Args: { _platform: string; _token: string };
+        Returns: undefined;
+      };
       mod_notifications_unregister_module: {
         Args: { _module: string };
         Returns: undefined;
+      };
+      mod_reminders_claim: {
+        Args: { _limit?: number; _stale_after?: string };
+        Returns: {
+          attempts: number;
+          channel: string;
+          id: string;
+          user_id: string;
+        }[];
       };
       my_blocking_workspaces: {
         Args: never;

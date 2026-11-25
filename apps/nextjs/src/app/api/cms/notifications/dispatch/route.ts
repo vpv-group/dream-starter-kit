@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { runDispatch } from "@acme/mcp";
 
 import { env } from "~/env";
+import { isCronAuthorized, resolveCronSecret } from "~/lib/cron-secret";
 import { summarizeDbError } from "~/lib/db/bootstrap-core";
 import { createAdminClient } from "~/lib/supabase/admin";
 
@@ -29,13 +30,17 @@ const getPayloadLazy = async () => {
 };
 
 async function handler(req: NextRequest): Promise<Response> {
-  if (!env.CRON_SECRET) {
+  const cronEnv = {
+    CRON_SECRET: env.CRON_SECRET,
+    SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+  if (!resolveCronSecret(cronEnv)) {
     return NextResponse.json(
-      { error: "CRON_SECRET is not configured" },
+      { error: "No cron secret: set CRON_SECRET or SUPABASE_SERVICE_ROLE_KEY" },
       { status: 503 },
     );
   }
-  if (req.headers.get("authorization") !== `Bearer ${env.CRON_SECRET}`) {
+  if (!isCronAuthorized(req.headers.get("authorization"), cronEnv)) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -53,7 +58,14 @@ async function handler(req: NextRequest): Promise<Response> {
     );
   }
   const admin = createAdminClient();
-  const result = await runDispatch({ payload, admin });
+  const { claimScheduledNotification } = await import(
+    "~/lib/cms/claim-notification"
+  );
+  const result = await runDispatch({
+    payload,
+    admin,
+    claim: (id) => claimScheduledNotification(payload, id),
+  });
   return NextResponse.json(result);
 }
 

@@ -90,7 +90,7 @@ export const modulesLock = {
       "edgeFunctions": []
     },
     "notifications": {
-      "version": "1.1.0",
+      "version": "1.2.0",
       "kitCompat": ">=2.3.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
@@ -102,7 +102,7 @@ export const modulesLock = {
       "edgeFunctions": []
     },
     "reminders": {
-      "version": "1.0.0",
+      "version": "1.1.0",
       "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
