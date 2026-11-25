@@ -152,6 +152,7 @@ describe("bootstrapDatabase gates", () => {
   it.each([
     ["opt-out", { ...ENV, DB_BOOTSTRAP: "off" }],
     ["build-phase", { ...ENV, NEXT_PHASE: "phase-production-build" }],
+    ["preview", { ...ENV, VERCEL_ENV: "preview" }],
     ["no-url", { NODE_ENV: "production" }],
   ] as const)(
     "skips with %s without touching the DB",
@@ -167,6 +168,21 @@ describe("bootstrapDatabase gates", () => {
       expect(createClient).not.toHaveBeenCalled();
     },
   );
+});
+
+describe("bootstrapDatabase on a preview deployment", () => {
+  it("runs when the preview opts in with DB_BOOTSTRAP=on (its own database)", async () => {
+    const createClient = vi.fn(() => Promise.reject(new Error("connect")));
+    const result = await bootstrapDatabase({
+      envSource: { ...ENV, VERCEL_ENV: "preview", DB_BOOTSTRAP: "on" },
+      migrations: MIGRATIONS,
+      createClient,
+      logger: spyLogger(),
+      sleep: () => Promise.resolve(),
+    });
+    expect(result.skipped).not.toBe("preview");
+    expect(createClient).toHaveBeenCalled();
+  });
 });
 
 describe("bootstrapDatabase fast path", () => {
