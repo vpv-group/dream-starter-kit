@@ -50,8 +50,8 @@ export async function ModOpsSetupAlert() {
                 Create a fine-grained GitHub token
               </a>{" "}
               for {repo ? <code>{repo}</code> : "this app's repository"} with
-              read &amp; write access to Contents, Pull requests, Actions and
-              Workflows.
+              read &amp; write access to Contents, Pull requests, Issues,
+              Actions and Workflows.
             </li>
             <li>
               Add it as the repository secret <code>MOD_OPS_TOKEN</code>

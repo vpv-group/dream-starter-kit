@@ -324,7 +324,9 @@ auto-merge.
 
 **Founder setup** (also shown at the top of `/admin` until it's done): create
 a fine-grained PAT on this repo with read & write access to Contents, Pull
-requests, Actions and Workflows; set it as the `MOD_OPS_TOKEN` repo secret
+requests, Issues, Actions and Workflows (Issues is what lets it create the
+`module-op` / `kit-update` labels — without it PRs still open, just
+unlabeled, with a warning in the run); set it as the `MOD_OPS_TOKEN` repo secret
 AND the `GITHUB_OPS_TOKEN` env (plus `GITHUB_REPO` off Vercel); enable
 “Allow auto-merge” in the repo settings. If you install modules from
 **private GitHub repos**, give the same PAT read access (Contents: read) to
