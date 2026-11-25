@@ -168,6 +168,42 @@ export function modifiedFiles(
   }
 }
 
+/** `git merge-tree --merge-base` (what mergeTrees runs) arrived in git 2.40. */
+const MIN_MERGE_GIT: readonly [number, number] = [2, 40];
+
+/** The installed git's [major, minor], or null if `git --version` is odd. */
+export function gitVersion(): [number, number] | null {
+  const out = execFileSync("git", ["--version"], { encoding: "utf8" });
+  const match = /(\d+)\.(\d+)/.exec(out);
+  return match ? [Number(match[1]), Number(match[2])] : null;
+}
+
+export function supportsMergeBase(
+  version: [number, number] | null = gitVersion(),
+): boolean {
+  if (!version) return true; // unknown format: let git itself decide
+  const [major, minor] = version;
+  const [minMajor, minMinor] = MIN_MERGE_GIT;
+  return major > minMajor || (major === minMajor && minor >= minMinor);
+}
+
+/**
+ * Fail before an update touches anything when git is too old for
+ * mergeTrees. Apple's bundled git (2.39.x) is: without this check the update
+ * crashed after modules/<slug>/ had already been swapped for upstream files.
+ */
+export function assertMergeTreeSupport(): void {
+  const version = gitVersion();
+  if (supportsMergeBase(version)) return;
+  throw new Error(
+    `pnpm mod update needs git ${MIN_MERGE_GIT.join(".")} or newer ` +
+      `(for \`git merge-tree --merge-base\`), but this git is ` +
+      `${version?.join(".") ?? "unknown"}. Nothing was changed. Install a ` +
+      `newer git (macOS: \`brew install git\`, then make sure it comes ` +
+      `first on PATH) and run the update again.`,
+  );
+}
+
 export interface MergeResult {
   tree: string;
   conflicts: string[];
