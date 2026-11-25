@@ -2,11 +2,13 @@ import "server-only";
 
 import { env } from "~/env";
 import { createClient } from "~/lib/supabase/server";
+import { forgetGithubToken, siteGithubToken } from "./updates";
 
 /**
  * Shared plumbing for the /api/modules/* admin routes (docs/
  * MODULES-PLAN.md §6): staff/admin gating via the caller's Supabase
- * session + profile, and the GitHub dispatch client for module-ops.yml.
+ * session + profile, and the GitHub client for module-ops.yml, signed in
+ * through Dream Updates (updates.ts) — no personal token anywhere.
  * The deployed app can't run git/pnpm, so every mutation dispatches the
  * workflow, which runs the real CLI and opens a PR.
  */
@@ -38,55 +40,63 @@ export async function requireAdmin(): Promise<
   return { ok: true };
 }
 
-export function githubRepo(): string | null {
-  if (env.GITHUB_REPO) return env.GITHUB_REPO;
-  if (env.VERCEL_GIT_REPO_OWNER && env.VERCEL_GIT_REPO_SLUG) {
-    return `${env.VERCEL_GIT_REPO_OWNER}/${env.VERCEL_GIT_REPO_SLUG}`;
-  }
-  return null;
-}
-
-export function opsConfigured(): boolean {
-  return Boolean(env.GITHUB_OPS_TOKEN && githubRepo());
+/**
+ * Is GitHub connected (the Dream Updates App, /admin → Updates)? Without
+ * it nothing runs: no update PRs, no installs from /admin.
+ */
+export async function githubConnected(): Promise<boolean> {
+  return (await siteGithubToken()).status === "ok";
 }
 
 /**
- * Paid modules (the Dream registry, `dream:<slug>`) need module ops: the same
- * PAT as the MOD_OPS_TOKEN repo secret, set here as GITHUB_OPS_TOKEN. Until it
- * is, nothing paid runs — no registry calls, no paid catalog, no paid
- * installs or updates (the CLI enforces the same rule; docs/MODULES.md).
+ * Paid modules (`dream:<slug>`) install through module-ops.yml, which needs
+ * GitHub connected; the registry then checks this site's entitlements.
  */
-export function paidModulesEnabled(): boolean {
-  return opsConfigured();
+export async function paidModulesEnabled(): Promise<boolean> {
+  return await githubConnected();
 }
 
 export const PAID_MODULES_DISABLED = {
   error:
-    "Paid modules need module ops: set the MOD_OPS_TOKEN repo secret and the GITHUB_OPS_TOKEN env (see the setup steps at the top of /admin).",
-  code: "paid_modules_disabled",
+    "Connect GitHub in /admin → Updates first: modules install through a pull request.",
+  code: "github_not_connected",
 } as const;
 
+/**
+ * The GitHub REST API for the connected repository, with the short-lived
+ * Dream Updates token (it can start module-ops.yml and read PRs and runs,
+ * never push code). 503 with a reason when GitHub isn't connected.
+ */
 export async function githubApi(
   path: string,
   init?: RequestInit,
 ): Promise<Response> {
-  const repo = githubRepo();
-  if (!env.GITHUB_OPS_TOKEN || !repo) {
+  const res = await siteGithubToken();
+  if (res.status !== "ok" || !("token" in res)) {
     return Response.json(
       {
         error:
-          "Admin ops are not configured — set GITHUB_OPS_TOKEN (and GITHUB_REPO unless on Vercel). Until then, run the pnpm mod CLI locally.",
+          "message" in res
+            ? res.message
+            : "GitHub isn't connected. Connect it in /admin → Updates.",
+        code: "github_not_connected",
       },
       { status: 503 },
     );
   }
-  return fetch(`https://api.github.com/repos/${repo}${path}`, {
-    ...init,
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${env.GITHUB_OPS_TOKEN}`,
-      "X-GitHub-Api-Version": "2022-11-28",
-      ...init?.headers,
+  const response = await fetch(
+    `${env.DREAM_GITHUB_API_URL.replace(/\/$/, "")}/repos/${res.token.repo}${path}`,
+    {
+      ...init,
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${res.token.token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+        ...init?.headers,
+      },
     },
-  });
+  );
+  // The App was removed or the token revoked: mint a fresh one next time.
+  if (response.status === 401) forgetGithubToken();
+  return response;
 }

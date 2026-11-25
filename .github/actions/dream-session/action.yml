@@ -1,0 +1,40 @@
+# Shared setup for every module-ops.yml job: pnpm + Node + install, then
+# sign in to Meet Dream with the job's GitHub Actions OIDC token (`pnpm mod
+# ops session`, tooling/mod/src/ops/session.ts). No secret is stored in the
+# repository: the registry checks the token comes from this repo's own
+# module-ops.yml and answers with a one-hour token for this repo only, plus
+# the owner's settings from /admin → Updates.
+name: Dream session
+description: Install the workspace and open a Dream Updates session.
+outputs:
+  connected:
+    description: "true when GitHub is connected for this repo in /admin"
+    value: ${{ steps.session.outputs.connected }}
+  token:
+    description: One-hour token for this repository (masked)
+    value: ${{ steps.session.outputs.token }}
+  repo:
+    description: owner/repo the token is for
+    value: ${{ steps.session.outputs.repo }}
+  auto_update:
+    description: Open update PRs automatically
+    value: ${{ steps.session.outputs.auto_update }}
+  auto_merge:
+    description: Merge clean, green update PRs automatically
+    value: ${{ steps.session.outputs.auto_merge }}
+  paused:
+    description: Comma-separated slugs whose updates are paused
+    value: ${{ steps.session.outputs.paused }}
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v6
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 22
+        cache: pnpm
+    - shell: bash
+      run: pnpm install --frozen-lockfile
+    - id: session
+      shell: bash
+      run: pnpm --silent mod ops session --output-file "$GITHUB_OUTPUT"

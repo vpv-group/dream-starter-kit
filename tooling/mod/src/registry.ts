@@ -6,6 +6,9 @@ import { z } from "zod/v4";
 
 import { DREAM_REGISTRY_DEFAULT_URL, KIT_VERSION } from "@acme/config";
 
+import type { RegistryAuth } from "./registry-auth";
+import { authHeaders } from "./registry-auth";
+
 /**
  * Dream module registry client (docs/MODULES.md → Paid modules): paid
  * modules install from `dream:<slug>[@x.y.z]` sources. The registry protocol
@@ -17,9 +20,9 @@ import { DREAM_REGISTRY_DEFAULT_URL, KIT_VERSION } from "@acme/config";
  *   `{ slug, version, url, sha256, expiresInSeconds }` (a short-lived signed
  *   URL — download immediately, verify the sha256 before installing)
  *
- * The license key travels ONLY in the `X-Dream-License-Key` header and is
- * never printed; in GitHub Actions it is masked with `::add-mask::` before
- * first use so accidental echoes are scrubbed from logs.
+ * Credentials come from registry-auth.ts: the workflow's GitHub Actions
+ * OIDC token in module-ops.yml, DREAM_TOKEN elsewhere. They travel only in
+ * request headers and are never printed.
  */
 
 /* ------------------------------- sources ------------------------------- */
@@ -54,7 +57,7 @@ export function parseDreamSource(arg: string): DreamRef {
 /** Spec'd registry error codes → actionable CLI messages. */
 export const REGISTRY_ERROR_MESSAGES: Record<string, string> = {
   invalid_key:
-    "the registry rejected the license key — check DREAM_LICENSE_KEY",
+    "the registry rejected the license key — check DREAM_TOKEN (or, in module-ops.yml, that GitHub is connected in /admin)",
   revoked_key:
     "license inactive — updates paused (the license key was revoked)",
   not_entitled:
@@ -108,65 +111,15 @@ export function registryUrl(
 }
 
 /**
- * The license key, or null when unset. NEVER printed or logged by the CLI —
- * it travels only in the `X-Dream-License-Key` header. In GitHub Actions the
- * workflow additionally masks it with `::add-mask::` before the CLI runs
- * (module-ops.yml), so even an accidental echo is scrubbed from logs.
- */
-export function licenseKey(
-  env: Record<string, string | undefined> = process.env,
-): string | null {
-  const key = env.DREAM_LICENSE_KEY?.trim();
-  return key === undefined || key === "" ? null : key;
-}
-
-/**
- * Module ops' GitHub token (the MOD_OPS_TOKEN repo secret; the app calls the
- * same PAT GITHUB_OPS_TOKEN), or null. Paid modules need it: without module
- * ops nothing paid runs — not here, not in the admin panel (docs/MODULES.md).
- */
-export function opsToken(
-  env: Record<string, string | undefined> = process.env,
-): string | null {
-  const token = (env.MOD_OPS_TOKEN ?? env.GITHUB_OPS_TOKEN)?.trim();
-  return token === undefined || token === "" ? null : token;
-}
-
-export function requireOpsToken(
-  env: Record<string, string | undefined> = process.env,
-): void {
-  if (!opsToken(env)) {
-    throw new Error(
-      "Paid modules need module ops: set MOD_OPS_TOKEN (or GITHUB_OPS_TOKEN) — " +
-        "the same GitHub token as the MOD_OPS_TOKEN repo secret " +
-        "(docs/MODULES.md → Admin panel + automatic updates)",
-    );
-  }
-}
-
-export function requireLicenseKey(
-  env: Record<string, string | undefined> = process.env,
-): string {
-  const key = licenseKey(env);
-  if (!key) {
-    throw new Error(
-      "DREAM_LICENSE_KEY is not set — paid modules need a license key " +
-        "(docs/MODULES.md → Paid modules)",
-    );
-  }
-  return key;
-}
-
-/**
  * The installing repo's identity (`owner/repo`) sent with /download so the
  * registry can enforce per-repo activations: GITHUB_REPOSITORY (set by
- * Actions) → GITHUB_REPO → the git origin remote.
+ * Actions) → the git origin remote.
  */
 export function repoIdentity(
   repoRoot: string,
   env: Record<string, string | undefined> = process.env,
 ): string {
-  const fromEnv = env.GITHUB_REPOSITORY ?? env.GITHUB_REPO;
+  const fromEnv = env.GITHUB_REPOSITORY;
   if (fromEnv) return fromEnv;
   try {
     const url = execFileSync(
@@ -199,7 +152,7 @@ export type DownloadGrant = z.infer<typeof downloadGrantSchema>;
 
 export interface DownloadRequest {
   registry: string;
-  licenseKey: string;
+  auth: RegistryAuth;
   slug: string;
   /** Omitted = the latest version compatible with `kitVersion`. */
   version?: string;
@@ -216,7 +169,7 @@ export async function requestDownload(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Dream-License-Key": req.licenseKey,
+      ...authHeaders(req.auth),
     },
     body: JSON.stringify({
       slug: req.slug,
@@ -296,12 +249,12 @@ const entitlementsSchema = z.object({
 
 /** `GET {registry}/entitlements` — never throws; errors become states. */
 export async function fetchEntitlements(
-  opts: { registry: string; licenseKey: string },
+  opts: { registry: string; auth: RegistryAuth },
   fetchImpl: typeof fetch = fetch,
 ): Promise<EntitlementsResult> {
   try {
     const res = await fetchImpl(`${opts.registry}/entitlements`, {
-      headers: { "X-Dream-License-Key": opts.licenseKey },
+      headers: authHeaders(opts.auth),
     });
     const body: unknown = await res.json().catch(() => ({}));
     if (!res.ok) {

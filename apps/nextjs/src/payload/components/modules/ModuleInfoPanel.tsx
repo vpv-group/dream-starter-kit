@@ -109,10 +109,10 @@ export function ModuleInfoPanel() {
         <Link href="/admin/collections/nav-items">Edit menu items</Link>
       </p>
 
-      {registry && !registry.opsConfigured ? (
+      {registry && !registry.githubConnected ? (
         <p className="kit-module-info__note">
-          Updating and removing modules from here needs module ops.{" "}
-          <Link href="/admin">Set it up</Link>
+          Updating and removing modules from here needs GitHub connected.{" "}
+          <Link href="/admin/updates">Connect GitHub</Link>
         </p>
       ) : null}
 

@@ -284,17 +284,16 @@ the GitHub repo URL you passed) and this kit can take one of its releases:
   registry instead of `git ls-remote`, so a **private module repo needs no
   token access**.
 
-If the registry can't serve it — no `MOD_OPS_TOKEN`/`DREAM_LICENSE_KEY`, the
-plan doesn't include it, a network error — the CLI warns and **falls back to
-the GitHub repo** (the one you installed from, or the catalog's public repo
-for free modules). Modules the registry doesn't list, zips and local modules
-are unaffected. Set the repo variable / env **`MOD_REGISTRY_FIRST=off`** to
-keep GitHub origins on GitHub.
+If the registry can't serve it — not signed in (`DREAM_TOKEN` on a laptop;
+in `module-ops.yml` the run signs in by itself), the plan doesn't include it,
+a network error — the CLI warns and **falls back to the GitHub repo** (the
+one you installed from, or the catalog's public repo for free modules).
+Modules the registry doesn't list, zips and local modules are unaffected.
 
 `--from` forces an origin for one update and records it in the lock, e.g.
 `pnpm mod update crm --from dream:crm`, or `--from <github-url>` to move a
-module back to GitHub (with `MOD_REGISTRY_FIRST=off`, or the next update
-goes registry-first again). `--from` never falls back. In `module-ops.yml`,
+module back to GitHub (the next update goes registry-first again). `--from`
+never falls back. In `module-ops.yml`,
 put the origin in the `source` input of an `update` run.
 
 **Install order across dependent modules.** `requires` names a slug, not a
@@ -308,68 +307,98 @@ tombstones the lock (pinned migration versions are never reused).
 
 ## Admin panel + automatic updates
 
-**Modules** in `/admin` (`/admin/collections/kit-modules`, the `kit-modules`
-collection) is the one screen for managing modules:
+Three places in `/admin`, all admin-only:
 
-- **The list** shows every installed module with its version (plus an
-  **Update** pill when a newer installable version exists), its source
-  (Bundled, GitHub, Dream registry — with license state — and Pinned) and
-  whether it's Enabled (plus **System** for modules the app shell depends on).
-  Install state comes from the **bundled** lock — an honest "this deploy
-  contains it" signal.
-- **A banner above the table** says when module ops is off, or lists what's
-  in flight: open module-ops PRs and running or failed workflow runs.
-- **Install module** (top right) opens a drawer: the curated catalog
-  (`MOD_CATALOG_URL`, format: `docs/module-catalog.example.json`), then
-  install from a GitHub URL (`#vX.Y.Z` pins a tag) or a verified ZIP upload.
-  With module ops off, catalog cards show the `pnpm mod add` command instead.
-- **A module's page** has its settings in the main column, and in the
-  sidebar: **Enabled**, then a **Module** panel with version, **Update**,
-  source, license, a link to its menu items and — behind a confirmation —
-  **Remove module…** (not for system modules).
+- **Updates** (`/admin/updates`, in the sidebar): the starter kit and module
+  updates in one list, two switches, the GitHub connection and the license.
+- **Modules** (`/admin/collections/kit-modules`): installed modules, their
+  settings, **Install module** (the Dream catalog), **Update** and
+  **Remove module…**.
+- A **Finish setup** row on the dashboard while GitHub isn't connected.
 
-The old `/admin/modules` URL redirects here. Every mutation dispatches `.github/workflows/module-ops.yml`, which runs the same
-CLI on a runner, enforces **path confinement** (the op may only write
-`modules/<slug>/**` + known sync outputs), and opens a labeled PR. The op
-starts a local Supabase on the runner (a few minutes), so `db:gen-types`
-includes the module's tables before typecheck. The apps' `package.json`
-files are allowed only for `"@acme/mod-<slug>": "workspace:*"` lines; any
-other change to them fails the check. A daily
-schedule opens update PRs with auto-merge — CI green ⇒ merged ⇒ deployed ⇒
-migrations at boot. Brakes: `MOD_AUTO_UPDATE=off` / `MOD_AUTO_MERGE=off`
-(repo variables), per-module `pinned` in the lock; removals never
-auto-merge.
+### Connect GitHub (once)
 
-**Founder setup** (also shown at the top of `/admin` until it's done): create
-a fine-grained PAT on this repo with read & write access to Contents, Pull
-requests, Actions and Workflows; set it as the `MOD_OPS_TOKEN` repo secret
-AND the `GITHUB_OPS_TOKEN` env (plus `GITHUB_REPO` off Vercel); enable
-“Allow auto-merge” in the repo settings. If you install modules from
-**private GitHub repos**, give the same PAT read access (Contents: read) to
-each of them too; otherwise `mod update` can't list their tags and the run
-fails with "Can't read the module's repository" (GitHub answers 403). A
-module the Dream registry carries doesn't need this: with `DREAM_LICENSE_KEY`
-set, updates come from the registry ([registry-first](#where-modules-come-from-registry-first)).
+Updates and installs happen as **pull requests on your repository**, opened by
+Meet Dream's **Dream Updates** GitHub App. The owner connects it once: on the
+founder's `/cms-setup/connect-code` step after the first sign-in, or with
+**Connect GitHub** in Updates. GitHub asks which repository; pick only this
+app's repository. Nothing is stored in the repository or in env:
 
-**Without the token, module ops is off.** Every job in `module-ops.yml` is
-_skipped_ (a preflight job leaves a notice explaining why) instead of failing,
-the Modules screen is read-only, and **paid modules are disabled everywhere**:
-the admin panel hides them and never contacts the registry, its API routes
-refuse `dream:` installs and paid updates (`403 paid_modules_disabled`), and
-the CLI refuses `pnpm mod add|update` of a registry module until
-`MOD_OPS_TOKEN` (or `GITHUB_OPS_TOKEN`) is set. Free modules keep working
-from the CLI.
+- The app's server asks meetdream.com for a **one-hour token** for that one
+  repository, using the site's own license key (`lib/mod/updates.ts`). It
+  can start `module-ops.yml` and read pull requests and runs, but can't push
+  code.
+- `.github/workflows/module-ops.yml` signs in with its **GitHub Actions OIDC
+  token** (`id-token: write`; `.github/actions/dream-session`). meetdream.com
+  checks it comes from this repository's own `module-ops.yml` on a branch,
+  never a fork or a pull request, and answers with a one-hour token plus the
+  owner's settings.
+- Removing the app on GitHub ends access at once; Updates then shows
+  **Connect GitHub** again.
 
-**Kit updates (free).** The same daily run also checks the Dream Starter Kit
-itself (`kit-update` job): when the kit has published a newer release (a
-`vX.Y.Z` tag whose build attestation verifies; never `main`, never a
-pre-release), it opens one PR labeled `kit-update` from a `sync/upstream-<date>` branch, or
-refreshes the open one. No license key is needed. These PRs **never
-auto-merge**: review them and land them with a **merge commit, never a
-squash** (docs/UPDATING.md). Conflicts are committed as markers and the PR is
-labeled `kit-update-conflicts`. Turn the check off with `KIT_AUTO_UPDATE=off`,
-or run it on demand with _Run workflow_ → `op: kit-update`. It is skipped in
-the kit repository itself.
+Until GitHub is connected, Modules is read-only (catalog cards show the
+`pnpm mod add dream:<slug>` command), paid modules are hidden, and every
+`module-ops.yml` job ends with a notice. On localhost the site never
+registers with meetdream.com, so none of this appears; develop with the CLI.
+
+### What happens automatically
+
+| Switch (Updates) | Default | What it does |
+|---|---|---|
+| **Automatic updates** | on | The daily run (06:23 UTC) opens a PR for each outdated module and for a new kit release |
+| **Merge updates automatically** | on | A PR merges itself once every check passes, including `integration` (Supabase, RLS, Playwright) |
+
+The founder picks one of three presets on `/cms-setup/app-updates`: install
+automatically (both on), review each update (merge off), or I'll update it
+myself (both off). **Install** or **Update** clicked in `/admin` is an
+approval: that PR merges once its checks pass whatever the switch says, and
+so does **Merge now** on a PR in Updates.
+
+The `merge` job (`pnpm mod ops merge`, `tooling/mod/src/ops/merge.ts` →
+`decideMerge`) runs after every CI run on an update branch and daily. It
+merges **one PR per run**, oldest first: kit PRs with a **merge commit**,
+module PRs **squashed**. It **never** merges, and labels `dream-review` with
+a comment saying why:
+
+- merge conflicts (`dream-update-conflicts`) or a removal (`dream-remove`);
+- no checks ran, or a check failed;
+- a major version, a migration that drops or changes existing data
+  (expand/contract, see Conventions in CLAUDE.md) or a change under
+  `.github/workflows/`;
+- code whose source wasn't verified (a kit release's build attestation, a
+  registry download's sha256);
+- a paused module or a skipped version (**Skip this version** in Updates);
+- while Meet Dream holds merging, fleet-wide or for that release.
+
+It also waits for a kit release's **72-hour soak** (Meet Dream's own canary
+sites get it first) and for a review your branch protection requires: the app
+is never given a bypass. After a merge it watches the production deployment
+GitHub records for the merge commit. **A failed deploy pauses automatic
+merging** for the site (Updates shows why, with **Resume**) and is reported
+to Meet Dream, along with every merge, failure and conflict.
+
+Every op runs the same CLI a developer would and enforces **path
+confinement**: an op may only write `modules/<slug>/**` plus known sync
+outputs; the apps' `package.json` only for `"@acme/mod-<slug>":
+"workspace:*"` lines. The op starts a local Supabase on the runner, so
+`db:gen-types` includes the module's tables. Installs started from `/admin`
+may only use Dream catalog sources (`dream:<slug>`); installing from a GitHub
+URL or a ZIP is CLI-only, for module authors.
+
+**Kit updates (free).** The daily run also checks the Dream Starter Kit
+(`kit-update` job): when the kit has published a newer release (a `vX.Y.Z`
+tag whose build attestation verifies; never `main`, never a pre-release), it
+merges it into one `dream/kit-update-<date>` branch, or refreshes the open
+one. Conflicts in generated files (lockfile, types, migration bundles,
+`*.generated.*`) take the release's side, and everything is regenerated, so
+a clean kit PR can merge with no local work. Real conflicts are committed as
+markers for a person. It is skipped in the kit repository itself.
+
+**Cost.** An update PR runs your full CI: about 25 minutes of GitHub Actions
+time (estimate), which fits a free private repository's 2,000 minutes a month.
+
+PRs opened before this release (branches `mod/*` and `sync/upstream-*`) are
+still listed and never merge themselves.
 
 ## Site license
 
@@ -384,7 +413,8 @@ updates and free modules work without anyone creating or pasting a key:
    - It sends the founder's email (the earliest admin), the other
      admin/editor emails, the kit version and the GitHub repo slug.
    - The registry returns the site key. It is stored in the admin-only
-     **System → Site License** global and shown at the top of `/admin`.
+     **System → Site License** global, which shows only its prefix: the full
+     key never leaves the server (rotate it from meetdream.com).
 2. **Daily.** Vercel Cron calls `/api/cms/dream-site/report`
    (`CRON_SECRET`); without the cron, a staff visit to `/admin` does it at
    most once a day. Each report sends the kit version and any new
@@ -401,9 +431,9 @@ its retry. While the global has no key, **System → Site License** shows a
 `POST /api/cms/dream-site/register`) that registers right away and shows
 the registry's error if it fails.
 
-The app uses `DREAM_LICENSE_KEY` when set and the site key otherwise. The
-`module-ops` workflow can't read the database, so to use paid modules, copy
-the key (top of `/admin`) into the `DREAM_LICENSE_KEY` repository secret.
+The app signs in to meetdream.com with the site key. `module-ops.yml` signs
+in with its GitHub Actions OIDC token instead, which meetdream.com maps to
+this site's key, so no key is copied anywhere.
 
 **Privacy and opt-out.** The founder is told on `/sign-up` (the first account's
 sign-up only) and again on `/cms-setup`, right before the seed that triggers
@@ -436,25 +466,19 @@ pnpm mod status --check        # update + license state per module
 
 **Setup**
 
-0. Set up module ops first (above): paid modules are off without it.
-1. Use this site's free key (see [Site license](#site-license)) with your
-   meetdream.com plan put on the site, or get an account key from
-   meetdream.com.
-2. Optionally set `DREAM_LICENSE_KEY` in the Vercel env (it overrides the
-   site key) (server-only — the browser only
-   ever sees derived entitlement state via the staff-gated
-   `/api/modules/entitlements` proxy, never the key).
-3. Add the same key as the **`DREAM_LICENSE_KEY` GitHub repo secret** so
-   `module-ops.yml` (admin installs/updates + the daily auto-update) can run
-   the CLI. The workflow masks it in logs (`::add-mask::`); the CLI never
-   prints it — it travels only in the `X-Dream-License-Key` header.
-4. Optional: `DREAM_REGISTRY_URL` points at a different registry. The
-   Modules screen's catalog defaults to `${DREAM_REGISTRY_URL}/catalog?schema=2`;
-   a self-hoster who sets `MOD_CATALOG_URL` keeps their own catalog.
+1. Connect GitHub (Updates): paid modules install through pull requests.
+2. Put your meetdream.com plan on this site (meetdream.com → **/a/modules →
+   Your sites → Use my plan on this site**). The site's free key then unlocks
+   the plan's modules; nothing to paste.
+3. On a laptop or in a cloud session, set **`DREAM_TOKEN`** to your license
+   key from meetdream.com → Account → Modules to run `pnpm mod add
+   dream:<slug>` yourself. Never set it in Vercel or GitHub.
+4. Optional: `DREAM_REGISTRY_URL` points at a different registry; the
+   Modules catalog is `${DREAM_REGISTRY_URL}/catalog?schema=2`.
 
 **How it works.** `mod add dream:<slug>` sends
 `POST {registry}/download` (`{ slug, version?, kitVersion, repo }` — the repo
-identity comes from `GITHUB_REPOSITORY`/`GITHUB_REPO` or the git origin, so
+identity comes from `GITHUB_REPOSITORY` or the git origin, so
 the registry can enforce per-repo activations), downloads the returned signed
 URL **immediately** (it expires in minutes), verifies its `sha256` before
 anything touches disk, and then runs the normal zip install path. The lock
@@ -476,8 +500,8 @@ codes (`invalid_key`, `incompatible_kit`, `no_release`, `activation_limit`,
 **License/trust note.** A registry module is vendored code like any other
 install — the trust model below applies unchanged (everything is a PR, path
 confinement, full CI); the recorded sha256 pins exactly the bytes the registry
-served. The license key is a secret: env/secret stores only, never committed,
-never logged.
+served. Keys and tokens are never committed or logged; in `module-ops.yml`
+there is no stored secret at all.
 
 ## Trust model (read before installing)
 

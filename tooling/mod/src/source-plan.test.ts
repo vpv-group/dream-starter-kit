@@ -8,7 +8,6 @@ import {
   normalizeRepo,
   planAdd,
   planUpdate,
-  registryFirstEnabled,
 } from "./source-plan";
 
 const KIT = "2.3.0";
@@ -29,14 +28,6 @@ const github = (repo: string): ModSource => ({
   repo,
   ref: "v1.1.1",
   commit: "abc",
-});
-
-describe("registryFirstEnabled", () => {
-  it("is on unless MOD_REGISTRY_FIRST=off", () => {
-    expect(registryFirstEnabled({})).toBe(true);
-    expect(registryFirstEnabled({ MOD_REGISTRY_FIRST: "on" })).toBe(true);
-    expect(registryFirstEnabled({ MOD_REGISTRY_FIRST: " OFF " })).toBe(false);
-  });
 });
 
 describe("normalizeRepo", () => {

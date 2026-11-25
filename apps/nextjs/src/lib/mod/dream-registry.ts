@@ -17,32 +17,16 @@ export function dreamRegistryUrl(): string {
   return env.DREAM_REGISTRY_URL.replace(/\/$/, "");
 }
 
-/**
- * The catalog the Modules screen's "Install module" drawer reads. A self-hoster who sets
- * MOD_CATALOG_URL keeps it; otherwise it defaults to the Dream registry's
- * schema-2 catalog (which includes paid modules).
- */
+/** The Dream catalog (schema 2, includes paid modules) the Modules screen reads. */
 export function catalogUrl(): string {
-  return env.MOD_CATALOG_URL ?? `${dreamRegistryUrl()}/catalog?schema=2`;
+  return `${dreamRegistryUrl()}/catalog?schema=2`;
 }
 
 /**
- * The catalog for the admin store, or null: the Dream catalog lists paid
- * modules, so it's only offered once paid modules are enabled. A self-hoster's
- * MOD_CATALOG_URL is always kept.
- */
-export function catalogUrlFor(paidEnabled: boolean): string | null {
-  if (env.MOD_CATALOG_URL) return env.MOD_CATALOG_URL;
-  return paidEnabled ? catalogUrl() : null;
-}
-
-/**
- * The license key the app uses: DREAM_LICENSE_KEY when set, otherwise this
- * deployment's free SITE key (docs/MODULES.md → Site license), which it got
- * automatically after the first CMS seed.
+ * This deployment's free SITE key (docs/MODULES.md → Site license), which it
+ * got automatically after the first CMS seed. Never sent to the browser.
  */
 export async function licenseKey(): Promise<string | null> {
-  if (env.DREAM_LICENSE_KEY) return env.DREAM_LICENSE_KEY;
   try {
     const { getPayloadClient } = await import("~/lib/cms/payload-client");
     const payload = await getPayloadClient();
@@ -80,13 +64,13 @@ const errorBodySchema = z.object({
 });
 
 export interface EntitlementsState {
-  /** Is there a license key (DREAM_LICENSE_KEY or the site key)? */
+  /** Does this site have its license key yet? */
   configured: boolean;
   /**
    * none = no key; active = the key unlocks `entitlements`; inactive = the
    * registry rejected the key (`code` says why — revoked_key, not_entitled,
    * invalid_key); error = the registry was unreachable; disabled = paid
-   * modules are off until module ops is configured.
+   * modules are off until GitHub is connected.
    */
   status: "none" | "active" | "inactive" | "error" | "disabled";
   code?: string;

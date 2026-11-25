@@ -43,17 +43,18 @@ import { WebAppHeader as WebAppHeader_66737539b3b361a59dee52152c3bd3eb } from '~
 import { FolderTypeField as FolderTypeField_2b8867833a34864a02ddf429b0728a40 } from '@payloadcms/next/client'
 import { RegenerateAllImages as RegenerateAllImages_5552ed3b6af65aa0c30dbc3814b71069 } from '~/payload/components/RegenerateAllImages'
 import { DreamSiteRegister as DreamSiteRegister_8fdc7ad44850bf64e6cb11d7cb127820 } from '~/payload/components/DreamSiteRegister'
-import { DreamSiteLicenseKey as DreamSiteLicenseKey_0c606955d15c3b75745277b5df780630 } from '~/payload/components/DreamSiteLicenseKey'
 import { AdminNav as AdminNav_5ba77d1ae4e48f9dcf3743b1eca31611 } from '~/payload/components/AdminNav'
 import { LogoutButton as LogoutButton_6c9a924bbf94f383766dffe3be60632c } from '~/payload/components/LogoutButton'
 import { BrandIcon as BrandIcon_7f003298658d3b7c758be66cf37cc99a } from '~/payload/components/BrandIcon'
 import { BrandLogo as BrandLogo_11d3156590230f2611ead54e0eaf3582 } from '~/payload/components/BrandLogo'
+import { UpdatesNavLink as UpdatesNavLink_7eac3bed3229399f6be63d5ba2b6a487 } from '~/payload/components/updates/UpdatesNavLink'
 import { SeedGate as SeedGate_579c462e1297910adc75e16d2ce018f6 } from '~/payload/components/SeedGate'
-import { ModOpsSetupAlert as ModOpsSetupAlert_a64136bce737fc32670ee2514b18a097 } from '~/payload/components/ModOpsSetupAlert'
+import { FinishSetupRow as FinishSetupRow_8b54354c83d7c62192b0d29f0d02675b } from '~/payload/components/FinishSetupRow'
 import { DreamSiteSync as DreamSiteSync_951a3f05120106343841bbe15f165aff } from '~/payload/components/DreamSiteSync'
 import { ThemeStyleProvider as ThemeStyleProvider_1ee7cf46bd3ef3bd11106074673f2adc } from '~/payload/components/ThemeStyleProvider'
 import { ModAdminProviders as ModAdminProviders_bfad74fcff187972c1859f01cc8bd34b } from '~/payload/components/ModAdminProviders'
 import { ModuleSettingsRedirect as ModuleSettingsRedirect_d8a20bc588dcf26827ccf79503f6bfcf } from '~/payload/components/ModuleSettingsRedirect'
+import { UpdatesView as UpdatesView_12eb572e6e090fae1d07aeebe9547c8d } from '~/payload/components/updates/UpdatesView'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 import { ModuleAdminSettings as ModuleAdminSettings_6fc8f7dd5c1ebbd6556166b197418f34 } from '~/payload/components/ModuleAdminSettings'
 import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
@@ -105,17 +106,18 @@ export const importMap = {
   "@payloadcms/next/client#FolderTypeField": FolderTypeField_2b8867833a34864a02ddf429b0728a40,
   "~/payload/components/RegenerateAllImages#RegenerateAllImages": RegenerateAllImages_5552ed3b6af65aa0c30dbc3814b71069,
   "~/payload/components/DreamSiteRegister#DreamSiteRegister": DreamSiteRegister_8fdc7ad44850bf64e6cb11d7cb127820,
-  "~/payload/components/DreamSiteLicenseKey#DreamSiteLicenseKey": DreamSiteLicenseKey_0c606955d15c3b75745277b5df780630,
   "~/payload/components/AdminNav#AdminNav": AdminNav_5ba77d1ae4e48f9dcf3743b1eca31611,
   "~/payload/components/LogoutButton#LogoutButton": LogoutButton_6c9a924bbf94f383766dffe3be60632c,
   "~/payload/components/BrandIcon#BrandIcon": BrandIcon_7f003298658d3b7c758be66cf37cc99a,
   "~/payload/components/BrandLogo#BrandLogo": BrandLogo_11d3156590230f2611ead54e0eaf3582,
+  "~/payload/components/updates/UpdatesNavLink#UpdatesNavLink": UpdatesNavLink_7eac3bed3229399f6be63d5ba2b6a487,
   "~/payload/components/SeedGate#SeedGate": SeedGate_579c462e1297910adc75e16d2ce018f6,
-  "~/payload/components/ModOpsSetupAlert#ModOpsSetupAlert": ModOpsSetupAlert_a64136bce737fc32670ee2514b18a097,
+  "~/payload/components/FinishSetupRow#FinishSetupRow": FinishSetupRow_8b54354c83d7c62192b0d29f0d02675b,
   "~/payload/components/DreamSiteSync#DreamSiteSync": DreamSiteSync_951a3f05120106343841bbe15f165aff,
   "~/payload/components/ThemeStyleProvider#ThemeStyleProvider": ThemeStyleProvider_1ee7cf46bd3ef3bd11106074673f2adc,
   "~/payload/components/ModAdminProviders#ModAdminProviders": ModAdminProviders_bfad74fcff187972c1859f01cc8bd34b,
   "~/payload/components/ModuleSettingsRedirect#ModuleSettingsRedirect": ModuleSettingsRedirect_d8a20bc588dcf26827ccf79503f6bfcf,
+  "~/payload/components/updates/UpdatesView#UpdatesView": UpdatesView_12eb572e6e090fae1d07aeebe9547c8d,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,
   "~/payload/components/ModuleAdminSettings#ModuleAdminSettings": ModuleAdminSettings_6fc8f7dd5c1ebbd6556166b197418f34,
   "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24

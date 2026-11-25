@@ -83,6 +83,7 @@ describe("planKitUpdate", () => {
       current: "2.3.0",
       ref: RELEASE_REF,
       unrelated: false,
+      publishedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) as string,
     });
     // The fetched ref is the v2.4.0 commit, not main.
     expect(git(app, ["show", `${RELEASE_REF}:package.json`])).toContain(
@@ -144,9 +145,10 @@ describe("toGithubOutput", () => {
         current: "2.3.0",
         ref: RELEASE_REF,
         unrelated: false,
+        publishedAt: "2026-11-20T10:00:00Z",
       }),
     ).toBe(
-      `action=merge\ntag=v2.4.0\nlatest=2.4.0\ncurrent=2.3.0\nref=${RELEASE_REF}\nunrelated=false\n`,
+      `action=merge\ntag=v2.4.0\nlatest=2.4.0\ncurrent=2.3.0\nref=${RELEASE_REF}\nunrelated=false\npublished_at=2026-11-20T10:00:00Z\n`,
     );
     expect(toGithubOutput({ action: "no-release" })).toBe(
       "action=no-release\n",

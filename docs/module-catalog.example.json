@@ -1,5 +1,5 @@
 {
-  "$comment": "Curated module catalog (docs/MODULES-PLAN.md §6). Host this JSON in a registry repo (e.g. dream-modules-catalog) and point MOD_CATALOG_URL at its raw URL — fork it to curate your own store. The five first-party modules ship vendored; they appear here once ejected to their own repos.",
+  "$comment": "Curated module catalog (docs/MODULES-PLAN.md §6). The Dream registry serves this shape at /catalog?schema=2. The five first-party modules ship vendored; they appear here once ejected to their own repos.",
   "modules": [
     {
       "slug": "example",

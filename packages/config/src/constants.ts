@@ -17,8 +17,7 @@ export const KIT_VERSION = "2.3.0";
 /**
  * Default Dream module registry — the paid-module distribution endpoint
  * (docs/MODULES.md → Paid modules). Overridable via `DREAM_REGISTRY_URL`;
- * the admin catalog defaults to `${registry}/catalog?schema=2` unless
- * `MOD_CATALOG_URL` is set.
+ * the admin catalog is `${registry}/catalog?schema=2`.
  */
 export const DREAM_REGISTRY_DEFAULT_URL =
   "https://www.meetdream.com/api/mod/modules/v1";

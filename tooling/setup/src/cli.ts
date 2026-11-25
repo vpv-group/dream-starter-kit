@@ -8,7 +8,7 @@
  */
 import { execFileSync, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -18,6 +18,7 @@ import {
   buildCiEnv,
   buildLocalEnv,
   commentOutEmpty,
+  isCiEnv,
   parseSupabaseStatus,
 } from "./env-writer";
 import { parseArgs, planSteps } from "./plan";
@@ -147,9 +148,17 @@ const handlers: Record<Step, (profile: string) => Promise<void> | void> = {
       return;
     }
     if (existsSync(envFile)) {
-      // Repair older files: empty optional vars must be absent, not "".
-      writeFileSync(envFile, commentOutEmpty(readFileSync(envFile, "utf8")));
-      return;
+      const current = readFileSync(envFile, "utf8");
+      if (isCiEnv(current)) {
+        // A ci-profile .env breaks local/cloud stacks (TLS, no
+        // PAYLOAD_SECRET): keep a copy and write a local one below.
+        renameSync(envFile, `${envFile}.ci`);
+        log("moved the ci-profile .env to .env.ci; writing a local one");
+      } else {
+        // Repair older files: empty optional vars must be absent, not "".
+        writeFileSync(envFile, commentOutEmpty(current));
+        return;
+      }
     }
     const example = readFileSync(path.join(root, ".env.example"), "utf8");
     writeFileSync(
@@ -246,7 +255,12 @@ end $$;`;
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const steps = planSteps(options, { envIsNew: !existsSync(envFile) });
+  // A ci-profile .env counts as new for local/cloud: it gets replaced, and
+  // the database is reset to match.
+  const envIsNew =
+    !existsSync(envFile) ||
+    (options.profile !== "ci" && isCiEnv(readFileSync(envFile, "utf8")));
+  const steps = planSteps(options, { envIsNew });
   log(`profile ${options.profile}: ${steps.join(" → ")}`);
   for (const [i, step] of steps.entries()) {
     log(`${i + 1}/${steps.length} ${step}`);

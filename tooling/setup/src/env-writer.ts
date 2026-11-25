@@ -97,6 +97,23 @@ export function buildLocalEnv(input: {
 }
 
 /** ci: the minimal fresh-hosted-project env (was a heredoc in ci.yml). */
+/** First line of a ci-profile .env, so other profiles know to replace it. */
+export const CI_ENV_MARKER =
+  "# Written by `pnpm dev:setup --profile ci` (TLS + derived CMS credentials).";
+
+/**
+ * Was this .env written for CI? It asks Postgres for TLS and omits
+ * PAYLOAD_SECRET, which breaks a local or cloud stack, so those profiles
+ * replace it. (Older ci files have no marker; their dummy AI key gives them
+ * away.)
+ */
+export function isCiEnv(text: string): boolean {
+  return (
+    text.includes(CI_ENV_MARKER) ||
+    text.includes("AI_GATEWAY_API_KEY=dummy-ci-key-not-real")
+  );
+}
+
 export function buildCiEnv(status: SupabaseStatus): string {
   const apiUrl = need(status, "API_URL");
   const anon = need(status, "ANON_KEY");
@@ -106,6 +123,7 @@ export function buildCiEnv(status: SupabaseStatus): string {
   // sslmode=require exercises the hosted-TLS path (handle existing params).
   const sslDbUrl = `${dbUrl}${dbUrl.includes("?") ? "&" : "?"}sslmode=require`;
   return [
+    CI_ENV_MARKER,
     `NEXT_PUBLIC_SUPABASE_URL=${apiUrl}`,
     `NEXT_PUBLIC_SUPABASE_ANON_KEY=${anon}`,
     `SUPABASE_SERVICE_ROLE_KEY=${serviceRole}`,

@@ -324,10 +324,11 @@ then merge `upstream/main` into a `sync/…` branch and open a PR — **never sq
 PRs** (it breaks the shared-history relationship and forces a full re-merge next time).
 Full tested routine, conflict hotspots, and the `merge=ours` pinning trick for files
 you intentionally diverge on: **[`docs/UPDATING.md`](./docs/UPDATING.md)**.
-With module ops set up (`MOD_OPS_TOKEN`), a daily job opens these kit-update PRs
-for you, from the kit's newest published release (never its `main` branch; the
-release's build attestation is verified first). They are free, never
-auto-merge, and must be merged with a merge commit.
+Connect GitHub once in **/admin → Updates** and a daily job opens these kit
+update PRs for you, from the kit's newest published release (never its `main`
+branch; the release's build attestation is verified first). They are free,
+land with a merge commit, and merge themselves once every check passes unless
+you turn that off.
 
 **Free site license.** After the first CMS seed, your deployment registers with
 meetdream.com: it sends its domain, the admin and editor emails, the kit version
@@ -479,11 +480,8 @@ supabase link --project-ref <your-ref>
 supabase db push                          # optional — the app already did this on boot
 supabase functions deploy billing-stripe-webhook  # + delete-account, reminders-process
 
-# Module admin ops (optional — /admin → Modules installs via PRs):
-# 1) create a fine-grained PAT (read & write: contents, pull requests, actions, workflows)
-# 2) repo secret MOD_OPS_TOKEN=<pat>; Vercel env GITHUB_OPS_TOKEN=<pat>
-#    (without it module ops is skipped and paid modules stay off; /admin shows the steps)
-# 3) repo Settings → enable "Allow auto-merge"   (see docs/MODULES.md)
+# Module installs + automatic updates need no setup here: connect GitHub once
+# in /admin → Updates (see docs/MODULES.md).
 supabase secrets set STRIPE_SECRET_KEY=… STRIPE_WEBHOOK_SECRET=… CRON_SECRET=…
 ```
 

@@ -79,16 +79,9 @@ export const env = createEnv({
     S3_ACCESS_KEY_ID: z.string().min(1).optional(),
     S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
     S3_BUCKET: z.string().min(1).optional(),
-    // Module framework admin ops (docs/MODULES-PLAN.md §6). Without
-    // GITHUB_OPS_TOKEN the Modules screen (/admin/collections/kit-modules)
-    // is read-only (it shows copy-paste CLI commands instead of dispatching
-    // workflows).
-    GITHUB_OPS_TOKEN: z.string().min(1).optional(),
-    // owner/repo; defaults from the Vercel-injected repo metadata below.
-    GITHUB_REPO: z
-      .string()
-      .regex(/^[^/]+\/[^/]+$/)
-      .optional(),
+    // Vercel-injected repo metadata: reported to meetdream.com when the site
+    // registers, so connecting GitHub binds the right repository
+    // (lib/platform/host.ts).
     VERCEL_GIT_REPO_OWNER: z.string().min(1).optional(),
     VERCEL_GIT_REPO_SLUG: z.string().min(1).optional(),
     // Auto-injected by Vercel. On `preview` deployments the runtime DB
@@ -96,16 +89,13 @@ export const env = createEnv({
     // DB_BOOTSTRAP=on (lib/db/preview-guard.ts): a preview of an unmerged
     // branch must never migrate the production database it shares env with.
     VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
-    // Overrides the catalog the Modules screen's "Install module" drawer reads. When unset it
-    // defaults to `${DREAM_REGISTRY_URL}/catalog?schema=2` (see
-    // lib/mod/dream-registry.ts) — a self-hoster who sets a value keeps it.
-    MOD_CATALOG_URL: z.url().optional(),
-    // Dream module registry (paid modules — docs/MODULES.md → Paid modules).
-    // DREAM_LICENSE_KEY unlocks installing/updating paid modules; server-only,
-    // never sent to the browser (the entitlements route proxies it). Also set
-    // it as a GitHub repo secret so module-ops.yml can run the CLI.
-    DREAM_LICENSE_KEY: z.string().min(1).optional(),
+    // Dream module registry (docs/MODULES.md → Paid modules). Installs and
+    // updates authenticate with this site's own license key (the dream-site
+    // global) and the Dream Updates GitHub App: no tokens in env.
     DREAM_REGISTRY_URL: z.url().default(DREAM_REGISTRY_DEFAULT_URL),
+    // GitHub REST base for /admin's update calls. Only E2E changes it (a
+    // stub server, tooling/web-e2e/stub-services.mjs).
+    DREAM_GITHUB_API_URL: z.url().default("https://api.github.com"),
     // Free site license (docs/MODULES.md → Site license): after the first CMS
     // seed this deployment registers its domain + admin/staff emails with
     // meetdream.com for a free license key (kit updates, free modules), then

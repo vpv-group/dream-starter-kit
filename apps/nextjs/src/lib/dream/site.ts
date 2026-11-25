@@ -6,8 +6,8 @@ import { KIT_VERSION } from "@acme/config";
 
 import type { DreamSiteState, SitePeople, SiteSyncResult } from "./site-core";
 import { env } from "~/env";
-import { githubRepo } from "~/lib/mod/admin-ops";
 import { dreamRegistryUrl } from "~/lib/mod/dream-registry";
+import { detectHost } from "~/lib/platform/host";
 import { getSiteUrl } from "~/lib/site-url";
 import { DREAM_SITE_GLOBAL, publicDomain, syncSite } from "./site-core";
 
@@ -71,7 +71,7 @@ export async function syncDreamSite(
       domain: publicDomain(getSiteUrl()),
       telemetry: siteTelemetryEnabled(),
       kitVersion: KIT_VERSION,
-      repo: githubRepo(),
+      repo: detectHost(env).repo,
       people: () => sitePeople(payload),
       load: () => getDreamSite(payload),
       save: async (patch) => {
