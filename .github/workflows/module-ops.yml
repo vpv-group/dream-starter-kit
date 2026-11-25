@@ -60,6 +60,9 @@ concurrency:
 permissions:
   contents: write
   pull-requests: write
+  # Labels are created and applied with the built-in GITHUB_TOKEN (not
+  # MOD_OPS_TOKEN), so the founder's PAT doesn't need Issues access.
+  issues: write
 
 jobs:
   # Job-level `if:` can't read secrets, so this turns "is the token set?" into
@@ -237,16 +240,25 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
+          LABEL_TOKEN: ${{ github.token }}
         run: |
-          # Create a label if it's missing. Returns non-zero (with a warning)
-          # instead of failing the job: labels need Issues: write on the token.
+          # Labels go through the built-in GITHUB_TOKEN (LABEL_TOKEN, granted
+          # `issues: write` above), so they work whatever MOD_OPS_TOKEN allows.
+          # Creates the label if missing; warns instead of failing the job.
           ensure_label() {
-            gh label list --search "$1" --json name --jq '.[].name' 2>/dev/null | grep -qx "$1" && return 0
             local err
-            if err=$(gh label create "$1" --color "$2" --description "$3" 2>&1); then return 0; fi
+            if err=$(GH_TOKEN="$LABEL_TOKEN" gh label create "$1" --color "$2" --description "$3" 2>&1); then return 0; fi
             case "$err" in *already_exists*|*"already exists"*) return 0 ;; esac
-            echo "::warning title=Can't create label $1::$(echo "$err" | tr '\n' ' ') — give MOD_OPS_TOKEN Issues: read & write (docs/MODULES.md → Founder setup)."
+            echo "::warning title=Can't create label $1::$(echo "$err" | tr '\n' ' ')"
             return 1
+          }
+          # label_pr <pr-url> <label>... — best effort, never fails the job.
+          label_pr() {
+            local url=$1; shift
+            local args=() l
+            for l in "$@"; do args+=(-f "labels[]=$l"); done
+            GH_TOKEN="$LABEL_TOKEN" gh api --method POST "repos/$GITHUB_REPOSITORY/issues/${url##*/}/labels" "${args[@]}" >/dev/null || \
+              echo "::warning title=PR not labeled::Couldn't add $* to $url."
           }
           BRANCH="mod/${{ inputs.op }}-${{ inputs.slug || 'new' }}-${{ github.run_id }}"
           git config user.name "module-ops"
@@ -263,13 +275,12 @@ jobs:
           if grep -q "registers a Payload plugin\|hasPlugins: true" modules/*/module.config.ts 2>/dev/null; then
             BODY="$BODY"$'\n\n'"Note: an installed module registers a Payload plugin (the widest module power)."
           fi
-          # Open the PR WITHOUT --label: `gh pr create --label` aborts before
-          # creating anything when the label can't be resolved (e.g. the token
-          # lacks Issues: write, so it couldn't create it). Labels are cosmetic.
+          # The PR is opened with MOD_OPS_TOKEN (so CI runs on it) and labeled
+          # afterwards with GITHUB_TOKEN — never `gh pr create --label`, which
+          # aborts the whole PR when the label can't be resolved.
           PR_URL=$(gh pr create --title "mod: ${{ inputs.op }} ${{ inputs.slug || inputs.source }}" --body "$BODY")
-          ensure_label "$LABEL" 5319e7 "Automated pnpm mod operation" && \
-            gh pr edit "$PR_URL" --add-label "$LABEL" >/dev/null || \
-            echo "::warning title=PR not labeled::Couldn't add the $LABEL label to $PR_URL (give MOD_OPS_TOKEN Issues: read & write)."
+          ensure_label "$LABEL" 5319e7 "Automated pnpm mod operation" || true
+          label_pr "$PR_URL" "$LABEL"
           # Auto-merge installs/updates when allowed (never removals).
           if [ "${{ inputs.op }}" != "remove" ] && [ "${{ vars.MOD_AUTO_MERGE || 'on' }}" = "on" ] && [ -n "$PR_URL" ]; then
             gh pr merge --squash --auto "$PR_URL" || true
@@ -327,6 +338,7 @@ jobs:
     env:
       UPSTREAM_URL: ${{ vars.KIT_UPSTREAM_URL || 'https://github.com/vpv-group/dream-starter-kit.git' }}
       GH_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
+      LABEL_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -341,15 +353,23 @@ jobs:
       - name: Open or refresh the kit update PR
         run: |
           set -euo pipefail
-          # Create a label if it's missing. Returns non-zero (with a warning)
-          # instead of failing the job: labels need Issues: write on the token.
+          # Labels go through the built-in GITHUB_TOKEN (LABEL_TOKEN, granted
+          # `issues: write` above), so they work whatever MOD_OPS_TOKEN allows.
+          # Creates the label if missing; warns instead of failing the job.
           ensure_label() {
-            gh label list --search "$1" --json name --jq '.[].name' 2>/dev/null | grep -qx "$1" && return 0
             local err
-            if err=$(gh label create "$1" --color "$2" --description "$3" 2>&1); then return 0; fi
+            if err=$(GH_TOKEN="$LABEL_TOKEN" gh label create "$1" --color "$2" --description "$3" 2>&1); then return 0; fi
             case "$err" in *already_exists*|*"already exists"*) return 0 ;; esac
-            echo "::warning title=Can't create label $1::$(echo "$err" | tr '\n' ' ') — give MOD_OPS_TOKEN Issues: read & write (docs/MODULES.md → Founder setup)."
+            echo "::warning title=Can't create label $1::$(echo "$err" | tr '\n' ' ')"
             return 1
+          }
+          # label_pr <pr-url> <label>... — best effort, never fails the job.
+          label_pr() {
+            local url=$1; shift
+            local args=() l
+            for l in "$@"; do args+=(-f "labels[]=$l"); done
+            GH_TOKEN="$LABEL_TOKEN" gh api --method POST "repos/$GITHUB_REPOSITORY/issues/${url##*/}/labels" "${args[@]}" >/dev/null || \
+              echo "::warning title=PR not labeled::Couldn't add $* to $url."
           }
           version_of() { git show "$1:package.json" | jq -r '.version // "unknown"'; }
           LATEST=$(version_of upstream/main)
@@ -415,13 +435,13 @@ jobs:
           ⚠️ **$(echo "$CONFLICTS" | wc -l) files have conflicts to resolve** (markers committed): $(echo "$CONFLICTS" | head -40 | sed 's/.*/`&`/' | tr '\n' ' ')$( [ "$(echo "$CONFLICTS" | wc -l)" -gt 40 ] && echo "…and more (search the branch for \`<<<<<<<\`)")
           Generated files: take either side and regenerate. Migrations: keep both sides' files. \`pnpm-lock.yaml\`: re-run \`pnpm install\`."
           fi
-          # No --label here: `gh pr create --label` aborts before creating the
-          # PR when a label can't be resolved. Label it afterwards, best effort.
+          # Opened with MOD_OPS_TOKEN (so CI runs), labeled afterwards with
+          # GITHUB_TOKEN — `gh pr create --label` aborts the whole PR when a
+          # label can't be resolved.
           PR_URL=$(gh pr create --base "$BASE" --head "$BRANCH" \
             --title "chore(kit): update Dream Starter Kit $CURRENT → $LATEST" \
             --body "$BODY")
           echo "Opened $PR_URL"
           ensure_label kit-update 0e8a16 "Dream Starter Kit update (merge commit, never squash)" || true
           [ "$LABELS" = "kit-update" ] || ensure_label kit-update-conflicts d93f0b "Kit update needs conflicts resolved" || true
-          gh pr edit "$PR_URL" --add-label "$LABELS" >/dev/null || \
-            echo "::warning title=PR not labeled::Opened $PR_URL but couldn't add $LABELS (give MOD_OPS_TOKEN Issues: read & write)."
+          label_pr "$PR_URL" ${LABELS//,/ }

@@ -31,8 +31,8 @@ no license key. The `kit-update` job:
 3. Opens one PR labeled `kit-update` that shows the version jump.
    - Later runs refresh that same PR instead of opening another (found by
      its `sync/upstream-` branch, so it works even if it couldn't be labeled).
-   - Creating the labels needs **Issues: read & write** on `MOD_OPS_TOKEN`.
-     Without it the PR still opens, unlabeled, and the run logs a warning.
+   - Labels are created automatically with the workflow's built-in
+     `GITHUB_TOKEN`; `MOD_OPS_TOKEN` needs no extra access for them.
 
 It **never auto-merges**. Review it, run the post-merge validation below, and
 land it with a **merge commit** — never squash.
