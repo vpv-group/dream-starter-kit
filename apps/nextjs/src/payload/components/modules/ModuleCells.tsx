@@ -1,9 +1,13 @@
 "use client";
 
 import type { DefaultCellComponentProps } from "payload";
-import { Pill } from "@payloadcms/ui";
+import { Button, Pill } from "@payloadcms/ui";
 
-import { sourceLabel, useModulesAdmin } from "./use-modules-admin";
+import {
+  dispatchModuleOp,
+  sourceLabel,
+  useModulesAdmin,
+} from "./use-modules-admin";
 
 /**
  * List cells for the Modules table (/admin/collections/kit-modules). They
@@ -16,17 +20,33 @@ const rowSlug = (rowData: DefaultCellComponentProps["rowData"]): string => {
   return typeof slug === "string" ? slug : "";
 };
 
-/** Version + an "Update available" pill when a newer version can install. */
+/**
+ * Version, plus an "Update to x.y.z" button when a newer version is available
+ * and module ops can dispatch the update (it opens a pull request, like the
+ * button on the module's page). Without module ops it stays a plain pill.
+ */
 export function ModuleVersionCell({
   cellData,
   rowData,
 }: DefaultCellComponentProps) {
-  const { statusFor } = useModulesAdmin();
-  const status = statusFor(rowSlug(rowData));
+  const { statusFor, busy } = useModulesAdmin();
+  const slug = rowSlug(rowData);
+  const status = statusFor(slug);
   return (
     <span className="kit-modules-cell">
       <span>{typeof cellData === "string" ? cellData : ""}</span>
-      {status?.updateTo ? (
+      {status?.updateTo && status.canUpdate ? (
+        <Button
+          buttonStyle="primary"
+          size="xsmall"
+          margin={false}
+          disabled={busy}
+          tooltip="Opens a pull request that updates this module"
+          onClick={() => void dispatchModuleOp({ op: "update", slug })}
+        >
+          Update to {status.updateTo}
+        </Button>
+      ) : status?.updateTo ? (
         <Pill pillStyle="warning" size="small">
           Update: {status.updateTo}
         </Pill>
