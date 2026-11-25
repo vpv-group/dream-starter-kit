@@ -96,6 +96,13 @@ pnpm typecheck          # tsc across the workspace  <- run before commit
 pnpm lint               # eslint across the workspace <- run before commit
 pnpm format:fix         # prettier write
 
+# Local stack (one bootstrap for laptops, cloud sessions and CI — tooling/setup)
+pnpm dev:setup          # Supabase + .env + db reset (first run) + dev admin
+                        #   (admin@dream.test, password in .dream/dev-admin.json)
+                        #   (first /admin visit seeds the CMS). --reset,
+                        #   --no-dev-admin, --browsers,
+                        #   --profile local|cloud|ci. (`pnpm setup` is pnpm's own.)
+
 # Supabase (local dev)
 supabase start          # boot local Postgres/Auth/Storage (Docker)
 supabase db reset       # re-apply migrations + seed.sql
@@ -107,12 +114,15 @@ pnpm db:gen-migrations  # re-inline supabase/migrations into the web bundle for 
 # Modules (see docs/MODULES.md)
 pnpm mod sync           # regenerate registries/stubs/migrations from modules/*
 pnpm mod create <slug>  # scaffold a new module (then: install, db:reset, gen-types)
-pnpm mod add|update|remove|status  # lifecycle (vendored + lock + snapshot refs)
+pnpm mod add|update|remove|status  # lifecycle (vendored + lock + snapshot refs);
+                        #   add/update/remove then apply locally (migration up +
+                        #   gen-types) unless --no-apply or in CI
 
 # Tests
 pnpm test               # vitest (unit/integration) — no backend needed
-pnpm test:e2e           # Playwright (web E2E). Needs `supabase start` + `supabase db
-                        #   reset` + .env on local Supabase; boots `next dev` itself.
+pnpm test:e2e           # Playwright (web E2E). Needs the local stack (pnpm dev:setup);
+                        #   outside CI it resets the DB first (the founder flow needs
+                        #   zero users; E2E_REUSE_DB=1 skips). Boots `next dev` itself.
                         #   See tooling/web-e2e/README.md.
 pnpm test:rls           # RLS isolation regression. Needs `supabase start` + .env with
                         #   NEXT_PUBLIC_SUPABASE_URL/ANON_KEY + SUPABASE_SERVICE_ROLE_KEY.
@@ -127,14 +137,16 @@ typecheck · unit · license, plus an `integration` job that boots Supabase and 
 
 Cloud session containers start bare: no Docker daemon, no Supabase CLI, no `.env`.
 The **SessionStart hook** (`.claude/hooks/session-start.sh`, registered in
-`.claude/settings.json`, cloud-only via `$CLAUDE_CODE_REMOTE`) bootstraps the full
-local stack automatically: it starts `dockerd`, installs the Supabase CLI (the
-version CI pins in `.github/workflows/ci.yml`),
-`pnpm install`s, boots Supabase, writes `.env` from `.env.example` with the local
-keys + a generated `PAYLOAD_SECRET`, runs `pnpm db:reset`, and installs
-**Playwright's Chromium** (`playwright install chromium`, cached in
-`$PLAYWRIGHT_BROWSERS_PATH`). Every step is idempotent, so resumed sessions are
-fast. Don't re-do these steps by hand — if the stack seems down, just rerun the hook.
+`.claude/settings.json`, cloud-only via `$CLAUDE_CODE_REMOTE`) runs `pnpm install`
+then `pnpm dev:setup --profile cloud` — the same bootstrap laptops and CI use
+(`tooling/setup`). It starts `dockerd`, installs the Supabase CLI (the version CI
+pins in `.github/workflows/ci.yml`), boots Supabase, writes `.env` from
+`.env.example` with the local keys + a generated `PAYLOAD_SECRET`, runs
+`pnpm db:reset`, creates the **dev admin** (`admin@dream.test`, password in
+`.dream/dev-admin.json`; its first `/admin` visit seeds the CMS), and installs **Playwright's
+Chromium** (cached in `$PLAYWRIGHT_BROWSERS_PATH`). Every step is idempotent, so
+resumed sessions are fast. Don't re-do these steps by hand — if the stack seems
+down, just rerun the hook (or `pnpm dev:setup --profile cloud`).
 
 Cloud-session quirks:
 
@@ -142,7 +154,7 @@ Cloud-session quirks:
   sets rlimits the sandboxed nested-container runtime forbids. Edge functions
   (Stripe webhook, `reminders-process`) don't run in cloud sessions.
 - **Unset optional env vars must be absent, not `""`** — empty strings fail the zod
-  schema's `min(1)` checks. The hook comments them out when generating `.env`.
+  schema's `min(1)` checks. `pnpm dev:setup` comments them out when writing `.env`.
 - **`pnpm db:reset` heals a stale gateway** (`scripts/db-reset.sh`): after the reset
   recreates the auth container, Kong can keep proxying to its old address, so auth
   answers 502 (`AuthRetryableFetchError` in tests) and Payload migrations were
@@ -165,8 +177,9 @@ the **full** test matrix, same commands as local:
 - `pnpm test:e2e` — Playwright web E2E. Chromium is pre-installed by the hook;
   Playwright boots `next dev` itself (or reuses one already running on :3000).
   Auth flows pull confirmation links/codes from Mailpit (see
-  `tooling/web-e2e/README.md`). The founder/first-user flow needs a **fresh DB** —
-  run `pnpm db:reset` first if users were created since the hook ran.
+  `tooling/web-e2e/README.md`). The founder/first-user flow needs a **fresh DB**, so
+  `pnpm test:e2e` runs `pnpm db:reset` first outside CI (this removes the dev admin;
+  rerun `pnpm dev:setup` afterwards to get it back).
 - Out of scope in cloud sessions: anything needing edge functions (Stripe webhook,
   `reminders-process`) and `expo` device builds.
 
@@ -534,7 +547,8 @@ with the kit, so the cardinal rule is: keep the merge commits, never squash them
   - After the first seed, the deployment registers its domain and
     admin/staff emails with meetdream.com for a free license key, then
     reports in daily.
-  - It is disclosed on `/cms-setup`; `DREAM_TELEMETRY=off` opts out.
+  - It is disclosed on the founder's `/sign-up` and on `/cms-setup`;
+    `DREAM_TELEMETRY=off` opts out.
   - The app's license key is `DREAM_LICENSE_KEY ?? site key`.
   - See `docs/MODULES.md` → Site license.
 - **Single urgent fix without a full sync:** `git fetch upstream` then
