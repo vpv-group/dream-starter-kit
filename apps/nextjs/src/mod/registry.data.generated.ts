@@ -8,6 +8,8 @@ export interface ModInstalled {
   version: string;
   /** True when the app shell depends on this module's mounts (e.g. the home screen). */
   system: boolean;
+  /** SQL function deciding if the current user may use the module (manifest access.check). */
+  accessCheck?: string;
 }
 
 export interface ModNavDefault {
@@ -17,6 +19,8 @@ export interface ModNavDefault {
   href: string;
   icon?: string;
   order: number;
+  /** Default audience; omitted = everyone. */
+  audience?: "everyone" | "staff";
 }
 
 /** Every installed module (from the vendored manifests). */
@@ -27,7 +31,7 @@ export const modInstalled: ModInstalled[] = [
   { slug: "chat-adapter-slack", name: "Slack Adapter", version: "1.0.0", system: false },
   { slug: "dashboard", name: "Dashboard", version: "1.0.0", system: true },
   { slug: "docs", name: "Docs", version: "1.0.0", system: true },
-  { slug: "notifications", name: "Notifications", version: "1.0.0", system: false },
+  { slug: "notifications", name: "Notifications", version: "1.1.0", system: false },
   { slug: "reminders", name: "Reminders", version: "1.0.0", system: false },
 ];
 
@@ -37,17 +41,18 @@ export const modInstalled: ModInstalled[] = [
  */
 export const modNavDefaults: { web: ModNavDefault[]; native: ModNavDefault[] } = {
   web: [
-    { key: "mod:billing:0", module: "billing", title: "Billing", href: "/billing", icon: "IconCreditCard", order: 50 },
-    { key: "mod:chat:0", module: "chat", title: "Chat", href: "/a/chat", icon: "IconMessageCircle", order: 20 },
-    { key: "mod:dashboard:0", module: "dashboard", title: "Dashboard", href: "/a", icon: "IconDashboard", order: 10 },
-    { key: "mod:notifications:0", module: "notifications", title: "Notifications", href: "/a/notifications", icon: "IconBell", order: 40 },
-    { key: "mod:reminders:0", module: "reminders", title: "Reminders", href: "/a/reminders", icon: "IconClock", order: 30 },
+    { key: "mod:billing:/billing", module: "billing", title: "Billing", href: "/billing", icon: "IconCreditCard", order: 50 },
+    { key: "mod:chat:/a/chat", module: "chat", title: "Chat", href: "/a/chat", icon: "IconMessageCircle", order: 20 },
+    { key: "mod:dashboard:/a", module: "dashboard", title: "Dashboard", href: "/a", icon: "IconDashboard", order: 10 },
+    { key: "mod:notifications:/a/notifications", module: "notifications", title: "Notifications", href: "/a/notifications", icon: "IconBell", order: 40 },
+    { key: "mod:reminders:/a/reminders", module: "reminders", title: "Reminders", href: "/a/reminders", icon: "IconClock", order: 30 },
   ],
   native: [
-    { key: "mod:billing:0", module: "billing", title: "Pricing", href: "/a/billing", order: 55 },
-    { key: "mod:chat:0", module: "chat", title: "Chat", href: "/a/chat", icon: "IconMessageCircle", order: 20 },
-    { key: "mod:notifications:0", module: "notifications", title: "Notifications", href: "/a/notifications", icon: "IconBell", order: 40 },
-    { key: "mod:reminders:0", module: "reminders", title: "Reminders", href: "/a/reminders", icon: "IconClock", order: 30 },
+    { key: "mod:billing:/a/billing", module: "billing", title: "Pricing", href: "/a/billing", icon: "IconCreditCard", order: 55 },
+    { key: "mod:chat:/a/chat", module: "chat", title: "Chat", href: "/a/chat", icon: "IconMessageCircle", order: 20 },
+    { key: "mod:dashboard:/home", module: "dashboard", title: "Home", href: "/home", icon: "IconHome", order: 0 },
+    { key: "mod:notifications:/a/notifications", module: "notifications", title: "Notifications", href: "/a/notifications", icon: "IconBell", order: 40 },
+    { key: "mod:reminders:/a/reminders", module: "reminders", title: "Reminders", href: "/a/reminders", icon: "IconClock", order: 30 },
   ],
 };
 

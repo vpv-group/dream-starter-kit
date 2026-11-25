@@ -110,6 +110,31 @@ return content only. In the content area:
 - **Width:** dashboards, lists and boards use the full width. Record pages and
   settings use `mx-auto max-w-5xl`, and single-column forms use `max-w-2xl`.
 
+### Bottom tab bar (phones and tablets, exists)
+
+Below `lg` the shell adds a floating Liquid Glass tab bar
+(`components/glass-tab-bar.tsx` + `.module.css`). It renders the **native app's
+menu** (/admin → Navigation → iOS and Android App), so staff configure one tab bar
+for every small screen. The header stays as is; on tablets the bar centres over the
+content column next to the expanded sidebar.
+
+- **Shape:** a 62px pill of 76px tabs (64px at ≤420px) and a separate 62px round
+  Search button, 12px apart, floating `max(20px, safe-area)` off the bottom.
+- **Material:** fill on `::before` (`saturate(220%) blur(16px)`, light
+  `rgba(245,245,247,.55)` / dark `rgba(38,38,40,.6)`), a 0.5px hairline from four
+  inset shadows on `::after`. Never put `backdrop-filter` on the element itself.
+- **Tabs:** 26px Tabler icon over a 10px/600 label in the system font. The active
+  tab takes `--primary` and sits on a sliding pill indicator.
+- **Search mode:** the tabs collapse into one round button (back to the current
+  tab), the Search button becomes a field, and a glass sheet above lists every
+  entry with a coloured icon tile.
+- **Content clearance:** the shell sets `--app-bottom-inset` (0 on desktop) and pads
+  the page by it. Full-height screens subtract it:
+  `h-[calc(100dvh-…-var(--app-bottom-inset,0px))]`.
+- **Accessibility:** links use `aria-current="page"`, 4px focus ring, Escape closes
+  search. `prefers-contrast: more` and `prefers-reduced-transparency` drop the blur
+  for a solid fill; `prefers-reduced-motion` drops the animations.
+
 ### Page header
 
 ```
@@ -361,12 +386,12 @@ tone is used consistently as a **dot** (tables, filters, board columns), a **bad
 
 ## 7. Where it lives in code
 
-| Layer             | Package                      | Contents                                                                                                                                                                                                                                                                                                                                                       |
-| ----------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tokens            | `tooling/tailwind/theme.css` | colours, status tones, radius, shadows (BRAND.md)                                                                                                                                                                                                                                                                                                              |
+| Layer             | Package                      | Contents                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ----------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tokens            | `tooling/tailwind/theme.css` | colours, status tones, radius, shadows (BRAND.md)                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Primitives        | `@acme/ui`                   | button, badge (tones `neutral` / `info` / `success` / `warning` / `danger`), card (`variant="framed"`, `size="sm"`), input, select, field, dropdown-menu, separator, dialog, alert-dialog, sheet, tabs (`variant="line"`), popover, command (cmdk), checkbox, avatar, tooltip, skeleton, progress, textarea, switch, table, toggle, toggle-group, radio-group, scroll-area, alert, kbd, empty, status-dot (`Tone`). Not in the kit yet: calendar, chart, combobox (compose popover + command) |
-| Generic blocks    | `@acme/ui`                   | page header, stat tile, data-table shell (toolbar / selection bar / pagination), filters builder, status dot + tone map type, empty state, board (kanban) shell, timeline                                                                                                                                                                                      |
-| Domain composites | the owning module            | e.g. the CRM's record form, path, related lists and pipeline board, all built from the blocks above                                                                                                                                                                                                                                                            |
+| Generic blocks    | `@acme/ui`                   | page header, stat tile, data-table shell (toolbar / selection bar / pagination), filters builder, status dot + tone map type, empty state, board (kanban) shell, timeline                                                                                                                                                                                                                                                                                                                     |
+| Domain composites | the owning module            | e.g. the CRM's record form, path, related lists and pipeline board, all built from the blocks above                                                                                                                                                                                                                                                                                                                                                                                           |
 
 Existing pages keep the current card look. The framed variant is opt-in
 (`<Card variant="framed">`), so adopting the system is incremental. The `/admin`

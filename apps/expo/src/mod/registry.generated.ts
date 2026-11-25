@@ -8,6 +8,11 @@ import { BillingWidget as widget_billing } from "@acme/mod-billing/native";
 import { ChatWidget as widget_chat } from "@acme/mod-chat/native";
 import { NotificationsWidget as widget_notifications } from "@acme/mod-notifications/native";
 import { RemindersWidget as widget_reminders } from "@acme/mod-reminders/native";
+import { PricingScreen as screen_billing_0 } from "@acme/mod-billing/native";
+import { ChatListScreen as screen_chat_0 } from "@acme/mod-chat/native";
+import { HomeScreen as screen_dashboard_0 } from "@acme/mod-dashboard/native";
+import { NotificationsScreen as screen_notifications_0 } from "@acme/mod-notifications/native";
+import { RemindersScreen as screen_reminders_0 } from "@acme/mod-reminders/native";
 
 export interface ModInstalled {
   slug: string;
@@ -15,6 +20,8 @@ export interface ModInstalled {
   version: string;
   /** True when the app shell depends on this module's mounts (e.g. the home screen). */
   system: boolean;
+  /** SQL function deciding if the current user may use the module (manifest access.check). */
+  accessCheck?: string;
 }
 
 export interface ModNavDefault {
@@ -24,6 +31,8 @@ export interface ModNavDefault {
   href: string;
   icon?: string;
   order: number;
+  /** Default audience; omitted = everyone. */
+  audience?: "everyone" | "staff";
 }
 
 export const modInstalled: ModInstalled[] = [
@@ -33,18 +42,31 @@ export const modInstalled: ModInstalled[] = [
   { slug: "chat-adapter-slack", name: "Slack Adapter", version: "1.0.0", system: false },
   { slug: "dashboard", name: "Dashboard", version: "1.0.0", system: true },
   { slug: "docs", name: "Docs", version: "1.0.0", system: true },
-  { slug: "notifications", name: "Notifications", version: "1.0.0", system: false },
+  { slug: "notifications", name: "Notifications", version: "1.1.0", system: false },
   { slug: "reminders", name: "Reminders", version: "1.0.0", system: false },
 ];
 
-/** Native nav defaults — fallback for useNavMenu() while offline/loading. */
+/** Native nav defaults — the bundled first-launch menu (useNativeNav fallback). */
 export const modNavDefaults: { native: ModNavDefault[] } = {
   native: [
-    { key: "mod:billing:0", module: "billing", title: "Pricing", href: "/a/billing", order: 55 },
-    { key: "mod:chat:0", module: "chat", title: "Chat", href: "/a/chat", icon: "IconMessageCircle", order: 20 },
-    { key: "mod:notifications:0", module: "notifications", title: "Notifications", href: "/a/notifications", icon: "IconBell", order: 40 },
-    { key: "mod:reminders:0", module: "reminders", title: "Reminders", href: "/a/reminders", icon: "IconClock", order: 30 },
+    { key: "mod:billing:/a/billing", module: "billing", title: "Pricing", href: "/a/billing", icon: "IconCreditCard", order: 55 },
+    { key: "mod:chat:/a/chat", module: "chat", title: "Chat", href: "/a/chat", icon: "IconMessageCircle", order: 20 },
+    { key: "mod:dashboard:/home", module: "dashboard", title: "Home", href: "/home", icon: "IconHome", order: 0 },
+    { key: "mod:notifications:/a/notifications", module: "notifications", title: "Notifications", href: "/a/notifications", icon: "IconBell", order: 40 },
+    { key: "mod:reminders:/a/reminders", module: "reminders", title: "Reminders", href: "/a/reminders", icon: "IconClock", order: 30 },
   ],
+};
+
+/**
+ * Module screens the native menu can point at (static routes), by href.
+ * Rendered inside the configured tab slots (app/(app)/(tabs)/t*).
+ */
+export const modNativeScreens: Record<string, React.ComponentType> = {
+  "/a/billing": screen_billing_0,
+  "/a/chat": screen_chat_0,
+  "/home": screen_dashboard_0,
+  "/a/notifications": screen_notifications_0,
+  "/a/reminders": screen_reminders_0,
 };
 
 /** Home-screen widgets declared by installed modules (native components). */

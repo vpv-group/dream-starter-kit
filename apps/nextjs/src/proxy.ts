@@ -83,6 +83,23 @@ export async function proxy(request: NextRequest) {
         url.search = "";
         return NextResponse.redirect(url);
       }
+      // Module settings moved from per-module globals to the module's page
+      // (kit 2.2): send old bookmarks to /admin/module-settings/<slug>.
+      const legacySettings =
+        /^\/admin\/globals\/mod-([a-z][a-z0-9-]*)-settings\/?$/.exec(pathname);
+      if (legacySettings) {
+        const url = request.nextUrl.clone();
+        url.pathname = `/admin/module-settings/${legacySettings[1]}`;
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
+      // /admin/modules was folded into the Modules collection screen.
+      if (pathname === "/admin/modules" || pathname === "/admin/modules/") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/admin/collections/kit-modules";
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
     }
     return response;
   }

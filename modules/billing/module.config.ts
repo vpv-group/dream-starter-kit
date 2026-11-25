@@ -23,7 +23,14 @@ export default defineModule({
     web: [
       { title: "Billing", href: "/billing", icon: "IconCreditCard", order: 50 },
     ],
-    native: [{ title: "Pricing", href: "/a/billing", order: 55 }],
+    native: [
+      {
+        title: "Pricing",
+        href: "/a/billing",
+        icon: "IconCreditCard",
+        order: 55,
+      },
+    ],
   },
   routes: {
     web: [

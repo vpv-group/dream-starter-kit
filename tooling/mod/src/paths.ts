@@ -32,6 +32,7 @@ export const MOD_PATHS = {
   nextClientRegistry: "apps/nextjs/src/mod/registry.client.generated.ts",
   nextServerRegistry: "apps/nextjs/src/mod/registry.server.generated.ts",
   nextPayloadRegistry: "apps/nextjs/src/mod/registry.payload.generated.ts",
+  nextAdminRegistry: "apps/nextjs/src/mod/registry.admin.generated.tsx",
   nextEnv: "apps/nextjs/src/mod/env.generated.ts",
   nextLockModule: "apps/nextjs/src/mod/lock.generated.ts",
   nextTranspileJson: "apps/nextjs/mod-packages.generated.json",

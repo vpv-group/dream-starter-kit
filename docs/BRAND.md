@@ -16,16 +16,17 @@ The icon is a D whose counter is a check. The logo is the icon and the product
 name, drawn as artwork. The wordmark is not typed, so never set "Dream" or
 "Dream Starter Kit" in Geist as a substitute for the files.
 
-| File | Use |
-| --- | --- |
-| `apps/nextjs/public/brand/dream-starter-kit-logo-color.svg` | Emerald icon, ink type. Light grounds |
-| `apps/nextjs/public/brand/dream-starter-kit-logo-reversed.svg` | Emerald icon, white type. Dark grounds |
-| `apps/nextjs/public/brand/dream-icon-green.svg` | The icon alone, where the name is already present |
-| `apps/nextjs/public/favicon.svg`, `favicon.ico`, `favicon-96x96.png` | Favicons. The SVG switches to a lighter green in dark mode |
-| `apps/nextjs/public/apple-touch-icon.png`, `web-app-manifest-*.png` | Home-screen icons: white D with an emerald check on an emerald tile |
-| `apps/expo/assets/icon.png` | App icon, full bleed (the stores apply the corner mask) |
-| `apps/expo/assets/adaptive-icon.png` | Android adaptive icon foreground, inside the safe zone, on `#009B53` |
-| `apps/expo/assets/splash-icon.png` | Splash screen mark |
+| File                                                                 | Use                                                                                                                         |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `apps/nextjs/public/brand/dream-starter-kit-logo-color.svg`          | Emerald icon, ink type. Light grounds                                                                                       |
+| `apps/nextjs/public/brand/dream-starter-kit-logo-reversed.svg`       | Emerald icon, white type. Dark grounds                                                                                      |
+| `apps/nextjs/public/brand/dream-icon-green.svg`                      | The icon alone, where the name is already present                                                                           |
+| `apps/nextjs/public/favicon.svg`, `favicon.ico`, `favicon-96x96.png` | Favicons. The SVG switches to a lighter green in dark mode                                                                  |
+| `apps/nextjs/public/apple-touch-icon.png`, `web-app-manifest-*.png`  | Home-screen icons: white D with an emerald check on an emerald tile                                                         |
+| `apps/expo/assets/icon.png`                                          | App icon, full bleed (the stores apply the corner mask)                                                                     |
+| `apps/expo/assets/adaptive-icon.png`                                 | Android adaptive icon foreground, inside the safe zone, on `#009B53`                                                        |
+| `apps/expo/assets/splash-icon.png`                                   | Splash screen mark                                                                                                          |
+| `apps/expo/assets/tab-home.png`, `@2x`, `@3x`                        | Native Home tab glyph: the icon in black on transparent with the check cut out, 24pt on a 28pt canvas. The tab bar tints it |
 
 Rules:
 
@@ -50,20 +51,20 @@ Rules:
 The tokens live in `tooling/tailwind/theme.css`, light and dark, in oklch. Hex
 values below are their sRGB renderings.
 
-| Role | Token | Light | Dark |
-| --- | --- | --- | --- |
-| Dream emerald: the icon, finished states, large fills | `brand` | `#009B53` | `#009B53` |
-| Buttons, active states, focus ring | `primary`, `ring` | `#008246` | `#41D686` |
-| Text on `primary` | `primary-foreground` | `#FFFFFF` | `#090C14` |
-| Inline links | `link` | `#00793F` | `#61DA92` |
-| Page ground | `background` | `#FFFFFF` | `#090C14` |
-| Headings and values | `foreground` | `#101524` | `#F2F3F7` |
-| Labels and captions | `muted-foreground` | `#636975` | `#9A9FA8` |
-| Hairlines | `border` | `#E3E6EC` | `#292E38` |
-| The dark band and footer, in both themes | `ink`, `on-ink`, `primary-on-ink` | `#0B1121`, `#F3F5F9`, `#41D686` | same |
-| Waiting states and notices | `info` | `#1D57F3` | `#87AFFF` |
-| Something to fix | `warning` | `#985B0B` | `#F2AF48` |
-| Errors and deleting | `destructive` | `#D01C29` | `#FA686A` |
+| Role                                                  | Token                             | Light                           | Dark      |
+| ----------------------------------------------------- | --------------------------------- | ------------------------------- | --------- |
+| Dream emerald: the icon, finished states, large fills | `brand`                           | `#009B53`                       | `#009B53` |
+| Buttons, active states, focus ring                    | `primary`, `ring`                 | `#008246`                       | `#41D686` |
+| Text on `primary`                                     | `primary-foreground`              | `#FFFFFF`                       | `#090C14` |
+| Inline links                                          | `link`                            | `#00793F`                       | `#61DA92` |
+| Page ground                                           | `background`                      | `#FFFFFF`                       | `#090C14` |
+| Headings and values                                   | `foreground`                      | `#101524`                       | `#F2F3F7` |
+| Labels and captions                                   | `muted-foreground`                | `#636975`                       | `#9A9FA8` |
+| Hairlines                                             | `border`                          | `#E3E6EC`                       | `#292E38` |
+| The dark band and footer, in both themes              | `ink`, `on-ink`, `primary-on-ink` | `#0B1121`, `#F3F5F9`, `#41D686` | same      |
+| Waiting states and notices                            | `info`                            | `#1D57F3`                       | `#87AFFF` |
+| Something to fix                                      | `warning`                         | `#985B0B`                       | `#F2AF48` |
+| Errors and deleting                                   | `destructive`                     | `#D01C29`                       | `#FA686A` |
 
 Rules:
 

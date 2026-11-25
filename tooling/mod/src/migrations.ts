@@ -67,6 +67,34 @@ export interface MigrationSyncResult {
 }
 
 /**
+ * Modules ordered so each comes after the modules it `requires` (stable
+ * otherwise). New migrations are pinned in this order, so a module's tables
+ * exist before a dependent's migrations reference them — even when both are
+ * pinned in one sync (a fresh CI kit, a dev resync).
+ */
+export function dependencyOrder<
+  M extends { manifest: { slug: string; requires: readonly string[] } },
+>(mods: readonly M[]): M[] {
+  const bySlug = new Map(mods.map((m) => [m.manifest.slug, m]));
+  const out: M[] = [];
+  const done = new Set<string>();
+  const visit = (m: M, path: Set<string>) => {
+    const slug = m.manifest.slug;
+    if (done.has(slug) || path.has(slug)) return;
+    path.add(slug);
+    for (const dep of m.manifest.requires) {
+      const d = bySlug.get(dep);
+      if (d) visit(d, path);
+    }
+    path.delete(slug);
+    done.add(slug);
+    out.push(m);
+  };
+  for (const m of mods) visit(m, new Set());
+  return out;
+}
+
+/**
  * Pin + copy every module migration into supabase/migrations/. Idempotent:
  * already-pinned files are verified (content hash) and re-materialized only if
  * the target is missing. Throws on content drift of a pinned source.
@@ -91,7 +119,7 @@ export function syncSupabaseMigrations(
     written: [],
   };
 
-  for (const mod of mods) {
+  for (const mod of dependencyOrder(mods)) {
     const slug = mod.manifest.slug;
     const srcDir = path.join(mod.dir, "supabase/migrations");
     if (!existsSync(srcDir)) continue;

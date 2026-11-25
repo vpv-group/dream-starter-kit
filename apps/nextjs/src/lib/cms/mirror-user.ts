@@ -92,20 +92,20 @@ export async function ensureCmsUser(user: {
     if (existing.totalDocs === 0) {
       // A staff-flagged profile without a CMS row at mirror time is the
       // FOUNDER (the first signup, auto-flagged is_staff) — provision them as
-      // the full CMS admin. Invited staff already have a row (the invite hook
-      // created it with `editor`), so this path never demotes/promotes them.
-      let isStaff = false;
-      try {
-        const { data: profile } = await createAdminClient()
-          .from("profiles")
-          .select("is_staff")
-          .eq("id", user.id)
-          .maybeSingle();
-        isStaff = Boolean(profile?.is_staff);
-      } catch {
-        // Service key unavailable — mirror as a plain member; the SSO bridge
-        // still grants a staff role on their first /admin visit.
-      }
+      // the full CMS admin. Invited users already have a row (the invite hook
+      // created it with the chosen roles), so this path never demotes/promotes
+      // them. The CMS roles decide staff access from here on, so if the flag
+      // can't be read we must NOT guess `member` (that would lock the founder
+      // out of /admin): let the error reach the catch below and skip the
+      // create — the next mirror call, or the SSO bridge's JIT-provisioning,
+      // creates the row with the right roles.
+      const { data: profile, error: profileError } = await createAdminClient()
+        .from("profiles")
+        .select("is_staff")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profileError) throw profileError;
+      const isStaff = Boolean(profile?.is_staff);
       await payload.create({
         collection: "users",
         data: {

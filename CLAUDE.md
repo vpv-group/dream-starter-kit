@@ -211,7 +211,12 @@ Rules that keep modules modular:
   module; `mod sync` pins versions and materializes copies — never edit a
   synced migration, add a new one. Ship a `drop.sql` for clean removal.
 - **Nav is CMS-driven:** manifest `nav` entries are defaults seeded into the
-  `nav-items` collection; staff own the menu in /admin afterwards.
+  `nav-items` collection ("Navigation" in /admin); staff own the menu
+  afterwards. The web sidebar and the native tab bar are ordered separately
+  (Navigation → Web App / iOS and Android App; the native side is the
+  `native-navigation` global, loaded at launch by `useNativeNav` and cached
+  offline — docs/CMS.md). The web app's phone/tablet bottom tab bar
+  (`components/glass-tab-bar.tsx`, below `lg`) renders that same native menu.
 - **Cross-module access** is declared: `requires: [...]` + `database.dml`
   whitelists; services are plain typed package exports (`notify()`,
   `usePremium()`).
@@ -293,11 +298,15 @@ the same in `/admin` → Users, written through to Supabase by
 **default-deny**: only users with `profiles.is_staff = true` get in — **the bridge
 authenticates staff only for now**; member-scoped collections carry correct
 owner-scoped access rules, but opening `/cms-api` to member sessions is a documented
-follow-up. The first signup is auto-flagged (and JIT-provisioned `admin`); further
-staff are **invited from `/admin` → Users → Create New** — a collection hook
-(`payload/hooks/invite-user.ts`) emails a Supabase invite and flags `is_staff` via
-the service-role client (`lib/supabase/admin.ts`, server-only — the pattern golden
-rule #2 allows); the invitee sets a password on `/accept-invite`. Users are
+follow-up. **`is_staff` follows the CMS roles** — admin/editor/author ⇒ `true`,
+member only ⇒ `false` — written through on every admin save of a user
+(`sync-user-to-supabase.ts`); there is no separate "grant staff" step, and an admin
+can't drop their own `admin` role. The first signup is auto-flagged (and
+JIT-provisioned `admin`); further users are **invited from `/admin` → Users →
+Create New** — a collection hook (`payload/hooks/invite-user.ts`) emails a Supabase
+invite and sets `is_staff` from the chosen roles via the service-role client
+(`lib/supabase/admin.ts`, server-only — the pattern golden rule #2 allows); the
+invitee sets a password on `/accept-invite`. Users are
 soft-deleted (`trash: true`): the bridge rejects trashed rows and the mirror won't
 resurrect them — restore from the admin Trash view. The bridge itself runs in the
 Next.js server — it reads `profiles` via the user's own RLS session and writes
@@ -542,7 +551,7 @@ the **remote MCP server** (`@acme/mcp`, docs/MCP.md) are core; dashboard,
 notifications, reminders, chat and billing ship as
 pre-installed modules under `modules/` with the full lifecycle
 (create/add/update/remove, CMS-driven menus, per-module settings screens,
-the /admin/modules panel + module-ops workflow). The test/CI suite is
+the /admin Modules screen + module-ops workflow). The test/CI suite is
 green end to end. Known follow-ups: opening the CMS API bridge to member
 sessions; publishing the five first-party modules to their own repos +
 the official catalog repo (`pnpm mod eject`); per-module RLS test

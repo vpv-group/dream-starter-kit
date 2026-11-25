@@ -70,7 +70,7 @@ export const modulesLock = {
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
-        "apps/expo/src/app/(app)/index.tsx",
+        "apps/expo/src/app/(app)/home.tsx",
         "apps/nextjs/src/app/(frontend)/(app)/a/layout.tsx",
         "apps/nextjs/src/app/(frontend)/(app)/a/page.tsx"
       ],
@@ -90,8 +90,8 @@ export const modulesLock = {
       "edgeFunctions": []
     },
     "notifications": {
-      "version": "1.0.0",
-      "kitCompat": ">=2.0.0 <3",
+      "version": "1.1.0",
+      "kitCompat": ">=2.3.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [

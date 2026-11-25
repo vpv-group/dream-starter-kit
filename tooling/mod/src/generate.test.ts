@@ -7,13 +7,17 @@ import {
   applyEnvExampleBlock,
   buildAllGeneratedFiles,
   buildEnvExampleBlock,
+  buildExpoRegistry,
+  buildNextAdminRegistry,
   buildNextClientRegistry,
   buildNextDataRegistry,
+  buildNextPayloadRegistry,
   buildNextServerRegistry,
   buildStubs,
   buildTranspileJson,
+  gatedDefaultExport,
 } from "./generate";
-import { bumpVersion, nextVersion } from "./migrations";
+import { bumpVersion, dependencyOrder, nextVersion } from "./migrations";
 
 function loaded(
   manifest: Parameters<typeof defineModule>[0],
@@ -86,8 +90,17 @@ describe("generated registries", () => {
       'import { ChatWidget as widget_chat } from "@acme/mod-chat/web";',
     );
     const data = buildNextDataRegistry([chat]);
-    expect(data).toContain('key: "mod:chat:0"');
+    // Same key the boot reconcile gives the nav-items row.
+    expect(data).toContain('key: "mod:chat:/a/chat"');
     expect(data).toContain('icon: "IconMessageCircle"');
+  });
+
+  it("maps native module screens by href for the tab bar", () => {
+    const out = buildExpoRegistry([chat]);
+    expect(out).toContain(
+      'import { ChatHome as screen_chat_0 } from "@acme/mod-chat/native";',
+    );
+    expect(out).toContain('"/a/chat": screen_chat_0,');
   });
 
   it("keeps the data registry free of imports (safe for server code and CLIs)", () => {
@@ -224,5 +237,120 @@ describe("migration version assignment", () => {
     const taken = new Set(["20260609000001"]);
     const now = new Date(Date.UTC(2026, 5, 11, 12, 0, 0));
     expect(nextVersion(taken, now)).toBe("20260611120000");
+  });
+});
+
+describe("gated native stubs", () => {
+  it("wrap like Prettier when the line is too long", () => {
+    expect(gatedDefaultExport('"mod_crm_access_ok"', "CrmScreen")).toBe(
+      'export default withModuleAccess("mod_crm_access_ok", CrmScreen);',
+    );
+    expect(
+      gatedDefaultExport('"mod_client_portal_access_ok"', "PortalTicketScreen"),
+    ).toBe(
+      'export default withModuleAccess(\n  "mod_client_portal_access_ok",\n  PortalTicketScreen,\n);',
+    );
+  });
+});
+
+describe("migration pin order", () => {
+  const mod = (slug: string, requires: string[] = []) => ({
+    manifest: { slug, requires },
+  });
+
+  it("puts a module after the modules it requires", () => {
+    const order = dependencyOrder([
+      mod("client-portal", ["crm", "notifications"]),
+      mod("crm", ["notifications"]),
+      mod("chat"),
+      mod("notifications"),
+    ]).map((m) => m.manifest.slug);
+    expect(order.indexOf("notifications")).toBeLessThan(order.indexOf("crm"));
+    expect(order.indexOf("crm")).toBeLessThan(order.indexOf("client-portal"));
+    expect(order).toHaveLength(4);
+  });
+
+  it("keeps the input order when there are no dependencies, and survives cycles", () => {
+    expect(
+      dependencyOrder([mod("b"), mod("a"), mod("c")]).map(
+        (m) => m.manifest.slug,
+      ),
+    ).toEqual(["b", "a", "c"]);
+    expect(
+      dependencyOrder([mod("x", ["y"]), mod("y", ["x"])]).map(
+        (m) => m.manifest.slug,
+      ),
+    ).toHaveLength(2);
+  });
+});
+
+describe("module access + admin settings", () => {
+  const crm = loaded({
+    slug: "crm",
+    name: "CRM",
+    version: "1.1.0",
+    kitCompat: ">=2.0.0 <3",
+    nav: {
+      web: [{ title: "CRM", href: "/a/crm", order: 20, audience: "staff" }],
+      native: [{ title: "CRM", href: "/a/crm", order: 20 }],
+    },
+    routes: {
+      web: [{ path: "", component: "CrmPage" }],
+      native: [{ path: "", component: "CrmScreen" }],
+    },
+    access: { check: "mod_crm_access_ok" },
+    admin: { settingsComponent: true },
+  });
+
+  it("gates the web layout with the access check", () => {
+    const layout = buildStubs([crm]).find((f) =>
+      f.path.endsWith("/a/crm/layout.tsx"),
+    );
+    expect(layout?.content).toContain(
+      'if (!(await hasModuleAccess("mod_crm_access_ok"))) redirect("/a");',
+    );
+    expect(layout?.content).toContain(
+      'import { notFound, redirect } from "next/navigation";',
+    );
+    // Ungated modules keep the plain enabled-only layout.
+    const plain = buildStubs([chat]).find((f) =>
+      f.path.endsWith("/a/chat/layout.tsx"),
+    );
+    expect(plain?.content).not.toContain("hasModuleAccess");
+  });
+
+  it("wraps native screens in the access gate", () => {
+    const screen = buildStubs([crm]).find(
+      (f) => f.path === "apps/expo/src/app/(app)/a/crm/index.tsx",
+    );
+    expect(screen?.content).toContain(
+      'export default withModuleAccess("mod_crm_access_ok", CrmScreen);',
+    );
+  });
+
+  it("bakes the access check and staff-only nav defaults into the registries", () => {
+    const data = buildNextDataRegistry([crm]);
+    expect(data).toContain('accessCheck: "mod_crm_access_ok"');
+    expect(data).toContain('audience: "staff"');
+    const expo = buildExpoRegistry([crm]);
+    expect(expo).toContain('accessCheck: "mod_crm_access_ok"');
+    // Gated screens stay gated when rendered inside a tab slot.
+    expect(expo).toContain('import { withModuleAccess } from "./access-gate";');
+    expect(expo).toContain(
+      '"/a/crm": withModuleAccess("mod_crm_access_ok", screen_crm_0),',
+    );
+  });
+
+  it("lists ./admin settings components for the module page", () => {
+    expect(buildNextPayloadRegistry([crm])).toContain('{ slug: "crm" },');
+    const admin = buildNextAdminRegistry([crm]);
+    expect(admin.startsWith('"use client";')).toBe(true);
+    expect(admin).toContain(
+      'import { AdminSettings as admin_crm } from "@acme/mod-crm/admin";',
+    );
+    expect(admin).toContain("crm: admin_crm,");
+    expect(buildNextAdminRegistry([chat])).toContain(
+      "modAdminComponents: Record<string, ComponentType> = {};",
+    );
   });
 });

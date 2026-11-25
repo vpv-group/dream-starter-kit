@@ -48,6 +48,10 @@ const ORIGINAL = {
   roles: ["member"],
 };
 
+// ORIGINAL without `roles`: an edit that doesn't touch the roles field, so
+// no `is_staff` reconciliation is expected.
+const { roles: _roles, ...FIELDS } = ORIGINAL;
+
 function run(
   data: Record<string, unknown>,
   opts: {
@@ -80,7 +84,7 @@ describe("syncUserToSupabase", () => {
   });
 
   it("writes an admin email change through to Supabase Auth, pre-confirmed", async () => {
-    await run({ ...ORIGINAL, email: "new@example.com" });
+    await run({ ...FIELDS, email: "new@example.com" });
     expect(updateUserById).toHaveBeenCalledWith("auth-123", {
       email: "new@example.com",
       email_confirm: true,
@@ -89,13 +93,13 @@ describe("syncUserToSupabase", () => {
   });
 
   it("ignores a case-only email difference", async () => {
-    await run({ ...ORIGINAL, email: "OLD@example.com" });
+    await run({ ...FIELDS, email: "OLD@example.com" });
     expect(updateUserById).not.toHaveBeenCalled();
   });
 
   it("syncs display name, phone and job title to profiles + user_metadata", async () => {
     await run({
-      ...ORIGINAL,
+      ...FIELDS,
       displayName: "New Name",
       phone: "+44 7700 900123",
       jobTitle: "",
@@ -120,7 +124,7 @@ describe("syncUserToSupabase", () => {
   });
 
   it("does nothing when no synced field changed", async () => {
-    await run({ ...ORIGINAL, bio: "hello" });
+    await run({ ...FIELDS, bio: "hello" });
     expect(updateUserById).not.toHaveBeenCalled();
     expect(profileUpdate).not.toHaveBeenCalled();
   });
@@ -154,6 +158,73 @@ describe("syncUserToSupabase", () => {
   it("refuses to clear a linked user's email", async () => {
     await expect(run({ ...ORIGINAL, email: "" })).rejects.toMatchObject({
       status: 400,
+    });
+  });
+
+  describe("staff access follows roles", () => {
+    it.each([
+      [["editor"], true],
+      [["author"], true],
+      [["member", "admin"], true],
+      [["member"], false],
+    ])("roles %j → is_staff %s", async (roles, isStaff) => {
+      await run({ ...FIELDS, roles });
+      expect(profileUpdate).toHaveBeenCalledWith({ is_staff: isStaff });
+      expect(profileEq).toHaveBeenCalledWith("id", "auth-123");
+      expect(updateUserById).not.toHaveBeenCalled();
+    });
+
+    it("demoting a staff user to member clears is_staff", async () => {
+      await run(
+        { ...FIELDS, roles: ["member"] },
+        { originalDoc: { ...ORIGINAL, roles: ["editor"] } },
+      );
+      expect(profileUpdate).toHaveBeenCalledWith({ is_staff: false });
+    });
+
+    it("reconciles on every admin save that carries roles (heals drift)", async () => {
+      await run({ ...ORIGINAL });
+      expect(profileUpdate).toHaveBeenCalledWith({ is_staff: false });
+    });
+
+    it("folds is_staff into the same profiles write as other fields", async () => {
+      await run({ ...FIELDS, phone: "+1 555 0199", roles: ["editor"] });
+      expect(profileUpdate).toHaveBeenCalledTimes(1);
+      expect(profileUpdate).toHaveBeenCalledWith({
+        phone: "+1 555 0199",
+        is_staff: true,
+      });
+    });
+
+    it("leaves is_staff alone when roles aren't in the update", async () => {
+      await run({ phone: "+1 555 0199" });
+      expect(profileUpdate).toHaveBeenCalledWith({ phone: "+1 555 0199" });
+    });
+
+    it("ignores roles sent by a non-admin", async () => {
+      await run(
+        { ...FIELDS, roles: ["admin"] },
+        { user: { id: 9, roles: ["editor"] } },
+      );
+      expect(profileUpdate).not.toHaveBeenCalled();
+    });
+
+    it("refuses to let an admin remove their own admin role", async () => {
+      await expect(
+        run(
+          { ...FIELDS, roles: ["editor"] },
+          { originalDoc: { ...ORIGINAL, id: 9, roles: ["admin"] } },
+        ),
+      ).rejects.toMatchObject({ status: 400 });
+      expect(profileUpdate).not.toHaveBeenCalled();
+    });
+
+    it("lets an admin demote another admin", async () => {
+      await run(
+        { ...FIELDS, roles: ["member"] },
+        { originalDoc: { ...ORIGINAL, roles: ["admin"] } },
+      );
+      expect(profileUpdate).toHaveBeenCalledWith({ is_staff: false });
     });
   });
 

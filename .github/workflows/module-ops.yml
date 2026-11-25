@@ -28,7 +28,7 @@ on:
         type: choice
         options: [add, update, remove, kit-update]
       source:
-        description: "add: GitHub url[#vX.Y.Z], signed zip URL, or dream:<slug>[@x.y.z]"
+        description: "add: GitHub url[#vX.Y.Z], signed zip URL, or dream:<slug>[@x.y.z]. update: optional new origin (e.g. dream:<slug>) to switch to"
         required: false
         type: string
       slug:
@@ -83,7 +83,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.op != 'kit-update' && needs.preflight.outputs.has_token == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           token: ${{ secrets.MOD_OPS_TOKEN }}
           fetch-depth: 0
@@ -93,8 +93,8 @@ jobs:
         run: |
           git fetch origin '+refs/mod-base/*:refs/mod-base/*' || true
           git fetch origin '+refs/ext-base/*:refs/ext-base/*' || true
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
@@ -123,6 +123,10 @@ jobs:
           # need module ops itself: the CLI checks MOD_OPS_TOKEN).
           DREAM_LICENSE_KEY: ${{ secrets.DREAM_LICENSE_KEY }}
           MOD_OPS_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
+          # Registry-first (default): modules the Dream registry lists install
+          # and update from it, falling back to GitHub. `off` keeps GitHub.
+          MOD_REGISTRY_FIRST: ${{ vars.MOD_REGISTRY_FIRST }}
+          UPDATE_FROM: ${{ inputs.op == 'update' && inputs.source || '' }}
         run: |
           set -euo pipefail
           case "${{ inputs.op }}" in
@@ -133,7 +137,22 @@ jobs:
             update)
               ARGS=()
               [ -n "${{ inputs.version }}" ] && ARGS+=(--to "${{ inputs.version }}")
-              pnpm mod update "${{ inputs.slug }}" "${ARGS[@]}" | tee /tmp/mod-op.log || echo "conflicts=true" >> "$GITHUB_OUTPUT"
+              # Optional: switch the module's origin (e.g. a private GitHub
+              # repo → the Dream registry, dream:<slug>).
+              [ -n "$UPDATE_FROM" ] && ARGS+=(--from "$UPDATE_FROM")
+              # Merge conflicts exit non-zero but still make a PR (markers
+              # and all). Any other failure (e.g. the module repo can't be
+              # read) must fail here, not look like an update.
+              if ! pnpm mod update "${{ inputs.slug }}" "${ARGS[@]}" 2>&1 | tee /tmp/mod-op.log; then
+                if grep -q "^Merge conflicts in:" /tmp/mod-op.log; then
+                  echo "conflicts=true" >> "$GITHUB_OUTPUT"
+                else
+                  if grep -q "returned error: 40[34]" /tmp/mod-op.log; then
+                    echo "::error title=Can't read the module's repository::GitHub refused access to ${{ inputs.slug }}'s source repo. For a private module repo, add it to the MOD_OPS_TOKEN fine-grained PAT's repository access with Contents: read (docs/MODULES.md → Founder setup). If the Dream registry carries this module, set the DREAM_LICENSE_KEY secret so updates come from the registry instead (registry-first), or re-run with source dream:${{ inputs.slug }}."
+                  fi
+                  exit 1
+                fi
+              fi
               ;;
             remove)
               ARGS=()
@@ -141,22 +160,81 @@ jobs:
               pnpm mod remove "${{ inputs.slug }}" "${ARGS[@]}" | tee /tmp/mod-op.log
               ;;
           esac
-          pnpm db:gen-types || true
-          pnpm cms:gen-types || true
+
+      # An op can leave the repo unchanged, e.g. `update` when the module's
+      # newest tag is the version already installed (a release whose vX.Y.Z
+      # tag isn't pushed yet). End with a notice instead of a failed commit,
+      # and skip the slow type regeneration below.
+      - name: Check for changes
+        id: changes
+        env:
+          OP: ${{ inputs.op }}
+          SLUG: ${{ inputs.slug }}
+          SOURCE: ${{ inputs.source }}
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+          VERSION=""
+          if [ -n "$SLUG" ]; then
+            VERSION=$(jq -r --arg s "$SLUG" '.modules[$s].version // empty' modules.lock 2>/dev/null || true)
+          fi
+          MSG="pnpm mod $OP ${SLUG:-$SOURCE} changed nothing"
+          if [ -n "$VERSION" ]; then MSG="$MSG: $SLUG is already at $VERSION"; fi
+          if [ "$OP" = "update" ]; then
+            MSG="$MSG. An update installs the module's newest vX.Y.Z tag (or the version you asked for), so push the release tag first."
+          fi
+          echo "::notice title=Nothing to update::$MSG"
+
+      # `pnpm db:gen-types` reads the LOCAL database, and modules query their
+      # own tables through the typed client, so the new/changed module's
+      # migrations must be applied before types are generated. Same pinned
+      # CLI as ci.yml (see the version note there).
+      - name: Setup Supabase CLI
+        if: steps.changes.outputs.changed == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.105.0
+
+      - name: Regenerate types + typecheck
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          supabase start -x studio,logflare,vector,edge-runtime
+          # No `|| true`: the script's `>` redirect empties
+          # packages/api/src/types.ts before the CLI runs, so a failure here
+          # must stop the job instead of committing an empty types file.
+          pnpm db:gen-types
+          pnpm cms:gen-types
           pnpm typecheck
 
       - name: Path confinement check
+        if: steps.changes.outputs.changed == 'true'
         run: |
           # The op may only touch modules/**, the known sync outputs and
           # lockfiles — a module can't smuggle a modified proxy.ts or
           # workflow into the PR (MODULES-PLAN.md §7).
           git add -A
-          BAD=$(git diff --cached --name-only | grep -vE '^(modules/|modules\.lock|pnpm-lock\.yaml|\.env\.example|supabase/(migrations|functions)/|apps/nextjs/(mod-packages\.generated\.json|src/(mod/|payload/migrations/|app/\(frontend\)/.*x/|app/\(frontend\)/\(app\)/(a|billing)/|app/\(frontend\)/\(public\)/pricing/))|apps/expo/src/(mod/|app/\(app\)/)|packages/(api|cms)/src/)' || true)
+          BAD=$(git diff --cached --name-only | grep -vE '^(modules/|modules\.lock|pnpm-lock\.yaml|\.env\.example|supabase/(migrations|functions)/|apps/nextjs/(mod-packages\.generated\.json|src/(lib/db/supabase-migrations\.generated\.json|mod/|payload/migrations/|app/\(frontend\)/.*x/|app/\(frontend\)/\(app\)/(a|billing)/|app/\(frontend\)/\(public\)/pricing/))|apps/expo/(package\.json|src/(mod/|app/\(app\)/))|apps/nextjs/package\.json|packages/(api|cms)/src/)' || true)
+          # `mod sync` adds/removes the module's workspace dependency in both
+          # apps' package.json, so those two files are allowed, but ONLY for
+          # "@acme/mod-<slug>": "workspace:*" lines: any other change to them
+          # (a new npm dependency, a script) still fails the check.
+          for f in apps/nextjs/package.json apps/expo/package.json; do
+            if git diff --cached -U0 -- "$f" | grep -E '^[+-] ' \
+                | grep -vqE '^[+-] +"@acme/mod-[a-z0-9-]+": "workspace:\*",?$'; then
+              BAD="$BAD"$'\n'"$f (changes other than @acme/mod-* workspace dependencies)"
+            fi
+          done
+          BAD=$(echo "$BAD" | sed '/^$/d')
           if [ -n "$BAD" ]; then
             echo "Files outside the allowlist were modified:"; echo "$BAD"; exit 1
           fi
 
       - name: Push branch + open PR
+        if: steps.changes.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
         run: |
@@ -189,12 +267,12 @@ jobs:
     if: github.event_name == 'schedule' && needs.preflight.outputs.has_token == 'true' && vars.MOD_AUTO_UPDATE != 'off'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           token: ${{ secrets.MOD_OPS_TOKEN }}
           fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
@@ -212,6 +290,7 @@ jobs:
           # — they are skipped quietly, never a failure.
           DREAM_LICENSE_KEY: ${{ secrets.DREAM_LICENSE_KEY }}
           MOD_OPS_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
+          MOD_REGISTRY_FIRST: ${{ vars.MOD_REGISTRY_FIRST }}
         run: |
           pnpm --silent mod status --json > /tmp/status.json || exit 0
           for slug in $(jq -r '.[] | select(.updateAvailable) | .slug' /tmp/status.json); do
@@ -235,7 +314,7 @@ jobs:
       UPSTREAM_URL: ${{ vars.KIT_UPSTREAM_URL || 'https://github.com/vpv-group/dream-starter-kit.git' }}
       GH_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           token: ${{ secrets.MOD_OPS_TOKEN }}
           fetch-depth: 0

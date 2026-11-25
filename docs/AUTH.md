@@ -182,7 +182,8 @@ invite-only notice. For **hard** server enforcement also set:
 enable_signup = false
 ```
 
-New staff are still invited from `/admin → Users → Create New`.
+New staff are still invited from `/admin → Users → Create New` (choose the
+Admin, Editor or Author role — the role decides staff access).
 
 ## Account settings (`/profile` + `/admin` Users)
 

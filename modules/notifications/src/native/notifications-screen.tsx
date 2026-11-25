@@ -5,8 +5,12 @@ import { useSupabase } from "@acme/api";
 import { Button } from "@acme/ui-native/button";
 import { Text } from "@acme/ui-native/text";
 
-import { useMarkNotificationRead, useNotifications } from "../index";
-import { registerForPushNotifications } from "./push";
+import {
+  notificationHref,
+  useMarkNotificationRead,
+  useNotifications,
+} from "../index";
+import { openNotificationHref, registerForPushNotifications } from "./push";
 
 // `EXPO_PUBLIC_*` is inlined by Metro at build time — literal reads only.
 declare const process: { env: Record<string, string | undefined> };
@@ -67,6 +71,7 @@ export function NotificationsScreen() {
           <Pressable
             onPress={() => {
               if (!item.read_at) void markRead.mutateAsync(item.id);
+              openNotificationHref(notificationHref(item));
             }}
             className="border-border border-b py-3"
           >

@@ -1,3 +1,4 @@
+import type { Payload } from "payload";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -5,6 +6,10 @@ import {
   composeSettingsTabs,
   defineAdapterSettings,
   defineModuleSettings,
+  getAdapterSettings,
+  getModuleSettings,
+  settingsGroupName,
+  updateModuleSettings,
 } from "./payload";
 
 describe("adapterGroupName", () => {
@@ -81,5 +86,83 @@ describe("composeSettingsTabs", () => {
     const baseTabs = base.global.fields[0] as { tabs: unknown[] };
     expect(baseTabs.tabs).toHaveLength(1);
     expect(base.defaults).not.toHaveProperty("adapter_chat_adapter_slack");
+  });
+});
+
+describe("module settings on the kit-modules row", () => {
+  const chat = defineModuleSettings({
+    slug: "chat",
+    name: "AI Chat",
+    fields: [
+      { name: "maxHistory", type: "number", defaultValue: 20 },
+      { name: "model", type: "text", defaultValue: "a" },
+    ],
+  });
+  const slack = defineAdapterSettings({
+    slug: "chat-adapter-slack",
+    name: "Slack",
+    target: "chat",
+    fields: [{ name: "enabled", type: "checkbox", defaultValue: true }],
+  });
+
+  function fakePayload(rows: Record<string, unknown>[]) {
+    const updates: { id: unknown; data: Record<string, unknown> }[] = [];
+    const payload = {
+      find: ({ where }: { where: { slug: { equals: string } } }) =>
+        Promise.resolve({
+          docs: rows.filter((r) => r.slug === where.slug.equals),
+        }),
+      update: (args: { id: unknown; data: Record<string, unknown> }) => {
+        updates.push(args);
+        return Promise.resolve({});
+      },
+    } as unknown as Payload;
+    return { payload, updates };
+  }
+
+  it("names the group after the slug and hides the legacy global", () => {
+    expect(settingsGroupName("chat-adapter-slack")).toBe(
+      "mod_chat_adapter_slack",
+    );
+    expect(chat.groupName).toBe("mod_chat");
+    expect(chat.global.admin?.hidden).toBe(true);
+  });
+
+  it("reads the row's group over the defaults, ignoring nulls", async () => {
+    const { payload } = fakePayload([
+      { slug: "chat", mod_chat: { maxHistory: 5, model: null } },
+    ]);
+    expect(await getModuleSettings(payload, chat)).toEqual({
+      maxHistory: 5,
+      model: "a",
+    });
+  });
+
+  it("falls back to the defaults before the row exists", async () => {
+    const { payload } = fakePayload([]);
+    expect(await getModuleSettings(payload, chat)).toEqual({
+      maxHistory: 20,
+      model: "a",
+    });
+  });
+
+  it("reads an adapter's tab inside its target's group", async () => {
+    const { payload } = fakePayload([
+      {
+        slug: "chat",
+        mod_chat: { adapter_chat_adapter_slack: { enabled: false } },
+      },
+    ]);
+    expect(await getAdapterSettings(payload, slack)).toEqual({
+      enabled: false,
+    });
+  });
+
+  it("writes settings into the module's group", async () => {
+    const { payload, updates } = fakePayload([{ id: 7, slug: "chat" }]);
+    await updateModuleSettings(payload, chat, { maxHistory: 9 });
+    expect(updates).toEqual([
+      expect.objectContaining({ id: 7, data: { mod_chat: { maxHistory: 9 } } }),
+    ]);
   });
 });

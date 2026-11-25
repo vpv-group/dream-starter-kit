@@ -12,6 +12,10 @@ export default defineConfig({
       "modules/*/tests/rls/**/*.test.ts",
     ],
     exclude: ["**/node_modules/**"],
+    // One file at a time: module suites share database-wide singletons (the
+    // CRM's company CRM and access mode, the client portal's settings row),
+    // so suites running side by side would change each other's setup.
+    fileParallelism: false,
     // Generous: a freshly-booted CI Supabase can be slow to settle.
     testTimeout: 45_000,
     hookTimeout: 45_000,

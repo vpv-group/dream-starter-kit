@@ -21,6 +21,12 @@ const navEntrySchema = z.object({
   icon: z.string().min(1).optional(),
   /** Menu sort order — lower first. Core entries use 10, 20, 30, … */
   order: z.number().int().default(100),
+  /**
+   * Who sees the entry by default: everyone signed in, or only staff
+   * (`profiles.is_staff`). Seeded into the nav item's `audience` once; staff
+   * own it in /admin → Nav Items afterwards.
+   */
+  audience: z.enum(["everyone", "staff"]).default("everyone"),
 });
 
 const routeEntrySchema = z.object({
@@ -131,6 +137,28 @@ export const moduleManifestSchema = z.object({
        * exclusive with `hasSettings`. The target must be a `requires` dep.
        */
       settingsTabFor: z.string().min(1).optional(),
+    })
+    .prefault({}),
+  /**
+   * Runtime access gate. `check` names a `mod_<slug>_*` SQL function (no
+   * args, returns boolean, callable by `authenticated`) that says whether the
+   * CURRENT user may use the module. When false the module's menu entries are
+   * hidden (web + native) and its web pages redirect to /a. Data access must
+   * still be enforced by the module's own RLS — this gate is the UX layer.
+   */
+  access: z
+    .object({
+      check: z.string().min(1).optional(),
+    })
+    .prefault({}),
+  admin: z
+    .object({
+      /**
+       * `./admin` exports a client `AdminSettings` component, rendered on the
+       * module's page in /admin (Modules → <module>). For settings that live
+       * in the module's own tables rather than Payload fields.
+       */
+      settingsComponent: z.boolean().default(false),
     })
     .prefault({}),
   env: z
