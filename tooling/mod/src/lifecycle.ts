@@ -515,7 +515,8 @@ export async function remove(
     const version = nextVersion(taken, new Date());
     writeFileSync(
       path.join(hostDir, `${version}_drop_mod_${slug.replace(/-/g, "_")}.sql`),
-      `-- Teardown for the removed "${slug}" module (pnpm mod remove).\n${dropSql}`,
+      `-- Teardown for the removed "${slug}" module (pnpm mod remove).\n` +
+        `-- dream:contract removes the module's tables (removal PRs never auto-merge)\n${dropSql}`,
     );
   }
 

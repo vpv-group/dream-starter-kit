@@ -22,13 +22,19 @@ With module ops set up (the `MOD_OPS_TOKEN` secret — see
 `module-ops.yml` run does this routine for you. Kit updates are free and need
 no license key. The `kit-update` job:
 
-1. Fetches `upstream/main`. If it's already merged, it exits.
-2. Merges `upstream/main` into a `sync/upstream-<date>` branch.
+1. Finds the kit's newest **published release**: the highest `vX.Y.Z` tag
+   (`pnpm mod ops kit-plan`). Never `main`, never a pre-release such as
+   `v2.4.0-rc.1`. If that release is already merged, or the kit hasn't
+   published one yet, it exits with a notice.
+2. Verifies the release's **build attestation**: it rebuilds the release's
+   source archive from the tag and checks it with `gh attestation verify`
+   against the kit repository. A release that doesn't verify is never merged.
+3. Merges the release into a `sync/upstream-<date>` branch.
    - The first merge on a "Use this template" repo uses
      `--allow-unrelated-histories` automatically.
    - Conflicts are committed as markers, and the PR gets the
      `kit-update-conflicts` label.
-3. Opens one PR labeled `kit-update` that shows the version jump.
+4. Opens one PR labeled `kit-update` that shows the version jump.
    - Later runs refresh that same PR instead of opening another (found by
      its `sync/upstream-` branch, so it works even if it couldn't be labeled).
    - Labels are created automatically with the workflow's built-in
@@ -41,7 +47,24 @@ land it with a **merge commit** — never squash.
 - Run it now with _Actions → Module ops → Run workflow → `op: kit-update`_.
 - `KIT_UPSTREAM_URL` (repository variable) points it at a different upstream.
 
-The rest of this guide is the same routine done by hand.
+The rest of this guide is the same routine done by hand. (By hand you can merge
+a release tag the same way: `git fetch upstream tag vX.Y.Z` then
+`git merge vX.Y.Z`. Merging `upstream/main` also works, but gets unreleased work.)
+
+### How kit releases work (maintainers)
+
+Kit releases are made by `.github/workflows/release.yml` in the kit repository:
+
+1. Bump `version` in the root `package.json` (`KIT_VERSION` follows; a unit test
+   keeps them equal) and merge it to `main`.
+2. Tag the merge commit `vX.Y.Z` and push the tag. Use `vX.Y.Z-rc.N` first to
+   publish a release candidate (a GitHub pre-release; apps never receive it).
+3. The workflow checks the tag matches the version, runs the full CI suite with
+   the E2E against a production build (`next build && next start`), then
+   attests the source archive and publishes the GitHub Release.
+
+Until the first `vX.Y.Z` release exists, the daily check reports "No kit release
+yet" and opens nothing.
 
 ---
 
@@ -141,11 +164,11 @@ not line-by-line:
   rebuild:
   - `packages/cms/src/payload-types.ts` → `pnpm cms:gen-types`
   - Supabase types (`packages/api`) → `pnpm db:gen-types`
-  Both scripts pipe their output through `prettier --write`, so the regenerated
-  files already pass `pnpm format` (raw generator output uses single quotes / no
-  semicolons and would fail CI's `format` job). If a regenerate still shows a diff
-  with no real type change, your clone predates that — pull the kit's
-  `package.json` scripts rather than discarding or hand-formatting the file.
+    Both scripts pipe their output through `prettier --write`, so the regenerated
+    files already pass `pnpm format` (raw generator output uses single quotes / no
+    semicolons and would fail CI's `format` job). If a regenerate still shows a diff
+    with no real type change, your clone predates that — pull the kit's
+    `package.json` scripts rather than discarding or hand-formatting the file.
 - **Migrations are append-only.** Never edit a shipped migration; **keep BOTH
   sides'** migration files (yours _and_ the kit's new ones). After merging, run
   `pnpm db:reset` to apply the combined sequence, then `pnpm db:gen-migrations` if

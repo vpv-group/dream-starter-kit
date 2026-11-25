@@ -1,0 +1,88 @@
+# Dream Starter Kit releases (docs/UPDATING.md → How kit releases work).
+#
+# Push a tag to release: `vX.Y.Z` (matching package.json "version") for a
+# release, or `vX.Y.Z-rc.N` for a release candidate. This workflow:
+#
+#   1. checks the tag matches the kit version (KIT_VERSION is unit-tested to
+#      equal package.json, so the app reports the same version);
+#   2. runs the FULL CI suite (ci.yml), with the E2E against a production
+#      build (`next build && next start`) instead of `next dev`;
+#   3. builds the source archive (`git archive`, uncompressed so the bytes are
+#      reproducible), attests it (GitHub artifact attestation: proof it was
+#      built by this workflow from this repository), and publishes a GitHub
+#      Release with the archive attached. RCs are published as pre-releases.
+#
+# Apps only ever receive published releases: module-ops.yml's `kit-update`
+# job picks the newest stable vX.Y.Z tag (never main, never an RC), rebuilds
+# the same archive from the tag and refuses it unless the attestation verifies.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      prerelease: ${{ steps.check.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Tag matches the kit version
+        id: check
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          VERSION=$(jq -r .version package.json)
+          case "$TAG" in
+            "v$VERSION") echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
+            "v$VERSION"-rc.*) echo "prerelease=true" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "::error title=Tag doesn't match the kit version::Tag $TAG, but package.json says $VERSION. Bump the version (package.json; KIT_VERSION follows) and tag v$VERSION (or v$VERSION-rc.N)."
+              exit 1
+              ;;
+          esac
+
+  ci:
+    needs: version
+    uses: ./.github/workflows/ci.yml
+    with:
+      e2e_server: prod
+    secrets: inherit
+
+  publish:
+    needs: [version, ci]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v5
+      # Same command module-ops.yml uses to rebuild and verify it.
+      - name: Build the source archive
+        # HEAD is the tagged commit here (a shallow checkout may lack the tag ref).
+        run: git archive --format=tar --prefix="dream-starter-kit-$TAG/" -o "dream-starter-kit-$TAG.tar" HEAD
+      - name: Attest the archive
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dream-starter-kit-${{ github.ref_name }}.tar
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          ARGS=(--verify-tag --generate-notes --title "Dream Starter Kit ${TAG#v}")
+          [ "$PRERELEASE" = "true" ] && ARGS+=(--prerelease)
+          gh release create "$TAG" "dream-starter-kit-$TAG.tar" "${ARGS[@]}"

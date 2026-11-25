@@ -15,7 +15,7 @@
 #
 # The daily run also checks the Dream Starter Kit itself for updates
 # (`kit-update` job, free — no license key) and opens a PR merging the kit's
-# upstream main. It never auto-merges: merge it with a MERGE COMMIT (never
+# newest published release (a vX.Y.Z tag with a verified build attestation). It never auto-merges: merge it with a MERGE COMMIT (never
 # squash — docs/UPDATING.md). KIT_AUTO_UPDATE=off (repo variable) disables it.
 name: Module ops
 
@@ -279,7 +279,7 @@ jobs:
             BODY="$BODY"$'\n\n'"⚠️ DATA LOSS: this PR includes a drop migration for the module's tables (unless --keep-data). It never auto-merges."
           fi
           if [ "$CONFLICTS" = "true" ]; then
-            FILES=$(grep -rlE '^(<<<<<<<|>>>>>>>) ' "modules/${{ inputs.slug }}" 2>/dev/null | head -40 | sed 's/.*/`&`/' | tr '\n' ' ')
+            FILES=$(grep -rlE '^(<<<<<<<|>>>>>>>) ' "modules/${{ inputs.slug }}" 2>/dev/null | head -40 | sed 's/.*/\x60&\x60/' | tr '\n' ' ')
             BODY="$BODY"$'\n\n'"⚠️ **Merge conflicts to resolve** (markers committed; types were not regenerated): ${FILES:-see the branch}. Resolve them, run \`pnpm mod update ${{ inputs.slug }} --continue\`, \`pnpm db:gen-types\` and \`pnpm cms:gen-types\`, then push. This PR never auto-merges."
           fi
           if grep -q "registers a Payload plugin\|hasPlugins: true" modules/*/module.config.ts 2>/dev/null; then
@@ -342,10 +342,12 @@ jobs:
 
   kit-update:
     # Free Dream Starter Kit updates (docs/UPDATING.md → Automatic update PRs):
-    # merges the kit's upstream main into a sync/upstream-<date> branch and
-    # opens a PR labeled `kit-update`. No license key needed. NEVER
-    # auto-merges — and must land as a merge commit, never a squash, so the
-    # next update stays a plain three-way merge. Skipped in the kit repo itself.
+    # merges the kit's newest PUBLISHED RELEASE (a vX.Y.Z tag made by the kit's
+    # release.yml, never its main branch, never a pre-release) into a
+    # sync/upstream-<date> branch and opens a PR labeled `kit-update`. The
+    # release's build attestation is verified first. No license key needed.
+    # NEVER auto-merges — and must land as a merge commit, never a squash, so
+    # the next update stays a plain three-way merge. Skipped in the kit repo.
     needs: preflight
     if: >-
       needs.preflight.outputs.has_token == 'true' &&
@@ -362,13 +364,57 @@ jobs:
         with:
           token: ${{ secrets.MOD_OPS_TOKEN }}
           fetch-depth: 0
-      - name: Fetch the kit's upstream
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # tooling/mod/src/ops/kit-update.ts (unit-tested): picks the newest
+      # stable vX.Y.Z tag and fetches it into refs/remotes/upstream/release.
+      - name: Find the latest kit release
+        id: plan
         run: |
-          git remote add upstream "$UPSTREAM_URL" 2>/dev/null || git remote set-url upstream "$UPSTREAM_URL"
-          git fetch --no-tags upstream main
+          set -euo pipefail
           git config user.name "module-ops"
           git config user.email "module-ops@users.noreply.github.com"
+          pnpm --silent mod ops kit-plan --upstream "$UPSTREAM_URL" --github-output | tee -a "$GITHUB_OUTPUT"
+
+      - name: Nothing to do
+        if: steps.plan.outputs.action != 'merge'
+        env:
+          ACTION: ${{ steps.plan.outputs.action }}
+          LATEST: ${{ steps.plan.outputs.latest }}
+        run: |
+          if [ "$ACTION" = "no-release" ]; then
+            echo "::notice title=No kit release yet::The Dream Starter Kit hasn't published a vX.Y.Z release yet, so there is nothing to update to."
+          else
+            echo "::notice title=Kit is up to date::Already includes Dream Starter Kit $LATEST."
+          fi
+
+      # Only a release built by the kit's own release.yml may be merged: its
+      # source archive (same command as release.yml) must carry a build
+      # attestation from the upstream repository.
+      - name: Verify the release attestation
+        if: steps.plan.outputs.action == 'merge'
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
+          REF: ${{ steps.plan.outputs.ref }}
+        run: |
+          set -euo pipefail
+          SLUG=$(echo "$UPSTREAM_URL" | sed -E 's#^(https://github\.com/|git@github\.com:)##; s#\.git$##')
+          git archive --format=tar --prefix="dream-starter-kit-$TAG/" -o "/tmp/dream-starter-kit-$TAG.tar" "$REF^{commit}"
+          gh attestation verify "/tmp/dream-starter-kit-$TAG.tar" --repo "$SLUG"
+
       - name: Open or refresh the kit update PR
+        if: steps.plan.outputs.action == 'merge'
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
+          REF: ${{ steps.plan.outputs.ref }}
+          LATEST: ${{ steps.plan.outputs.latest }}
+          CURRENT: ${{ steps.plan.outputs.current }}
+          UNRELATED: ${{ steps.plan.outputs.unrelated }}
         run: |
           set -euo pipefail
           # Labels go through the built-in GITHUB_TOKEN (LABEL_TOKEN, granted
@@ -389,14 +435,8 @@ jobs:
             GH_TOKEN="$LABEL_TOKEN" gh api --method POST "repos/$GITHUB_REPOSITORY/issues/${url##*/}/labels" "${args[@]}" >/dev/null || \
               echo "::warning title=PR not labeled::Couldn't add $* to $url."
           }
-          version_of() { git show "$1:package.json" | jq -r '.version // "unknown"'; }
-          LATEST=$(version_of upstream/main)
-          if git merge-base --is-ancestor upstream/main HEAD; then
-            echo "::notice title=Kit is up to date::Already includes Dream Starter Kit $LATEST."
-            exit 0
-          fi
-          CURRENT=$(version_of HEAD)
           BASE=$(git rev-parse --abbrev-ref HEAD)
+          MSG="chore(kit): merge Dream Starter Kit $LATEST ($TAG)"
 
           # One open kit-update PR at a time: refresh it instead of stacking.
           # Matched by branch name, not label, so a PR that couldn't be
@@ -407,13 +447,13 @@ jobs:
             read -r PR_NUMBER BRANCH <<< "$OPEN_PR"
             git fetch origin "$BRANCH"
             git checkout -B "$BRANCH" "origin/$BRANCH"
-            if git merge-base --is-ancestor upstream/main HEAD; then
+            if git merge-base --is-ancestor "$REF" HEAD; then
               echo "::notice title=Kit update PR is current::#$PR_NUMBER already has $LATEST."
               exit 0
             fi
-            if git merge --no-edit -m "chore(kit): merge Dream Starter Kit $LATEST (upstream/main)" upstream/main; then
+            if git merge --no-edit -m "$MSG" "$REF"; then
               git push origin "$BRANCH"
-              gh pr comment "$PR_NUMBER" --body "Updated to Dream Starter Kit **$LATEST**. Still never auto-merged — merge with a merge commit, not a squash."
+              gh pr comment "$PR_NUMBER" --body "Updated to Dream Starter Kit **$LATEST** ($TAG). Still never auto-merged — merge with a merge commit, not a squash."
             else
               git merge --abort
               gh pr comment "$PR_NUMBER" --body "Dream Starter Kit **$LATEST** is out, but merging it into this branch conflicts. Merge or close this PR; the next daily run opens a fresh one."
@@ -424,25 +464,25 @@ jobs:
           BRANCH="sync/upstream-$(date -u +%F)"
           git checkout -b "$BRANCH"
           ARGS=()
-          # "Use this template" repos share no history with the kit: the first
-          # merge needs --allow-unrelated-histories (docs/UPDATING.md).
-          git merge-base HEAD upstream/main >/dev/null 2>&1 || ARGS+=(--allow-unrelated-histories)
+          # "Use this template" repos (and Vercel clones) share no history with
+          # the kit: the first merge needs --allow-unrelated-histories.
+          [ "$UNRELATED" = "true" ] && ARGS+=(--allow-unrelated-histories)
           LABELS="kit-update"
-          if ! git merge --no-edit "${ARGS[@]}" -m "chore(kit): merge Dream Starter Kit $LATEST (upstream/main)" upstream/main; then
+          if ! git merge --no-edit "${ARGS[@]}" -m "$MSG" "$REF"; then
             # Commit the conflict markers so a human (or Claude) can resolve
             # them on the PR — same as module update conflicts.
             CONFLICTS=$(git diff --name-only --diff-filter=U)
             git add -A
-            git commit --no-edit -m "chore(kit): merge Dream Starter Kit $LATEST (upstream/main) — conflicts to resolve"
+            git commit --no-edit -m "$MSG — conflicts to resolve"
             LABELS="kit-update,kit-update-conflicts"
           fi
           # The branch is bot-owned and has no open PR (checked above); a
           # same-day re-run after a failed attempt must be able to replace it.
           git push --force -u origin "$BRANCH"
 
-          BODY="Automated Dream Starter Kit update: **$CURRENT → $LATEST** (merges \`upstream/main\` from $UPSTREAM_URL). Free — no license key needed.
+          BODY="Automated Dream Starter Kit update: **$CURRENT → $LATEST** (release \`$TAG\` from $UPSTREAM_URL; its build attestation was verified). Free — no license key needed.
 
-          **Merge with a merge commit — never squash.** Squashing drops the record that \`upstream/main\` is an ancestor, and the next update needs \`--allow-unrelated-histories\` again (docs/UPDATING.md).
+          **Merge with a merge commit — never squash.** Squashing drops the record that the kit release is an ancestor, and the next update needs \`--allow-unrelated-histories\` again (docs/UPDATING.md).
 
           After merging: \`pnpm install\`, regenerate types (\`pnpm db:gen-types\`, \`pnpm cms:gen-types\`) and, locally, \`pnpm db:reset\`. Migrations apply automatically on deploy.
 
@@ -450,7 +490,7 @@ jobs:
           if [ -n "${CONFLICTS:-}" ]; then
             BODY="$BODY
 
-          ⚠️ **$(echo "$CONFLICTS" | wc -l) files have conflicts to resolve** (markers committed): $(echo "$CONFLICTS" | head -40 | sed 's/.*/`&`/' | tr '\n' ' ')$( [ "$(echo "$CONFLICTS" | wc -l)" -gt 40 ] && echo "…and more (search the branch for \`<<<<<<<\`)")
+          ⚠️ **$(echo "$CONFLICTS" | wc -l) files have conflicts to resolve** (markers committed): $(echo "$CONFLICTS" | head -40 | sed 's/.*/\x60&\x60/' | tr '\n' ' ')$( [ "$(echo "$CONFLICTS" | wc -l)" -gt 40 ] && echo "…and more (search the branch for \`<<<<<<<\`)")
           Generated files: take either side and regenerate. Migrations: keep both sides' files. \`pnpm-lock.yaml\`: re-run \`pnpm install\`."
           fi
           # Opened with MOD_OPS_TOKEN (so CI runs), labeled afterwards with

@@ -63,6 +63,14 @@ test("signing in before confirming re-sends the confirmation email", async ({
   await signUpToCheckEmail(page, { name: "E2E User", email });
   const first = await fetchAuthEmail(email);
 
+  // GoTrue refuses another confirmation email within `max_frequency` of the
+  // last one (supabase/config.toml [auth.email], 1s locally; 60s hosted) with
+  // 429 over_email_send_rate_limit — the UI then still lands on /check-email,
+  // whose own Resend button covers it. Against a production build the sign-in
+  // can arrive inside that window (`next dev` compiles were always slower), so
+  // wait it out to test the resend itself.
+  await page.waitForTimeout(1_500);
+
   await signInWithPasswordUI(page, email);
   await page.waitForURL(/\/check-email/);
 

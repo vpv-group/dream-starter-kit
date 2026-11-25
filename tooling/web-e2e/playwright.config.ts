@@ -74,10 +74,17 @@ export default defineConfig({
   // sign-up / favorites need no token. To exercise the widget locally, set
   // NEXT_PUBLIC_TURNSTILE_SITE_KEY (Cloudflare's always-pass test key
   // 1x00000000000000000000AA) in .env — see docs/TURNSTILE.md.
+  //
+  // E2E_SERVER=prod (the kit's release.yml) runs against a production build
+  // instead — `next build && next start` — so the production boot path
+  // (runtime DB bootstrap, Payload prodMigrations) is exercised too.
   webServer: {
-    command: "pnpm --filter @acme/nextjs dev",
+    command:
+      process.env.E2E_SERVER === "prod"
+        ? "pnpm --filter @acme/nextjs build && pnpm --filter @acme/nextjs start"
+        : "pnpm --filter @acme/nextjs dev",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: process.env.E2E_SERVER === "prod" ? 900_000 : 120_000,
   },
 });
