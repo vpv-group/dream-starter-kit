@@ -2,6 +2,8 @@ import type { CollectionConfig } from "payload";
 
 import { anyone, isStaff } from "../access";
 
+const COMPONENTS = "~/payload/components/navigation";
+
 /**
  * The CMS-driven app menu (docs/MODULES-PLAN.md §2.5) — one row per menu
  * entry, core entries included, so staff rename / drag-reorder / re-icon /
@@ -12,19 +14,34 @@ import { anyone, isStaff } from "../access";
  * platforms/enabled/order are staff-owned after creation and never
  * overwritten by reconcile or module updates.
  *
- * Public read: the native app renders its menu from this collection over
- * /cms-api REST (`useNavMenu()` in @acme/app).
+ * Shown in /admin as "Navigation": the list table is the WEB app menu (rows
+ * with the web platform — the /a sidebar), and below it the "iOS and Android
+ * App" section edits the native tab bar from the native rows, ordered and
+ * hidden independently (the `native-navigation` global —
+ * payload/components/navigation/NativeNavigationEditor.tsx).
+ *
+ * Public read: the native app renders its menu from these rows + that global
+ * (GET /api/nav/native → `useNativeNav()` in @acme/app).
  */
 export const NavItems: CollectionConfig = {
   slug: "nav-items",
-  labels: { singular: "Nav Item", plural: "Nav Items" },
+  labels: { singular: "Navigation item", plural: "Navigation" },
   orderable: true,
   admin: {
     group: "Modules",
     useAsTitle: "label",
     defaultColumns: ["label", "href", "platforms", "enabled"],
     description:
-      "The app menu (web sidebar + native home). Drag to reorder; rename, change icons, or toggle items. New modules add their entries here automatically on install.",
+      "The app menus. New modules add their entries here automatically on install.",
+    // The table is the web app menu; native-only rows are managed in the
+    // "iOS and Android App" section below it.
+    baseFilter: () => ({ platforms: { in: ["web"] } }),
+    components: {
+      beforeListTable: [`${COMPONENTS}/WebAppHeader#WebAppHeader`],
+      afterList: [
+        `${COMPONENTS}/NativeNavigationEditor#NativeNavigationEditor`,
+      ],
+    },
   },
   access: {
     read: anyone,

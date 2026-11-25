@@ -360,3 +360,283 @@ html[data-theme="dark"] {
   margin: 0;
   color: var(--theme-elevation-500);
 }
+
+/*
+ * payload/components/navigation/*: the Navigation screen's "Web App" header
+ * and the "iOS and Android App" native tab bar editor + previews. Payload
+ * spacing (--base) and theme vars, so light/dark follow the rest of /admin.
+ */
+.kit-nav-section {
+  margin-bottom: var(--base);
+}
+.kit-nav-section__title {
+  margin: 0 0 calc(var(--base) * 0.25);
+}
+.kit-nav-section__hint {
+  margin: 0;
+  max-width: 72ch;
+  color: var(--theme-elevation-500);
+}
+.kit-nav-native {
+  margin-bottom: calc(var(--base) * 3);
+  margin-top: calc(var(--base) * 3);
+  padding-top: calc(var(--base) * 2);
+  border-top: 1px solid var(--theme-elevation-150);
+}
+.kit-nav-native__error {
+  color: var(--theme-error-500);
+}
+.kit-nav-native__body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--base) * 2);
+  margin-top: calc(var(--base) * 1.25);
+}
+.kit-nav-native__editor {
+  flex: 1 1 480px;
+  min-width: 0;
+}
+.kit-nav-native__tabcount {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--base) * 0.4);
+  margin-bottom: calc(var(--base) * 0.75);
+}
+.kit-nav-native__tabcount > span {
+  margin-right: calc(var(--base) * 0.4);
+}
+.kit-nav-native__seg {
+  min-width: calc(var(--base) * 2);
+  padding: calc(var(--base) * 0.2) calc(var(--base) * 0.6);
+  border: 1px solid var(--theme-elevation-250);
+  border-radius: var(--style-radius-s);
+  background: var(--theme-elevation-0);
+  color: var(--theme-text);
+  cursor: pointer;
+}
+.kit-nav-native__seg--on {
+  border-color: var(--theme-text);
+  background: var(--theme-text);
+  color: var(--theme-elevation-0);
+}
+.kit-nav-native__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: var(--style-radius-m);
+  overflow: hidden;
+}
+.kit-nav-native__row {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--base) * 0.6);
+  padding: calc(var(--base) * 0.5) calc(var(--base) * 0.75);
+  background: var(--theme-elevation-0);
+  border-bottom: 1px solid var(--theme-elevation-100);
+}
+.kit-nav-native__row:last-child {
+  border-bottom: 0;
+}
+.kit-nav-native__row--dragging {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.15);
+}
+.kit-nav-native__row--muted .kit-nav-native__label {
+  color: var(--theme-elevation-500);
+}
+.kit-nav-native__handle {
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: var(--theme-elevation-500);
+  cursor: grab;
+  touch-action: none;
+}
+.kit-nav-native__label {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.kit-nav-native__href {
+  color: var(--theme-elevation-500);
+  font-size: 0.85em;
+}
+.kit-nav-native__warn {
+  color: var(--theme-warning-500);
+  font-size: 0.85em;
+}
+.kit-nav-native__badge {
+  padding: 1px calc(var(--base) * 0.4);
+  border-radius: 999px;
+  background: var(--theme-elevation-100);
+  font-size: 0.8em;
+  white-space: nowrap;
+}
+.kit-nav-native__badge--tab {
+  background: var(--theme-success-100);
+  color: var(--theme-success-750);
+}
+.kit-nav-native__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--base) * 0.3);
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+.kit-nav-native__divider {
+  padding: calc(var(--base) * 0.3) calc(var(--base) * 0.75);
+  background: var(--theme-elevation-50);
+  border-bottom: 1px solid var(--theme-elevation-100);
+  color: var(--theme-elevation-500);
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.kit-nav-native__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(var(--base) * 0.5);
+  margin: calc(var(--base) * 0.75) 0;
+}
+.kit-nav-native__actions .btn {
+  margin: 0;
+}
+.kit-nav-native__status {
+  margin-right: auto;
+  color: var(--theme-elevation-500);
+}
+/* One narrow column: iOS above Android, so the editor gets the width. */
+.kit-nav-native__previews {
+  display: flex;
+  flex: 0 0 300px;
+  flex-direction: column;
+  gap: var(--base);
+  max-width: 100%;
+}
+.kit-nav-preview {
+  margin: 0;
+  text-align: center;
+}
+.kit-nav-preview figcaption {
+  margin-top: calc(var(--base) * 0.4);
+  color: var(--theme-elevation-500);
+  font-size: 0.85em;
+}
+.kit-nav-preview__screen {
+  position: relative;
+  width: 300px;
+  max-width: 100%;
+  height: 120px;
+  border-radius: 24px;
+  border: 1px solid var(--theme-elevation-150);
+  background: linear-gradient(
+    160deg,
+    var(--theme-elevation-100),
+    var(--theme-elevation-300)
+  );
+  overflow: hidden;
+}
+.kit-nav-preview__tab {
+  display: inline-flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  font-size: 10px;
+  color: var(--theme-elevation-700);
+}
+.kit-nav-preview__tab > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kit-nav-preview__tab--on {
+  color: var(--theme-success-500);
+}
+.kit-nav-preview__ios-bar {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  gap: 8px;
+}
+.kit-nav-preview__glass {
+  display: flex;
+  align-items: center;
+  border: 1px solid rgb(255 255 255 / 0.5);
+  background: rgb(255 255 255 / 0.45);
+  backdrop-filter: blur(12px) saturate(1.6);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.12);
+}
+.kit-nav-preview__glass--group {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 4px;
+  border-radius: 999px;
+}
+.kit-nav-preview__glass--search {
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border-radius: 50%;
+  color: var(--theme-elevation-700);
+}
+.kit-nav-preview__md-bar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  padding: 8px 4px 10px;
+  background: var(--theme-elevation-50);
+  border-top: 1px solid var(--theme-elevation-150);
+}
+.kit-nav-native__icons {
+  margin-top: calc(var(--base) * 0.25);
+  font-size: 0.85em;
+}
+.kit-nav-native__icons summary {
+  color: var(--theme-elevation-500);
+  cursor: pointer;
+}
+.kit-nav-native__icons label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: calc(var(--base) * 0.4);
+}
+.kit-nav-native__icons input {
+  max-width: 260px;
+  padding: calc(var(--base) * 0.2) calc(var(--base) * 0.4);
+  border: 1px solid var(--theme-elevation-250);
+  border-radius: var(--style-radius-s);
+  background: var(--theme-input-bg, var(--theme-elevation-0));
+  color: var(--theme-text);
+}
+.kit-nav-preview__glass--field {
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: var(--theme-elevation-600);
+  font-size: 13px;
+}
+/* The app logo as a tintable glyph (follows currentColor, like the icons). */
+.kit-nav-native__logo {
+  display: inline-block;
+  flex: none;
+  background: currentColor;
+  mask: url("/brand/dream-icon-green.svg") center / 86% no-repeat;
+}

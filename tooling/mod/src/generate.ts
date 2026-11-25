@@ -52,9 +52,10 @@ function navLiterals(
   const out: NavLiteral[] = [];
   for (const { manifest: m } of mods) {
     if (!m.platforms[platform]) continue;
-    m.nav[platform].forEach((entry, i) => {
+    m.nav[platform].forEach((entry) => {
       out.push({
-        key: `mod:${m.slug}:${i}`,
+        // Same key the boot reconcile gives the nav-items row.
+        key: `mod:${m.slug}:${entry.href}`,
         module: m.slug,
         title: entry.title,
         href: entry.href,
@@ -427,6 +428,15 @@ export const modClientRuntimeEnv = ${obj(runtimeRows)};
 `;
 }
 
+/** The URL a native module route is served at (see buildStubs). */
+function nativeRouteHref(
+  slug: string,
+  r: LoadedModule["manifest"]["routes"]["native"][number],
+): string {
+  if (r.mount === "index") return "/home";
+  return r.path === "" ? `/a/${slug}` : `/a/${slug}/${r.path}`;
+}
+
 /** apps/expo/src/mod/registry.generated.ts */
 export function buildExpoRegistry(mods: LoadedModule[]): string {
   const nativeMods = mods.filter((e) => e.manifest.platforms.native);
@@ -447,6 +457,34 @@ export function buildExpoRegistry(mods: LoadedModule[]): string {
     );
   }
 
+  // Menu-addressable screens (static routes only), keyed by URL href, so the
+  // native tab bar can render whichever module staff put in each tab slot.
+  const screenRows: string[] = [];
+  let needsGate = false;
+  for (const e of nativeMods) {
+    const m = e.manifest;
+    for (const [i, r] of m.routes.native.entries()) {
+      if (r.path.includes("[")) continue;
+      const local = `screen_${ident(m.slug)}_${i}`;
+      imports.push(
+        `import { ${r.component} as ${local} } from "${e.packageName}/native";`,
+      );
+      const href = nativeRouteHref(m.slug, r);
+      if (m.access.check) {
+        needsGate = true;
+        screenRows.push(
+          `  ${quote(href)}: withModuleAccess(${quote(m.access.check)}, ${local}),`,
+        );
+      } else {
+        screenRows.push(`  ${quote(href)}: ${local},`);
+      }
+    }
+  }
+  if (needsGate)
+    imports.push('import { withModuleAccess } from "./access-gate";');
+  const screens =
+    screenRows.length === 0 ? "{}" : `{\n${screenRows.join("\n")}\n}`;
+
   const widgets =
     widgetMods.length === 0
       ? "[]"
@@ -462,10 +500,16 @@ export function buildExpoRegistry(mods: LoadedModule[]): string {
 ${SHARED_TYPES}
 export const modInstalled: ModInstalled[] = ${renderInstalled(mods)};
 
-/** Native nav defaults — fallback for useNavMenu() while offline/loading. */
+/** Native nav defaults — the bundled first-launch menu (useNativeNav fallback). */
 export const modNavDefaults: { native: ModNavDefault[] } = {
   native: ${renderNav(navLiterals(mods, "native"), "  ")},
 };
+
+/**
+ * Module screens the native menu can point at (static routes), by href.
+ * Rendered inside the configured tab slots (app/(app)/(tabs)/t*).
+ */
+export const modNativeScreens: Record<string, React.ComponentType> = ${screens};
 
 /** Home-screen widgets declared by installed modules (native components). */
 export const modWidgets: { slug: string; Widget: React.ComponentType }[] = ${widgets};
@@ -596,9 +640,11 @@ export default async function ModuleLayout({
       for (const r of m.routes.native) {
         // Native gating is nav-level (disabled modules disappear from the
         // menu and their APIs 404); Expo Router has no server gate to add.
+        // `mount: "index"` is the app's home screen. It lives at /home: "/"
+        // belongs to the host (it opens the first tab of the tab bar).
         const file =
           r.mount === "index"
-            ? "index"
+            ? "home"
             : `a/${slug}/${r.path === "" ? "index" : r.path}`;
         files.push({
           path: `${MOD_PATHS.expoAppGroup}/${file}.tsx`,

@@ -89,8 +89,17 @@ describe("generated registries", () => {
       'import { ChatWidget as widget_chat } from "@acme/mod-chat/web";',
     );
     const data = buildNextDataRegistry([chat]);
-    expect(data).toContain('key: "mod:chat:0"');
+    // Same key the boot reconcile gives the nav-items row.
+    expect(data).toContain('key: "mod:chat:/a/chat"');
     expect(data).toContain('icon: "IconMessageCircle"');
+  });
+
+  it("maps native module screens by href for the tab bar", () => {
+    const out = buildExpoRegistry([chat]);
+    expect(out).toContain(
+      'import { ChatHome as screen_chat_0 } from "@acme/mod-chat/native";',
+    );
+    expect(out).toContain('"/a/chat": screen_chat_0,');
   });
 
   it("keeps the data registry free of imports (safe for server code and CLIs)", () => {
@@ -278,8 +287,12 @@ describe("module access + admin settings", () => {
     const data = buildNextDataRegistry([crm]);
     expect(data).toContain('accessCheck: "mod_crm_access_ok"');
     expect(data).toContain('audience: "staff"');
-    expect(buildExpoRegistry([crm])).toContain(
-      'accessCheck: "mod_crm_access_ok"',
+    const expo = buildExpoRegistry([crm]);
+    expect(expo).toContain('accessCheck: "mod_crm_access_ok"');
+    // Gated screens stay gated when rendered inside a tab slot.
+    expect(expo).toContain('import { withModuleAccess } from "./access-gate";');
+    expect(expo).toContain(
+      '"/a/crm": withModuleAccess("mod_crm_access_ok", screen_crm_0),',
     );
   });
 

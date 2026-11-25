@@ -1,36 +1,6 @@
 /**
- * Core (host-owned) menu defaults — seeded into the `nav-items` collection by
- * the boot reconcile alongside module nav defaults, so staff manage the
- * whole menu uniformly in /admin. As features are extracted into modules
- * (MODULES-PLAN.md §8), their entries move from here into the module
- * manifests.
- *
- * Keys are `core:<href>` — href is the stable identity of a menu entry; a
- * changed href reads as remove + add (staff edits on the old row are dropped).
+ * Core (host-owned) menu defaults. The list lives in @acme/app so the Expo
+ * app builds its offline fallback menu from the same entries; this re-export
+ * keeps the reconcile's import local.
  */
-export interface CoreNavItem {
-  key: string;
-  label: string;
-  href: string;
-  icon?: string;
-  /** Creation order — initial menu position (staff drag-reorder owns it after). */
-  order: number;
-  platforms: ("web" | "native")[];
-}
-
-export const CORE_NAV_ITEMS: CoreNavItem[] = [
-  {
-    key: "core:/content/posts",
-    label: "Posts",
-    href: "/content/posts",
-    order: 15,
-    platforms: ["native"],
-  },
-  {
-    key: "core:/profile",
-    label: "Profile",
-    href: "/profile",
-    order: 60,
-    platforms: ["native"],
-  },
-];
+export { CORE_NAV_ITEMS, type CoreNavItem } from "@acme/app";

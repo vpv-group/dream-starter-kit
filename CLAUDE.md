@@ -211,7 +211,11 @@ Rules that keep modules modular:
   module; `mod sync` pins versions and materializes copies — never edit a
   synced migration, add a new one. Ship a `drop.sql` for clean removal.
 - **Nav is CMS-driven:** manifest `nav` entries are defaults seeded into the
-  `nav-items` collection; staff own the menu in /admin afterwards.
+  `nav-items` collection ("Navigation" in /admin); staff own the menu
+  afterwards. The web sidebar and the native tab bar are ordered separately
+  (Navigation → Web App / iOS and Android App; the native side is the
+  `native-navigation` global, loaded at launch by `useNativeNav` and cached
+  offline — docs/CMS.md).
 - **Cross-module access** is declared: `requires: [...]` + `database.dml`
   whitelists; services are plain typed package exports (`notify()`,
   `usePremium()`).

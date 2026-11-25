@@ -38,6 +38,8 @@ import { ModuleInfoPanel as ModuleInfoPanel_e45f3c51844d1d1d2064cc8ddaea07fd } f
 import { NoModuleSettings as NoModuleSettings_e45f3c51844d1d1d2064cc8ddaea07fd } from '~/payload/components/modules/ModuleInfoPanel'
 import { ModulesStatusBanner as ModulesStatusBanner_6258eb62fe74ca5100b8f18310328f15 } from '~/payload/components/modules/ModulesStatusBanner'
 import { InstallModuleAction as InstallModuleAction_16b4d481212f2700435b4ec764108e7d } from '~/payload/components/modules/InstallModuleAction'
+import { NativeNavigationEditor as NativeNavigationEditor_5a350b9da14d67a63796be4eb41f7af6 } from '~/payload/components/navigation/NativeNavigationEditor'
+import { WebAppHeader as WebAppHeader_66737539b3b361a59dee52152c3bd3eb } from '~/payload/components/navigation/WebAppHeader'
 import { FolderTypeField as FolderTypeField_2b8867833a34864a02ddf429b0728a40 } from '@payloadcms/next/client'
 import { RegenerateAllImages as RegenerateAllImages_5552ed3b6af65aa0c30dbc3814b71069 } from '~/payload/components/RegenerateAllImages'
 import { DreamSiteRegister as DreamSiteRegister_8fdc7ad44850bf64e6cb11d7cb127820 } from '~/payload/components/DreamSiteRegister'
@@ -96,6 +98,8 @@ export const importMap = {
   "~/payload/components/modules/ModuleInfoPanel#NoModuleSettings": NoModuleSettings_e45f3c51844d1d1d2064cc8ddaea07fd,
   "~/payload/components/modules/ModulesStatusBanner#ModulesStatusBanner": ModulesStatusBanner_6258eb62fe74ca5100b8f18310328f15,
   "~/payload/components/modules/InstallModuleAction#InstallModuleAction": InstallModuleAction_16b4d481212f2700435b4ec764108e7d,
+  "~/payload/components/navigation/NativeNavigationEditor#NativeNavigationEditor": NativeNavigationEditor_5a350b9da14d67a63796be4eb41f7af6,
+  "~/payload/components/navigation/WebAppHeader#WebAppHeader": WebAppHeader_66737539b3b361a59dee52152c3bd3eb,
   "@payloadcms/next/client#FolderTypeField": FolderTypeField_2b8867833a34864a02ddf429b0728a40,
   "~/payload/components/RegenerateAllImages#RegenerateAllImages": RegenerateAllImages_5552ed3b6af65aa0c30dbc3814b71069,
   "~/payload/components/DreamSiteRegister#DreamSiteRegister": DreamSiteRegister_8fdc7ad44850bf64e6cb11d7cb127820,

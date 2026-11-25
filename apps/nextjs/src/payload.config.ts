@@ -56,6 +56,7 @@ import { Videos } from "./payload/collections/Videos";
 import { AuthenticationSettings } from "./payload/globals/AuthenticationSettings";
 import { DreamSite } from "./payload/globals/DreamSite";
 import { ImageGenerationSettings } from "./payload/globals/ImageGenerationSettings";
+import { NativeNavigation } from "./payload/globals/NativeNavigation";
 import { ProfileFields } from "./payload/globals/ProfileFields";
 import { SiteSettings } from "./payload/globals/SiteSettings";
 import { ThemeSettings } from "./payload/globals/ThemeSettings";
@@ -226,6 +227,7 @@ export default buildConfig({
     ProfileFields,
     AuthenticationSettings,
     DreamSite,
+    NativeNavigation,
     // Installed modules' globals incl. their settings screens (§1.7)
     ...modGlobals,
   ].map(noDocumentLock),

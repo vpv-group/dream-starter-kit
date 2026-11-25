@@ -26,6 +26,7 @@ import * as migration_20261117_222758_sync_snapshot_after_module_rename from './
 import * as migration_20261118_231216_workspaces_account_model from './20261118_231216_workspaces_account_model';
 import * as migration_20261122_193348_dream_site from './20261122_193348_dream_site';
 import * as migration_20261124_153215_module_settings from './20261124_153215_module_settings';
+import * as migration_20261125_024658_native_navigation from './20261125_024658_native_navigation';
 
 export const migrations = [
   {
@@ -166,6 +167,11 @@ export const migrations = [
   {
     up: migration_20261124_153215_module_settings.up,
     down: migration_20261124_153215_module_settings.down,
-    name: '20261124_153215_module_settings'
+    name: '20261124_153215_module_settings',
+  },
+  {
+    up: migration_20261125_024658_native_navigation.up,
+    down: migration_20261125_024658_native_navigation.down,
+    name: '20261125_024658_native_navigation'
   },
 ];

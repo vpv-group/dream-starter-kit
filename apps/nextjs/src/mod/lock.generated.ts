@@ -70,7 +70,7 @@ export const modulesLock = {
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
-        "apps/expo/src/app/(app)/index.tsx",
+        "apps/expo/src/app/(app)/home.tsx",
         "apps/nextjs/src/app/(frontend)/(app)/a/layout.tsx",
         "apps/nextjs/src/app/(frontend)/(app)/a/page.tsx"
       ],

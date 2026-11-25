@@ -229,6 +229,7 @@ export interface Config {
     "profile-fields": ProfileField;
     "authentication-settings": AuthenticationSetting;
     "dream-site": DreamSite;
+    "native-navigation": NativeNavigation;
     "mod-billing-settings": ModBillingSetting;
     "mod-chat-settings": ModChatSetting;
     "mod-docs-settings": ModDocsSetting;
@@ -243,6 +244,8 @@ export interface Config {
     "authentication-settings":
       AuthenticationSettingsSelect<false> | AuthenticationSettingsSelect<true>;
     "dream-site": DreamSiteSelect<false> | DreamSiteSelect<true>;
+    "native-navigation":
+      NativeNavigationSelect<false> | NativeNavigationSelect<true>;
     "mod-billing-settings":
       ModBillingSettingsSelect<false> | ModBillingSettingsSelect<true>;
     "mod-chat-settings":
@@ -2825,21 +2828,21 @@ export interface Legal {
   _status?: ("draft" | "published") | null;
 }
 /**
- * Installed modules. Disabling hides a module's menu items and 404s its pages and API at runtime without uninstalling it.
+ * Installed modules. Disabling a module hides its menu items and blocks its pages and API without uninstalling it.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "kit-modules".
  */
 export interface KitModule {
   id: number;
-  slug: string;
-  name: string;
+  slug?: string | null;
+  name?: string | null;
   /**
    * Mirrored from the bundled modules.lock at boot.
    */
-  version: string;
+  version?: string | null;
   /**
-   * Uncheck to hide this module from menus and block its pages/API. Code stays deployed; re-enable any time.
+   * Uncheck to hide this module from menus and block its pages and API. Code stays deployed; re-enable any time.
    */
   enabled?: boolean | null;
   /**
@@ -3027,7 +3030,7 @@ export interface KitModule {
   createdAt: string;
 }
 /**
- * The app menu (web sidebar + native home). Drag to reorder; rename, change icons, or toggle items. New modules add their entries here automatically on install.
+ * The app menus. New modules add their entries here automatically on install.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "nav-items".
@@ -5817,6 +5820,43 @@ export interface DreamSite {
   createdAt?: string | null;
 }
 /**
+ * The iOS and Android app tab bar. Edit it from Navigation → iOS and Android App.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "native-navigation".
+ */
+export interface NativeNavigation {
+  id: number;
+  /**
+   * How many menu items show in the bottom tab bar. The rest are listed under More (Android) / Search (iOS).
+   */
+  tabCount: "3" | "4";
+  /**
+   * Order = tab bar order, then the More list.
+   */
+  items?:
+    | {
+        item: number | NavItem;
+        /**
+         * Hide from the tab bar and More menu. The screen stays reachable by deep link.
+         */
+        hidden?: boolean | null;
+        /**
+         * iOS icon override — an SF Symbol name (e.g. bell.fill).
+         */
+        sfSymbol?: string | null;
+        /**
+         * Android icon override — a Material Symbols name (e.g. notifications).
+         */
+        materialIcon?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  _status?: ("draft" | "published") | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "mod-billing-settings".
  */
@@ -6311,6 +6351,26 @@ export interface DreamSiteSelect<T extends boolean = true> {
   lastError?: T;
   nonce?: T;
   lastAttemptAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "native-navigation_select".
+ */
+export interface NativeNavigationSelect<T extends boolean = true> {
+  tabCount?: T;
+  items?:
+    | T
+    | {
+        item?: T;
+        hidden?: T;
+        sfSymbol?: T;
+        materialIcon?: T;
+        id?: T;
+      };
+  _status?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

@@ -484,16 +484,52 @@ banner and an **Install module** drawer; each module's page adds a sidebar
 - **Access:** read is anyone (the native menu reads it); update is admin;
   create and delete are framework-only.
 
-### `nav-items` — the CMS-driven app menu
+### `nav-items` — the CMS-driven app menus ("Navigation")
 
-One row per menu entry. Manifest `nav` defaults are seeded once; staff own
-`label`, `icon`, `platforms`, `enabled`, order and **`audience`** afterwards.
+Shown in `/admin` as **Navigation** (the slug stays `nav-items`). One row per
+menu entry. Manifest `nav` defaults are seeded once; staff own `label`,
+`icon`, `platforms`, `enabled`, order and **`audience`** afterwards.
+
+The screen has two sections:
+
+- **Web App** — the list table, filtered to rows with the `web` platform:
+  the `/a` sidebar. Drag rows to reorder (`_order`), open one to edit it.
+- **iOS and Android App** — the native tab bar editor
+  (`payload/components/navigation/NativeNavigationEditor.tsx`), saved to
+  the `native-navigation` global (below). Staff drag the native rows into
+  an order of their own, choose a **3- or 4-tab** bar, **hide** rows on
+  native, and optionally override a row's native icons (SF Symbol / Material
+  Symbol). The first N visible rows are tabs. Every visible row is listed
+  (icon + name, searchable) on the app's **Search** tab (iOS) / **More** tab
+  (Android), so rows past the tab bar are reachable there. On iOS 26 the
+  Search tab is the system's separate Liquid Glass button: selecting it
+  turns the bottom bar into a full-width search field, with the tabs
+  collapsed into one button that returns to the previous tab. The Home row
+  (`/home`) wears the app logo as its native icon (like Apple News' Today
+  tab), so coming back from Search shows the app's mark; an SF Symbol /
+  Material override replaces it. Hidden rows
+  are reachable by deep link only. Save draft → Publish; the app reads only
+  the published version.
+
+Per-user rules, on both platforms:
 
 - **`audience`:** "Everyone signed in" (default) or "Staff only". Staff-only
   entries are dropped for users without `profiles.is_staff`: server-side on
-  the web sidebar, and in `useNavMenu()` on native.
+  the web sidebar, and in `useNavMenu()` / `useNativeNav()` on native.
 - Entries of a module with an access check (manifest `access.check`) are also
   dropped for users the check denies.
+
+**How the native app loads it.** `GET /api/nav/native` (public,
+`lib/mod/native-nav.ts`) merges the published global with the live native
+rows and module enablement; rows the global doesn't list yet (a newly
+installed module) are appended, visible. The Expo app (`useNativeNav` in
+`@acme/app`, `apps/expo/src/nav/`) filters it per user, drops hrefs this
+build has no screen for, and caches the result per user in AsyncStorage.
+Launch order: cached menu → (first launch) network → bundled defaults. A
+menu fetched mid-session is stored as _pending_ and applied at the next
+launch, so the tab bar never changes while someone is using it (Apple HIG;
+NativeTabs also can't change its tabs while mounted). Menu changes need no
+app release; a brand-new module's screens still ship in a build.
 
 ## Globals
 
@@ -505,6 +541,7 @@ One row per menu entry. Manifest `nav` defaults are seeded once; staff own
 | `profile-fields`            | Admin-defined custom member fields (key, label, type, options, required, visibility, editableByMember, order) — drives `users.customFields` validation + profile UI                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `anyone`           | `isStaff` |
 | `image-generation-settings` | **System → Image Generation.** Workspace settings for AI image generation: `enabled` (kill switch), `model` (gateway image-model slug from the `@acme/config` catalog), `systemPrompt` (art direction). Resolution order at generation time: global → env → code default. Also a **post-generation audit** (`auditEnabled`, `auditMaxAttempts`, `auditFailureAction` publish/skip, `auditModel`, `auditInstructions`) and a **Regenerate all images** button (re-renders every image-enabled doc against the current settings; backed by the staff-only `/api/cms/regenerate-images` route)                                                                                                                                                                   | `isStaff`          | `isStaff` |
 | `authentication-settings`   | **System → Authentication.** Front-end auth config: an **orderable** login-method list (password · magic link · email OTP · Google · Apple · SAML SSO — drag to reorder, toggle on/off; first enabled = primary CTA), sign-up access (invite-only, email-domain allow/block, terms links + checkbox, post-login/signup redirects), security (min password length, Turnstile toggle), copy, and SAML SSO domain routing. A **UI + client-logic** layer — Supabase still gates what each method actually does. Read server-side via `getAuthSettings()` and over the public `GET /api/auth/config` (mobile). Drives `AuthFlow` (web) + the Expo auth screens. Full guide: [docs/AUTH.md](https://github.com/vpv-group/dream-starter-kit/blob/main/docs/AUTH.md) | `anyone`           | `isStaff` |
+| `native-navigation`         | **Hidden — edited from Navigation → iOS and Android App.** The native app tab bar: `tabCount` (3/4) and an ordered `items` array (`item` → `nav-items`, `hidden`, `sfSymbol`, `materialIcon`). Drafts → publish (`versions.drafts`); `GET /api/nav/native` reads the published version.                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `publishedOrStaff` | `isStaff` |
 
 ---
 

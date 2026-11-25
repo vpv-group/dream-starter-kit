@@ -41,17 +41,18 @@ export const modInstalled: ModInstalled[] = [
  */
 export const modNavDefaults: { web: ModNavDefault[]; native: ModNavDefault[] } = {
   web: [
-    { key: "mod:billing:0", module: "billing", title: "Billing", href: "/billing", icon: "IconCreditCard", order: 50 },
-    { key: "mod:chat:0", module: "chat", title: "Chat", href: "/a/chat", icon: "IconMessageCircle", order: 20 },
-    { key: "mod:dashboard:0", module: "dashboard", title: "Dashboard", href: "/a", icon: "IconDashboard", order: 10 },
-    { key: "mod:notifications:0", module: "notifications", title: "Notifications", href: "/a/notifications", icon: "IconBell", order: 40 },
-    { key: "mod:reminders:0", module: "reminders", title: "Reminders", href: "/a/reminders", icon: "IconClock", order: 30 },
+    { key: "mod:billing:/billing", module: "billing", title: "Billing", href: "/billing", icon: "IconCreditCard", order: 50 },
+    { key: "mod:chat:/a/chat", module: "chat", title: "Chat", href: "/a/chat", icon: "IconMessageCircle", order: 20 },
+    { key: "mod:dashboard:/a", module: "dashboard", title: "Dashboard", href: "/a", icon: "IconDashboard", order: 10 },
+    { key: "mod:notifications:/a/notifications", module: "notifications", title: "Notifications", href: "/a/notifications", icon: "IconBell", order: 40 },
+    { key: "mod:reminders:/a/reminders", module: "reminders", title: "Reminders", href: "/a/reminders", icon: "IconClock", order: 30 },
   ],
   native: [
-    { key: "mod:billing:0", module: "billing", title: "Pricing", href: "/a/billing", order: 55 },
-    { key: "mod:chat:0", module: "chat", title: "Chat", href: "/a/chat", icon: "IconMessageCircle", order: 20 },
-    { key: "mod:notifications:0", module: "notifications", title: "Notifications", href: "/a/notifications", icon: "IconBell", order: 40 },
-    { key: "mod:reminders:0", module: "reminders", title: "Reminders", href: "/a/reminders", icon: "IconClock", order: 30 },
+    { key: "mod:billing:/a/billing", module: "billing", title: "Pricing", href: "/a/billing", icon: "IconCreditCard", order: 55 },
+    { key: "mod:chat:/a/chat", module: "chat", title: "Chat", href: "/a/chat", icon: "IconMessageCircle", order: 20 },
+    { key: "mod:dashboard:/home", module: "dashboard", title: "Home", href: "/home", icon: "IconHome", order: 0 },
+    { key: "mod:notifications:/a/notifications", module: "notifications", title: "Notifications", href: "/a/notifications", icon: "IconBell", order: 40 },
+    { key: "mod:reminders:/a/reminders", module: "reminders", title: "Reminders", href: "/a/reminders", icon: "IconClock", order: 30 },
   ],
 };
 
