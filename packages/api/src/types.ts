@@ -824,36 +824,70 @@ export type Database = {
       };
       mod_notifications: {
         Row: {
+          actor_id: string | null;
           body: string | null;
+          category: string | null;
+          channels: string[] | null;
           created_at: string;
           data: Json;
+          dedupe_key: string | null;
+          entity_id: string | null;
+          entity_type: string | null;
           id: string;
+          payload: Json;
           read_at: string | null;
+          source_module: string | null;
           title: string | null;
           type: string;
+          url: string | null;
           user_id: string;
         };
         Insert: {
+          actor_id?: string | null;
           body?: string | null;
+          category?: string | null;
+          channels?: string[] | null;
           created_at?: string;
           data?: Json;
+          dedupe_key?: string | null;
+          entity_id?: string | null;
+          entity_type?: string | null;
           id?: string;
+          payload?: Json;
           read_at?: string | null;
+          source_module?: string | null;
           title?: string | null;
           type: string;
+          url?: string | null;
           user_id: string;
         };
         Update: {
+          actor_id?: string | null;
           body?: string | null;
+          category?: string | null;
+          channels?: string[] | null;
           created_at?: string;
           data?: Json;
+          dedupe_key?: string | null;
+          entity_id?: string | null;
+          entity_type?: string | null;
           id?: string;
+          payload?: Json;
           read_at?: string | null;
+          source_module?: string | null;
           title?: string | null;
           type?: string;
+          url?: string | null;
           user_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "mod_notifications_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "mod_notifications_user_id_fkey";
             columns: ["user_id"];
@@ -862,6 +896,42 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      mod_notifications_categories: {
+        Row: {
+          audience: string;
+          created_at: string;
+          default_channels: string[];
+          description: string | null;
+          key: string;
+          label: string;
+          module: string;
+          transactional: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          audience?: string;
+          created_at?: string;
+          default_channels?: string[];
+          description?: string | null;
+          key: string;
+          label: string;
+          module: string;
+          transactional?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          audience?: string;
+          created_at?: string;
+          default_channels?: string[];
+          description?: string | null;
+          key?: string;
+          label?: string;
+          module?: string;
+          transactional?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       mod_notifications_push_tokens: {
         Row: {
@@ -1253,6 +1323,40 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      mod_notifications_emit: {
+        Args: {
+          _actor?: string;
+          _body?: string;
+          _category: string;
+          _channels?: string[];
+          _data?: Json;
+          _dedupe_key?: string;
+          _entity_id?: string;
+          _entity_type?: string;
+          _payload?: Json;
+          _source_module?: string;
+          _title?: string;
+          _url?: string;
+          _user: string;
+        };
+        Returns: string;
+      };
+      mod_notifications_register_category: {
+        Args: {
+          _audience?: string;
+          _default_channels?: string[];
+          _description?: string;
+          _key: string;
+          _label: string;
+          _module: string;
+          _transactional?: boolean;
+        };
+        Returns: undefined;
+      };
+      mod_notifications_unregister_module: {
+        Args: { _module: string };
+        Returns: undefined;
       };
       my_blocking_workspaces: {
         Args: never;

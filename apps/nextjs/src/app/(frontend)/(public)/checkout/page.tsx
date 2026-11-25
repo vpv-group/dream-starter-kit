@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import type { Media, ModBillingPlan, Review } from "@acme/cms";
+import { getModuleSettings } from "@acme/mod-kit/payload";
 
 import type { CheckoutTestimonialData } from "~/components/checkout/checkout-testimonial";
 import { CheckoutFlow } from "~/components/checkout/checkout-flow";
@@ -9,6 +10,7 @@ import { isViewerPremium } from "~/lib/billing-entitlement";
 import { getPayloadClient } from "~/lib/cms/payload-client";
 import { getAuthSettings, getBranding } from "~/lib/payload";
 import { resolveAnnualPlan } from "~/lib/paywall-copy";
+import { modSettings } from "~/mod/registry.payload.generated";
 
 export const dynamic = "force-dynamic";
 
@@ -91,9 +93,15 @@ export default async function CheckoutPage({
 
       // Curated checkout testimonial: read the featured review id from settings,
       // then fetch it populated (author + avatar).
-      const billing = await payload
-        .findGlobal({ slug: "mod-billing-settings", depth: 0 })
-        .catch(() => null);
+      // Billing may be uninstalled — the generated map then lacks it.
+      const billingSettings = Object.hasOwn(modSettings, "billing")
+        ? modSettings.billing
+        : undefined;
+      const billing = billingSettings
+        ? await getModuleSettings<{
+            featuredReview?: number | { id: number } | null;
+          }>(payload, billingSettings)
+        : null;
       const featured = billing?.featuredReview;
       const reviewId = typeof featured === "object" ? featured?.id : featured;
       if (reviewId != null) {

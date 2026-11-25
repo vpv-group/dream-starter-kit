@@ -88,13 +88,35 @@ export interface ModuleSettingsOptions {
 }
 
 export interface ModuleSettings {
+  /** The owning module's slug. */
+  slug: string;
+  /**
+   * Where the values live: a group of this name on the module's
+   * `kit-modules` row (its page in /admin) — see `settingsGroupName`.
+   */
+  groupName: string;
+  /** The module's legacy settings global (kept hidden one release, for migration). */
   globalSlug: string;
   /** Whether clients may read this global anonymously over REST. */
   publicRead: boolean;
   /** Field defaults, applied by `getModuleSettings` before first save. */
   defaults: Record<string, unknown>;
-  /** The wrapped Payload Global — registered via the generated payload registry. */
+  /**
+   * The fields + hooks, wrapped as a Payload Global. Since kit 2.2 the fields
+   * render on the module's `kit-modules` page and the global is registered
+   * HIDDEN only so existing values can be copied over once (reconcile).
+   * Hooks set on it (e.g. `afterChange`) run when the module page is saved.
+   */
   global: GlobalConfig;
+}
+
+/**
+ * `chat` → `mod_chat`: the group holding a module's settings on its
+ * kit-modules row. Kept short — nested field/table names build on it and
+ * Postgres truncates identifiers past 63 characters.
+ */
+export function settingsGroupName(slug: string): string {
+  return `mod_${slug.replace(/-/g, "_")}`;
 }
 
 /** Collect `defaultValue`s from top-level named fields (incl. inside rows/groups). */
@@ -144,13 +166,17 @@ export function defineModuleSettings(
 ): ModuleSettings {
   const globalSlug = settingsGlobalSlug(opts.slug);
   return {
+    slug: opts.slug,
+    groupName: settingsGroupName(opts.slug),
     globalSlug,
     publicRead: opts.publicRead ?? false,
     defaults: collectDefaults(opts.fields),
     global: {
       slug: globalSlug,
       label: `${opts.name} Settings`,
-      admin: { group: opts.group ?? "Modules" },
+      // Legacy: the screen moved to the module's page (Modules → <module>);
+      // /admin/globals/mod-<slug>-settings redirects there (proxy.ts).
+      admin: { group: opts.group ?? "Modules", hidden: true },
       access: {
         read: opts.publicRead ? anyoneRead : staffRead,
         update: adminUpdate,
@@ -163,26 +189,111 @@ export function defineModuleSettings(
 }
 
 /**
- * Read a module's settings server-side (Local API), with field defaults
- * applied — so a module works before the admin ever opens the screen, and
- * degrades to defaults if the CMS is unreachable.
+ * The settings group stored on a module's `kit-modules` row, or null when the
+ * row doesn't exist yet (fresh deploy before the boot reconcile).
+ */
+async function readSettingsGroup(
+  payload: Payload,
+  slug: string,
+  groupName: string,
+): Promise<Record<string, unknown> | null> {
+  const find = payload.find.bind(payload) as (args: {
+    collection: string;
+    where: Record<string, unknown>;
+    limit: number;
+    depth: number;
+    overrideAccess: boolean;
+  }) => Promise<{ docs: Record<string, unknown>[] }>;
+  const { docs } = await find({
+    collection: "kit-modules",
+    where: { slug: { equals: slug } },
+    limit: 1,
+    depth: 0,
+    overrideAccess: true,
+  });
+  const group = docs[0]?.[groupName];
+  return group && typeof group === "object"
+    ? (group as Record<string, unknown>)
+    : null;
+}
+
+function mergeDefaults(
+  defaults: Record<string, unknown>,
+  values: Record<string, unknown> | null,
+): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...defaults };
+  for (const [key, value] of Object.entries(values ?? {})) {
+    if (value !== null && value !== undefined) merged[key] = value;
+  }
+  return merged;
+}
+
+/**
+ * Read a module's settings server-side (Local API) from its page in /admin
+ * (the `kit-modules` row), with field defaults applied — so a module works
+ * before the admin ever opens the screen, and degrades to defaults if the
+ * CMS is unreachable.
  */
 export async function getModuleSettings<
   T extends Record<string, unknown> = Record<string, unknown>,
 >(payload: Payload, settings: ModuleSettings): Promise<T> {
   try {
-    const findGlobal = payload.findGlobal.bind(payload) as (args: {
-      slug: string;
-    }) => Promise<Record<string, unknown>>;
-    const doc = await findGlobal({ slug: settings.globalSlug });
-    const merged: Record<string, unknown> = { ...settings.defaults };
-    for (const [key, value] of Object.entries(doc)) {
-      if (value !== null && value !== undefined) merged[key] = value;
-    }
-    return merged as T;
+    const group = await readSettingsGroup(
+      payload,
+      settings.slug,
+      settings.groupName,
+    );
+    return mergeDefaults(settings.defaults, group) as T;
   } catch {
     return settings.defaults as T;
   }
+}
+
+/**
+ * Write (merge) a module's settings — for seeds and hooks that change
+ * settings programmatically. Pass `req` from inside a hook (same transaction).
+ * Runs as a system write (overrideAccess); never call it with user input.
+ */
+export async function updateModuleSettings(
+  payload: Payload,
+  settings: Pick<ModuleSettings, "slug" | "groupName">,
+  data: Record<string, unknown>,
+  opts: { req?: unknown; context?: Record<string, unknown> } = {},
+): Promise<void> {
+  const find = payload.find.bind(payload) as (args: {
+    collection: string;
+    where: Record<string, unknown>;
+    limit: number;
+    depth: number;
+    overrideAccess: boolean;
+    req?: unknown;
+  }) => Promise<{ docs: { id: string | number }[] }>;
+  const update = payload.update.bind(payload) as (args: {
+    collection: string;
+    id: string | number;
+    data: Record<string, unknown>;
+    overrideAccess: boolean;
+    req?: unknown;
+    context?: Record<string, unknown>;
+  }) => Promise<unknown>;
+  const { docs } = await find({
+    collection: "kit-modules",
+    where: { slug: { equals: settings.slug } },
+    limit: 1,
+    depth: 0,
+    overrideAccess: true,
+    ...(opts.req ? { req: opts.req } : {}),
+  });
+  const row = docs[0];
+  if (!row) throw new Error(`kit-modules row for "${settings.slug}" not found`);
+  await update({
+    collection: "kit-modules",
+    id: row.id,
+    data: { [settings.groupName]: data },
+    overrideAccess: true,
+    ...(opts.req ? { req: opts.req } : {}),
+    ...(opts.context ? { context: opts.context } : {}),
+  });
 }
 
 /* -------------------------------------------------------------------------- */
@@ -291,23 +402,23 @@ export function composeSettingsTabs(
 
 /**
  * Read an adapter's settings server-side, from its tab inside the target
- * settings global (`mod-<target>-settings`), with defaults applied. Mirrors
+ * module's settings (on the target's kit-modules row), with defaults applied. Mirrors
  * `getModuleSettings` but reads the namespaced group.
  */
 export async function getAdapterSettings<
   T extends Record<string, unknown> = Record<string, unknown>,
 >(payload: Payload, adapter: AdapterSettings): Promise<T> {
   try {
-    const findGlobal = payload.findGlobal.bind(payload) as (args: {
-      slug: string;
-    }) => Promise<Record<string, unknown>>;
-    const doc = await findGlobal({ slug: settingsGlobalSlug(adapter.target) });
-    const group = (doc[adapter.groupName] ?? {}) as Record<string, unknown>;
-    const merged: Record<string, unknown> = { ...adapter.defaults };
-    for (const [key, value] of Object.entries(group)) {
-      if (value !== null && value !== undefined) merged[key] = value;
-    }
-    return merged as T;
+    const group = await readSettingsGroup(
+      payload,
+      adapter.target,
+      settingsGroupName(adapter.target),
+    );
+    const own = (group?.[adapter.groupName] ?? null) as Record<
+      string,
+      unknown
+    > | null;
+    return mergeDefaults(adapter.defaults, own) as T;
   } catch {
     return adapter.defaults as T;
   }

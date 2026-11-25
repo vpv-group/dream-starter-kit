@@ -20,8 +20,11 @@ import { validateCustomFields } from "../hooks/validate-custom-fields";
  * custom SSO strategy — there is NO separate Payload login or password. A
  * `cms.users` row is provisioned on first access and linked to its Supabase
  * user by `supabaseUserId`. Only app users flagged `profiles.is_staff` may sign
- * in to /admin (and `access.admin` additionally requires a staff role). See
- * payload/auth/supabase-strategy.ts and docs/ARCHITECTURE.md.
+ * in to /admin (and `access.admin` additionally requires a staff role). The
+ * `roles` field is the single source of truth: admin/editor/author ⇒
+ * `is_staff = true`, member only ⇒ `false`, written through on every admin
+ * save (hooks/sync-user-to-supabase.ts). See payload/auth/supabase-strategy.ts
+ * and docs/ARCHITECTURE.md.
  *
  * Every Supabase signup is mirrored here as a `member` (see
  * lib/cms/mirror-user.ts) so the admin Users page manages everyone — profiles,
@@ -39,8 +42,8 @@ import { validateCustomFields } from "../hooks/validate-custom-fields";
  * sidebar "Password" panel (never stored here). See docs/AUTH.md → Account
  * settings.
  *
- * Creating a user here (new email) emails them a Supabase invite and grants
- * staff access. For an existing user, use "Grant staff access". The "User tags"
+ * Creating a user here (new email) emails them a Supabase invite; the chosen
+ * roles decide whether they get staff access (invite-user.ts). The "User tags"
  * UI manages the Supabase `public.user_tags` segmentation (incl. the auto
  * plan-name tag from the Stripe webhook) — distinct from the CMS `tags`
  * relationship fields used for member interests. See payload/hooks/invite-user.ts.
@@ -68,8 +71,9 @@ export const Users: CollectionConfig = {
     listSearchableFields: ["email", "displayName", "username"],
     description:
       "All app users — members and staff. Creating a NEW email emails a " +
-      "Supabase invite and grants staff access; for an existing user use " +
-      "“Grant staff access”. User tags (incl. the plan-name tag) are managed below.",
+      "Supabase invite. The role decides staff access: admin, editor and " +
+      "author can sign in to /admin; member is an app user only. User tags " +
+      "(incl. the plan-name tag) are managed below.",
   },
   hooks: {
     beforeChange: [inviteUserOnCreate, syncUserToSupabase],
@@ -150,8 +154,8 @@ export const Users: CollectionConfig = {
       admin: {
         position: "sidebar",
         description:
-          "admin/editor/author may enter /admin (with staff access granted); " +
-          "member is an app user.",
+          "admin/editor/author can sign in to /admin; member is an app user " +
+          "only. Saving updates their staff access.",
       },
     },
     {
@@ -441,16 +445,6 @@ export const Users: CollectionConfig = {
       admin: {
         components: {
           Field: "~/payload/components/UserTagsManager#UserTagsManager",
-        },
-      },
-    },
-    {
-      name: "grantStaff",
-      type: "ui",
-      admin: {
-        position: "sidebar",
-        components: {
-          Field: "~/payload/components/GrantStaffButton#GrantStaffButton",
         },
       },
     },

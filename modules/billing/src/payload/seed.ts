@@ -1,4 +1,7 @@
 import type { ModSeedStep } from "@acme/mod-kit/payload";
+import { updateModuleSettings } from "@acme/mod-kit/payload";
+
+import { settings } from "./settings";
 
 /**
  * Demo billing catalog — runs through the host's idempotent CMS seed flow
@@ -134,39 +137,33 @@ export const seed: ModSeedStep[] = [
         featuredReviewId = review.id;
       }
 
-      await payload.updateGlobal({
-        slug: "mod-billing-settings",
-        data: {
-          heading: "Pricing",
-          subheading: "Start free. Upgrade when you're ready.",
-          billingToggleDefault: "monthly",
-          showFreeTier: true,
-          featuredPlans: [monthly.id, annual.id, lifetime.id],
-          freeTier: {
-            name: "Free",
-            description: "Everything you need to get started.",
-            ctaLabel: "Get started",
-            features: [
-              { text: "Core features" },
-              { text: "Community support" },
-            ],
-          },
-          showEnterpriseTier: true,
-          enterpriseTier: {
-            name: "Enterprise",
-            description: "Total access for your whole team, billed your way.",
-            ctaLabel: "Contact sales",
-            link: { url: "mailto:sales@example.com" },
-            features: [
-              { text: "Everything in the paid plans" },
-              { text: "Centralized team billing & SSO" },
-              { text: "Priority onboarding & support" },
-            ],
-          },
-          ...(featuredReviewId != null
-            ? { featuredReview: featuredReviewId }
-            : {}),
+      await updateModuleSettings(payload, settings, {
+        heading: "Pricing",
+        subheading: "Start free. Upgrade when you're ready.",
+        billingToggleDefault: "monthly",
+        showFreeTier: true,
+        featuredPlans: [monthly.id, annual.id, lifetime.id],
+        freeTier: {
+          name: "Free",
+          description: "Everything you need to get started.",
+          ctaLabel: "Get started",
+          features: [{ text: "Core features" }, { text: "Community support" }],
         },
+        showEnterpriseTier: true,
+        enterpriseTier: {
+          name: "Enterprise",
+          description: "Total access for your whole team, billed your way.",
+          ctaLabel: "Contact sales",
+          link: { url: "mailto:sales@example.com" },
+          features: [
+            { text: "Everything in the paid plans" },
+            { text: "Centralized team billing & SSO" },
+            { text: "Priority onboarding & support" },
+          ],
+        },
+        ...(featuredReviewId != null
+          ? { featuredReview: featuredReviewId }
+          : {}),
       });
     },
   },

@@ -35,6 +35,21 @@ describe("validateManifest", () => {
     expect(validateManifest(m)).toEqual([]);
   });
 
+  it("requires the access check to be one of the module's own SQL functions", () => {
+    const ok = defineModule({
+      ...base,
+      slug: "crm",
+      access: { check: "mod_crm_access_ok" },
+    });
+    expect(validateManifest(ok)).toEqual([]);
+    const bad = defineModule({
+      ...base,
+      slug: "crm",
+      access: { check: "is_admin" },
+    });
+    expect(validateManifest(bad)[0]).toContain("access.check");
+  });
+
   it("rejects tables outside the module's prefix", () => {
     const m = defineModule({
       ...base,
@@ -185,6 +200,31 @@ describe("validateManifestSet", () => {
     const errors = validateManifestSet([a]);
     expect(errors).toHaveLength(1);
     expect(errors[0]).toContain('requires "notifications"');
+  });
+
+  it("points at a stale dependency when its newer table is missing", () => {
+    const crm = defineModule({
+      ...base,
+      slug: "crm",
+      version: "1.1.1",
+      database: { tables: ["mod_crm_contacts"] },
+    });
+    const portal = defineModule({
+      ...base,
+      slug: "client-portal",
+      requires: ["crm"],
+      database: {
+        dml: ["mod_crm_contacts", "mod_crm_cases"],
+        triggersOn: ["mod_crm_cases"],
+      },
+    });
+    const errors = validateManifestSet([crm, portal]);
+    expect(errors).toHaveLength(2);
+    for (const e of errors) {
+      expect(e).toContain('"mod_crm_cases"');
+      expect(e).toContain("installed crm@1.1.1");
+      expect(e).toContain("pnpm mod update crm");
+    }
   });
 
   it("passes a valid set", () => {

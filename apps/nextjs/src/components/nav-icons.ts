@@ -1,11 +1,14 @@
 import type { Icon } from "@tabler/icons-react";
 import {
   IconBell,
+  IconCalendar,
   IconClock,
   IconCreditCard,
   IconDashboard,
+  IconHome,
   IconLayoutGrid,
   IconMessageCircle,
+  IconNews,
   IconNotes,
   IconUser,
 } from "@tabler/icons-react";
@@ -20,11 +23,14 @@ import { modIcons } from "~/mod/registry.client.generated";
  */
 const CORE_ICONS: Record<string, Icon> = {
   IconBell,
+  IconCalendar,
   IconClock,
   IconCreditCard,
   IconDashboard,
+  IconHome,
   IconLayoutGrid,
   IconMessageCircle,
+  IconNews,
   IconNotes,
   IconUser,
 };

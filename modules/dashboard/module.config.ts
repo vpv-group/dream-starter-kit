@@ -16,6 +16,9 @@ export default defineModule({
   description: "The home screen: quick links + module widgets.",
   nav: {
     web: [{ title: "Dashboard", href: "/a", icon: "IconDashboard", order: 10 }],
+    // The native home screen (mount "index" is served at /home) — first tab
+    // of the native tab bar by default.
+    native: [{ title: "Home", href: "/home", icon: "IconHome", order: 0 }],
   },
   routes: {
     web: [{ path: "", component: "DashboardPage", mount: "/a" }],

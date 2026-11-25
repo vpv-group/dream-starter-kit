@@ -35,6 +35,10 @@ const sysMod = (m: LoadedModule["manifest"]): boolean =>
 
 const quote = (s: string): string => JSON.stringify(s);
 
+/** An object key the way Prettier writes it (quoted only when needed). */
+export const propKey = (s: string): string =>
+  /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(s) ? s : quote(s);
+
 interface NavLiteral {
   key: string;
   module: string;
@@ -42,6 +46,7 @@ interface NavLiteral {
   href: string;
   icon?: string;
   order: number;
+  audience: "everyone" | "staff";
 }
 
 function navLiterals(
@@ -51,14 +56,16 @@ function navLiterals(
   const out: NavLiteral[] = [];
   for (const { manifest: m } of mods) {
     if (!m.platforms[platform]) continue;
-    m.nav[platform].forEach((entry, i) => {
+    m.nav[platform].forEach((entry) => {
       out.push({
-        key: `mod:${m.slug}:${i}`,
+        // Same key the boot reconcile gives the nav-items row.
+        key: `mod:${m.slug}:${entry.href}`,
         module: m.slug,
         title: entry.title,
         href: entry.href,
         icon: entry.icon,
         order: entry.order,
+        audience: entry.audience,
       });
     });
   }
@@ -69,7 +76,7 @@ function renderNav(items: NavLiteral[], indent: string): string {
   if (items.length === 0) return "[]";
   const rows = items.map(
     (n) =>
-      `${indent}  { key: ${quote(n.key)}, module: ${quote(n.module)}, title: ${quote(n.title)}, href: ${quote(n.href)}, ${n.icon ? `icon: ${quote(n.icon)}, ` : ""}order: ${n.order} },`,
+      `${indent}  { key: ${quote(n.key)}, module: ${quote(n.module)}, title: ${quote(n.title)}, href: ${quote(n.href)}, ${n.icon ? `icon: ${quote(n.icon)}, ` : ""}order: ${n.order}${n.audience === "staff" ? `, audience: "staff"` : ""} },`,
   );
   return `[\n${rows.join("\n")}\n${indent}]`;
 }
@@ -78,7 +85,7 @@ function renderInstalled(mods: LoadedModule[]): string {
   if (mods.length === 0) return "[]";
   const rows = mods.map(
     ({ manifest: m }) =>
-      `  { slug: ${quote(m.slug)}, name: ${quote(m.name)}, version: ${quote(m.version)}, system: ${sysMod(m)} },`,
+      `  { slug: ${quote(m.slug)}, name: ${quote(m.name)}, version: ${quote(m.version)}, system: ${sysMod(m)}${m.access.check ? `, accessCheck: ${quote(m.access.check)}` : ""} },`,
   );
   return `[\n${rows.join("\n")}\n]`;
 }
@@ -89,6 +96,8 @@ const SHARED_TYPES = `export interface ModInstalled {
   version: string;
   /** True when the app shell depends on this module's mounts (e.g. the home screen). */
   system: boolean;
+  /** SQL function deciding if the current user may use the module (manifest access.check). */
+  accessCheck?: string;
 }
 
 export interface ModNavDefault {
@@ -98,6 +107,8 @@ export interface ModNavDefault {
   href: string;
   icon?: string;
   order: number;
+  /** Default audience; omitted = everyone. */
+  audience?: "everyone" | "staff";
 }
 `;
 
@@ -338,8 +349,46 @@ export const modPayloadMigrations: ModPayloadMigration[] = ${arr(migrations)};
 
 export const modSeedSteps: ModSeedStep[] = ${arr(seeds)};
 
-/** slug → settings definition (admin settings screens, §1.7). */
+/**
+ * slug → settings definition. The fields render on the module's page in
+ * /admin (kit-modules) — see payload/collections/KitModules.ts.
+ */
 export const modSettings: Record<string, ModuleSettings> = ${obj(settings)};
+
+/**
+ * Modules with their own admin settings component (manifest
+ * admin.settingsComponent) — rendered on the module's page in /admin through
+ * the kit's ModuleAdminSettings wrapper (registry.admin.generated.tsx).
+ */
+export const modAdminSettings: { slug: string }[] = ${arr(
+    mods
+      .filter((e) => e.manifest.admin.settingsComponent)
+      .map((e) => `  { slug: ${quote(e.manifest.slug)} },`),
+  )};
+`;
+}
+
+/**
+ * apps/nextjs/src/mod/registry.admin.generated.tsx — the modules' ./admin
+ * settings components by slug. A client module imported only by the /admin
+ * wrapper (payload/components/ModuleAdminSettings.tsx), so Payload's import
+ * map stays static however many modules are installed.
+ */
+export function buildNextAdminRegistry(mods: LoadedModule[]): string {
+  const adminMods = mods.filter((e) => e.manifest.admin.settingsComponent);
+  const imports = adminMods.map(
+    (e) =>
+      `import { AdminSettings as admin_${ident(e.manifest.slug)} } from "${e.packageName}/admin";`,
+  );
+  const rows = adminMods.map(
+    (e) => `  ${propKey(e.manifest.slug)}: admin_${ident(e.manifest.slug)},`,
+  );
+  return `"use client";
+
+${ESLINT_OFF}${HEADER}import type { ComponentType } from "react";
+${imports.length > 0 ? `\n${imports.join("\n")}\n` : ""}
+/** slug → the module's \`./admin\` AdminSettings component. */
+export const modAdminComponents: Record<string, ComponentType> = ${rows.length === 0 ? "{}" : `{\n${rows.join("\n")}\n}`};
 `;
 }
 
@@ -383,6 +432,15 @@ export const modClientRuntimeEnv = ${obj(runtimeRows)};
 `;
 }
 
+/** The URL a native module route is served at (see buildStubs). */
+function nativeRouteHref(
+  slug: string,
+  r: LoadedModule["manifest"]["routes"]["native"][number],
+): string {
+  if (r.mount === "index") return "/home";
+  return r.path === "" ? `/a/${slug}` : `/a/${slug}/${r.path}`;
+}
+
 /** apps/expo/src/mod/registry.generated.ts */
 export function buildExpoRegistry(mods: LoadedModule[]): string {
   const nativeMods = mods.filter((e) => e.manifest.platforms.native);
@@ -403,6 +461,34 @@ export function buildExpoRegistry(mods: LoadedModule[]): string {
     );
   }
 
+  // Menu-addressable screens (static routes only), keyed by URL href, so the
+  // native tab bar can render whichever module staff put in each tab slot.
+  const screenRows: string[] = [];
+  let needsGate = false;
+  for (const e of nativeMods) {
+    const m = e.manifest;
+    for (const [i, r] of m.routes.native.entries()) {
+      if (r.path.includes("[")) continue;
+      const local = `screen_${ident(m.slug)}_${i}`;
+      imports.push(
+        `import { ${r.component} as ${local} } from "${e.packageName}/native";`,
+      );
+      const href = nativeRouteHref(m.slug, r);
+      if (m.access.check) {
+        needsGate = true;
+        screenRows.push(
+          `  ${quote(href)}: withModuleAccess(${quote(m.access.check)}, ${local}),`,
+        );
+      } else {
+        screenRows.push(`  ${quote(href)}: ${local},`);
+      }
+    }
+  }
+  if (needsGate)
+    imports.push('import { withModuleAccess } from "./access-gate";');
+  const screens =
+    screenRows.length === 0 ? "{}" : `{\n${screenRows.join("\n")}\n}`;
+
   const widgets =
     widgetMods.length === 0
       ? "[]"
@@ -418,10 +504,16 @@ export function buildExpoRegistry(mods: LoadedModule[]): string {
 ${SHARED_TYPES}
 export const modInstalled: ModInstalled[] = ${renderInstalled(mods)};
 
-/** Native nav defaults — fallback for useNavMenu() while offline/loading. */
+/** Native nav defaults — the bundled first-launch menu (useNativeNav fallback). */
 export const modNavDefaults: { native: ModNavDefault[] } = {
   native: ${renderNav(navLiterals(mods, "native"), "  ")},
 };
+
+/**
+ * Module screens the native menu can point at (static routes), by href.
+ * Rendered inside the configured tab slots (app/(app)/(tabs)/t*).
+ */
+export const modNativeScreens: Record<string, React.ComponentType> = ${screens};
 
 /** Home-screen widgets declared by installed modules (native components). */
 export const modWidgets: { slug: string; Widget: React.ComponentType }[] = ${widgets};
@@ -483,6 +575,17 @@ export function buildTranspileJson(mods: LoadedModule[]): string {
 }
 
 /** Generated route stubs for both apps (machine-owned subtrees). */
+/**
+ * `export default withModuleAccess(check, Component);`, wrapped the way
+ * Prettier wraps it when it doesn't fit in 80 columns (long module slugs).
+ */
+export function gatedDefaultExport(check: string, component: string): string {
+  const line = `export default withModuleAccess(${check}, ${component});`;
+  return line.length <= 80
+    ? line
+    : `export default withModuleAccess(\n  ${check},\n  ${component},\n);`;
+}
+
 export function buildStubs(mods: LoadedModule[]): GeneratedFile[] {
   const files: GeneratedFile[] = [];
 
@@ -519,9 +622,14 @@ export function buildStubs(mods: LoadedModule[]): GeneratedFile[] {
           path: `${baseDir}/layout.tsx`,
           slug,
           content: `${ESLINT_OFF}${HEADER}import type { ReactNode } from "react";
-import { notFound } from "next/navigation";
+import { ${m.access.check ? "notFound, redirect" : "notFound"} } from "next/navigation";
 
-import { isModuleEnabled } from "~/lib/mod/enabled";
+${
+  m.access.check
+    ? `import { hasModuleAccess } from "~/lib/mod/access";
+`
+    : ""
+}import { isModuleEnabled } from "~/lib/mod/enabled";
 
 /** Runtime enable/disable gate — disabling the module 404s its pages. */
 export default async function ModuleLayout({
@@ -529,7 +637,13 @@ export default async function ModuleLayout({
 }: {
   children: ReactNode;
 }) {
-  if (!(await isModuleEnabled(${quote(slug)}))) notFound();
+  if (!(await isModuleEnabled(${quote(slug)}))) notFound();${
+    m.access.check
+      ? `
+  // Access gate (manifest access.check) — users without access go home.
+  if (!(await hasModuleAccess(${quote(m.access.check)}))) redirect("/a");`
+      : ""
+  }
   return children;
 }
 `,
@@ -541,14 +655,24 @@ export default async function ModuleLayout({
       for (const r of m.routes.native) {
         // Native gating is nav-level (disabled modules disappear from the
         // menu and their APIs 404); Expo Router has no server gate to add.
+        // `mount: "index"` is the app's home screen. It lives at /home: "/"
+        // belongs to the host (it opens the first tab of the tab bar).
         const file =
           r.mount === "index"
-            ? "index"
+            ? "home"
             : `a/${slug}/${r.path === "" ? "index" : r.path}`;
         files.push({
           path: `${MOD_PATHS.expoAppGroup}/${file}.tsx`,
           slug,
-          content: `${ESLINT_OFF}${HEADER}export { ${r.component} as default } from "${e.packageName}/native";\n`,
+          content: m.access.check
+            ? `${ESLINT_OFF}${HEADER}import { ${r.component} } from "${e.packageName}/native";
+
+import { withModuleAccess } from "~/mod/access-gate";
+
+// Access gate (manifest access.check) — users without access go home.
+${gatedDefaultExport(quote(m.access.check), r.component)}
+`
+            : `${ESLINT_OFF}${HEADER}export { ${r.component} as default } from "${e.packageName}/native";\n`,
         });
       }
     }
@@ -593,6 +717,10 @@ export function buildAllGeneratedFiles(mods: LoadedModule[]): GeneratedFile[] {
     {
       path: MOD_PATHS.nextPayloadRegistry,
       content: buildNextPayloadRegistry(mods),
+    },
+    {
+      path: MOD_PATHS.nextAdminRegistry,
+      content: buildNextAdminRegistry(mods),
     },
     { path: MOD_PATHS.nextEnv, content: buildNextEnv(mods) },
     { path: MOD_PATHS.nextTranspileJson, content: buildTranspileJson(mods) },

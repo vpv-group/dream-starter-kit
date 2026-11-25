@@ -5,15 +5,19 @@ import type { User } from "@acme/cms";
 
 import { getSiteUrl } from "~/lib/site-url";
 import { createAdminClient } from "~/lib/supabase/admin";
+import { hasStaffRole } from "../access";
 
 /**
- * Staff invite — runs when an admin creates a row in the `users` collection
+ * User invite — runs when an admin creates a row in the `users` collection
  * from the CMS (`/admin` → Users → Create New, or POST /cms-api/users).
  *
  * Sends a Supabase invite email (the invitee clicks it, lands on
- * /accept-invite, sets a password, and enters /admin) and grants staff access
- * by flagging `profiles.is_staff = true` — the service-role client is the one
- * writer allowed to touch that column (RLS revokes it from users by design).
+ * /accept-invite and sets a password) and sets `profiles.is_staff` from the
+ * chosen roles: admin/editor/author → staff (they continue to /admin), member
+ * only → an app user (/welcome sends them to the app). The service-role
+ * client is the one writer allowed to touch that column (RLS revokes it from
+ * users by design); later role edits keep it in step via
+ * hooks/sync-user-to-supabase.ts.
  * The new auth user's id is stored as `supabaseUserId` so the SSO bridge
  * (payload/auth/supabase-strategy.ts) finds this row instead of JIT-creating
  * a duplicate on their first visit.
@@ -23,8 +27,9 @@ import { createAdminClient } from "~/lib/supabase/admin";
  *  - the CMS seed's placeholder author (Local API, no `req.user`).
  *
  * If the email already belongs to an app user, no email is sent — the existing
- * account is linked and promoted to staff instead (re-running a failed invite
- * lands here too, which makes the operation self-healing).
+ * account is linked and its staff access set from the roles instead
+ * (re-running a failed invite lands here too, which makes the operation
+ * self-healing).
  */
 export const inviteUserOnCreate: CollectionBeforeChangeHook<User> = async ({
   data,
@@ -56,8 +61,8 @@ export const inviteUserOnCreate: CollectionBeforeChangeHook<User> = async ({
     if (error.code !== "email_exists") {
       throw new APIError(`Could not send the invite: ${error.message}`, 502);
     }
-    // Already an app user → link + promote instead of emailing an invite
-    // (an invite would be a confusing "create account" prompt for them).
+    // Already an app user → link (and set staff access) instead of emailing
+    // an invite (an invite would be a confusing "create account" prompt).
     const existing = await findAuthUserByEmail(admin, email);
     if (!existing) {
       throw new APIError(
@@ -67,41 +72,33 @@ export const inviteUserOnCreate: CollectionBeforeChangeHook<User> = async ({
     }
     supabaseUserId = existing.id;
     req.payload.logger.info(
-      `Staff invite: ${email} already has an account — promoting to staff without sending an email.`,
+      `User invite: ${email} already has an account — linking it without sending an email.`,
     );
   } else {
     supabaseUserId = invited.user.id;
   }
 
-  // Grant CMS access. The profiles row exists by now: handle_new_user fires
-  // synchronously on auth.users insert. Zero updated rows means it doesn't —
-  // fail loudly rather than leaving a user who can't get past the /admin gate.
+  // Staff access follows the roles. The profiles row exists by now:
+  // handle_new_user fires synchronously on auth.users insert. Zero updated
+  // rows means it doesn't — fail loudly rather than leaving a CMS row whose
+  // roles and `is_staff` disagree.
+  const isStaff = hasStaffRole(data.roles ?? ["member"]);
   const { data: updated, error: updateError } = await admin
     .from("profiles")
-    .update({ is_staff: true })
+    .update({ is_staff: isStaff })
     .eq("id", supabaseUserId)
     .select("id");
-  const granted = !updateError && updated.length > 0;
-  if (!granted) {
+  const applied = !updateError && updated.length > 0;
+  if (!applied) {
     throw new APIError(
-      `Invited ${email}, but granting staff access failed${
+      `Invited ${email}, but setting their access failed${
         updateError ? `: ${updateError.message}` : " (no profile row found)"
       }. Re-create the user to retry.`,
       502,
     );
   }
 
-  // An invited user is staff by definition (the grant above) — make sure the
-  // CMS row carries a staff role even if the form was left on the default
-  // `member`, so role-based access (access.admin, isStaff) matches.
-  const roles = data.roles ?? [];
-  const staffRoles = roles.some((r) =>
-    ["admin", "editor", "author"].includes(r),
-  )
-    ? roles
-    : [...roles, "editor" as const];
-
-  return { ...data, supabaseUserId, roles: staffRoles };
+  return { ...data, supabaseUserId };
 };
 
 /**

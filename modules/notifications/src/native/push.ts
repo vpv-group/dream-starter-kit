@@ -1,8 +1,11 @@
-import { Platform } from "react-native";
+import { Linking, Platform } from "react-native";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
+import { router } from "expo-router";
 
 import type { AppSupabaseClient } from "@acme/api";
+
+import { isSafeNotificationUrl } from "../contract";
 
 // `EXPO_PUBLIC_*` is inlined by Metro at build time — literal reads only.
 declare const process: { env: Record<string, string | undefined> };
@@ -17,6 +20,30 @@ Notifications.setNotificationHandler({
       shouldSetBadge: false,
     }),
 });
+
+/**
+ * Open a notification's target: app paths through the router, https links in
+ * the browser. Anything else is ignored.
+ */
+export function openNotificationHref(href: string | null): void {
+  if (!href || !isSafeNotificationUrl(href)) return;
+  if (href.startsWith("/")) router.push(href);
+  else void Linking.openURL(href);
+}
+
+// Tapping a push opens its `data.url` (set by notify()). Registered once, when
+// this file is first imported (the notifications widget and screen import it).
+let tapListenerAdded = false;
+export function listenForNotificationTaps(): void {
+  if (tapListenerAdded) return;
+  tapListenerAdded = true;
+  Notifications.addNotificationResponseReceivedListener((response) => {
+    const data = response.notification.request.content.data;
+    const url = data?.url;
+    openNotificationHref(typeof url === "string" ? url : null);
+  });
+}
+listenForNotificationTaps();
 
 /**
  * Register for Expo push notifications and persist the token to `mod_notifications_push_tokens`.

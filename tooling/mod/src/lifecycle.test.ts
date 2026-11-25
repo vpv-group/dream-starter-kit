@@ -30,4 +30,15 @@ describe("parseSource", () => {
   it("recognizes the Dream registry", () => {
     expect(parseSource("dream:crm", "/work/kit").kind).toBe("registry");
   });
+
+  it("treats a bare slug as the Dream registry", () => {
+    expect(parseSource("crm", "/work/kit")).toEqual({
+      kind: "registry",
+      location: "dream:crm",
+    });
+    expect(parseSource("client-portal@1.2.0", "/work/kit").location).toBe(
+      "dream:client-portal@1.2.0",
+    );
+    expect(parseSource("crm.zip", "/work/kit").kind).toBe("zip");
+  });
 });

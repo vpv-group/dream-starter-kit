@@ -22,12 +22,15 @@ Commands:
   sync                       Regenerate registries, stubs, migrations and env
                              from modules/* (run after any change there).
   create <slug>              Scaffold a new local module.
-  add <url[#vX.Y.Z]|.zip|dream:<slug>[@x.y.z]>
+  add <url[#vX.Y.Z]|.zip|dream:<slug>[@x.y.z]|<slug>>
                              Vendor a module from GitHub, a zip, or the Dream
-                             registry (paid modules — needs DREAM_LICENSE_KEY).
-  update <slug> [--to vX.Y.Z] [--continue]
+                             registry (needs DREAM_LICENSE_KEY). Registry-first:
+                             modules the registry lists come from it, with
+                             GitHub as fallback (MOD_REGISTRY_FIRST=off: never).
+  update <slug> [--to vX.Y.Z] [--from <url|dream:<slug>>] [--continue]
                              Three-way merge a new upstream version over your
-                             (possibly modified) vendored copy.
+                             (possibly modified) vendored copy. --from switches
+                             the module's origin (e.g. GitHub → registry).
   remove <slug> [--keep-data]
                              Uninstall: drop migration(s), delete the package,
                              tombstone the lock, regenerate.
@@ -59,13 +62,14 @@ async function main(): Promise<void> {
       await create(root, args[0]);
       return;
     case "add":
-      if (!args[0]) throw new Error("usage: pnpm mod add <url|zip>");
+      if (!args[0]) throw new Error("usage: pnpm mod add <url|zip|slug>");
       await add(root, args[0]);
       return;
     case "update":
       if (!args[0]) throw new Error("usage: pnpm mod update <slug>");
       await update(root, args[0], {
         to: flagValue("--to"),
+        from: flagValue("--from"),
         cont: flags.has("--continue"),
       });
       return;
