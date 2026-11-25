@@ -141,10 +141,11 @@ not line-by-line:
   rebuild:
   - `packages/cms/src/payload-types.ts` → `pnpm cms:gen-types`
   - Supabase types (`packages/api`) → `pnpm db:gen-types`
-- **`packages/cms/src/payload-types.ts` phantom churn.** Even with no real type
-  change, a `pnpm db:reset`/generate reorders things non-deterministically
-  (single- vs double-quotes, `SupportedTimezones` reordering). That's **formatting
-  noise**, not a type change — discard it: `git checkout -- packages/cms/src/payload-types.ts`.
+  Both scripts pipe their output through `prettier --write`, so the regenerated
+  files already pass `pnpm format` (raw generator output uses single quotes / no
+  semicolons and would fail CI's `format` job). If a regenerate still shows a diff
+  with no real type change, your clone predates that — pull the kit's
+  `package.json` scripts rather than discarding or hand-formatting the file.
 - **Migrations are append-only.** Never edit a shipped migration; **keep BOTH
   sides'** migration files (yours _and_ the kit's new ones). After merging, run
   `pnpm db:reset` to apply the combined sequence, then `pnpm db:gen-migrations` if

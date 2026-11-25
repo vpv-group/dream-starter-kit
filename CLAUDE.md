@@ -515,9 +515,9 @@ with the kit, so the cardinal rule is: keep the merge commits, never squash them
   re-breaking the relationship and forcing `--allow-unrelated-histories` next time.
 - **Conflict hotspots:** generated files (`packages/cms/src/payload-types.ts` →
   `pnpm cms:gen-types`; Supabase types → `pnpm db:gen-types`) — take either side
-  then **regenerate**, don't hand-merge; `payload-types.ts` also shows phantom
-  quote/`SupportedTimezones` churn after a generate — discard it
-  (`git checkout -- <file>`). Migrations are append-only — keep **both** sides'
+  then **regenerate**, don't hand-merge (both `gen-types` scripts run
+  `prettier --write` on their output, so a regenerate is already
+  `pnpm format`-clean — no manual formatting step). Migrations are append-only — keep **both** sides'
   files, then `pnpm db:reset` (+ `pnpm db:gen-migrations` if the bundle JSON drifts).
   Env: reconcile both `.env.example` and the zod schema. `pnpm-lock.yaml`: re-run
   `pnpm install`, don't hand-merge.
