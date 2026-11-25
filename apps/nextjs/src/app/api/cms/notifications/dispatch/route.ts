@@ -15,7 +15,8 @@ import { createAdminClient } from "~/lib/supabase/admin";
  * the Payload Local API (cms schema) and the service-role Supabase client
  * (public schema: device tokens + mod_notifications); see packages/mcp dispatch.
  *
- * Triggered by Vercel Cron every minute (apps/nextjs/vercel.json). Vercel adds
+ * Triggered by Supabase Cron every minute (`kit-notifications-dispatch`, via
+ * pg_net — supabase/migrations/*_scheduler_retention_audit.sql), which adds
  * `Authorization: Bearer ${CRON_SECRET}` to cron requests; pg_cron / manual
  * callers must send the same header. Modeled on supabase/functions/
  * reminders-process (which dispatches mod_reminders the same way).
@@ -58,9 +59,8 @@ async function handler(req: NextRequest): Promise<Response> {
     );
   }
   const admin = createAdminClient();
-  const { claimScheduledNotification } = await import(
-    "~/lib/cms/claim-notification"
-  );
+  const { claimScheduledNotification } =
+    await import("~/lib/cms/claim-notification");
   const result = await runDispatch({
     payload,
     admin,
@@ -69,5 +69,5 @@ async function handler(req: NextRequest): Promise<Response> {
   return NextResponse.json(result);
 }
 
-// Vercel Cron sends GET; allow POST for pg_cron / manual triggering.
+// Supabase Cron sends GET; POST works for manual triggering.
 export { handler as GET, handler as POST };

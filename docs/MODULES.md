@@ -108,6 +108,45 @@ lint rejects triggers on any other foreign table. Trigger functions should
 be `security definer`, catch their own errors and never block the core
 write.
 
+**Service-only functions.** Module SQL can't GRANT or REVOKE, so a
+function meant for the server (service role, cron) checks its caller itself:
+`if coalesce((select auth.role()), '') in ('authenticated', 'anon') then
+raise exception … using errcode = '42501'`. See
+`mod_notifications_broadcast` and `mod_reminders_claim`.
+
+**Retention and housekeeping.** Nothing grows forever. A module whose
+tables accumulate rows (logs, history, outboxes, dedupe keys) ships a purge
+function and registers it from a migration; the kit's hourly Supabase Cron
+job (`private.run_housekeeping()`) runs it, isolates failures, and writes
+the per-task counts to the audit log. Windows come from the retention
+policy table, never from literals, so a compliance module can raise them
+and a legal hold can pause them:
+
+```sql
+-- in the module's migration
+select public.kit_register_retention('mod_crm_activity', 365, 'CRM activity timeline');
+create or replace function public.mod_crm_purge() returns integer
+language plpgsql security definer set search_path = '' as $$
+declare _cutoff timestamptz := private.retention_cutoff('mod_crm_activity'); _n integer;
+begin
+  if _cutoff is null then return 0; end if;       -- unknown class or legal hold
+  delete from public.mod_crm_activity a where a.id in (
+    select x.id from public.mod_crm_activity x where x.occurred_at < _cutoff limit 10000);
+  get diagnostics _n = row_count; return _n;
+end $$;
+select public.kit_register_housekeeping('public.mod_crm_purge', 'crm');
+
+-- in drop.sql
+select public.kit_unregister_housekeeping('crm');
+```
+
+Batch deletes (≤10k rows per call; the next hourly run drains a backlog), and
+index the column you delete by (BRIN suits append-only timestamps).
+Audit-class data (who did what) is kept on the long `audit` policy, not
+short-purged. Server code can append to the kit's audit log with the
+service-role RPC `audit_log_event(action, actor_id, …)` — IDs and labels
+only, never content or PII.
+
 **Module tests.** Unit tests live in `modules/<slug>/tests/*.test.ts` and run
 in `pnpm test` (no database). Suites that need the live database go in
 `modules/<slug>/tests/rls/*.test.ts` — `pnpm test:rls` picks them up alongside
@@ -374,7 +413,7 @@ updates and free modules work without anyone creating or pasting a key:
      admin/editor emails, the kit version and the GitHub repo slug.
    - The registry returns the site key. It is stored in the admin-only
      **System → Site License** global and shown at the top of `/admin`.
-2. **Daily.** Vercel Cron calls `/api/cms/dream-site/report`
+2. **Daily.** Supabase Cron calls `/api/cms/dream-site/report`
    (`CRON_SECRET`); without the cron, a staff visit to `/admin` does it at
    most once a day. Each report sends the kit version and any new
    admin/editor emails. If the key was rotated, the site registers again.

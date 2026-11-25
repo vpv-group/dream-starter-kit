@@ -92,7 +92,8 @@ export const serverEnvSchema = z.object({
   /**
    * Shared secret guarding scheduled worker endpoints (the in-app notifications
    * dispatch route, and the `reminders-process` edge function). Sent as a bearer
-   * token by Vercel Cron / pg_cron.
+   * token by Supabase Cron (pg_cron + pg_net). Optional: when unset it is
+   * derived from SUPABASE_SERVICE_ROLE_KEY (apps/nextjs/src/lib/cron-secret.ts).
    */
   CRON_SECRET: z.string().min(1).optional(),
 

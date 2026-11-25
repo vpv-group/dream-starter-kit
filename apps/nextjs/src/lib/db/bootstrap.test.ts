@@ -101,6 +101,9 @@ function makeFake(db: Partial<FakeDb> = {}, opts: { failOn?: RegExp } = {}) {
           ],
         });
       }
+      if (sql.includes("to_regprocedure")) {
+        return Promise.resolve({ rows: [{ present: true }] });
+      }
       if (sql.includes("select name from cms.payload_migrations")) {
         return Promise.resolve({
           rows: state.cmsApplied.map((name) => ({ name })),
@@ -199,6 +202,26 @@ describe("bootstrapDatabase fast path", () => {
       false,
     );
     expect(fake.isEnded()).toBe(true);
+  });
+
+  it("stores the scheduler secrets in Vault on every boot", async () => {
+    const fake = makeFake({
+      ledgerExists: true,
+      applied: MIGRATIONS.map((m) => m.version),
+      roleExists: true,
+      cmsSchemaExists: true,
+    });
+    await bootstrapDatabase({
+      envSource: ENV,
+      migrations: MIGRATIONS,
+      createClient: () => Promise.resolve(fake.client),
+      logger: spyLogger(),
+      schedulerSecrets: { appUrl: "https://app.example.com", cronSecret: "s" },
+    });
+    const sync = fake.calls.find((c) =>
+      c.sql.includes("private.sync_scheduler_secrets"),
+    );
+    expect(sync?.params).toEqual(["https://app.example.com", "s"]);
   });
 });
 

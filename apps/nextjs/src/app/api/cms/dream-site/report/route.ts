@@ -8,7 +8,7 @@ import { DAY_MS } from "~/lib/dream/site-core";
 /**
  * Daily site-license report (docs/MODULES.md → Site license): registers this
  * deployment with meetdream.com if it hasn't yet, otherwise sends its kit
- * version + staff emails. Vercel Cron (apps/nextjs/vercel.json) sends
+ * version + staff emails. Supabase Cron (`kit-dream-site-report`, daily) sends
  * `Authorization: Bearer ${CRON_SECRET}`. Without CRON_SECRET the same sync
  * runs at most daily when staff open /admin (DreamSiteSync).
  */

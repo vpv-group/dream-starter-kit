@@ -12,6 +12,7 @@ import {
   pgConnectionOptions,
   resolveAdminDbUrl,
   resolveRuntimeDbUrl,
+  schedulerAppUrl,
   summarizeDbError,
   transactionPoolerUrl,
 } from "./bootstrap-core";
@@ -20,6 +21,23 @@ const mig = (version: string, name = `m${version}`): SqlMigration => ({
   version,
   name,
   sql: `select '${version}'`,
+});
+
+describe("schedulerAppUrl", () => {
+  it("maps loopback hosts to host.docker.internal (DB runs in Docker)", () => {
+    expect(schedulerAppUrl("http://localhost:3000")).toBe(
+      "http://host.docker.internal:3000",
+    );
+    expect(schedulerAppUrl("http://127.0.0.1:3000/")).toBe(
+      "http://host.docker.internal:3000",
+    );
+  });
+
+  it("leaves real origins alone", () => {
+    expect(schedulerAppUrl("https://app.example.com")).toBe(
+      "https://app.example.com",
+    );
+  });
 });
 
 describe("parseMigrationFilename", () => {

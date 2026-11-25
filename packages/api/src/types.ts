@@ -65,15 +65,7 @@ export type Database = {
           occurred_at?: string;
           user_id?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "auth_events_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
+        Relationships: [];
       };
       content_favorites: {
         Row: {
@@ -1231,6 +1223,18 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      audit_log_event: {
+        Args: {
+          _action: string;
+          _actor_id?: string;
+          _actor_type?: string;
+          _entity_id?: string;
+          _entity_type?: string;
+          _meta?: Json;
+          _org_id?: string;
+        };
+        Returns: number;
+      };
       blocking_owned_workspaces: {
         Args: { _user: string };
         Returns: {
@@ -1329,6 +1333,18 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      kit_register_housekeeping: {
+        Args: { _fn: string; _module: string };
+        Returns: undefined;
+      };
+      kit_register_retention: {
+        Args: { _class: string; _description?: string; _keep_days: number };
+        Returns: undefined;
+      };
+      kit_unregister_housekeeping: {
+        Args: { _module: string };
+        Returns: undefined;
       };
       mod_notifications_audience: {
         Args: {

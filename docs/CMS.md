@@ -419,7 +419,7 @@ here.)
 (`draft`/`scheduled`/`sending`/`sent`/`failed`). **Access:** all `isStaff`.
 Trash. **Delivery:** a `scheduled` notification whose `scheduledAt` has passed is
 sent by the dispatch worker at `POST /api/cms/notifications/dispatch`
-(`CRON_SECRET`-guarded, Vercel Cron every minute — `apps/nextjs/vercel.json`).
+(cron-secret-guarded, Supabase Cron every minute — `kit-notifications-dispatch`).
 It resolves the audience (all / `targetUsers` via `cms.users.supabaseUserId` /
 `segment` `{ tags: [...] }`) to Supabase user ids, fans out Expo push and inserts
 in-app feed rows (`public.mod_notifications`), then writes back

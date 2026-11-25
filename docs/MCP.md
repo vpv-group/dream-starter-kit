@@ -187,9 +187,10 @@ The `collection` enum on the content tools and `list_collections` update automat
 `notify_schedule` writes a Payload `notification` with `status: "scheduled"` and a
 `scheduledAt`. Delivery is performed by the **dispatch worker** at
 `POST /api/cms/notifications/dispatch` (`apps/nextjs/src/app/api/cms/notifications/dispatch/route.ts`),
-triggered by **Vercel Cron** every minute (`apps/nextjs/vercel.json`) and guarded by
-`CRON_SECRET` (Vercel adds the bearer automatically; pg_cron/manual callers send the same
-header).
+triggered by **Supabase Cron** every minute (`kit-notifications-dispatch`, pg_cron + pg_net)
+and guarded by the cron bearer secret — `CRON_SECRET`, or derived from the service-role key
+when unset. The runtime bootstrap stores the app URL and secret in Supabase Vault, so there
+is nothing to configure.
 
 The worker core is pure and injectable (`packages/mcp/src/dispatch/run-dispatch.ts`). Per
 due notification it: claims the row (`status → sending`, so overlapping runs don't
@@ -252,5 +253,7 @@ Backend-dependent (need `supabase start` + `.env`):
 - **401 loop** — the client isn't honoring the `WWW-Authenticate` header; confirm it
   supports OAuth remote MCP servers.
 - **`access_denied` after login** — that account isn't staff (`profiles.is_staff`).
-- **Scheduled notifications never send** — `CRON_SECRET` unset, Vercel Cron not enabled
-  (`apps/nextjs/vercel.json`), or no device tokens registered for the audience.
+- **Scheduled notifications never send** — the app hasn't booted since deploy (the bootstrap
+  writes the scheduler's Vault secrets), Supabase can't reach the app URL
+  (`select * from net._http_response order by created desc`), or no device tokens are
+  registered for the audience.

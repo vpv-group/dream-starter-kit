@@ -431,7 +431,7 @@ notifications in natural language. Full reference: **[`docs/MCP.md`](./MCP.md)**
 - **Tools:** content CRUD over an allowlist of collections, push-notification
   authoring/scheduling, and ChatGPT-compatible `search`/`fetch`. Scheduled
   notifications are delivered by the dispatch worker
-  (`/api/cms/notifications/dispatch`, Vercel Cron).
+  (`/api/cms/notifications/dispatch`, Supabase Cron).
 
 ---
 

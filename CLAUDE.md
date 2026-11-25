@@ -575,8 +575,8 @@ enters the Expo bundle). It's **gated by `MCP_JWT_SECRET`** (`isMcpConfigured`/`
   `fetch`** (ids are `collection:id`). To expose another collection, add it to
   `MCP_COLLECTIONS`.
 * **Notification delivery:** `notify_schedule` writes a `scheduled` Payload `notification`; the
-  **dispatch worker** (`/api/cms/notifications/dispatch`, `CRON_SECRET`-guarded, Vercel Cron —
-  `apps/nextjs/vercel.json`) sends it. See `docs/CMS.md` → `notifications`.
+  **dispatch worker** (`/api/cms/notifications/dispatch`, cron-secret-guarded, Supabase Cron —
+  `kit-notifications-dispatch`) sends it. See `docs/CMS.md` → `notifications`.
 * **Don't hardcode the origin** — absolute URLs (issuer/resource/metadata) come from
   `getSiteUrl()`. Tests: pure logic (pkce/tokens/oauth flow), an in-memory MCP client↔server
   tool test against a fake Payload, and the dispatch worker all run under `pnpm test` (no
