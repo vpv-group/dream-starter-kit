@@ -159,9 +159,9 @@ export default buildConfig({
       // disables once the CMS has content. See payload/components/SeedGate.tsx.
       beforeDashboard: [
         "~/payload/components/SeedGate#SeedGate",
-        // Module ops setup steps (MOD_OPS_TOKEN) until it's configured —
-        // see payload/components/ModOpsSetupAlert.tsx.
-        "~/payload/components/ModOpsSetupAlert#ModOpsSetupAlert",
+        // One "Finish setup" row until GitHub is connected for updates —
+        // see payload/components/FinishSetupRow.tsx.
+        "~/payload/components/FinishSetupRow#FinishSetupRow",
         "~/payload/components/DreamSiteSync#DreamSiteSync",
       ],
       // Wraps every admin route and injects the site-wide shadcn theme as a
@@ -180,6 +180,10 @@ export default buildConfig({
       // Sidebar with accordion groups: one open at a time, and the group of
       // the current page open on load. See payload/components/AdminNav.tsx.
       Nav: "~/payload/components/AdminNav#AdminNav",
+      // "Updates" link for admins (payload/components/updates/).
+      afterNavLinks: [
+        "~/payload/components/updates/UpdatesNavLink#UpdatesNavLink",
+      ],
       // Module install/update/remove lives on the Modules collection screen
       // (payload/collections/KitModules.ts + payload/components/modules/).
       views: {
@@ -188,6 +192,12 @@ export default buildConfig({
           Component:
             "~/payload/components/ModuleSettingsRedirect#ModuleSettingsRedirect",
           path: "/module-settings/:slug",
+        },
+        // /admin/updates — automatic updates for the kit and modules
+        // (payload/components/updates/UpdatesView.tsx).
+        updates: {
+          Component: "~/payload/components/updates/UpdatesView#UpdatesView",
+          path: "/updates",
         },
       },
     },

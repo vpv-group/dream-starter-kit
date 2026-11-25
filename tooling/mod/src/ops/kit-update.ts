@@ -37,6 +37,8 @@ export type KitPlan =
       ref: string;
       /** No shared history yet ("Use this template" / Vercel clone). */
       unrelated: boolean;
+      /** The release commit's ISO date. */
+      publishedAt: string;
     };
 
 export function tagsAt(repoRoot: string, upstreamUrl: string): string[] {
@@ -98,6 +100,8 @@ export function planKitUpdate(opts: {
     current,
     ref: RELEASE_REF,
     unrelated: !hasCommonHistory(repoRoot, RELEASE_REF, head),
+    // The release commit's date: when its soak time starts (eligibility.ts).
+    publishedAt: git(repoRoot, ["log", "-1", "--format=%cI", RELEASE_REF]),
   };
 }
 
@@ -130,7 +134,11 @@ export function toGithubOutput(plan: KitPlan): string {
     );
   }
   if (plan.action === "merge") {
-    entries.push(["ref", plan.ref], ["unrelated", String(plan.unrelated)]);
+    entries.push(
+      ["ref", plan.ref],
+      ["unrelated", String(plan.unrelated)],
+      ["published_at", plan.publishedAt],
+    );
   }
   return entries.map(([k, v]) => `${k}=${v}`).join("\n") + "\n";
 }

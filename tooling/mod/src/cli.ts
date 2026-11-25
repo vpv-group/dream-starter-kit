@@ -1,3 +1,6 @@
+import { appendFileSync, readFileSync } from "node:fs";
+
+import type { ModulesLock } from "./lock";
 import { applyLocal } from "./apply";
 import { create } from "./create";
 import {
@@ -8,9 +11,17 @@ import {
   status,
   update,
 } from "./lifecycle";
+import { readLock } from "./lock";
 import { ModValidationError } from "./manifests";
+import { describeModuleOp, describeOutput } from "./ops/describe";
+import { githubClient } from "./ops/github";
 import { planKitUpdate, toGithubOutput } from "./ops/kit-update";
+import { runMerge, watchDeployment } from "./ops/merge";
+import { reporter } from "./ops/report";
+import { resolveGeneratedConflicts } from "./ops/resolve-generated";
+import { openSession, sessionOutputs } from "./ops/session";
 import { findRepoRoot } from "./paths";
+import { registryUrl } from "./registry";
 import { sync } from "./sync";
 
 /**
@@ -26,9 +37,10 @@ Commands:
   create <slug>              Scaffold a new local module.
   add <url[#vX.Y.Z]|.zip|dream:<slug>[@x.y.z]|<slug>>
                              Vendor a module from GitHub, a zip, or the Dream
-                             registry (needs DREAM_LICENSE_KEY). Registry-first:
-                             modules the registry lists come from it, with
-                             GitHub as fallback (MOD_REGISTRY_FIRST=off: never).
+                             registry (paid modules: set DREAM_TOKEN; in
+                             module-ops.yml the run signs in by itself).
+                             Registry-first: modules the registry lists come
+                             from it, with GitHub as fallback.
   update <slug> [--to vX.Y.Z] [--from <url|dream:<slug>>] [--continue]
                              Three-way merge a new upstream version over your
                              (possibly modified) vendored copy. --from switches
@@ -53,6 +65,18 @@ Commands:
                              refs/remotes/upstream/release. Used by
                              module-ops.yml (--github-output prints key=value
                              lines for $GITHUB_OUTPUT instead of JSON).
+  ops session --output-file <path>
+                             module-ops.yml's sign-in: trades the job's OIDC
+                             token for a one-hour repo token + the owner's
+                             update settings (appended to <path>).
+  ops describe --op <add|update|remove> --before <lock.json> [--slug <slug>]
+                             The PR marker for a module op (key=value lines).
+  ops resolve-generated      During a conflicted kit merge: take the release's
+                             side of generated files (regenerated afterwards);
+                             prints remaining=<files> for a person.
+  ops merge [--approve <pr>] Merge the update PRs that are ready (decideMerge),
+                             one per run; label the rest for review; watch
+                             the production deploy and report to Meet Dream.
 `;
 
 async function main(): Promise<void> {
@@ -114,8 +138,78 @@ async function main(): Promise<void> {
       await payloadMigrate(root, args[0], args[1]);
       return;
     case "ops": {
+      if (args[0] === "session") {
+        const out = flagValue("--output-file");
+        if (!out)
+          throw new Error("usage: pnpm mod ops session --output-file <path>");
+        const result = await openSession(registryUrl());
+        const { log, output } = sessionOutputs(result);
+        process.stdout.write(log);
+        appendFileSync(out, output);
+        return;
+      }
+      if (args[0] === "resolve-generated") {
+        const { resolved, remaining } = resolveGeneratedConflicts(root);
+        process.stdout.write(
+          `resolved=${resolved.join(" ")}\nremaining=${remaining.join(" ")}\n`,
+        );
+        return;
+      }
+      if (args[0] === "describe") {
+        const op = flagValue("--op");
+        const beforeFile = flagValue("--before");
+        if (
+          (op !== "add" && op !== "update" && op !== "remove") ||
+          !beforeFile
+        ) {
+          throw new Error(
+            "usage: pnpm mod ops describe --op <add|update|remove> --before <lock.json>",
+          );
+        }
+        const before = JSON.parse(
+          readFileSync(beforeFile, "utf8"),
+        ) as Partial<ModulesLock>;
+        const meta = describeModuleOp(
+          op,
+          before.modules ?? {},
+          readLock(root).modules,
+          flagValue("--slug"),
+        );
+        process.stdout.write(describeOutput(meta));
+        return;
+      }
+      if (args[0] === "merge") {
+        const registry = registryUrl();
+        const result = await openSession(registry);
+        if (result.status !== "ok") {
+          process.stdout.write(sessionOutputs(result).log);
+          return;
+        }
+        const { session } = result;
+        process.stdout.write(`::add-mask::${session.githubToken}\n`);
+        const gh = githubClient({
+          repo: session.repo,
+          token: session.githubToken,
+        });
+        const log = (line: string) => process.stdout.write(`${line}\n`);
+        const approve = Number(flagValue("--approve") ?? "");
+        const outcomes = await runMerge({
+          gh,
+          session,
+          ...(Number.isInteger(approve) && approve > 0
+            ? { approvePr: approve }
+            : {}),
+          report: reporter(registry, process.env, fetch, log),
+          watchDeploy: (sha) => watchDeployment(gh, sha),
+          log,
+        });
+        process.stdout.write(`${JSON.stringify(outcomes)}\n`);
+        return;
+      }
       if (args[0] !== "kit-plan") {
-        throw new Error("usage: pnpm mod ops kit-plan [--upstream <url>]");
+        throw new Error(
+          "usage: pnpm mod ops kit-plan|session|merge (see pnpm mod help)",
+        );
       }
       const plan = planKitUpdate({
         repoRoot: root,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { GithubPr } from "./ops-core";
-import { classifyOpsPr, dispatchBody, toOpsPrs } from "./ops-core";
+import { classifyOpsPr, dispatchBody, prTarget, toOpsPrs } from "./ops-core";
 
 const pr = (number: number, ref: string, labels: string[] = []): GithubPr => ({
   number,
@@ -16,11 +16,14 @@ describe("classifyOpsPr", () => {
     expect(classifyOpsPr(pr(1, "sync/upstream-2026-11-25"))).toBe("kit");
     expect(classifyOpsPr(pr(2, "renamed", ["kit-update"]))).toBe("kit");
     expect(classifyOpsPr(pr(3, "x", ["kit-update-conflicts"]))).toBe("kit");
+    expect(classifyOpsPr(pr(10, "dream/kit-update-2026-12-01"))).toBe("kit");
   });
 
   it("recognizes module op PRs by branch or label", () => {
     expect(classifyOpsPr(pr(4, "mod/update-crm-123"))).toBe("module");
     expect(classifyOpsPr(pr(5, "x", ["module-op"]))).toBe("module");
+    expect(classifyOpsPr(pr(11, "dream/update-crm-9"))).toBe("module");
+    expect(classifyOpsPr(pr(12, "x", ["dream-update"]))).toBe("module");
   });
 
   it("ignores everyone else's PRs", () => {
@@ -38,6 +41,14 @@ describe("toOpsPrs", () => {
     expect(out.map((p) => [p.number, p.kind, p.conflicts])).toEqual([
       [7, "kit", false],
       [9, "module", true],
+    ]);
+    const flagged = toOpsPrs([
+      pr(1, "dream/update-crm-1", ["dream-update", "dream-review"]),
+      pr(2, "dream/add-ai-2", ["dream-update", "dream-approved"]),
+    ]);
+    expect(flagged.map((p) => [p.needsReview, p.approved])).toEqual([
+      [true, false],
+      [false, true],
     ]);
     expect(out[0]?.url).toBe("https://github.com/o/r/pull/7");
   });
@@ -61,7 +72,8 @@ describe("dispatchBody", () => {
       slug: "crm",
       version: "",
       keep_data: "true",
-      sha256: "",
+      approved: "false",
+      pr: "",
     });
   });
 
@@ -77,7 +89,41 @@ describe("dispatchBody", () => {
       slug: "",
       version: "",
       keep_data: "false",
-      sha256: "",
+      approved: "false",
+      pr: "",
     });
+  });
+});
+
+describe("dispatchBody approval", () => {
+  it("marks admin installs and updates approved, never removals or checks", () => {
+    const approved = (op: Parameters<typeof dispatchBody>[0]["op"]) =>
+      dispatchBody({ op, slug: "crm", approved: true }, "main").inputs.approved;
+    expect(approved("add")).toBe("true");
+    expect(approved("update")).toBe("true");
+    expect(approved("remove")).toBe("false");
+    expect(approved("merge")).toBe("false");
+    expect(dispatchBody({ op: "check", slug: "x" }, "main").inputs.slug).toBe(
+      "",
+    );
+  });
+});
+
+describe("prTarget", () => {
+  it("reads the slug and version from the PR marker", () => {
+    expect(
+      prTarget(
+        'Update.\n\n<!-- dream-update {"kind":"module","op":"update","slug":"crm","to":"1.3.0","verified":true} -->',
+      ),
+    ).toEqual({ slug: "crm", to: "1.3.0" });
+    expect(prTarget(null)).toEqual({ slug: null, to: null });
+    expect(prTarget("<!-- dream-update {oops} -->")).toEqual({
+      slug: null,
+      to: null,
+    });
+  });
+
+  it("passes the chosen PR to a merge dispatch", () => {
+    expect(dispatchBody({ op: "merge", pr: 12 }, "main").inputs.pr).toBe("12");
   });
 });

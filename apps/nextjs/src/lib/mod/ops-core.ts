@@ -2,11 +2,13 @@
  * Pure helpers for the /api/modules/ops route (no env, no I/O) so the PR
  * classification and dispatch rules are unit-tested (ops-core.test.ts).
  *
- * module-ops.yml opens two kinds of update PRs:
- *   - module ops: branch `mod/<op>-<slug>-<run>`, label `module-op`
- *     (`module-op-conflicts` when the update conflicts);
- *   - kit updates: branch `sync/upstream-<date>`, label `kit-update`
- *     (`kit-update-conflicts` when the merge conflicts).
+ * module-ops.yml opens two kinds of update PRs, all labeled `dream-update`:
+ *   - modules: branch `dream/<op>-<slug>-<run>`;
+ *   - kit updates: branch `dream/kit-update-<date>`.
+ * `dream-update-conflicts` marks committed conflict markers, `dream-review`
+ * one that needs a person, `dream-approved` one an admin approved. PRs from
+ * before (branches `mod/*` and `sync/upstream-*`, labels `module-op*` and
+ * `kit-update*`) are still recognized for one release.
  */
 
 export type OpsPrKind = "module" | "kit";
@@ -15,6 +17,7 @@ export interface GithubPr {
   number: number;
   title: string;
   html_url: string;
+  body?: string | null;
   labels: { name: string }[];
   head: { ref: string };
 }
@@ -26,6 +29,34 @@ export interface OpsPr {
   kind: OpsPrKind;
   /** The PR carries committed conflict markers and needs a human. */
   conflicts: boolean;
+  /** The merge step decided a person must look at it (a comment says why). */
+  needsReview: boolean;
+  /** An admin approved it in /admin: it merges once checks pass. */
+  approved: boolean;
+  /** From the PR's hidden marker: `kit` or the module slug, and versions. */
+  slug: string | null;
+  to: string | null;
+}
+
+const MARKER = /<!--\s*dream-update\s+(\{[\s\S]*?\})\s*-->/;
+
+/** The slug and target version module-ops.yml wrote into the PR body. */
+export function prTarget(body: string | null | undefined): {
+  slug: string | null;
+  to: string | null;
+} {
+  const match = body ? MARKER.exec(body) : null;
+  try {
+    const meta = match?.[1]
+      ? (JSON.parse(match[1]) as { slug?: unknown; to?: unknown })
+      : {};
+    return {
+      slug: typeof meta.slug === "string" ? meta.slug : null,
+      to: typeof meta.to === "string" ? meta.to : null,
+    };
+  } catch {
+    return { slug: null, to: null };
+  }
 }
 
 /** Which kind of update PR this is, or null when it isn't one of ours. */
@@ -33,15 +64,18 @@ export function classifyOpsPr(
   pr: Pick<GithubPr, "labels" | "head">,
 ): OpsPrKind | null {
   const labels = pr.labels.map((l) => l.name);
+  const ref = pr.head.ref;
   if (
-    pr.head.ref.startsWith("sync/upstream-") ||
+    ref.startsWith("dream/kit-update-") ||
+    ref.startsWith("sync/upstream-") ||
     labels.some((l) => l.startsWith("kit-update"))
   ) {
     return "kit";
   }
   if (
-    pr.head.ref.startsWith("mod/") ||
-    labels.some((l) => l.startsWith("module"))
+    ref.startsWith("dream/") ||
+    ref.startsWith("mod/") ||
+    labels.some((l) => l.startsWith("dream-update") || l.startsWith("module"))
   ) {
     return "module";
   }
@@ -60,6 +94,9 @@ export function toOpsPrs(prs: GithubPr[]): OpsPr[] {
       url: pr.html_url,
       kind,
       conflicts: pr.labels.some((l) => l.name.endsWith("-conflicts")),
+      needsReview: pr.labels.some((l) => l.name === "dream-review"),
+      approved: pr.labels.some((l) => l.name === "dream-approved"),
+      ...prTarget(pr.body),
     });
   }
   return out.sort((a, b) =>
@@ -67,14 +104,23 @@ export function toOpsPrs(prs: GithubPr[]): OpsPr[] {
   );
 }
 
+export type OpName =
+  "add" | "update" | "remove" | "kit-update" | "check" | "merge";
+
 export interface OpInput {
-  op: "add" | "update" | "remove" | "kit-update";
+  op: OpName;
+  /** add: `dream:<slug>[@x.y.z]`; update: optional new origin. */
   source?: string;
   slug?: string;
   version?: string;
   keepData?: boolean;
-  sha256?: string;
+  /** An admin clicked Install or Update: the PR merges once checks pass. */
+  approved?: boolean;
+  /** merge: the PR an admin chose with "Merge now". */
+  pr?: number;
 }
+
+const MODULE_OPS = new Set<OpName>(["add", "update", "remove"]);
 
 /**
  * The workflow_dispatch body for module-ops.yml. Dispatches target the
@@ -82,16 +128,20 @@ export interface OpInput {
  * workflow file and the scheduled runs live.
  */
 export function dispatchBody(input: OpInput, defaultBranch: string | null) {
-  const kit = input.op === "kit-update";
+  const mod = MODULE_OPS.has(input.op);
   return {
     ref: defaultBranch ?? "main",
     inputs: {
       op: input.op,
-      source: kit ? "" : (input.source ?? ""),
-      slug: kit ? "" : (input.slug ?? ""),
-      version: kit ? "" : (input.version ?? ""),
-      keep_data: !kit && input.keepData ? "true" : "false",
-      sha256: kit ? "" : (input.sha256 ?? ""),
+      source: mod ? (input.source ?? "") : "",
+      slug: mod ? (input.slug ?? "") : "",
+      version: mod ? (input.version ?? "") : "",
+      keep_data: mod && input.keepData ? "true" : "false",
+      approved:
+        input.approved && (input.op === "add" || input.op === "update")
+          ? "true"
+          : "false",
+      pr: input.op === "merge" && input.pr ? String(input.pr) : "",
     },
   };
 }

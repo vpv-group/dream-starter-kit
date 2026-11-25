@@ -31,11 +31,12 @@ export interface RegistryResponse {
       { version: string; source: unknown; pinned?: boolean }
     >;
   };
-  opsConfigured: boolean;
-  /** Paid modules need module ops (GITHUB_OPS_TOKEN); off until then. */
+  /** GitHub connected through Dream Updates (/admin → Updates)? */
+  githubConnected: boolean;
+  /** Paid modules install through a PR, so they need GitHub connected. */
   paidModulesEnabled: boolean;
   catalogUrl: string | null;
-  /** Is DREAM_LICENSE_KEY set (paid modules — docs/MODULES.md)? */
+  /** Has this site got its license key from meetdream.com yet? */
   licenseConfigured: boolean;
 }
 
@@ -79,6 +80,8 @@ export interface OpsResponse {
     url: string;
     kind: "module" | "kit";
     conflicts: boolean;
+    needsReview: boolean;
+    approved: boolean;
   }[];
 }
 
@@ -92,10 +95,12 @@ interface State {
 }
 
 export type ModuleOp =
-  | { op: "add"; source: string; sha256?: string }
+  | { op: "add"; source: string }
   | { op: "update"; slug: string }
   | { op: "remove"; slug: string }
-  | { op: "kit-update" };
+  | { op: "kit-update" }
+  | { op: "check" }
+  | { op: "merge" };
 
 /* ── helpers (pure) ──────────────────────────────────────────────────────── */
 
@@ -180,7 +185,7 @@ async function load(): Promise<void> {
     // License/entitlement state for paid modules — proxied server-side so the
     // key never reaches the browser.
     getJson<EntitlementsState>("/api/modules/entitlements"),
-    registry.opsConfigured
+    registry.githubConnected
       ? getJson<OpsResponse>("/api/modules/ops")
       : Promise.resolve(null),
   ]);
@@ -198,13 +203,15 @@ export function refreshModulesAdmin(force = false): Promise<void> {
 }
 
 const DISPATCHED: Record<ModuleOp["op"], string> = {
-  add: "Install requested — a pull request will open shortly. Merging it deploys the module.",
+  add: "Install requested — a pull request opens shortly and merges itself once its checks pass.",
   update:
-    "Update requested — a pull request will open shortly. Merging it deploys the new version.",
+    "Update requested — a pull request opens shortly and merges itself once its checks pass.",
   remove:
     "Removal requested — a pull request will open shortly. It never merges on its own.",
   "kit-update":
     "Checking for a Dream Starter Kit update — if there is one, a pull request opens shortly.",
+  check: "Checking for updates — pull requests open shortly for anything new.",
+  merge: "Merging the updates that are ready.",
 };
 
 /** Dispatch a module op (module-ops.yml → PR). Resolves true on success. */
@@ -233,37 +240,6 @@ export async function dispatchModuleOp(body: ModuleOp): Promise<boolean> {
 }
 
 /** Upload a module ZIP (signed URL + sha256), then dispatch its install. */
-export async function uploadModuleZip(file: File): Promise<boolean> {
-  setState({ busy: true });
-  try {
-    const form = new FormData();
-    form.set("file", file);
-    const res = await fetch("/api/modules/upload", {
-      method: "POST",
-      body: form,
-    });
-    const json = (await res.json().catch(() => ({}))) as {
-      url?: string;
-      sha256?: string;
-      error?: string;
-    };
-    if (!res.ok || !json.url || !json.sha256) {
-      toast.error(json.error ?? "Upload failed.");
-      return false;
-    }
-    return await dispatchModuleOp({
-      op: "add",
-      source: json.url,
-      sha256: json.sha256,
-    });
-  } catch {
-    toast.error("Upload failed. Check your connection and try again.");
-    return false;
-  } finally {
-    setState({ busy: false });
-  }
-}
-
 /* ── hook ────────────────────────────────────────────────────────────────── */
 
 export interface ModuleRowStatus {
@@ -297,7 +273,7 @@ export function useModulesAdmin() {
   );
   const isEntitled = (slug: string) => licenseActive && entitledPlans.has(slug);
   const catalogBySlug = new Map(catalog.map((e) => [e.slug, e]));
-  // No module ops → no paid modules: only free catalog entries are shown.
+  // GitHub not connected → no paid modules: only free catalog entries show.
   const visibleCatalog = registry?.paidModulesEnabled
     ? catalog
     : catalog.filter((e) => !isPaidEntry(e));
@@ -305,7 +281,7 @@ export function useModulesAdmin() {
 
   const licenseFor = (slug: string): { label: string; ok: boolean } => {
     if (!registry?.paidModulesEnabled)
-      return { label: "Paid modules off — set up module ops", ok: false };
+      return { label: "Connect GitHub to update paid modules", ok: false };
     if (!registry.licenseConfigured)
       return { label: "No license key — updates paused", ok: false };
     if (entitlements?.status === "error")
@@ -331,8 +307,8 @@ export function useModulesAdmin() {
       source,
       pinned: Boolean(entry?.pinned),
       updateTo,
-      canUpdate: registry.opsConfigured && updatable,
-      canRemove: registry.opsConfigured && Boolean(mod) && !mod?.system,
+      canUpdate: registry.githubConnected && updatable,
+      canRemove: registry.githubConnected && Boolean(mod) && !mod?.system,
       license: fromRegistry ? licenseFor(slug) : null,
     };
   };

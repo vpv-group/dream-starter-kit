@@ -5803,10 +5803,10 @@ export interface DreamSite {
    * Registered domain.
    */
   domain?: string | null;
-  /**
-   * The site license key. Add it as the GitHub repository secret DREAM_LICENSE_KEY so module ops can install modules. Keep it secret.
-   */
   licenseKey?: string | null;
+  /**
+   * The start of this site's key. The full key never leaves the server; rotate it from meetdream.com.
+   */
   licenseKeyPrefix?: string | null;
   registeredAt?: string | null;
   lastReportedAt?: string | null;

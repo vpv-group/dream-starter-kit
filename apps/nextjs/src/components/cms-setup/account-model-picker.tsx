@@ -8,10 +8,7 @@ import type { AccountModel } from "@acme/app";
 import type { ChoiceOption } from "~/components/onboarding/choice-cards";
 import type { Branding } from "~/lib/payload";
 import { ChoiceCards } from "~/components/onboarding/choice-cards";
-import { OnboardingBrand } from "~/components/onboarding/onboarding-brand";
-import { StepHeading } from "~/components/onboarding/onboarding-shell";
-import { StepEyebrow } from "~/components/onboarding/step-progress";
-import { Badge } from "~/components/ui/badge";
+import { SetupStep } from "~/components/setup/setup-step";
 import { Button } from "~/components/ui/button";
 import { FieldError } from "~/components/ui/field";
 import { Spinner } from "~/components/ui/spinner";
@@ -49,9 +46,11 @@ const OPTIONS: ChoiceOption<AccountModel>[] = [
  */
 export function AccountModelPicker({
   branding,
+  position,
   onDone,
 }: {
   branding: Branding;
+  position: { index: string; total: string } | null;
   onDone: () => void;
 }) {
   const [choice, setChoice] = useState<AccountModel>("consumer");
@@ -91,52 +90,33 @@ export function AccountModelPicker({
   }
 
   return (
-    <div className="bg-background flex min-h-svh flex-col px-4 py-6 min-[760px]:px-14 min-[760px]:py-10">
-      <header className="flex items-center justify-between gap-4">
-        <OnboardingBrand branding={branding} />
-        <Badge variant="secondary">Admin setup</Badge>
-      </header>
-      <main className="flex flex-1 items-center justify-center py-10">
-        <div className="flex w-full max-w-[960px] flex-col gap-6">
-          <div className="flex flex-col gap-4">
-            <StepEyebrow index="01" total="02" />
-            <StepHeading
-              title="Who signs up for your app?"
-              description="This sets how sign-up works for everyone after you. You can change it later in Admin › Authentication."
-            />
-          </div>
-          <ChoiceCards
-            name="account-model"
-            options={OPTIONS}
-            value={choice}
-            onValueChange={setChoice}
-            columns={3}
-          />
-          {error ? <FieldError>{error}</FieldError> : null}
-          <div className="flex flex-col-reverse gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-muted-foreground text-sm">
-              Who: <span className="text-foreground">you, the admin</span>
-              <span className="px-2" aria-hidden />
-              How long: <span className="text-foreground">
-                under a minute
-              </span>{" "}
-              (estimate)
-            </p>
-            <Button
-              size="lg"
-              className="w-full sm:w-48"
-              disabled={saving}
-              onClick={() => void onContinue()}
-            >
-              {saving ? <Spinner /> : null}
-              Continue
-            </Button>
-          </div>
-        </div>
-      </main>
-      <footer className="text-muted-foreground text-sm">
-        Next we add sample content to your CMS.
-      </footer>
-    </div>
+    <SetupStep
+      branding={branding}
+      position={position}
+      title="Who signs up for your app?"
+      description="This sets how sign-up works for everyone after you. You can change it later in Admin › Authentication."
+      howLong="under a minute"
+      next="Next we add sample content to your CMS."
+      actions={
+        <Button
+          size="lg"
+          className="w-full sm:w-48"
+          disabled={saving}
+          onClick={() => void onContinue()}
+        >
+          {saving ? <Spinner /> : null}
+          Continue
+        </Button>
+      }
+    >
+      <ChoiceCards
+        name="account-model"
+        options={OPTIONS}
+        value={choice}
+        onValueChange={setChoice}
+        columns={3}
+      />
+      {error ? <FieldError>{error}</FieldError> : null}
+    </SetupStep>
   );
 }

@@ -14,6 +14,8 @@ import { Progress } from "~/components/ui/progress";
  * (the Payload admin tree doesn't include them).
  */
 const ADMIN_URL = "/admin";
+/** After seeding: the GitHub steps, which send on to /admin when not needed. */
+const NEXT_URL = "/cms-setup/connect-code";
 
 export function CmsSeedProgress({
   stepLabel,
@@ -30,6 +32,9 @@ export function CmsSeedProgress({
 
   const goToAdmin = useCallback(() => {
     window.location.assign(ADMIN_URL);
+  }, []);
+  const goToNext = useCallback(() => {
+    window.location.assign(NEXT_URL);
   }, []);
 
   const runSeed = useCallback(async () => {
@@ -72,7 +77,7 @@ export function CmsSeedProgress({
         );
         return;
       }
-      goToAdmin();
+      goToNext();
       return;
     }
 
@@ -123,9 +128,9 @@ export function CmsSeedProgress({
     if (!errored) {
       setPercent(100);
       setLabel("Done");
-      goToAdmin();
+      goToNext();
     }
-  }, [goToAdmin]);
+  }, [goToNext]);
 
   useEffect(() => {
     if (started.current) return;

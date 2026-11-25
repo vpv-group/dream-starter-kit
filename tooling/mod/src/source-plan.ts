@@ -8,8 +8,7 @@ import { latestCompatible } from "./registry";
  * The Dream registry is the default origin for every module it lists: `add`
  * and `update` try it first and fall back to the module's GitHub repo when
  * the registry can't serve it (no license key, not entitled, unreachable).
- * Modules the registry doesn't list keep their GitHub origin. Turn it off
- * with MOD_REGISTRY_FIRST=off (a repo variable in module-ops.yml).
+ * Modules the registry doesn't list keep their GitHub origin.
  *
  * Everything here is pure — the network calls live in lifecycle.ts.
  */
@@ -26,13 +25,6 @@ export interface SourcePlan {
   primary: Source;
   /** Tried when the primary fails (always a GitHub repo). */
   fallback?: Source;
-}
-
-/** Is registry-first on? Off via MOD_REGISTRY_FIRST=off. */
-export function registryFirstEnabled(
-  env: Record<string, string | undefined> = process.env,
-): boolean {
-  return env.MOD_REGISTRY_FIRST?.trim().toLowerCase() !== "off";
 }
 
 /** Comparable form of a GitHub repo URL (scheme, `.git`, case dropped). */

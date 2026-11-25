@@ -1,34 +1,37 @@
-# Module operations (docs/MODULES-PLAN.md §6): the admin panel (and a
-# daily schedule) dispatch this workflow; it runs the SAME `pnpm mod` CLI a
-# developer would, pushes a branch and opens a labeled PR. Everything an
-# module ships is therefore visible as a reviewable diff and gated by the
-# full CI before it can run — zip installs included, never a direct commit.
+# Dream updates (docs/MODULES.md → Automatic updates; docs/UPDATING.md).
 #
-# Auth: a fine-grained PAT in the `MOD_OPS_TOKEN` repo secret (Contents,
-# Pull requests and Actions: read & write; Workflows: read & write). Pushes by
-# the default GITHUB_TOKEN would not trigger the `pull_request` CI run. The
-# same PAT goes in the app's `GITHUB_OPS_TOKEN` env (docs/MODULES.md).
+# /admin and a daily schedule run this workflow. It runs the SAME `pnpm mod`
+# CLI a developer would, pushes a branch and opens a pull request, so every
+# change is a reviewable diff that the full CI gates before it can go live.
 #
-# Without MOD_OPS_TOKEN every job here is SKIPPED (not failed): the preflight
-# job reports why. Paid modules (`dream:<slug>`) also need it — the CLI, the
-# admin panel and its API routes refuse them until module ops is configured.
+# Sign-in: no secrets. Each job trades its GitHub Actions OIDC token for a
+# one-hour token for THIS repository from Meet Dream's "Dream Updates" GitHub
+# App (.github/actions/dream-session), which the owner connects once in
+# /admin → Updates. Until GitHub is connected every job ends with a notice.
 #
-# The daily run also checks the Dream Starter Kit itself for updates
-# (`kit-update` job, free — no license key) and opens a PR merging the kit's
-# newest published release (a vX.Y.Z tag with a verified build attestation). It never auto-merges: merge it with a MERGE COMMIT (never
-# squash — docs/UPDATING.md). KIT_AUTO_UPDATE=off (repo variable) disables it.
+# What runs:
+#   check       daily: dispatch an update for each outdated module
+#   kit-update  daily: a PR merging the newest PUBLISHED kit release (a vX.Y.Z
+#               tag with a verified build attestation, never main)
+#   op          add | update | remove one module (from /admin or `check`)
+#   merge       after every CI run on an update branch (and daily): merges
+#               the PRs that are ready, one at a time, under the owner's
+#               settings (tooling/mod/src/ops/merge.ts → decideMerge)
+#
+# The logic lives in tested TypeScript (`pnpm mod ops …`); this file only
+# wires it to GitHub.
 name: Module ops
 
 on:
   workflow_dispatch:
     inputs:
       op:
-        description: add | update | remove | kit-update
+        description: add | update | remove | kit-update | check | merge
         required: true
         type: choice
-        options: [add, update, remove, kit-update]
+        options: [add, update, remove, kit-update, check, merge]
       source:
-        description: "add: GitHub url[#vX.Y.Z], signed zip URL, or dream:<slug>[@x.y.z]. update: optional new origin (e.g. dream:<slug>) to switch to"
+        description: "add: dream:<slug>[@x.y.z] (or, run by a person: a GitHub url[#vX.Y.Z]). update: optional new origin, e.g. dream:<slug>"
         required: false
         type: string
       slug:
@@ -44,192 +47,180 @@ on:
         required: false
         default: "false"
         type: string
-      sha256:
-        description: "zip installs: hash the runner re-verifies"
+      approved:
+        description: "true when an admin clicked Install/Update in /admin: the PR merges once checks pass"
+        required: false
+        default: "false"
+        type: string
+      pr:
+        description: "merge: the PR an admin chose with Merge now in /admin (counts as approved)"
         required: false
         type: string
   schedule:
-    # Daily module + kit update check (MOD_AUTO_UPDATE=off / KIT_AUTO_UPDATE=off
-    # repo variables disable each).
     - cron: "23 6 * * *"
-
-concurrency:
-  group: module-ops
-  cancel-in-progress: false
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
 
 permissions:
-  contents: write
-  pull-requests: write
-  # Labels are created and applied with the built-in GITHUB_TOKEN (not
-  # MOD_OPS_TOKEN), so the founder's PAT doesn't need Issues access.
-  issues: write
+  contents: read
+  # Sign in to Meet Dream (no stored secret).
+  id-token: write
 
 jobs:
-  # Job-level `if:` can't read secrets, so this turns "is the token set?" into
-  # an output. Missing token → a notice, and every job below is skipped.
-  preflight:
+  check:
+    if: github.event_name == 'schedule' || inputs.op == 'check'
     runs-on: ubuntu-latest
-    outputs:
-      has_token: ${{ steps.check.outputs.has_token }}
-    steps:
-      - id: check
-        env:
-          HAS_TOKEN: ${{ secrets.MOD_OPS_TOKEN != '' }}
-        run: |
-          echo "has_token=$HAS_TOKEN" >> "$GITHUB_OUTPUT"
-          if [ "$HAS_TOKEN" != "true" ]; then
-            echo "::notice title=Module ops is off::Set the MOD_OPS_TOKEN repo secret to enable module installs, updates and paid modules. Setup: docs/MODULES.md#admin-panel--automatic-updates (also shown at the top of /admin)."
-          fi
-
-  op:
-    needs: preflight
-    if: github.event_name == 'workflow_dispatch' && inputs.op != 'kit-update' && needs.preflight.outputs.has_token == 'true'
-    runs-on: ubuntu-latest
+    concurrency:
+      group: module-ops-check
     steps:
       - uses: actions/checkout@v5
         with:
-          token: ${{ secrets.MOD_OPS_TOKEN }}
-          fetch-depth: 0
-      - name: Fetch pristine-base refs
-        # refs/ext-base/* = snapshots from before modules were renamed;
-        # the CLI falls back to them and re-roots them under modules/.
+          persist-credentials: false
+      - id: dream
+        uses: ./.github/actions/dream-session
+      - name: Dispatch updates for outdated modules
+        if: steps.dream.outputs.connected == 'true' && steps.dream.outputs.auto_update == 'true'
+        env:
+          GH_TOKEN: ${{ steps.dream.outputs.token }}
+          PAUSED: ${{ steps.dream.outputs.paused }}
         run: |
+          pnpm --silent mod status --json > /tmp/status.json || exit 0
+          for slug in $(jq -r '.[] | select(.updateAvailable) | .slug' /tmp/status.json); do
+            case ",$PAUSED," in *",$slug,"*) echo "Updates for $slug are paused in /admin."; continue ;; esac
+            gh workflow run module-ops.yml --repo "$GITHUB_REPOSITORY" -f op=update -f slug="$slug"
+          done
+
+  op:
+    if: github.event_name == 'workflow_dispatch' && contains(fromJSON('["add","update","remove"]'), inputs.op)
+    runs-on: ubuntu-latest
+    concurrency:
+      group: module-ops-op-${{ inputs.slug || inputs.source }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: dream
+        uses: ./.github/actions/dream-session
+      - name: Needs GitHub connected
+        if: steps.dream.outputs.connected != 'true'
+        run: |
+          echo "::error title=Connect GitHub first::Open /admin → Updates and connect GitHub, then try again."
+          exit 1
+
+      # Runs started by the app (a bot) may only install from the Dream
+      # catalog. A person running the workflow by hand may use any source.
+      - name: Check the source
+        env:
+          ACTOR: ${{ github.triggering_actor }}
+          SOURCE: ${{ inputs.source }}
+        run: |
+          if [[ "$ACTOR" == *"[bot]" && -n "$SOURCE" && ! "$SOURCE" =~ ^dream:[a-z][a-z0-9-]*(@v?[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?)?$ ]]; then
+            echo "::error title=Catalog modules only::Installs started from /admin must come from the Dream catalog (dream:<slug>). Got: $SOURCE"
+            exit 1
+          fi
+
+      - name: Sign git in as Dream Updates
+        env:
+          TOKEN: ${{ steps.dream.outputs.token }}
+        run: |
+          git config user.name "dream-updates[bot]"
+          git config user.email "dream-updates[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          # refs/ext-base/* = snapshots from before modules were renamed.
           git fetch origin '+refs/mod-base/*:refs/mod-base/*' || true
           git fetch origin '+refs/ext-base/*:refs/ext-base/*' || true
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-
-      - name: Download zip (verified)
-        if: inputs.op == 'add' && startsWith(inputs.source, 'http') && contains(inputs.source, 'module-uploads')
-        id: zip
-        run: |
-          curl -sSfL "${{ inputs.source }}" -o /tmp/mod.zip
-          echo "${{ inputs.sha256 }}  /tmp/mod.zip" | sha256sum -c -
-          echo "path=/tmp/mod.zip" >> "$GITHUB_OUTPUT"
-
-      - name: Mask the Dream license key
-        # Defense in depth on top of GitHub's automatic secret masking: scrub
-        # the key from every later log line. The CLI itself never prints it.
-        env:
-          DREAM_LICENSE_KEY: ${{ secrets.DREAM_LICENSE_KEY }}
-        run: |
-          if [ -n "$DREAM_LICENSE_KEY" ]; then echo "::add-mask::$DREAM_LICENSE_KEY"; fi
+          cp modules.lock /tmp/lock-before.json 2>/dev/null || echo '{}' > /tmp/lock-before.json
 
       - name: Run the CLI
         id: cli
         env:
-          # Unlocks `dream:<slug>` installs/updates of paid modules (which also
-          # need module ops itself: the CLI checks MOD_OPS_TOKEN).
-          DREAM_LICENSE_KEY: ${{ secrets.DREAM_LICENSE_KEY }}
-          MOD_OPS_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
-          # Registry-first (default): modules the Dream registry lists install
-          # and update from it, falling back to GitHub. `off` keeps GitHub.
-          MOD_REGISTRY_FIRST: ${{ vars.MOD_REGISTRY_FIRST }}
-          UPDATE_FROM: ${{ inputs.op == 'update' && inputs.source || '' }}
+          OP: ${{ inputs.op }}
+          SLUG: ${{ inputs.slug }}
+          SOURCE: ${{ inputs.source }}
+          VERSION: ${{ inputs.version }}
+          KEEP_DATA: ${{ inputs.keep_data }}
         run: |
           set -euo pipefail
-          case "${{ inputs.op }}" in
+          case "$OP" in
             add)
-              SRC="${{ steps.zip.outputs.path || inputs.source }}"
-              pnpm mod add "$SRC" | tee /tmp/mod-op.log
+              pnpm mod add "$SOURCE" | tee /tmp/mod-op.log
               ;;
             update)
               ARGS=()
-              [ -n "${{ inputs.version }}" ] && ARGS+=(--to "${{ inputs.version }}")
-              # Optional: switch the module's origin (e.g. a private GitHub
-              # repo → the Dream registry, dream:<slug>).
-              [ -n "$UPDATE_FROM" ] && ARGS+=(--from "$UPDATE_FROM")
-              # Merge conflicts exit non-zero but still make a PR (markers
-              # and all). Any other failure (e.g. the module repo can't be
-              # read) must fail here, not look like an update.
-              if ! pnpm mod update "${{ inputs.slug }}" "${ARGS[@]}" 2>&1 | tee /tmp/mod-op.log; then
+              [ -n "$VERSION" ] && ARGS+=(--to "$VERSION")
+              [ -n "$SOURCE" ] && ARGS+=(--from "$SOURCE")
+              # Merge conflicts exit non-zero but still make a PR (markers and
+              # all). Any other failure must fail here.
+              if ! pnpm mod update "$SLUG" "${ARGS[@]}" 2>&1 | tee /tmp/mod-op.log; then
                 if grep -q "^Merge conflicts in:" /tmp/mod-op.log; then
                   echo "conflicts=true" >> "$GITHUB_OUTPUT"
                 else
-                  if grep -q "returned error: 40[34]" /tmp/mod-op.log; then
-                    echo "::error title=Can't read the module's repository::GitHub refused access to ${{ inputs.slug }}'s source repo. For a private module repo, add it to the MOD_OPS_TOKEN fine-grained PAT's repository access with Contents: read (docs/MODULES.md → Founder setup). If the Dream registry carries this module, set the DREAM_LICENSE_KEY secret so updates come from the registry instead (registry-first), or re-run with source dream:${{ inputs.slug }}."
-                  fi
                   exit 1
                 fi
               fi
               ;;
             remove)
               ARGS=()
-              [ "${{ inputs.keep_data }}" = "true" ] && ARGS+=(--keep-data)
-              pnpm mod remove "${{ inputs.slug }}" "${ARGS[@]}" | tee /tmp/mod-op.log
+              [ "$KEEP_DATA" = "true" ] && ARGS+=(--keep-data)
+              pnpm mod remove "$SLUG" "${ARGS[@]}" | tee /tmp/mod-op.log
               ;;
           esac
+          pnpm --silent mod ops describe --op "$OP" --before /tmp/lock-before.json --slug "$SLUG" >> "$GITHUB_OUTPUT"
 
-      # An op can leave the repo unchanged, e.g. `update` when the module's
-      # newest tag is the version already installed (a release whose vX.Y.Z
-      # tag isn't pushed yet). End with a notice instead of a failed commit,
-      # and skip the slow type regeneration below.
+      # An op can change nothing, e.g. `update` when the newest tag is the
+      # version already installed. End with a notice instead of an empty PR.
       - name: Check for changes
         id: changes
         env:
           OP: ${{ inputs.op }}
-          SLUG: ${{ inputs.slug }}
-          SOURCE: ${{ inputs.source }}
+          SLUG: ${{ steps.cli.outputs.slug || inputs.slug }}
         run: |
           if [ -n "$(git status --porcelain)" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           echo "changed=false" >> "$GITHUB_OUTPUT"
-          VERSION=""
-          if [ -n "$SLUG" ]; then
-            VERSION=$(jq -r --arg s "$SLUG" '.modules[$s].version // empty' modules.lock 2>/dev/null || true)
-          fi
-          MSG="pnpm mod $OP ${SLUG:-$SOURCE} changed nothing"
-          if [ -n "$VERSION" ]; then MSG="$MSG: $SLUG is already at $VERSION"; fi
-          if [ "$OP" = "update" ]; then
-            MSG="$MSG. An update installs the module's newest vX.Y.Z tag (or the version you asked for), so push the release tag first."
-          fi
-          echo "::notice title=Nothing to update::$MSG"
+          echo "::notice title=Nothing to update::pnpm mod $OP $SLUG changed nothing (an update installs the module's newest release)."
 
-      # `pnpm db:gen-types` reads the LOCAL database, and modules query their
-      # own tables through the typed client, so the new/changed module's
-      # migrations must be applied before types are generated. Same pinned
-      # CLI as ci.yml (see the version note there).
-      # A conflicted update leaves conflict markers in the module's files, so
-      # type generation and typecheck can't run on it: skip them and open the
-      # PR with the markers committed for a human to resolve (see below).
+      # Module code queries its own tables through the typed client, so the
+      # migrations must be applied before types are generated. A conflicted
+      # update has markers in its files: skip, a person resolves them.
       - name: Setup Supabase CLI
         if: steps.changes.outputs.changed == 'true' && steps.cli.outputs.conflicts != 'true'
         uses: supabase/setup-cli@v1
         with:
           version: 2.105.0
 
-      - name: Regenerate types + typecheck
+      - name: Regenerate types + typecheck the module
         if: steps.changes.outputs.changed == 'true' && steps.cli.outputs.conflicts != 'true'
+        env:
+          SLUG: ${{ steps.cli.outputs.slug }}
+          OP: ${{ inputs.op }}
         run: |
           set -euo pipefail
           supabase start -x studio,logflare,vector,edge-runtime
-          # No `|| true`: the script's `>` redirect empties
-          # packages/api/src/types.ts before the CLI runs, so a failure here
-          # must stop the job instead of committing an empty types file.
-          # Both gen-types scripts run `prettier --write` on their output, so
-          # the committed files pass ci.yml's `format` job as-is.
+          # Both gen-types scripts run prettier on their output. No `|| true`:
+          # the `>` redirect empties the file before the CLI runs.
           pnpm db:gen-types
           pnpm cms:gen-types
-          pnpm typecheck
+          # The PR's own CI typechecks the whole workspace; this only catches
+          # a module that doesn't compile against this kit, quickly.
+          if [ "$OP" != "remove" ] && [ -n "$SLUG" ]; then
+            pnpm -F "@acme/mod-$SLUG" --if-present typecheck
+          fi
 
       - name: Path confinement check
         if: steps.changes.outputs.changed == 'true'
         run: |
           # The op may only touch modules/**, the known sync outputs and
-          # lockfiles — a module can't smuggle a modified proxy.ts or
-          # workflow into the PR (MODULES-PLAN.md §7).
+          # lockfiles: a module can't smuggle a modified proxy.ts or workflow
+          # into the PR (MODULES-PLAN.md §7).
           git add -A
           BAD=$(git diff --cached --name-only | grep -vE '^(modules/|modules\.lock|pnpm-lock\.yaml|\.env\.example|supabase/(migrations|functions)/|apps/nextjs/(mod-packages\.generated\.json|src/(lib/db/supabase-migrations\.generated\.json|mod/|payload/migrations/|app/\(frontend\)/.*x/|app/\(frontend\)/\(app\)/(a|billing)/|app/\(frontend\)/\(public\)/pricing/))|apps/expo/(package\.json|src/(mod/|app/\(app\)/))|apps/nextjs/package\.json|packages/(api|cms)/src/)' || true)
           # `mod sync` adds/removes the module's workspace dependency in both
-          # apps' package.json, so those two files are allowed, but ONLY for
-          # "@acme/mod-<slug>": "workspace:*" lines: any other change to them
-          # (a new npm dependency, a script) still fails the check.
+          # apps' package.json: allowed ONLY for "@acme/mod-<slug>" lines.
           for f in apps/nextjs/package.json apps/expo/package.json; do
             if git diff --cached -U0 -- "$f" | grep -E '^[+-] ' \
                 | grep -vqE '^[+-] +"@acme/mod-[a-z0-9-]+": "workspace:\*",?$'; then
@@ -244,262 +235,277 @@ jobs:
       - name: Push branch + open PR
         if: steps.changes.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
-          LABEL_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.dream.outputs.token }}
+          OP: ${{ inputs.op }}
+          SLUG: ${{ steps.cli.outputs.slug || inputs.slug }}
+          SOURCE: ${{ inputs.source }}
+          FROM: ${{ steps.cli.outputs.from }}
+          TO: ${{ steps.cli.outputs.to }}
+          MARKER: ${{ steps.cli.outputs.marker }}
           CONFLICTS: ${{ steps.cli.outputs.conflicts == 'true' }}
-        run: |
-          # Labels go through the built-in GITHUB_TOKEN (LABEL_TOKEN, granted
-          # `issues: write` above), so they work whatever MOD_OPS_TOKEN allows.
-          # Creates the label if missing; warns instead of failing the job.
-          ensure_label() {
-            local err
-            if err=$(GH_TOKEN="$LABEL_TOKEN" gh label create "$1" --color "$2" --description "$3" 2>&1); then return 0; fi
-            case "$err" in *already_exists*|*"already exists"*) return 0 ;; esac
-            echo "::warning title=Can't create label $1::$(echo "$err" | tr '\n' ' ')"
-            return 1
-          }
-          # label_pr <pr-url> <label>... — best effort, never fails the job.
-          label_pr() {
-            local url=$1; shift
-            local args=() l
-            for l in "$@"; do args+=(-f "labels[]=$l"); done
-            GH_TOKEN="$LABEL_TOKEN" gh api --method POST "repos/$GITHUB_REPOSITORY/issues/${url##*/}/labels" "${args[@]}" >/dev/null || \
-              echo "::warning title=PR not labeled::Couldn't add $* to $url."
-          }
-          BRANCH="mod/${{ inputs.op }}-${{ inputs.slug || 'new' }}-${{ github.run_id }}"
-          git config user.name "module-ops"
-          git config user.email "module-ops@users.noreply.github.com"
-          git checkout -b "$BRANCH"
-          git commit -m "chore(mod): ${{ inputs.op }} ${{ inputs.slug || inputs.source }}"
-          git push -u origin "$BRANCH"
-          git push origin 'refs/mod-base/*:refs/mod-base/*' || true
-          LABEL="module-op"
-          BODY="Automated \`pnpm mod ${{ inputs.op }}\` run. Review the full diff — installed module code runs server-side with env access (see docs/MODULES-PLAN.md §7)."
-          if [ "${{ inputs.op }}" = "remove" ]; then
-            BODY="$BODY"$'\n\n'"⚠️ DATA LOSS: this PR includes a drop migration for the module's tables (unless --keep-data). It never auto-merges."
-          fi
-          if [ "$CONFLICTS" = "true" ]; then
-            FILES=$(grep -rlE '^(<<<<<<<|>>>>>>>) ' "modules/${{ inputs.slug }}" 2>/dev/null | head -40 | sed 's/.*/\x60&\x60/' | tr '\n' ' ')
-            BODY="$BODY"$'\n\n'"⚠️ **Merge conflicts to resolve** (markers committed; types were not regenerated): ${FILES:-see the branch}. Resolve them, run \`pnpm mod update ${{ inputs.slug }} --continue\`, \`pnpm db:gen-types\` and \`pnpm cms:gen-types\`, then push. This PR never auto-merges."
-          fi
-          if grep -q "registers a Payload plugin\|hasPlugins: true" modules/*/module.config.ts 2>/dev/null; then
-            BODY="$BODY"$'\n\n'"Note: an installed module registers a Payload plugin (the widest module power)."
-          fi
-          # The PR is opened with MOD_OPS_TOKEN (so CI runs on it) and labeled
-          # afterwards with GITHUB_TOKEN — never `gh pr create --label`, which
-          # aborts the whole PR when the label can't be resolved.
-          TITLE="mod: ${{ inputs.op }} ${{ inputs.slug || inputs.source }}"
-          if [ "$CONFLICTS" = "true" ]; then TITLE="$TITLE (conflicts to resolve)"; fi
-          PR_URL=$(gh pr create --title "$TITLE" --body "$BODY")
-          ensure_label "$LABEL" 5319e7 "Automated pnpm mod operation" || true
-          if [ "$CONFLICTS" = "true" ]; then
-            ensure_label module-op-conflicts d93f0b "Module update needs conflicts resolved" || true
-            label_pr "$PR_URL" "$LABEL" module-op-conflicts
-          else
-            label_pr "$PR_URL" "$LABEL"
-          fi
-          # Auto-merge installs/updates when allowed (never removals, never a
-          # conflicted update).
-          if [ "${{ inputs.op }}" != "remove" ] && [ "$CONFLICTS" != "true" ] && [ "${{ vars.MOD_AUTO_MERGE || 'on' }}" = "on" ] && [ -n "$PR_URL" ]; then
-            gh pr merge --squash --auto "$PR_URL" || true
-          fi
-
-  schedule:
-    # MOD_AUTO_UPDATE=off (repo variable) turns the daily module check off.
-    needs: preflight
-    if: github.event_name == 'schedule' && needs.preflight.outputs.has_token == 'true' && vars.MOD_AUTO_UPDATE != 'off'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.MOD_OPS_TOKEN }}
-          fetch-depth: 0
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Mask the Dream license key
-        env:
-          DREAM_LICENSE_KEY: ${{ secrets.DREAM_LICENSE_KEY }}
-        run: |
-          if [ -n "$DREAM_LICENSE_KEY" ]; then echo "::add-mask::$DREAM_LICENSE_KEY"; fi
-      - name: Dispatch updates for outdated modules
-        env:
-          GH_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
-          # Lets the update check see registry (paid) modules too. When the
-          # license is inactive, status reports them with updateAvailable=false
-          # — they are skipped quietly, never a failure.
-          DREAM_LICENSE_KEY: ${{ secrets.DREAM_LICENSE_KEY }}
-          MOD_OPS_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
-          MOD_REGISTRY_FIRST: ${{ vars.MOD_REGISTRY_FIRST }}
-        run: |
-          pnpm --silent mod status --json > /tmp/status.json || exit 0
-          for slug in $(jq -r '.[] | select(.updateAvailable) | .slug' /tmp/status.json); do
-            gh workflow run module-ops.yml -f op=update -f slug="$slug"
-          done
-
-  kit-update:
-    # Free Dream Starter Kit updates (docs/UPDATING.md → Automatic update PRs):
-    # merges the kit's newest PUBLISHED RELEASE (a vX.Y.Z tag made by the kit's
-    # release.yml, never its main branch, never a pre-release) into a
-    # sync/upstream-<date> branch and opens a PR labeled `kit-update`. The
-    # release's build attestation is verified first. No license key needed.
-    # NEVER auto-merges — and must land as a merge commit, never a squash, so
-    # the next update stays a plain three-way merge. Skipped in the kit repo.
-    needs: preflight
-    if: >-
-      needs.preflight.outputs.has_token == 'true' &&
-      github.repository != 'vpv-group/dream-starter-kit' &&
-      vars.KIT_AUTO_UPDATE != 'off' &&
-      (github.event_name == 'schedule' || inputs.op == 'kit-update')
-    runs-on: ubuntu-latest
-    env:
-      UPSTREAM_URL: ${{ vars.KIT_UPSTREAM_URL || 'https://github.com/vpv-group/dream-starter-kit.git' }}
-      GH_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
-      LABEL_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.MOD_OPS_TOKEN }}
-          fetch-depth: 0
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-
-      # tooling/mod/src/ops/kit-update.ts (unit-tested): picks the newest
-      # stable vX.Y.Z tag and fetches it into refs/remotes/upstream/release.
-      - name: Find the latest kit release
-        id: plan
+          APPROVED: ${{ inputs.approved == 'true' }}
         run: |
           set -euo pipefail
-          git config user.name "module-ops"
-          git config user.email "module-ops@users.noreply.github.com"
+          BRANCH="dream/$OP-${SLUG:-new}-$GITHUB_RUN_ID"
+          git checkout -b "$BRANCH"
+          git commit -m "chore(mod): $OP ${SLUG:-$SOURCE}${TO:+ $TO}"
+          git push -u origin "$BRANCH"
+          git push origin 'refs/mod-base/*:refs/mod-base/*' || true
+
+          case "$OP" in
+            add) TITLE="Install ${SLUG:-$SOURCE}${TO:+ $TO}" ;;
+            update) TITLE="Update $SLUG${FROM:+ $FROM →}${TO:+ $TO}" ;;
+            remove) TITLE="Remove $SLUG" ;;
+          esac
+          BODY="Automated \`pnpm mod $OP\` run by Dream Updates. Review the full diff: module code runs server-side with env access (docs/MODULES-PLAN.md §7)."
+          LABELS=(dream-update)
+          if [ "$OP" = "remove" ]; then
+            BODY="$BODY"$'\n\n'"⚠️ **Data loss:** this PR includes a drop migration for the module's tables (unless kept). It never merges itself."
+            LABELS+=(dream-remove)
+          fi
+          if [ "$CONFLICTS" = "true" ]; then
+            FILES=$(grep -rlE '^(<<<<<<<|>>>>>>>) ' "modules/$SLUG" 2>/dev/null | head -40 | sed 's/.*/\x60&\x60/' | tr '\n' ' ')
+            BODY="$BODY"$'\n\n'"⚠️ **Merge conflicts to resolve** (markers committed; types were not regenerated): ${FILES:-see the branch}. Resolve them, run \`pnpm mod update $SLUG --continue\`, \`pnpm db:gen-types\` and \`pnpm cms:gen-types\`, then push. It never merges itself."
+            TITLE="$TITLE (conflicts to resolve)"
+            LABELS+=(dream-update-conflicts)
+          fi
+          # Clicking Install or Update in /admin is the approval.
+          [ "$APPROVED" = "true" ] && [ "$OP" != "remove" ] && LABELS+=(dream-approved)
+          BODY="$BODY"$'\n\n'"$MARKER"
+
+          ensure_label() {
+            gh label create "$1" --color "$2" --description "$3" 2>/dev/null || true
+          }
+          ensure_label dream-update 5319e7 "Automated Dream update"
+          ensure_label dream-update-conflicts d93f0b "Dream update with conflicts to resolve"
+          ensure_label dream-remove b60205 "Removes a module and its data"
+          ensure_label dream-approved 0e8a16 "Approved in /admin: merges when checks pass"
+          ensure_label dream-review fbca04 "A Dream update that needs a person"
+          PR_URL=$(gh pr create --title "$TITLE" --body "$BODY")
+          for label in "${LABELS[@]}"; do
+            gh pr edit "$PR_URL" --add-label "$label" || echo "::warning::Couldn't add $label to $PR_URL"
+          done
+          echo "Opened $PR_URL"
+
+  kit-update:
+    # Free Dream Starter Kit updates: merges the kit's newest PUBLISHED release
+    # (a vX.Y.Z tag from the kit's release.yml, never main, never a
+    # pre-release) after verifying its build attestation. Kit PRs land as a
+    # merge commit, never a squash, so the next one stays a plain three-way
+    # merge. Skipped in the kit's own repository.
+    if: >-
+      github.repository != 'vpv-group/dream-starter-kit' &&
+      (github.event_name == 'schedule' || inputs.op == 'kit-update')
+    runs-on: ubuntu-latest
+    concurrency:
+      group: module-ops-kit
+    env:
+      UPSTREAM_URL: https://github.com/vpv-group/dream-starter-kit.git
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: dream
+        uses: ./.github/actions/dream-session
+      # The schedule respects "I'll update it myself"; a click in /admin
+      # ("Check now") always runs.
+      - name: Is this on?
+        id: on
+        env:
+          CONNECTED: ${{ steps.dream.outputs.connected }}
+          AUTO: ${{ steps.dream.outputs.auto_update }}
+          EVENT: ${{ github.event_name }}
+          PAUSED: ${{ steps.dream.outputs.paused }}
+        run: |
+          RUN=true
+          if [ "$CONNECTED" != "true" ]; then RUN=false; fi
+          if [ "$EVENT" = "schedule" ] && [ "$AUTO" != "true" ]; then RUN=false; fi
+          case ",$PAUSED," in *",kit,"*) [ "$EVENT" = "schedule" ] && RUN=false ;; esac
+          echo "run=$RUN" >> "$GITHUB_OUTPUT"
+
+      - name: Find the latest kit release
+        id: plan
+        if: steps.on.outputs.run == 'true'
+        env:
+          TOKEN: ${{ steps.dream.outputs.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "dream-updates[bot]"
+          git config user.email "dream-updates[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           pnpm --silent mod ops kit-plan --upstream "$UPSTREAM_URL" --github-output | tee -a "$GITHUB_OUTPUT"
 
       - name: Nothing to do
-        if: steps.plan.outputs.action != 'merge'
+        if: steps.on.outputs.run == 'true' && steps.plan.outputs.action != 'merge'
         env:
           ACTION: ${{ steps.plan.outputs.action }}
           LATEST: ${{ steps.plan.outputs.latest }}
         run: |
           if [ "$ACTION" = "no-release" ]; then
-            echo "::notice title=No kit release yet::The Dream Starter Kit hasn't published a vX.Y.Z release yet, so there is nothing to update to."
+            echo "::notice title=No kit release yet::The Dream Starter Kit hasn't published a vX.Y.Z release yet."
           else
             echo "::notice title=Kit is up to date::Already includes Dream Starter Kit $LATEST."
           fi
 
       # Only a release built by the kit's own release.yml may be merged: its
       # source archive (same command as release.yml) must carry a build
-      # attestation from the upstream repository.
+      # attestation from the kit's repository.
       - name: Verify the release attestation
         if: steps.plan.outputs.action == 'merge'
         env:
+          GH_TOKEN: ${{ steps.dream.outputs.token }}
           TAG: ${{ steps.plan.outputs.tag }}
           REF: ${{ steps.plan.outputs.ref }}
         run: |
           set -euo pipefail
-          SLUG=$(echo "$UPSTREAM_URL" | sed -E 's#^(https://github\.com/|git@github\.com:)##; s#\.git$##')
           git archive --format=tar --prefix="dream-starter-kit-$TAG/" -o "/tmp/dream-starter-kit-$TAG.tar" "$REF^{commit}"
-          gh attestation verify "/tmp/dream-starter-kit-$TAG.tar" --repo "$SLUG"
+          gh attestation verify "/tmp/dream-starter-kit-$TAG.tar" --repo vpv-group/dream-starter-kit
 
-      - name: Open or refresh the kit update PR
+      - name: Merge the release
+        id: merge
         if: steps.plan.outputs.action == 'merge'
         env:
-          TAG: ${{ steps.plan.outputs.tag }}
+          GH_TOKEN: ${{ steps.dream.outputs.token }}
           REF: ${{ steps.plan.outputs.ref }}
+          TAG: ${{ steps.plan.outputs.tag }}
           LATEST: ${{ steps.plan.outputs.latest }}
-          CURRENT: ${{ steps.plan.outputs.current }}
           UNRELATED: ${{ steps.plan.outputs.unrelated }}
         run: |
           set -euo pipefail
-          # Labels go through the built-in GITHUB_TOKEN (LABEL_TOKEN, granted
-          # `issues: write` above), so they work whatever MOD_OPS_TOKEN allows.
-          # Creates the label if missing; warns instead of failing the job.
-          ensure_label() {
-            local err
-            if err=$(GH_TOKEN="$LABEL_TOKEN" gh label create "$1" --color "$2" --description "$3" 2>&1); then return 0; fi
-            case "$err" in *already_exists*|*"already exists"*) return 0 ;; esac
-            echo "::warning title=Can't create label $1::$(echo "$err" | tr '\n' ' ')"
-            return 1
-          }
-          # label_pr <pr-url> <label>... — best effort, never fails the job.
-          label_pr() {
-            local url=$1; shift
-            local args=() l
-            for l in "$@"; do args+=(-f "labels[]=$l"); done
-            GH_TOKEN="$LABEL_TOKEN" gh api --method POST "repos/$GITHUB_REPOSITORY/issues/${url##*/}/labels" "${args[@]}" >/dev/null || \
-              echo "::warning title=PR not labeled::Couldn't add $* to $url."
-          }
-          BASE=$(git rev-parse --abbrev-ref HEAD)
           MSG="chore(kit): merge Dream Starter Kit $LATEST ($TAG)"
-
-          # One open kit-update PR at a time: refresh it instead of stacking.
-          # Matched by branch name, not label, so a PR that couldn't be
-          # labeled is still found.
-          OPEN_PR=$(gh pr list --state open --limit 200 --json number,headRefName \
-            --jq '[.[] | select(.headRefName | startswith("sync/upstream-"))][0] | select(.) | "\(.number) \(.headRefName)"')
-          if [ -n "$OPEN_PR" ]; then
-            read -r PR_NUMBER BRANCH <<< "$OPEN_PR"
+          # One open kit update at a time: refresh it instead of stacking.
+          OPEN=$(gh pr list --state open --limit 200 --json number,headRefName \
+            --jq '[.[] | select(.headRefName | startswith("dream/kit-update-") or startswith("sync/upstream-"))][0] | select(.) | "\(.number) \(.headRefName)"')
+          if [ -n "$OPEN" ]; then
+            read -r PR BRANCH <<< "$OPEN"
             git fetch origin "$BRANCH"
             git checkout -B "$BRANCH" "origin/$BRANCH"
             if git merge-base --is-ancestor "$REF" HEAD; then
-              echo "::notice title=Kit update PR is current::#$PR_NUMBER already has $LATEST."
+              echo "::notice title=Kit update PR is current::#$PR already has $LATEST."
+              echo "result=current" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-            if git merge --no-edit -m "$MSG" "$REF"; then
-              git push origin "$BRANCH"
-              gh pr comment "$PR_NUMBER" --body "Updated to Dream Starter Kit **$LATEST** ($TAG). Still never auto-merged — merge with a merge commit, not a squash."
-            else
-              git merge --abort
-              gh pr comment "$PR_NUMBER" --body "Dream Starter Kit **$LATEST** is out, but merging it into this branch conflicts. Merge or close this PR; the next daily run opens a fresh one."
-            fi
-            exit 0
+            echo "pr=$PR" >> "$GITHUB_OUTPUT"
+          else
+            BRANCH="dream/kit-update-$(date -u +%F)"
+            git checkout -B "$BRANCH"
           fi
-
-          BRANCH="sync/upstream-$(date -u +%F)"
-          git checkout -b "$BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
           ARGS=()
-          # "Use this template" repos (and Vercel clones) share no history with
+          # "Use this template" repos and Vercel clones share no history with
           # the kit: the first merge needs --allow-unrelated-histories.
           [ "$UNRELATED" = "true" ] && ARGS+=(--allow-unrelated-histories)
-          LABELS="kit-update"
-          if ! git merge --no-edit "${ARGS[@]}" -m "$MSG" "$REF"; then
-            # Commit the conflict markers so a human (or Claude) can resolve
-            # them on the PR — same as module update conflicts.
-            CONFLICTS=$(git diff --name-only --diff-filter=U)
+          if git merge --no-edit "${ARGS[@]}" -m "$MSG" "$REF"; then
+            echo "result=clean" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Generated files: take the release's side, regenerate below. Only
+          # hand-written files are left for a person.
+          pnpm --silent mod ops resolve-generated | tee /tmp/resolve.txt
+          REMAINING=$(sed -n 's/^remaining=//p' /tmp/resolve.txt)
+          if [ -z "$REMAINING" ]; then
+            git commit --no-edit -m "$MSG"
+            echo "result=clean" >> "$GITHUB_OUTPUT"
+          else
             git add -A
             git commit --no-edit -m "$MSG — conflicts to resolve"
-            LABELS="kit-update,kit-update-conflicts"
+            echo "result=conflicts" >> "$GITHUB_OUTPUT"
+            echo "conflicts=$REMAINING" >> "$GITHUB_OUTPUT"
           fi
-          # The branch is bot-owned and has no open PR (checked above); a
-          # same-day re-run after a failed attempt must be able to replace it.
-          git push --force -u origin "$BRANCH"
 
-          BODY="Automated Dream Starter Kit update: **$CURRENT → $LATEST** (release \`$TAG\` from $UPSTREAM_URL; its build attestation was verified). Free — no license key needed.
+      # A clean merge gets everything regenerated so the PR can merge with
+      # no local work: lockfile, module registries, migrations bundle, types.
+      - name: Setup Supabase CLI
+        if: steps.merge.outputs.result == 'clean'
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.105.0
+      - name: Regenerate
+        if: steps.merge.outputs.result == 'clean'
+        run: |
+          set -euo pipefail
+          pnpm install --no-frozen-lockfile
+          pnpm mod sync
+          pnpm db:gen-migrations
+          supabase start -x studio,logflare,vector,edge-runtime
+          pnpm db:gen-types
+          pnpm cms:gen-types
+          git add -A
+          git diff --cached --quiet || git commit -m "chore(kit): regenerate after the kit update"
 
-          **Merge with a merge commit — never squash.** Squashing drops the record that the kit release is an ancestor, and the next update needs \`--allow-unrelated-histories\` again (docs/UPDATING.md).
+      - name: Open or refresh the kit update PR
+        if: steps.merge.outputs.result == 'clean' || steps.merge.outputs.result == 'conflicts'
+        env:
+          GH_TOKEN: ${{ steps.dream.outputs.token }}
+          BRANCH: ${{ steps.merge.outputs.branch }}
+          PR: ${{ steps.merge.outputs.pr }}
+          TAG: ${{ steps.plan.outputs.tag }}
+          LATEST: ${{ steps.plan.outputs.latest }}
+          CURRENT: ${{ steps.plan.outputs.current }}
+          PUBLISHED_AT: ${{ steps.plan.outputs.published_at }}
+          RESULT: ${{ steps.merge.outputs.result }}
+          CONFLICTS: ${{ steps.merge.outputs.conflicts }}
+        run: |
+          set -euo pipefail
+          git push --force-with-lease -u origin "$BRANCH"
+          MARKER=$(jq -cn --arg from "$CURRENT" --arg to "$LATEST" --arg at "$PUBLISHED_AT" \
+            '{kind:"kit",op:"kit-update",slug:"kit",from:$from,to:$to,verified:true,publishedAt:$at}')
+          BODY="Dream Starter Kit **$CURRENT → $LATEST** (release \`$TAG\`; its build attestation was verified). Types, lockfile and generated files are regenerated, so it can merge as is.
 
-          After merging: \`pnpm install\`, regenerate types (\`pnpm db:gen-types\`, \`pnpm cms:gen-types\`) and, locally, \`pnpm db:reset\`. Migrations apply automatically on deploy.
+          It lands as a **merge commit, never a squash**: squashing drops the record that the release is an ancestor (docs/UPDATING.md).
 
-          This PR never auto-merges. Turn the daily check off with the \`KIT_AUTO_UPDATE=off\` repository variable."
-          if [ -n "${CONFLICTS:-}" ]; then
+          <!-- dream-update $MARKER -->"
+          if [ "$RESULT" = "conflicts" ]; then
             BODY="$BODY
 
-          ⚠️ **$(echo "$CONFLICTS" | wc -l) files have conflicts to resolve** (markers committed): $(echo "$CONFLICTS" | head -40 | sed 's/.*/\x60&\x60/' | tr '\n' ' ')$( [ "$(echo "$CONFLICTS" | wc -l)" -gt 40 ] && echo "…and more (search the branch for \`<<<<<<<\`)")
-          Generated files: take either side and regenerate. Migrations: keep both sides' files. \`pnpm-lock.yaml\`: re-run \`pnpm install\`."
+          ⚠️ **Conflicts to resolve** (markers committed): $(echo "$CONFLICTS" | tr ' ' '\n' | head -40 | sed 's/.*/\x60&\x60/' | tr '\n' ' ')
+          Then run \`pnpm install\`, \`pnpm db:gen-types\` and \`pnpm cms:gen-types\`. It never merges itself."
           fi
-          # Opened with MOD_OPS_TOKEN (so CI runs), labeled afterwards with
-          # GITHUB_TOKEN — `gh pr create --label` aborts the whole PR when a
-          # label can't be resolved.
-          PR_URL=$(gh pr create --base "$BASE" --head "$BRANCH" \
-            --title "chore(kit): update Dream Starter Kit $CURRENT → $LATEST" \
-            --body "$BODY")
-          echo "Opened $PR_URL"
-          ensure_label kit-update 0e8a16 "Dream Starter Kit update (merge commit, never squash)" || true
-          [ "$LABELS" = "kit-update" ] || ensure_label kit-update-conflicts d93f0b "Kit update needs conflicts resolved" || true
-          label_pr "$PR_URL" ${LABELS//,/ }
+          gh label create dream-update --color 5319e7 --description "Automated Dream update" 2>/dev/null || true
+          gh label create dream-update-conflicts --color d93f0b --description "Dream update with conflicts to resolve" 2>/dev/null || true
+          if [ -n "$PR" ]; then
+            gh pr edit "$PR" --title "Update Dream Starter Kit $CURRENT → $LATEST" --body "$BODY"
+            URL="$PR"
+          else
+            URL=$(gh pr create --head "$BRANCH" --title "Update Dream Starter Kit $CURRENT → $LATEST" --body "$BODY")
+          fi
+          gh pr edit "$URL" --add-label dream-update || true
+          if [ "$RESULT" = "conflicts" ]; then
+            gh pr edit "$URL" --add-label dream-update-conflicts || true
+          else
+            gh pr edit "$URL" --remove-label dream-update-conflicts 2>/dev/null || true
+          fi
+          echo "Kit update PR: $URL"
+
+  merge:
+    # After CI finishes on an update branch, on the daily schedule, or when
+    # an admin clicks "Merge now": merge what is ready (one per run).
+    if: >-
+      github.event_name == 'schedule' || inputs.op == 'merge' ||
+      (github.event_name == 'workflow_run' && (
+        startsWith(github.event.workflow_run.head_branch, 'dream/') ||
+        startsWith(github.event.workflow_run.head_branch, 'mod/') ||
+        startsWith(github.event.workflow_run.head_branch, 'sync/upstream-')))
+    runs-on: ubuntu-latest
+    concurrency:
+      group: module-ops-merge
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Merge ready updates
+        env:
+          APPROVE: ${{ inputs.pr }}
+        run: |
+          if [[ "$APPROVE" =~ ^[0-9]+$ ]]; then
+            pnpm --silent mod ops merge --approve "$APPROVE"
+          else
+            pnpm --silent mod ops merge
+          fi

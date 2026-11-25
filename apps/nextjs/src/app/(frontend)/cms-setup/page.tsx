@@ -48,7 +48,13 @@ export default async function CmsSetupPage() {
   return (
     <CmsSetupFlow
       branding={branding}
-      askAccountModel={isStaff && !settings.accountModelChosen}
+      steps={{
+        askAccountModel: isStaff && !settings.accountModelChosen,
+        // The seed registers the site on a public domain; then the GitHub
+        // steps follow (/cms-setup/connect-code skips itself otherwise).
+        updatesAvailable: Boolean(licenseNotice),
+        githubConnected: false,
+      }}
       licenseNotice={licenseNotice}
     />
   );
