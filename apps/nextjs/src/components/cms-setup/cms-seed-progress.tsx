@@ -17,8 +17,11 @@ const ADMIN_URL = "/admin";
 
 export function CmsSeedProgress({
   stepLabel,
+  notice,
 }: {
   stepLabel?: React.ReactNode;
+  /** Shown under the progress bar (the site-license disclosure). */
+  notice?: React.ReactNode;
 }) {
   const [percent, setPercent] = useState(0);
   const [label, setLabel] = useState("Preparing your CMS…");
@@ -168,6 +171,7 @@ export function CmsSeedProgress({
             <Progress value={percent} id="cms-seed-progress" />
           </Field>
         )}
+        {notice}
       </div>
     </main>
   );

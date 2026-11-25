@@ -15,9 +15,12 @@ import { StepEyebrow } from "~/components/onboarding/step-progress";
 export function CmsSetupFlow({
   branding,
   askAccountModel,
+  licenseNotice,
 }: {
   branding: Branding;
   askAccountModel: boolean;
+  /** The site-license disclosure, rendered under the seed progress. */
+  licenseNotice?: React.ReactNode;
 }) {
   const [phase, setPhase] = useState<"model" | "seed">(
     askAccountModel ? "model" : "seed",
@@ -30,6 +33,7 @@ export function CmsSetupFlow({
   }
   return (
     <CmsSeedProgress
+      notice={licenseNotice}
       stepLabel={
         askAccountModel ? <StepEyebrow index="02" total="02" /> : undefined
       }
