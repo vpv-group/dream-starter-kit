@@ -35,6 +35,10 @@ const sysMod = (m: LoadedModule["manifest"]): boolean =>
 
 const quote = (s: string): string => JSON.stringify(s);
 
+/** An object key the way Prettier writes it (quoted only when needed). */
+export const propKey = (s: string): string =>
+  /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(s) ? s : quote(s);
+
 interface NavLiteral {
   key: string;
   module: string;
@@ -376,7 +380,7 @@ export function buildNextAdminRegistry(mods: LoadedModule[]): string {
       `import { AdminSettings as admin_${ident(e.manifest.slug)} } from "${e.packageName}/admin";`,
   );
   const rows = adminMods.map(
-    (e) => `  ${quote(e.manifest.slug)}: admin_${ident(e.manifest.slug)},`,
+    (e) => `  ${propKey(e.manifest.slug)}: admin_${ident(e.manifest.slug)},`,
   );
   return `"use client";
 
@@ -527,6 +531,17 @@ export function buildTranspileJson(mods: LoadedModule[]): string {
 }
 
 /** Generated route stubs for both apps (machine-owned subtrees). */
+/**
+ * `export default withModuleAccess(check, Component);`, wrapped the way
+ * Prettier wraps it when it doesn't fit in 80 columns (long module slugs).
+ */
+export function gatedDefaultExport(check: string, component: string): string {
+  const line = `export default withModuleAccess(${check}, ${component});`;
+  return line.length <= 80
+    ? line
+    : `export default withModuleAccess(\n  ${check},\n  ${component},\n);`;
+}
+
 export function buildStubs(mods: LoadedModule[]): GeneratedFile[] {
   const files: GeneratedFile[] = [];
 
@@ -609,7 +624,7 @@ export default async function ModuleLayout({
 import { withModuleAccess } from "~/mod/access-gate";
 
 // Access gate (manifest access.check) — users without access go home.
-export default withModuleAccess(${quote(m.access.check)}, ${r.component});
+${gatedDefaultExport(quote(m.access.check), r.component)}
 `
             : `${ESLINT_OFF}${HEADER}export { ${r.component} as default } from "${e.packageName}/native";\n`,
         });

@@ -15,6 +15,7 @@ import {
   buildNextServerRegistry,
   buildStubs,
   buildTranspileJson,
+  gatedDefaultExport,
 } from "./generate";
 import { bumpVersion, dependencyOrder, nextVersion } from "./migrations";
 
@@ -230,6 +231,19 @@ describe("migration version assignment", () => {
   });
 });
 
+describe("gated native stubs", () => {
+  it("wrap like Prettier when the line is too long", () => {
+    expect(gatedDefaultExport('"mod_crm_access_ok"', "CrmScreen")).toBe(
+      'export default withModuleAccess("mod_crm_access_ok", CrmScreen);',
+    );
+    expect(
+      gatedDefaultExport('"mod_client_portal_access_ok"', "PortalTicketScreen"),
+    ).toBe(
+      'export default withModuleAccess(\n  "mod_client_portal_access_ok",\n  PortalTicketScreen,\n);',
+    );
+  });
+});
+
 describe("migration pin order", () => {
   const mod = (slug: string, requires: string[] = []) => ({
     manifest: { slug, requires },
@@ -321,7 +335,7 @@ describe("module access + admin settings", () => {
     expect(admin).toContain(
       'import { AdminSettings as admin_crm } from "@acme/mod-crm/admin";',
     );
-    expect(admin).toContain('"crm": admin_crm,');
+    expect(admin).toContain("crm: admin_crm,");
     expect(buildNextAdminRegistry([chat])).toContain(
       "modAdminComponents: Record<string, ComponentType> = {};",
     );
