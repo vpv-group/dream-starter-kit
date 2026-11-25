@@ -4,6 +4,8 @@
  * these to render a badge.
  */
 export {
+  NOTIFICATIONS_PAGE,
+  useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotifications,
   useUnreadCount,

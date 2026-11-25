@@ -199,9 +199,14 @@ module, following the org-scoped pattern already in
 1. **Manifest:** a `scope: "user" | "org"` field in `module.config.ts`.
 2. **Schema:** org-scoped tables carry `org_id uuid not null references
    public.organizations on delete cascade`, plus an index on it.
-3. **RLS:** `using (public.is_org_member(org_id)) with check
-   (public.is_org_member(org_id))`, `is_org_admin(org_id)` for admin-only
-   writes, and the usual RESTRICTIVE no-anon policy.
+3. **RLS:** `using (org_id = any (array(select private.user_org_ids())))
+   with check (org_id = any (array(select private.user_org_ids())))`, and
+   `private.user_admin_org_ids()` for admin-only writes, plus the usual
+   RESTRICTIVE no-anon policy. The helpers run once per statement; calling
+   `is_org_member(org_id)` in a policy runs once per row and doesn't scale
+   (the public `is_org_member()` / `is_org_admin()` stay for RPCs and clients).
+   Index `org_id`, and make list indexes start with it, e.g. `(org_id,
+   created_at desc)`.
 4. **Code:** server routes read `getActiveOrg()`; client hooks read the active
    workspace and filter by `org_id`. RLS remains the guarantee — the filter is
    only for picking the current workspace.

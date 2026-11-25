@@ -293,16 +293,18 @@ create policy "reminders owned by user"
 
 -- Org-scoped variant: the owner, or any member of the row's org. Use this shape
 -- for a table with a nullable `org_id` (model it on `organizations`/`memberships`).
+-- private.user_org_ids() is a security-definer helper in the non-exposed
+-- `private` schema; wrapped as `= any (array(select ...))` it runs ONCE per
+-- statement (an InitPlan) instead of once per row, and the planner can still
+-- use an index on org_id. Never call a definer helper with a row column
+-- (e.g. `is_org_member(org_id)`) inside a policy: it can't be inlined and runs
+-- per row. Use private.user_admin_org_ids() for admin-only writes.
 -- create policy "<table>: owner or org member"
 --   on <table> for all
 --   to authenticated
 --   using (
 --     (org_id is null and owner_id = (select auth.uid()))
---     or exists (
---       select 1 from memberships m
---       where m.org_id = <table>.org_id
---         and m.user_id = (select auth.uid())
---     )
+--     or org_id = any (array(select private.user_org_ids()))
 --   );
 
 -- Stripe-synced tables: users may READ their own; only the webhook writes (service role bypasses RLS)
@@ -317,7 +319,10 @@ Notes:
 
 - Storage buckets get their own RLS policies on `storage.objects` (path-prefixed by user/org), mirroring the `files` table.
 - The Stripe webhook (a Supabase edge function) uses the **service role key** to write `customers` / `subscriptions` — clients never write billing rows.
-- Wrapping `auth.uid()` as `(select auth.uid())` lets Postgres cache it per statement (a standard Supabase performance tip).
+- Wrapping `auth.uid()` as `(select auth.uid())` lets Postgres cache it per statement (a standard Supabase performance tip). The same goes for any helper that doesn't depend on the row: `(select private.some_helper())`.
+- **Security-definer helpers used by policies live in the `private` schema**, which the Data API doesn't expose (Supabase: never put them in an exposed schema). It holds `user_org_ids()` and `user_admin_org_ids()`. Module SQL can't GRANT, so a module's service-only functions in `public` check their caller instead (`auth.role()` not `authenticated`/`anon`).
+- **Index what policies and queries filter on, in their order.** Composite indexes match list queries, e.g. `(user_id, created_at desc)` for a newest-first feed or `(thread_id, created_at)` for messages; partial indexes cover hot subsets, e.g. unread notifications or pending reminders. Every foreign key that an `ON DELETE` action follows gets an index. `supabase db advisors --type performance` flags missing FK indexes, `auth.uid()` that isn't wrapped, duplicate indexes and overlapping permissive policies — run it before committing a migration.
+- **Never read a whole table through the Data API.** PostgREST stops at `max_rows` (1000) without an error. Page with a keyset cursor (`created_at, id`), or do set-based work in an RPC (`mod_notifications_broadcast`, `mod_reminders_claim`).
 
 ---
 

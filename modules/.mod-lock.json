@@ -40,6 +40,11 @@
       "sha256": "f8047e3fd2a4cecf60314d921c6007ca3357880dea917bcc17fc06d58471faa4",
       "target": "20261117192628_mod_chat_006_rename_to_mod_prefix.sql"
     },
+    "chat/007_scale_indexes.sql": {
+      "version": "20261125231717",
+      "sha256": "69415f05a69f20729753ce3d030062f2fd9b31aa2ca7148c22ad7bbb731fb38c",
+      "target": "20261125231717_mod_chat_007_scale_indexes.sql"
+    },
     "demo/001_initial.sql": {
       "version": "20260612100001",
       "sha256": "3d92502cfbf0b105901f6b6beb517f30f6ace3c7f2d3a304d923a0bd2e2bed7e",
@@ -64,6 +69,11 @@
       "version": "20261125230847",
       "sha256": "c64d44fd528d3724fc893dea37a32749aa57b6338880bd57683cf2de75d40bc4",
       "target": "20261125230847_mod_notifications_004_delivery_fixes.sql"
+    },
+    "notifications/005_feed_scale.sql": {
+      "version": "20261125231718",
+      "sha256": "2a3ccaf11ca425f5f4fbe814f3fe7cf061e640cc2451339447a0b2af20d7984f",
+      "target": "20261125231718_mod_notifications_005_feed_scale.sql"
     },
     "reminders/001_initial.sql": {
       "version": "20260612011541",

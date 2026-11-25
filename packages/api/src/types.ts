@@ -1386,6 +1386,7 @@ export type Database = {
         };
         Returns: string;
       };
+      mod_notifications_mark_all_read: { Args: never; Returns: number };
       mod_notifications_register_category: {
         Args: {
           _audience?: string;
@@ -1402,6 +1403,7 @@ export type Database = {
         Args: { _platform: string; _token: string };
         Returns: undefined;
       };
+      mod_notifications_unread_count: { Args: never; Returns: number };
       mod_notifications_unregister_module: {
         Args: { _module: string };
         Returns: undefined;
@@ -1460,7 +1462,7 @@ export type Database = {
       };
       sha256_hex: { Args: { _value: string }; Returns: string };
       workspace_members: {
-        Args: { _org: string };
+        Args: { _after?: string; _limit?: number; _org: string };
         Returns: {
           avatar_url: string;
           display_name: string;
