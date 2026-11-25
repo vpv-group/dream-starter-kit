@@ -499,7 +499,14 @@ fonts, logo files and how to swap in your own brand.
 - **Keep it buildable.** typecheck + lint must pass at every checkpoint.
 - **Env changes** always touch both `.env.example` and the zod schema.
 - **Migrations are append-only and idempotent-friendly.** Never edit a shipped
-  migration; add a new one.
+  migration; add a new one. They are also **expand/contract**: keep each one
+  compatible with the previous release's code (add first; drop, rename, retype
+  or set NOT NULL in a later release, marked `-- dream:contract <why>`).
+  `tooling/mod/src/migration-safety.test.ts` enforces it.
+- **Kit releases are tags.** Bump the root `package.json` version, merge, tag
+  `vX.Y.Z` (or `vX.Y.Z-rc.N`); `.github/workflows/release.yml` runs the full CI
+  with a production-build E2E, attests the source archive and publishes the
+  release. Apps' `kit-update` PRs only ever merge published releases.
 - **Don't track create-t3-turbo upstream** (see `docs/ARCHITECTURE.md` → Keeping
   dependencies current): snapshot + cherry-pick only. The forked SHA is in `NOTICE`.
 
@@ -538,7 +545,8 @@ with the kit, so the cardinal rule is: keep the merge commits, never squash them
   (`path/** merge=ours`) + `git config merge.ours.driver true` (per-clone, not
   committed). `merge=ours` doesn't cover modify/delete — re-delete those.
 - **Automatic kit-update PRs:** with module ops set up, the `kit-update` job
-  in `module-ops.yml` does this routine daily: it opens or refreshes one
+  in `module-ops.yml` does this routine daily, merging the kit's newest
+  published release tag (attestation verified), never `main`: it opens or refreshes one
   `kit-update` PR and never auto-merges. Conflicts are committed as markers
   and labeled `kit-update-conflicts`. `KIT_AUTO_UPDATE=off` turns it off.
   Resolve and land those PRs exactly like a manual sync (merge commit).

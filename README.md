@@ -325,7 +325,9 @@ PRs** (it breaks the shared-history relationship and forces a full re-merge next
 Full tested routine, conflict hotspots, and the `merge=ours` pinning trick for files
 you intentionally diverge on: **[`docs/UPDATING.md`](./docs/UPDATING.md)**.
 With module ops set up (`MOD_OPS_TOKEN`), a daily job opens these kit-update PRs
-for you. They are free, never auto-merge, and must be merged with a merge commit.
+for you, from the kit's newest published release (never its `main` branch; the
+release's build attestation is verified first). They are free, never
+auto-merge, and must be merged with a merge commit.
 
 **Free site license.** After the first CMS seed, your deployment registers with
 meetdream.com: it sends its domain, the admin and editor emails, the kit version

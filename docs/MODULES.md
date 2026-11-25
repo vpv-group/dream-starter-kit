@@ -251,6 +251,16 @@ apply step is skipped with `--no-apply`, in CI / GitHub Actions (module-ops.yml
 regenerates types on its runner), after a conflicted update, and when the local
 Supabase isn't running (it prints the catch-up command).
 
+**Migrations are expand/contract.** Updates go live one at a time and can be
+reverted, but migrations only run forward, so every migration (kit or module)
+must keep working with the previous release's code: add tables and columns
+first, and drop, rename, retype or make columns NOT NULL only in a later
+release. A migration that does contract must say so with a
+`-- dream:contract <why>` comment; automatic merging sends those to review.
+`tooling/mod/src/migration-safety.test.ts` enforces it on every migration
+(files shipped before the rule are grandfathered), and `pnpm mod remove`
+marks its teardown migration.
+
 Updates are a three-way merge (base = `refs/mod-base/<slug>` pinned in the
 lock, ours = your possibly-modified copy, theirs = upstream) — local edits
 survive clean updates; conflicts get standard markers + `--continue`.
@@ -351,8 +361,9 @@ the CLI refuses `pnpm mod add|update` of a registry module until
 from the CLI.
 
 **Kit updates (free).** The same daily run also checks the Dream Starter Kit
-itself (`kit-update` job): when the kit's `upstream/main` has moved on, it
-opens one PR labeled `kit-update` from a `sync/upstream-<date>` branch, or
+itself (`kit-update` job): when the kit has published a newer release (a
+`vX.Y.Z` tag whose build attestation verifies; never `main`, never a
+pre-release), it opens one PR labeled `kit-update` from a `sync/upstream-<date>` branch, or
 refreshes the open one. No license key is needed. These PRs **never
 auto-merge**: review them and land them with a **merge commit, never a
 squash** (docs/UPDATING.md). Conflicts are committed as markers and the PR is
