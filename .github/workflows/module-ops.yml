@@ -133,7 +133,19 @@ jobs:
             update)
               ARGS=()
               [ -n "${{ inputs.version }}" ] && ARGS+=(--to "${{ inputs.version }}")
-              pnpm mod update "${{ inputs.slug }}" "${ARGS[@]}" | tee /tmp/mod-op.log || echo "conflicts=true" >> "$GITHUB_OUTPUT"
+              # Merge conflicts exit non-zero but still make a PR (markers
+              # and all). Any other failure (e.g. the module repo can't be
+              # read) must fail here, not look like an update.
+              if ! pnpm mod update "${{ inputs.slug }}" "${ARGS[@]}" 2>&1 | tee /tmp/mod-op.log; then
+                if grep -q "^Merge conflicts in:" /tmp/mod-op.log; then
+                  echo "conflicts=true" >> "$GITHUB_OUTPUT"
+                else
+                  if grep -q "returned error: 40[34]" /tmp/mod-op.log; then
+                    echo "::error title=Can't read the module's repository::GitHub refused access to ${{ inputs.slug }}'s source repo. For a private module repo, add it to the MOD_OPS_TOKEN fine-grained PAT's repository access with Contents: read (docs/MODULES.md → Founder setup)."
+                  fi
+                  exit 1
+                fi
+              fi
               ;;
             remove)
               ARGS=()
