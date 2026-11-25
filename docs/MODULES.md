@@ -207,6 +207,15 @@ import the provider's exported APIs directly — e.g.
 (or the tiny core whitelist: `tags`, `user_tags`) for edge functions that
 follow the SQL contract.
 
+**Notifications are produced, not delivered, by your module.** Register your
+categories in a migration (`mod_notifications_register_category`), emit with
+`notify()` (TypeScript) or `mod_notifications_emit(...)` (SQL triggers and
+definer functions), and put per-channel renderings (email subject/body/
+reply-to, push overrides) in `payload`. The notifications module delivers on
+the channels it supports today (in-app, Expo push) and picks up email and web
+push when those ship, with no producer change. See
+`modules/notifications/README.md` → Producer contract.
+
 **Widgets**: declare `widgets: { web, native }` (export names). The host wires
 its generated widget registry through `@acme/mod-kit/react`'s
 `ModWidgetsProvider`; the dashboard module renders `useModWidgets()`.

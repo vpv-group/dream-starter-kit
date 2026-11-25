@@ -5,6 +5,12 @@
     "jsx": "preserve",
     "moduleSuffixes": [".ios", ".android", ".native", ""]
   },
-  "include": ["src", "module.config.ts", "nativewind-env.d.ts"],
+  "include": [
+    "src",
+    "tests",
+    "module.config.ts",
+    "nativewind-env.d.ts",
+    "vitest.config.ts"
+  ],
   "exclude": ["node_modules", "supabase"]
 }
