@@ -15,12 +15,12 @@ once, never squash it away, and updates stay easy forever.
 
 ---
 
-## Automatic update PRs (module ops)
+## Automatic update PRs
 
-With module ops set up (the `MOD_OPS_TOKEN` secret — see
+Once GitHub is connected in **/admin → Updates** (see
 [`MODULES.md`](./MODULES.md#admin-panel--automatic-updates)), the daily
 `module-ops.yml` run does this routine for you. Kit updates are free and need
-no license key. The `kit-update` job:
+no license key or stored secret. The `kit-update` job:
 
 1. Finds the kit's newest **published release**: the highest `vX.Y.Z` tag
    (`pnpm mod ops kit-plan`). Never `main`, never a pre-release such as
@@ -29,23 +29,45 @@ no license key. The `kit-update` job:
 2. Verifies the release's **build attestation**: it rebuilds the release's
    source archive from the tag and checks it with `gh attestation verify`
    against the kit repository. A release that doesn't verify is never merged.
-3. Merges the release into a `sync/upstream-<date>` branch.
+3. Merges the release into a `dream/kit-update-<date>` branch.
    - The first merge on a "Use this template" repo uses
      `--allow-unrelated-histories` automatically.
-   - Conflicts are committed as markers, and the PR gets the
-     `kit-update-conflicts` label.
-4. Opens one PR labeled `kit-update` that shows the version jump.
-   - Later runs refresh that same PR instead of opening another (found by
-     its `sync/upstream-` branch, so it works even if it couldn't be labeled).
-   - Labels are created automatically with the workflow's built-in
-     `GITHUB_TOKEN`; `MOD_OPS_TOKEN` needs no extra access for them.
+   - Conflicts in **generated** files (lockfile, Payload and Supabase types,
+     the migrations bundle, `*.generated.*`) take the release's side
+     (`pnpm mod ops resolve-generated`), then everything is regenerated:
+     `pnpm install`, `pnpm mod sync`, `pnpm db:gen-migrations` and both
+     gen-types against a Supabase started on the runner.
+   - Conflicts in hand-written files are committed as markers, and the PR
+     gets the `dream-update-conflicts` label.
+4. Opens one PR labeled `dream-update` that shows the version jump. Later
+   runs refresh that same PR instead of opening another.
 
-It **never auto-merges**. Review it, run the post-merge validation below, and
-land it with a **merge commit** — never squash.
+**Merging.** With **Merge updates automatically** on (the default), the
+`merge` job merges the PR with a **merge commit** once every check passes,
+there are no conflicts, and the release has soaked for 72 hours. Major
+versions, migrations that remove data and changes to `.github/workflows/`
+always wait for you, and a failed production deploy pauses automatic merging
+(MODULES.md has the full list). With it off, review the PR, run the
+post-merge validation below and merge it yourself — **merge commit, never
+squash**.
 
-- Turn it off with the `KIT_AUTO_UPDATE=off` repository variable.
-- Run it now with _Actions → Module ops → Run workflow → `op: kit-update`_.
-- `KIT_UPSTREAM_URL` (repository variable) points it at a different upstream.
+- Turn the daily check off with **Automatic updates** in /admin → Updates.
+- Run it now with **Check now** there.
+
+**Removed in 2.4.** Automatic updates no longer use a personal access token
+or repository settings. Once GitHub is connected, delete these if you set
+them; nothing reads them any more:
+
+| Removed | Where it was |
+|---|---|
+| `MOD_OPS_TOKEN`, `DREAM_LICENSE_KEY` | repository secrets |
+| `GITHUB_OPS_TOKEN`, `GITHUB_REPO`, `DREAM_LICENSE_KEY`, `MOD_CATALOG_URL` | Vercel env / `.env` |
+| `MOD_AUTO_UPDATE`, `MOD_AUTO_MERGE`, `KIT_AUTO_UPDATE`, `MOD_REGISTRY_FIRST`, `KIT_UPSTREAM_URL` | repository variables |
+| "Allow auto-merge" | repository settings (no longer needed) |
+
+The private `module-uploads` storage bucket is no longer used (ZIP installs
+are CLI-only); it is left in place because Supabase doesn't allow deleting a
+bucket from a migration. Delete it from the dashboard if it's empty.
 
 The rest of this guide is the same routine done by hand. (By hand you can merge
 a release tag the same way: `git fetch upstream tag vX.Y.Z` then

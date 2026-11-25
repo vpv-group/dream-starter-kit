@@ -565,12 +565,16 @@ with the kit, so the cardinal rule is: keep the merge commits, never squash them
 - **Intentional divergence** (branding, your CI, README): pin with `.gitattributes`
   (`path/** merge=ours`) + `git config merge.ours.driver true` (per-clone, not
   committed). `merge=ours` doesn't cover modify/delete — re-delete those.
-- **Automatic kit-update PRs:** with module ops set up, the `kit-update` job
-  in `module-ops.yml` does this routine daily, merging the kit's newest
-  published release tag (attestation verified), never `main`: it opens or refreshes one
-  `kit-update` PR and never auto-merges. Conflicts are committed as markers
-  and labeled `kit-update-conflicts`. `KIT_AUTO_UPDATE=off` turns it off.
-  Resolve and land those PRs exactly like a manual sync (merge commit).
+- **Automatic kit-update PRs:** once GitHub is connected in /admin → Updates
+  (the Dream Updates GitHub App; the workflow signs in with its Actions OIDC
+  token, no stored secret), the `kit-update` job in `module-ops.yml` does
+  this routine daily, merging the kit's newest published release tag
+  (attestation verified), never `main`, into one `dream/kit-update-*` PR.
+  Generated-file conflicts are resolved by regenerating; real ones are
+  committed as markers and labeled `dream-update-conflicts`. The `merge` job
+  (`pnpm mod ops merge` → `decideMerge`) merges clean, green, soaked PRs with
+  a merge commit when **Merge updates automatically** is on (the default).
+  Resolve conflicted ones exactly like a manual sync (merge commit).
 - **Free site license** (`lib/dream/site*.ts`, the `dream-site` global,
   `/.well-known/dream-site.json`, cron `/api/cms/dream-site/report`):
   - After the first seed, the deployment registers its domain and
@@ -578,7 +582,8 @@ with the kit, so the cardinal rule is: keep the merge commits, never squash them
     reports in daily.
   - It is disclosed on the founder's `/sign-up` and on `/cms-setup`;
     `DREAM_TELEMETRY=off` opts out.
-  - The app's license key is `DREAM_LICENSE_KEY ?? site key`.
+  - The app's license key is the site key (admins see its prefix only);
+    `module-ops.yml` signs in with its Actions OIDC token instead.
   - See `docs/MODULES.md` → Site license.
 - **Single urgent fix without a full sync:** `git fetch upstream` then
   `git cherry-pick <sha>` (patch-based — works across unrelated histories).
