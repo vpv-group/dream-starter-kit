@@ -50,6 +50,10 @@ export const DreamSite: GlobalConfig = {
         description:
           "The site license key. Add it as the GitHub repository secret " +
           "DREAM_LICENSE_KEY so module ops can install modules. Keep it secret.",
+        // Masked, with Reveal + Copy — the only place the full key exists.
+        components: {
+          Field: "~/payload/components/DreamSiteLicenseKey#DreamSiteLicenseKey",
+        },
       },
     },
     { name: "licenseKeyPrefix", type: "text", admin: { readOnly: true } },
