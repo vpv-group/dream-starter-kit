@@ -57,6 +57,7 @@ describe("toBootstrapStatus", () => {
   it.each([
     ["opt-out", "skipped:opt-out"],
     ["build-phase", "skipped:build-phase"],
+    ["preview", "skipped:preview"],
     ["no-url", "skipped:no-url"],
   ] as const)("maps the %s gate to %s", (skipped, status) => {
     expect(toBootstrapStatus(result({ skipped })).status).toBe(status);

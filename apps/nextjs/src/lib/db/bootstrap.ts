@@ -51,6 +51,7 @@ import {
 } from "./bootstrap-core";
 import { recordBootstrapResult } from "./bootstrap-status";
 import { supabaseMigrations } from "./migrations";
+import { isGuardedPreview } from "./preview-guard";
 
 /** The slice of `pg.Client` the runner uses — fakeable in unit tests. */
 export interface BootstrapClient {
@@ -99,7 +100,13 @@ export interface BootstrapDeps {
 export interface BootstrapResult {
   /** Why nothing ran — or `false` when provisioning work was attempted. */
   skipped:
-    "opt-out" | "build-phase" | "no-url" | "up-to-date" | "error" | false;
+    | "opt-out"
+    | "build-phase"
+    | "preview"
+    | "no-url"
+    | "up-to-date"
+    | "error"
+    | false;
   appliedVersions: string[];
   cmsRoleCreated: boolean;
   /** Whether `migrateCms` ran here (under the lock). When false on a non-error
@@ -306,6 +313,8 @@ async function runBootstrap(deps: BootstrapDeps): Promise<BootstrapResult> {
     // Seed for the derived CMS credentials (see lib/cms/derived-credentials).
     SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
     NODE_ENV: env.NODE_ENV,
+    // Vercel's deployment kind: previews never migrate (lib/db/preview-guard).
+    VERCEL_ENV: env.VERCEL_ENV,
     // Set by Next itself during `next build` (like NEXT_RUNTIME), so it lives
     // outside the zod env schema.
     // eslint-disable-next-line no-restricted-properties, turbo/no-undeclared-env-vars
@@ -326,6 +335,14 @@ async function runBootstrap(deps: BootstrapDeps): Promise<BootstrapResult> {
   // a runtime concern, and preview/CI builds may have no DB access at all.
   if (envSource.NEXT_PHASE === "phase-production-build") {
     return { ...none, skipped: "build-phase" };
+  }
+  // A preview deployment of an unmerged branch must not migrate the
+  // (usually shared, production) database — lib/db/preview-guard.ts.
+  if (isGuardedPreview(envSource)) {
+    log.info(
+      "[db-bootstrap] preview deployment — skipping runtime provisioning (set DB_BOOTSTRAP=on if this preview has its own database)",
+    );
+    return { ...none, skipped: "preview" };
   }
   const adminUrl = resolveAdminDbUrl(envSource);
   if (!adminUrl) {

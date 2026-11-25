@@ -1,22 +1,26 @@
 import { z } from "zod/v4";
 
+import type { GithubPr } from "~/lib/mod/ops-core";
 import {
   githubApi,
   PAID_MODULES_DISABLED,
   paidModulesEnabled,
   requireAdmin,
 } from "~/lib/mod/admin-ops";
+import { dispatchBody, toOpsPrs } from "~/lib/mod/ops-core";
 import { isPaidOp } from "~/lib/mod/paid-ops";
 
 /**
  * Module operations (docs/MODULES-PLAN.md §6): every mutation dispatches
  * .github/workflows/module-ops.yml, which runs the real `pnpm mod` CLI on a
  * runner and opens a labeled PR — installed/updated code is always reviewed as
- * a diff and gated by CI before it can run. GET lists in-flight runs + PRs.
+ * a diff and gated by CI before it can run. `kit-update` runs the workflow's
+ * Dream Starter Kit check now instead of waiting for the daily schedule.
+ * GET lists in-flight runs plus open module and kit update PRs.
  */
 
 const opSchema = z.object({
-  op: z.enum(["add", "update", "remove"]),
+  op: z.enum(["add", "update", "remove", "kit-update"]),
   /** add: github url (#vX.Y.Z ok) or a signed zip URL; update/remove: unused. */
   source: z.string().optional(),
   slug: z.string().optional(),
@@ -39,19 +43,22 @@ export async function POST(req: Request) {
     return Response.json(PAID_MODULES_DISABLED, { status: 403 });
   }
 
+  // Dispatch on the repository's default branch, where the workflow lives.
+  const repoRes = await githubApi("");
+  if (repoRes.status === 503) return repoRes;
+  const defaultBranch = repoRes.ok
+    ? (((await repoRes.json()) as { default_branch?: string }).default_branch ??
+      null)
+    : null;
+
   const res = await githubApi("/actions/workflows/module-ops.yml/dispatches", {
     method: "POST",
-    body: JSON.stringify({
-      ref: "main",
-      inputs: {
-        op,
-        source: source ?? "",
-        slug: slug ?? "",
-        version: version ?? "",
-        keep_data: keepData ? "true" : "false",
-        sha256: sha256 ?? "",
-      },
-    }),
+    body: JSON.stringify(
+      dispatchBody(
+        { op, source, slug, version, keepData, sha256 },
+        defaultBranch,
+      ),
+    ),
   });
   if (res.status === 503) return res;
   if (!res.ok) {
@@ -85,15 +92,7 @@ export async function GET() {
         }[];
       })
     : { workflow_runs: [] };
-  const prs = prsRes.ok
-    ? ((await prsRes.json()) as {
-        number: number;
-        title: string;
-        html_url: string;
-        labels: { name: string }[];
-        head: { ref: string };
-      }[])
-    : [];
+  const prs = prsRes.ok ? ((await prsRes.json()) as GithubPr[]) : [];
 
   return Response.json({
     runs: (runs.workflow_runs ?? []).map((r) => ({
@@ -104,12 +103,6 @@ export async function GET() {
       createdAt: r.created_at,
       title: r.display_title,
     })),
-    prs: prs
-      .filter(
-        (p) =>
-          p.head.ref.startsWith("mod/") ||
-          p.labels.some((l) => l.name.startsWith("module")),
-      )
-      .map((p) => ({ number: p.number, title: p.title, url: p.html_url })),
+    prs: toOpsPrs(prs),
   });
 }

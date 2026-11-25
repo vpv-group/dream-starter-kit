@@ -17,6 +17,7 @@ export interface BootstrapStatus {
     | "ok"
     | "skipped:opt-out"
     | "skipped:build-phase"
+    | "skipped:preview"
     | "skipped:no-url"
     | "error"
     | "not-run";
@@ -51,6 +52,7 @@ export function toBootstrapStatus(result: BootstrapResult): BootstrapStatus {
   switch (result.skipped) {
     case "opt-out":
     case "build-phase":
+    case "preview":
     case "no-url":
       return { status: `skipped:${result.skipped}`, ...base };
     // "error" without an error summary can't happen (the catch-all always

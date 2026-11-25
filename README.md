@@ -128,46 +128,34 @@ corepack enable    # provides pnpm 10
 pnpm install
 ```
 
-### 3. Start the local backend
+### 3. Start the local backend (one command)
 
-Requires the [Supabase CLI](https://supabase.com/docs/guides/cli) + Docker.
+Requires Docker and the [Supabase CLI](https://supabase.com/docs/guides/cli)
+(the version CI pins in `.github/workflows/ci.yml`).
 
 ```bash
-cp .env.example .env
-supabase start     # boots local Postgres/Auth/Storage; prints your API URL + keys
-pnpm db:reset      # applies migrations + seed.sql (ships EMPTY — the first signup
-                   #   becomes the founder), provisions the Payload `cms` schema +
-                   #   payload_cms role (config.toml [db.seed].sql_paths, local-only),
-                   #   then runs `cms:migrate` to build the Payload tables so a running
-                   #   dev server stays in sync after a reset
+pnpm dev:setup     # boots local Supabase, writes .env with the local keys and a
+                   #   generated PAYLOAD_SECRET, resets the database (first run),
+                   #   and creates a dev admin
 ```
 
-> Use `pnpm db:reset` rather than bare `supabase db reset`: the former also runs
-> `pnpm cms:migrate`, which re-creates Payload's `cms` tables. A plain `supabase db
-reset` drops them and a _running_ `next dev` won't recreate them until restarted.
+It prints a **dev admin** (`admin@dream.test`; the password is saved in
+`.dream/dev-admin.json`, which git ignores). Sign in with it and `/admin` and `/a`
+work right away: no sign-up, no confirmation email. Your first visit to `/admin`
+seeds the CMS with demo content (a short progress bar). Re-running is safe and keeps
+your data; `pnpm dev:setup --reset` starts from an empty database.
 
-> Payload connects as the dedicated `payload_cms` role using the local
-> `PAYLOAD_DATABASE_URL` from `.env.example` — make sure you copied the full
-> `PAYLOAD_*` / `S3_*` block into your `.env` (step above), or `/admin` will 500
-> with `password authentication failed for user "payload_cms"`.
+> It's the same bootstrap Claude Code cloud sessions (`--profile cloud`, run by the
+> SessionStart hook) and CI (`--profile ci`) use, so the three never drift.
+> (It's `dev:setup`, not `setup`: `pnpm setup` is a built-in pnpm command.)
 
-Payload's `cms` tables are auto-created in dev on first boot. **The CMS shares your
-Supabase login — there's no separate Payload account.** Sign up through the app (step 4)
-and confirm your email — confirmations are on locally to match hosted Supabase; the
-confirmation email (link + a manual 6-digit code) lands in **Mailpit** at
-http://127.0.0.1:54324. The **first** signup is automatically flagged staff (the
-founder/admin). Open `/admin` while signed in and you're let straight into the CMS — the
-kit provisions your CMS user, then seeds demo content (pages, posts, an event, site
-nav) with a progress bar and drops you into the admin. To add more editors later, invite
-them from **`/admin` → Users → Create New** — they get a Supabase invite email and set a
-password on `/accept-invite` (requires `SUPABASE_SERVICE_ROLE_KEY` in the web app's env).
-The `pnpm cms:seed` CLI is still available for headless/CI setup.
-
-Paste the printed **API URL**, **anon key**, and **service_role key** into `.env`
-(see [Environment variables](#environment-variables) for which is which). The Payload
-env (`PAYLOAD_*`, `S3_*`) ships with working local defaults in `.env.example`; set
-`PAYLOAD_SECRET` and the local anon key as `S3_SECRET_ACCESS_KEY`. The CMS admin is at
-**http://localhost:3000/admin**.
+Use `pnpm db:reset` rather than bare `supabase db reset`: the former also runs
+`pnpm cms:migrate`, which re-creates Payload's `cms` tables. **The CMS shares your
+Supabase login — there's no separate Payload account.** Confirmation emails (link + a
+6-digit code) land in **Mailpit** at http://127.0.0.1:54324. On an empty database the
+**first** signup becomes the owner (staff) and is routed through the CMS seed. To add
+more editors later, invite them from **`/admin` → Users → Create New**. The
+`pnpm cms:seed` CLI is still available for headless setup.
 
 ### 4. Run it
 
@@ -176,9 +164,9 @@ pnpm dev:next      # web only  →  http://localhost:3000
 pnpm dev           # web + mobile together (turbo watch)
 ```
 
-The database ships **empty** (no seeded accounts), so the **first account you
-sign up becomes the owner** — it's auto-flagged staff and gets Payload CMS admin
-access at `/admin`. Open the web app, hit **Sign up**, and you're the founder.
+The CMS admin is at **http://localhost:3000/admin**. Modules install with one
+command, ready to preview: `pnpm mod add <slug>` vendors the module, applies its
+migrations to your local database and regenerates the types (`--no-apply` skips that).
 
 ### 5. Make it yours
 
@@ -339,10 +327,11 @@ you intentionally diverge on: **[`docs/UPDATING.md`](./docs/UPDATING.md)**.
 With module ops set up (`MOD_OPS_TOKEN`), a daily job opens these kit-update PRs
 for you. They are free, never auto-merge, and must be merged with a merge commit.
 
-**Free site license.** After the first CMS seed, your deployment registers its
-domain and admin/staff emails with meetdream.com. It gets a free license key
-for lifetime kit updates and free modules. You're told on `/cms-setup` before
-anything is sent; set `DREAM_TELEMETRY=off` to opt out. See
+**Free site license.** After the first CMS seed, your deployment registers with
+meetdream.com: it sends its domain, the admin and editor emails, the kit version
+and the repository name, and gets a free license key for lifetime kit updates
+and free modules. You're told on the founder's `/sign-up` and again on
+`/cms-setup` before anything is sent; set `DREAM_TELEMETRY=off` to opt out. See
 [`docs/MODULES.md` → Site license](./docs/MODULES.md#site-license).
 
 ## Testing

@@ -93,7 +93,8 @@ export async function POST() {
   }
 
   // Once the seed has streamed, claim this site's free license on
-  // meetdream.com (disclosed on /cms-setup; DREAM_TELEMETRY=off opts out).
+  // meetdream.com (disclosed on /sign-up and /cms-setup; DREAM_TELEMETRY=off
+  // opts out).
   // Runs after the response, so it never slows the progress bar.
   after(async () => {
     if (await isCmsSeeded(payload))

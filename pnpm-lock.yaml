@@ -1777,6 +1777,36 @@ importers:
 
   tooling/scripts: {}
 
+  tooling/setup:
+    devDependencies:
+      '@acme/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint
+      '@acme/prettier-config':
+        specifier: workspace:*
+        version: link:../prettier
+      '@acme/tsconfig':
+        specifier: workspace:*
+        version: link:../typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.20.5
+      eslint:
+        specifier: 'catalog:'
+        version: 10.14.0(jiti@2.7.0)
+      prettier:
+        specifier: 'catalog:'
+        version: 3.9.10
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.1.0(@opentelemetry/api@1.9.0)(@types/node@22.20.5)(happy-dom@20.9.0(bufferutil@4.0.8))(vite@7.1.12(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.30.1)(sass@1.77.4)(terser@5.44.0)(tsx@4.23.15)(yaml@2.8.1))
+
   tooling/tailwind:
     dependencies:
       '@tailwindcss/postcss':

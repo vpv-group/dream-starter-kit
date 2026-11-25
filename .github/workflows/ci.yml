@@ -101,95 +101,21 @@ jobs:
           # against the new version locally.
           version: 2.105.0
 
-      - name: Start Supabase (applies migrations + seed)
-        run: supabase start
-
-      # Mirror hosted Supabase's TLS posture: hosted Postgres presents a cert
-      # chain rooted in Supabase's own CA, so `sslmode=require` must connect
-      # WITHOUT CA verification (libpq semantics). The local container is
-      # plaintext-only by default — which once let a SELF_SIGNED_CERT_IN_CHAIN
-      # regression in the runtime DB bootstrap ship while CI stayed green. This
-      # enables TLS with a throwaway self-signed cert; the .env below then opts
-      # the app's DB URLs into sslmode=require so `next dev`'s bootstrap and the
-      # Payload pool run the hosted code path end-to-end (founder.setup.ts
-      # asserts /api/health/db). Plaintext clients (psql provisioning, the
-      # stack itself) are unaffected: `ssl=on` does not force SSL. The script
-      # hard-fails if TLS doesn't come up, so the gate can't silently test
-      # plaintext.
-      - name: Enable TLS (self-signed) on local Supabase Postgres
-        run: bash tooling/scripts/enable-supabase-db-tls.sh
-
-      # `supabase status -o env` prints the LOCAL stack's well-known demo anon +
-      # service_role keys to stdout — throwaway values for an ephemeral CI
-      # Postgres, not real secrets. They're written to a private .env consumed by
-      # `next dev` and the RLS tests (both via `dotenv -e ../../.env`); never echoed.
-      - name: Configure .env from local Supabase
-        shell: bash
-        run: |
-          set -a
-          source <(supabase status -o env)
-          set +a
-          : "${DB_URL:=postgresql://postgres:postgres@127.0.0.1:54322/postgres}"
-          # sslmode=require exercises the hosted-TLS path the step above set up
-          # (handle a DB_URL that already carries query params).
-          case "$DB_URL" in *\?*) DB_SEP='&' ;; *) DB_SEP='?' ;; esac
-          cat > .env <<EOF
-          NEXT_PUBLIC_SUPABASE_URL=$API_URL
-          NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY
-          SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY
-          SUPABASE_DB_URL=${DB_URL}${DB_SEP}sslmode=require
-          NEXT_PUBLIC_APP_URL=http://localhost:3000
-          # Dummy key so the AI chat route gets past its "AI not configured" 503
-          # guard to the auth check (enforcement.spec.ts asserts unauth → 401).
-          # Never used to call the gateway: the e2e request is unauthenticated.
-          AI_GATEWAY_API_KEY=dummy-ci-key-not-real
-          EXPO_PUBLIC_SUPABASE_URL=$API_URL
-          EXPO_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY
-          EXPO_PUBLIC_API_URL=http://localhost:3000
-          # PAYLOAD_SECRET / PAYLOAD_DATABASE_URL are deliberately ABSENT:
-          # CI exercises the zero-touch path a clone-and-connect Vercel deploy
-          # takes — both are derived from SUPABASE_SERVICE_ROLE_KEY (+ the
-          # admin DB URL) by lib/cms/derived-credentials.ts, and the runtime
-          # bootstrap creates the payload_cms role with the derived password.
-          # Throwaway signing secret for the Payload Stripe webhook endpoint so
-          # subscription.spec.ts can exercise the mirror with self-signed events
-          # (no Stripe account involved; never used against the Stripe API).
-          STRIPE_WEBHOOKS_ENDPOINT_SECRET=whsec_e2e_test_secret
-          NEXT_PUBLIC_CMS_URL=http://localhost:3000
-          S3_ENDPOINT=$API_URL/storage/v1/s3
-          S3_REGION=local
-          S3_ACCESS_KEY_ID=stub
-          S3_SECRET_ACCESS_KEY=$ANON_KEY
-          S3_BUCKET=cms-media
-          # The app's own emails (e.g. the phone-changed notice) go to Mailpit's
-          # SMTP port (supabase/config.toml [inbucket] smtp_port); profile.spec.ts
-          # reads them back like the auth emails.
-          SMTP_HOST=127.0.0.1
-          SMTP_PORT=54325
-          EOF
-
-      # Mirror a FRESH hosted project for the zero-touch CMS path: a first
-      # `supabase start` applies the [db.seed].sql_paths from config.toml,
-      # which includes 00_cms_role.sql — creating the payload_cms role with
-      # the LOCAL DEV password. Hosted projects have neither the role nor the
-      # cms schema, and the e2e run must exercise exactly that: the runtime
-      # DB bootstrap creates both on the app's first boot using credentials
-      # DERIVED from SUPABASE_SERVICE_ROLE_KEY (lib/cms/derived-credentials).
-      # Without this drop, the dev-password role shadows the derived one and
-      # Payload fails auth.
-      - name: Drop seeded CMS role/schema (mirror a fresh hosted project)
-        run: |
-          docker exec -i -e PGPASSWORD=postgres \
-            "$(docker ps --filter name=supabase_db_ --format '{{.Names}}' | head -n1)" \
-            psql -h 127.0.0.1 -U supabase_admin -d postgres -v ON_ERROR_STOP=1 <<'SQL'
-          drop schema if exists cms cascade;
-          do $$ begin
-            if exists (select 1 from pg_roles where rolname = 'payload_cms') then
-              drop owned by payload_cms;
-              drop role payload_cms;
-            end if;
-          end $$;
-          SQL
+      # One bootstrap for laptops, cloud sessions and CI (tooling/setup,
+      # src/plan.ts + src/env-writer.ts, both unit-tested). The ci profile:
+      #   - `supabase start` (applies migrations + seed);
+      #   - TLS on the local Postgres with a throwaway self-signed cert
+      #     (tooling/scripts/enable-supabase-db-tls.sh), so `sslmode=require`
+      #     exercises the hosted-TLS path that once shipped a
+      #     SELF_SIGNED_CERT_IN_CHAIN regression while CI stayed green;
+      #   - a minimal .env from `supabase status` (local demo keys, not real
+      #     secrets) with NO PAYLOAD_SECRET / PAYLOAD_DATABASE_URL, so the
+      #     zero-touch derived-credentials path a fresh Vercel deploy takes
+      #     is what runs;
+      #   - drops the seeded payload_cms role + cms schema, mirroring a fresh
+      #     hosted project (the runtime bootstrap must create both).
+      - name: Bootstrap (pnpm dev:setup --profile ci)
+        run: pnpm dev:setup --profile ci
 
       - name: RLS isolation regression
         run: pnpm test:rls

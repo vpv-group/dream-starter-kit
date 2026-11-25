@@ -1,3 +1,4 @@
+import { applyLocal } from "./apply";
 import { create } from "./create";
 import {
   add,
@@ -34,6 +35,10 @@ Commands:
   remove <slug> [--keep-data]
                              Uninstall: drop migration(s), delete the package,
                              tombstone the lock, regenerate.
+
+  add, update and remove then apply the change to the local stack
+  (supabase migration up, pnpm db:gen-types, pnpm cms:gen-types) unless
+  --no-apply is passed or this runs in CI.
   list | status [--json] [--check]
                              Installed modules, local modifications, and
                              (--check) upstream update availability.
@@ -64,6 +69,7 @@ async function main(): Promise<void> {
     case "add":
       if (!args[0]) throw new Error("usage: pnpm mod add <url|zip|slug>");
       await add(root, args[0]);
+      applyLocal(root, { noApply: flags.has("--no-apply") });
       return;
     case "update":
       if (!args[0]) throw new Error("usage: pnpm mod update <slug>");
@@ -72,10 +78,12 @@ async function main(): Promise<void> {
         from: flagValue("--from"),
         cont: flags.has("--continue"),
       });
+      applyLocal(root, { noApply: flags.has("--no-apply") });
       return;
     case "remove":
       if (!args[0]) throw new Error("usage: pnpm mod remove <slug>");
       await remove(root, args[0], { keepData: flags.has("--keep-data") });
+      applyLocal(root, { noApply: flags.has("--no-apply") });
       return;
     case "list":
       await status(root, { json: flags.has("--json"), checkUpstream: false });
