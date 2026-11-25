@@ -16,7 +16,7 @@ import {
   buildStubs,
   buildTranspileJson,
 } from "./generate";
-import { bumpVersion, nextVersion } from "./migrations";
+import { bumpVersion, dependencyOrder, nextVersion } from "./migrations";
 
 function loaded(
   manifest: Parameters<typeof defineModule>[0],
@@ -227,6 +227,37 @@ describe("migration version assignment", () => {
     const taken = new Set(["20260609000001"]);
     const now = new Date(Date.UTC(2026, 5, 11, 12, 0, 0));
     expect(nextVersion(taken, now)).toBe("20260611120000");
+  });
+});
+
+describe("migration pin order", () => {
+  const mod = (slug: string, requires: string[] = []) => ({
+    manifest: { slug, requires },
+  });
+
+  it("puts a module after the modules it requires", () => {
+    const order = dependencyOrder([
+      mod("client-portal", ["crm", "notifications"]),
+      mod("crm", ["notifications"]),
+      mod("chat"),
+      mod("notifications"),
+    ]).map((m) => m.manifest.slug);
+    expect(order.indexOf("notifications")).toBeLessThan(order.indexOf("crm"));
+    expect(order.indexOf("crm")).toBeLessThan(order.indexOf("client-portal"));
+    expect(order).toHaveLength(4);
+  });
+
+  it("keeps the input order when there are no dependencies, and survives cycles", () => {
+    expect(
+      dependencyOrder([mod("b"), mod("a"), mod("c")]).map(
+        (m) => m.manifest.slug,
+      ),
+    ).toEqual(["b", "a", "c"]);
+    expect(
+      dependencyOrder([mod("x", ["y"]), mod("y", ["x"])]).map(
+        (m) => m.manifest.slug,
+      ),
+    ).toHaveLength(2);
   });
 });
 
