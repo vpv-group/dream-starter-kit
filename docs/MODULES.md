@@ -381,8 +381,8 @@ The app uses `DREAM_LICENSE_KEY` when set and the site key otherwise. The
 `module-ops` workflow can't read the database, so to use paid modules, copy
 the key (top of `/admin`) into the `DREAM_LICENSE_KEY` repository secret.
 
-**Privacy and opt-out.** The founder is told on `/cms-setup` before anything
-is sent. Registration sends only:
+**Privacy and opt-out.** The founder is told on `/sign-up` (the first account's
+sign-up only) before anything is sent. Registration sends only:
 
 - the public domain;
 - admin and editor emails (up to 25);

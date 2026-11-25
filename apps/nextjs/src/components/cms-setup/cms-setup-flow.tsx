@@ -15,12 +15,9 @@ import { StepEyebrow } from "~/components/onboarding/step-progress";
 export function CmsSetupFlow({
   branding,
   askAccountModel,
-  notice,
 }: {
   branding: Branding;
   askAccountModel: boolean;
-  /** Disclosure shown while seeding (the free site license). */
-  notice?: React.ReactNode;
 }) {
   const [phase, setPhase] = useState<"model" | "seed">(
     askAccountModel ? "model" : "seed",
@@ -28,16 +25,11 @@ export function CmsSetupFlow({
 
   if (phase === "model") {
     return (
-      <AccountModelPicker
-        branding={branding}
-        notice={notice}
-        onDone={() => setPhase("seed")}
-      />
+      <AccountModelPicker branding={branding} onDone={() => setPhase("seed")} />
     );
   }
   return (
     <CmsSeedProgress
-      notice={notice}
       stepLabel={
         askAccountModel ? <StepEyebrow index="02" total="02" /> : undefined
       }
