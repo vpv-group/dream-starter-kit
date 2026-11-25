@@ -160,11 +160,16 @@ export function signInWithOAuth(
 export function signInWithSSO(
   client: AppSupabaseClient,
   params: { domain?: string; providerId?: string },
-  opts?: { redirectTo?: string; skipBrowserRedirect?: boolean },
+  opts?: {
+    redirectTo?: string;
+    skipBrowserRedirect?: boolean;
+    captchaToken?: string;
+  },
 ) {
   const options = {
     redirectTo: opts?.redirectTo,
     skipBrowserRedirect: opts?.skipBrowserRedirect,
+    captchaToken: opts?.captchaToken,
   };
   return client.auth.signInWithSSO(
     params.providerId

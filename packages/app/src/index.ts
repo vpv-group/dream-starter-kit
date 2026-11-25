@@ -8,6 +8,7 @@ export * from "./validators/auth";
 export * from "./validators/tag";
 export * from "./validators/workspace";
 export * from "./auth";
+export * from "./captcha";
 export * from "./auth-settings";
 export * from "./workspaces";
 export * from "./post-auth";

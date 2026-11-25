@@ -20,6 +20,7 @@ import { Input } from "@acme/ui-native/input";
 import { Text } from "@acme/ui-native/text";
 
 import { nativeOAuth } from "~/lib/auth";
+import { useCaptcha } from "~/lib/captcha";
 import { supabase } from "~/lib/supabase";
 
 const msg = (e: unknown) =>
@@ -28,6 +29,8 @@ const msg = (e: unknown) =>
 export default function SignUp() {
   const settings = useAuthConfig();
   const m = settings.methods;
+  // One takeToken() per gated GoTrue call (tokens are single-use).
+  const { takeToken } = useCaptcha();
   // Set once sign-up needs email confirmation (the hosted Supabase default) or a
   // passwordless sign-up link/code is sent: swaps the form for "Check your email".
   const [confirm, setConfirm] = useState<{
@@ -68,6 +71,7 @@ export default function SignUp() {
     try {
       const { session } = await signUpWithPassword(supabase, values, {
         emailRedirectTo: Linking.createURL("/auth-callback"),
+        captchaToken: await takeToken(),
       });
       // With confirmations off there's a session already — AuthGate redirects.
       if (!session) setConfirm({ email: values.email, mode: "signup" });
@@ -85,6 +89,7 @@ export default function SignUp() {
         emailRedirectTo: Linking.createURL("/auth-callback"),
         // Sign-up screen (gated by `gate()` above): creating the account is intended.
         shouldCreateUser: true,
+        captchaToken: await takeToken(),
       });
       setConfirm({ email, mode: "otp" });
     } catch (e) {

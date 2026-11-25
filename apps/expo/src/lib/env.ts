@@ -13,6 +13,8 @@ export const clientEnv = parseClientEnv({
   SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
   APP_URL: process.env.EXPO_PUBLIC_API_URL,
   CMS_URL: process.env.EXPO_PUBLIC_CMS_URL,
+  // Optional — when unset the native CaptchaProvider is inert (docs/TURNSTILE.md).
+  TURNSTILE_SITE_KEY: process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY,
 });
 
 /**

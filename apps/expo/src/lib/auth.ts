@@ -41,15 +41,20 @@ export async function nativeOAuth(provider: Provider): Promise<void> {
  * flow as {@link nativeOAuth}. Requires SAML enabled in Supabase (see
  * docs/AUTH.md); gated in the UI by the auth-settings global.
  */
-export async function nativeSSO(params: {
-  domain?: string;
-  providerId?: string;
-}): Promise<void> {
+export async function nativeSSO(
+  params: {
+    domain?: string;
+    providerId?: string;
+  },
+  /** Required once Supabase CAPTCHA is on (`POST /sso` is gated). */
+  opts?: { captchaToken?: string },
+): Promise<void> {
   const redirectTo = Linking.createURL("/auth-callback");
 
   const { data, error } = await signInWithSSO(supabase, params, {
     redirectTo,
     skipBrowserRedirect: true,
+    captchaToken: opts?.captchaToken,
   });
   if (error) throw error;
   if (!data.url) throw new Error("SSO is not available for that email");
