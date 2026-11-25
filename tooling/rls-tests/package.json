@@ -14,13 +14,15 @@
   },
   "dependencies": {
     "@acme/api": "workspace:*",
-    "@supabase/supabase-js": "catalog:"
+    "@supabase/supabase-js": "catalog:",
+    "pg": "8.23.1"
   },
   "devDependencies": {
     "@acme/eslint-config": "workspace:*",
     "@acme/prettier-config": "workspace:*",
     "@acme/tsconfig": "workspace:*",
     "@types/node": "catalog:",
+    "@types/pg": "8.23.1",
     "dotenv-cli": "^11.1.0",
     "eslint": "catalog:",
     "prettier": "catalog:",

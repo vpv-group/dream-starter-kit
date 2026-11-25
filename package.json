@@ -14,6 +14,7 @@
     "clean:workspaces": "turbo run clean",
     "db:gen-migrations": "pnpm -F @acme/nextjs db:gen-migrations",
     "db:gen-types": "supabase gen types typescript --local > packages/api/src/types.ts && prettier --write --log-level warn packages/api/src/types.ts",
+    "db:advisors": "supabase db advisors --local --type all --fail-on warn",
     "db:reset": "bash scripts/db-reset.sh",
     "db:start": "supabase start",
     "db:stop": "supabase stop",

@@ -249,8 +249,11 @@ pnpm test:e2e           # Playwright (web E2E). Needs the local stack (pnpm dev:
                         #   outside CI it resets the DB first (the founder flow needs
                         #   zero users; E2E_REUSE_DB=1 skips). Boots `next dev` itself.
                         #   See tooling/web-e2e/README.md.
-pnpm test:rls           # RLS isolation regression. Needs `supabase start` + .env with
+pnpm test:rls           # RLS isolation regression + query-plan checks (plans.test.ts).
+                        #   Needs `supabase start` + .env with
                         #   NEXT_PUBLIC_SUPABASE_URL/ANON_KEY + SUPABASE_SERVICE_ROLE_KEY.
+pnpm db:advisors        # Supabase Security + Performance Advisor lints on the local DB
+                        #   (fails on warnings) — run before committing a migration
 pnpm license:check      # fail on strong copyleft (GPL/AGPL/SSPL) in the prod tree
 ```
 

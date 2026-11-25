@@ -147,6 +147,19 @@ short-purged. Server code can append to the kit's audit log with the
 service-role RPC `audit_log_event(action, actor_id, …)` — IDs and labels
 only, never content or PII.
 
+**Database guardrails.** Two checks run in CI's integration job and are
+worth running before you commit a migration:
+
+- `pnpm db:advisors` — Supabase's Security + Performance Advisor lints
+  (`supabase db advisors --local`): unindexed foreign keys, `auth.uid()` not
+  wrapped in a select, overlapping permissive policies, duplicate indexes,
+  RLS gaps. Fails on any warning.
+- `tooling/rls-tests/src/plans.test.ts` (part of `pnpm test:rls`) — EXPLAINs
+  the hot queries as a signed-in user: a public security-definer function
+  called per row in a policy (`is_org_member(org_id)`) or a per-row SubPlan
+  fails it, and so does a hot query that stops using its index. Add your
+  module's hot queries to it, or mirror it in `tests/rls/`.
+
 **Module tests.** Unit tests live in `modules/<slug>/tests/*.test.ts` and run
 in `pnpm test` (no database). Suites that need the live database go in
 `modules/<slug>/tests/rls/*.test.ts` — `pnpm test:rls` picks them up alongside
