@@ -209,6 +209,8 @@ jobs:
           # No `|| true`: the script's `>` redirect empties
           # packages/api/src/types.ts before the CLI runs, so a failure here
           # must stop the job instead of committing an empty types file.
+          # Both gen-types scripts run `prettier --write` on their output, so
+          # the committed files pass ci.yml's `format` job as-is.
           pnpm db:gen-types
           pnpm cms:gen-types
           pnpm typecheck
