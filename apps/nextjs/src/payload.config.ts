@@ -15,6 +15,7 @@ import type { S3ConfigSource } from "./lib/s3-config";
 import { resolveCmsCredentials } from "./lib/cms/derived-credentials";
 import { generateMediaFileURL } from "./lib/cms/media-url";
 import { noDocumentLock } from "./lib/cms/no-document-lock";
+import { CMS_CLI_PROCESS_ENV, cmsPoolSizing } from "./lib/cms/pool-sizing";
 import { pgConnectionOptions } from "./lib/db/bootstrap-core";
 import { isGuardedPreview } from "./lib/db/preview-guard";
 import { resolveSmtpConfig } from "./lib/email/smtp";
@@ -85,6 +86,11 @@ const guardedPreview = isGuardedPreview({
   VERCEL_ENV: process.env.VERCEL_ENV,
   DB_BOOTSTRAP: process.env.DB_BOOTSTRAP,
 });
+
+// `pnpm cms:seed` / `pnpm cms:backfill-users` set this marker (via
+// scripts/mark-cli-process.mjs) so the one-shot CLI process gets a wider pool
+// than a serverless instance. Internal process marker, not user config.
+const cliProcess = process.env[CMS_CLI_PROCESS_ENV] === "true";
 
 // Outgoing email for the app's own notices (e.g. the phone-changed security
 // email, payload/hooks/notify-contact-change.ts) via SMTP_* — see
@@ -304,11 +310,13 @@ export default buildConfig({
     // Hook authors: always pass `req` to nested Local API calls — a req-less
     // call inside a transaction checks out a second connection and is exactly
     // how such a wedge forms (see payload/hooks/validate-custom-fields.ts).
+    //
+    // The sizing (max 2 / 20s idle / 15s acquire) lives in lib/cms/pool-sizing.ts;
+    // only the CMS CLI scripts get a wider pool there (dev push introspection
+    // queries every table concurrently and starves a 2-connection pool).
     pool: {
       ...pgConnectionOptions(cmsCredentials.runtimeDatabaseUrl),
-      max: 2,
-      idleTimeoutMillis: 20_000,
-      connectionTimeoutMillis: 15_000,
+      ...cmsPoolSizing({ cli: cliProcess }),
       idle_in_transaction_session_timeout: 60_000,
     },
     // Payload owns its own Postgres schema, isolated from the RLS-governed
