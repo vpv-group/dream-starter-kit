@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import type { NativeNavConfig, NativeNavRow, NavItemRow } from "@acme/app";
 import { mergeNativeNav, nativeNavVersion } from "@acme/app";
 
@@ -16,6 +18,25 @@ import { desiredNavItems } from "./reconcile-nav";
  * deploy before bootstrap), so the app always gets a menu.
  */
 export async function getNativeNavConfig(): Promise<NativeNavConfig> {
+  return (await loadNativeNav()).config;
+}
+
+/** The native menu config plus each row's Tabler icon name, keyed by nav key. */
+export interface LoadedNativeNav {
+  config: NativeNavConfig;
+  /**
+   * `nav-items` icon names (the web sidebar's Tabler set). The config itself
+   * only carries native symbols; the web tab bar (lib/mod/web-tab-menu.ts)
+   * renders these instead.
+   */
+  icons: Map<string, string | undefined>;
+}
+
+/**
+ * Shared loader for GET /api/nav/native and the web tab bar. Per-request
+ * memoized (React cache), like the other CMS readers.
+ */
+export const loadNativeNav = cache(async (): Promise<LoadedNativeNav> => {
   try {
     const { getPayloadClient } = await import("../cms/payload-client");
     const payload = await getPayloadClient();
@@ -40,7 +61,7 @@ export async function getNativeNavConfig(): Promise<NativeNavConfig> {
         overrideAccess: true,
       }),
     ]);
-    if (navRes.docs.length === 0) return defaultNativeNavConfig();
+    if (navRes.docs.length === 0) return defaultLoadedNativeNav();
 
     const navItems: NavItemRow[] = navRes.docs.map((d) => ({
       key: d.key,
@@ -72,10 +93,20 @@ export async function getNativeNavConfig(): Promise<NativeNavConfig> {
       ),
       tabCount: global.tabCount,
     });
-    return { version: nativeNavVersion(merged), ...merged };
+    return {
+      config: { version: nativeNavVersion(merged), ...merged },
+      icons: new Map(navItems.map((n) => [n.key, n.icon ?? undefined])),
+    };
   } catch {
-    return defaultNativeNavConfig();
+    return defaultLoadedNativeNav();
   }
+});
+
+function defaultLoadedNativeNav(): LoadedNativeNav {
+  return {
+    config: defaultNativeNavConfig(),
+    icons: new Map(desiredNavItems().map((d) => [d.key, d.icon])),
+  };
 }
 
 /** The generated defaults (core + manifests) — the no-CMS fallback. */
