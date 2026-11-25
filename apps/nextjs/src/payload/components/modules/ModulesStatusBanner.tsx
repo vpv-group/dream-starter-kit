@@ -8,7 +8,7 @@ import { useModulesAdmin } from "./use-modules-admin";
 /**
  * Above the Modules table (collection `beforeListTable`): says when module
  * ops is off (the screen is read-only), or lists what's in flight — open
- * module-ops PRs plus running or failed workflow runs. Renders nothing when
+ * module and kit update PRs plus running or failed workflow runs. Renders nothing when
  * there's nothing to say, or for staff who aren't admins.
  */
 export function ModulesStatusBanner() {
@@ -36,15 +36,19 @@ export function ModulesStatusBanner() {
   return (
     <Banner type={failed ? "error" : "info"} className="kit-modules-banner">
       <strong>
-        {failed ? "A module operation failed" : "Module operations in progress"}
+        {failed ? "An update operation failed" : "Updates in progress"}
       </strong>
       <ul className="kit-modules-banner__list">
         {prs.map((pr) => (
           <li key={`pr-${pr.number}`}>
             <a href={pr.url} target="_blank" rel="noreferrer">
-              PR #{pr.number}: {pr.title}
+              {pr.kind === "kit" ? "Starter kit" : "Module"} PR #{pr.number}:{" "}
+              {pr.title}
             </a>{" "}
-            — waiting for review and merge
+            —{" "}
+            {pr.conflicts
+              ? "has conflicts to resolve"
+              : "waiting for review and merge"}
           </li>
         ))}
         {runs.map((run) => (

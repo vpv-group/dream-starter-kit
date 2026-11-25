@@ -73,7 +73,13 @@ export interface OpsResponse {
     url: string;
     title: string;
   }[];
-  prs: { number: number; title: string; url: string }[];
+  prs: {
+    number: number;
+    title: string;
+    url: string;
+    kind: "module" | "kit";
+    conflicts: boolean;
+  }[];
 }
 
 interface State {
@@ -88,7 +94,8 @@ interface State {
 export type ModuleOp =
   | { op: "add"; source: string; sha256?: string }
   | { op: "update"; slug: string }
-  | { op: "remove"; slug: string };
+  | { op: "remove"; slug: string }
+  | { op: "kit-update" };
 
 /* ── helpers (pure) ──────────────────────────────────────────────────────── */
 
@@ -196,6 +203,8 @@ const DISPATCHED: Record<ModuleOp["op"], string> = {
     "Update requested — a pull request will open shortly. Merging it deploys the new version.",
   remove:
     "Removal requested — a pull request will open shortly. It never merges on its own.",
+  "kit-update":
+    "Checking for a Dream Starter Kit update — if there is one, a pull request opens shortly.",
 };
 
 /** Dispatch a module op (module-ops.yml → PR). Resolves true on success. */

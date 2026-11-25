@@ -13,7 +13,8 @@ import { DREAM_SITE_GLOBAL, publicDomain, syncSite } from "./site-core";
 
 /**
  * App wiring for the free site license (site-core.ts has the flow).
- * Disclosed on /cms-setup; `DREAM_TELEMETRY=off` turns it off.
+ * Disclosed on the founder's /sign-up and on /cms-setup (SiteLicenseNotice);
+ * `DREAM_TELEMETRY=off` turns it off.
  */
 
 export function siteTelemetryEnabled(): boolean {

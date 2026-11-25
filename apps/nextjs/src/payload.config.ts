@@ -16,6 +16,7 @@ import { resolveCmsCredentials } from "./lib/cms/derived-credentials";
 import { generateMediaFileURL } from "./lib/cms/media-url";
 import { noDocumentLock } from "./lib/cms/no-document-lock";
 import { pgConnectionOptions } from "./lib/db/bootstrap-core";
+import { isGuardedPreview } from "./lib/db/preview-guard";
 import { resolveSmtpConfig } from "./lib/email/smtp";
 import { resolveS3Config } from "./lib/s3-config";
 import {
@@ -78,6 +79,12 @@ const cmsCredentials = resolveCmsCredentials();
 // Postgres") before throwing; silence the logger for that expected failure so
 // build output stays clean. NEXT_PHASE is set by Next itself during the build.
 const buildPhase = process.env.NEXT_PHASE === "phase-production-build";
+// A preview deployment of an unmerged branch must not run boot migrations
+// against the (usually shared, production) database — lib/db/preview-guard.ts.
+const guardedPreview = isGuardedPreview({
+  VERCEL_ENV: process.env.VERCEL_ENV,
+  DB_BOOTSTRAP: process.env.DB_BOOTSTRAP,
+});
 
 // Outgoing email for the app's own notices (e.g. the phone-changed security
 // email, payload/hooks/notify-contact-change.ts) via SMTP_* — see
@@ -336,11 +343,13 @@ export default buildConfig({
     // gating them to the real server boot removes the prompt path entirely.
     // `NEXT_PHASE` is propagated to the static-gen worker processes, so the
     // gate holds there too.
-    prodMigrations: buildPhase
-      ? undefined
-      : [...migrations, ...modPayloadMigrations].sort((a, b) =>
-          a.name.localeCompare(b.name),
-        ),
+    // Also not registered on a guarded preview deployment (see above).
+    prodMigrations:
+      buildPhase || guardedPreview
+        ? undefined
+        : [...migrations, ...modPayloadMigrations].sort((a, b) =>
+            a.name.localeCompare(b.name),
+          ),
     migrationDir: path.resolve(dirname, "payload/migrations"),
   }),
   sharp,

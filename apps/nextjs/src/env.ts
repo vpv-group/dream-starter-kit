@@ -91,6 +91,11 @@ export const env = createEnv({
       .optional(),
     VERCEL_GIT_REPO_OWNER: z.string().min(1).optional(),
     VERCEL_GIT_REPO_SLUG: z.string().min(1).optional(),
+    // Auto-injected by Vercel. On `preview` deployments the runtime DB
+    // bootstrap and Payload's boot migrations are skipped unless
+    // DB_BOOTSTRAP=on (lib/db/preview-guard.ts): a preview of an unmerged
+    // branch must never migrate the production database it shares env with.
+    VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
     // Overrides the catalog the Modules screen's "Install module" drawer reads. When unset it
     // defaults to `${DREAM_REGISTRY_URL}/catalog?schema=2` (see
     // lib/mod/dream-registry.ts) — a self-hoster who sets a value keeps it.
