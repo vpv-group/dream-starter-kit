@@ -219,3 +219,144 @@ html[data-theme="dark"] {
 [data-theme="dark"] .dream-brand-logo__dark {
   display: block;
 }
+
+/* ── 4. Modules screen (/admin/collections/kit-modules) ─────────────────────── */
+/*
+ * payload/components/modules/*: list cells, the status banner, the "Install
+ * module" drawer and the module page's sidebar panel. Built from Payload's
+ * own components; these rules only lay them out, using Payload's spacing
+ * (--base) and theme vars so they follow light/dark like the rest of /admin.
+ */
+.kit-modules-cell {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--base) * 0.4);
+}
+.kit-modules-cell__muted {
+  color: var(--theme-elevation-500);
+}
+.kit-modules-cell__warning,
+.kit-module-info__warning {
+  color: var(--theme-warning-500);
+}
+
+.kit-modules-banner {
+  margin-bottom: var(--base);
+}
+.kit-modules-banner code {
+  font-size: 0.9em;
+}
+.kit-modules-banner__list {
+  margin: calc(var(--base) * 0.4) 0 0;
+  padding-left: calc(var(--base) * 1.2);
+}
+
+.kit-modules-install {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--base) * 2);
+  padding-bottom: calc(var(--base) * 3);
+}
+.kit-modules-install__section > form {
+  max-width: 640px;
+}
+.kit-modules-install__title {
+  margin: 0 0 calc(var(--base) * 0.75);
+}
+.kit-modules-install__hint {
+  margin: 0;
+  color: var(--theme-elevation-500);
+}
+.kit-modules-install__file input[type="file"] {
+  display: block;
+  margin-top: calc(var(--base) * 0.25);
+}
+
+.kit-modules-catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--base);
+}
+.kit-modules-catalog__card {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--base) * 0.5);
+  padding: var(--base);
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: var(--style-radius-m);
+  background: var(--theme-elevation-0);
+}
+.kit-modules-catalog__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--base) * 0.4);
+}
+.kit-modules-catalog__version {
+  color: var(--theme-elevation-500);
+  font-size: 0.85em;
+}
+.kit-modules-catalog__desc {
+  flex: 1;
+  margin: 0;
+  color: var(--theme-elevation-800);
+}
+.kit-modules-catalog__foot {
+  display: flex;
+  align-items: center;
+  min-height: calc(var(--base) * 1.6);
+}
+.kit-modules-catalog__command {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--base) * 0.25);
+  min-width: 0;
+}
+.kit-modules-catalog__command code {
+  overflow-wrap: anywhere;
+  font-size: 0.85em;
+}
+
+.kit-module-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(var(--base) * 0.6);
+  margin-bottom: var(--base);
+  padding-top: var(--base);
+  border-top: 1px solid var(--theme-elevation-150);
+}
+.kit-module-info__list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: calc(var(--base) * 0.4) var(--base);
+  width: 100%;
+  margin: 0;
+}
+.kit-module-info__list dt {
+  color: var(--theme-elevation-500);
+}
+.kit-module-info__list dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--base) * 0.4);
+  margin: 0;
+  min-width: 0;
+}
+.kit-module-info__note {
+  margin: 0;
+  font-size: 0.85em;
+  color: var(--theme-elevation-500);
+}
+.kit-module-info__link {
+  margin: 0;
+}
+.kit-module-info__remove {
+  color: var(--theme-error-500);
+}
+.kit-module-no-settings {
+  margin: 0;
+  color: var(--theme-elevation-500);
+}

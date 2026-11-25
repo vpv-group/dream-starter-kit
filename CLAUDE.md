@@ -546,7 +546,7 @@ the **remote MCP server** (`@acme/mcp`, docs/MCP.md) are core; dashboard,
 notifications, reminders, chat and billing ship as
 pre-installed modules under `modules/` with the full lifecycle
 (create/add/update/remove, CMS-driven menus, per-module settings screens,
-the /admin/modules panel + module-ops workflow). The test/CI suite is
+the /admin Modules screen + module-ops workflow). The test/CI suite is
 green end to end. Known follow-ups: opening the CMS API bridge to member
 sessions; publishing the five first-party modules to their own repos +
 the official catalog repo (`pnpm mod eject`); per-module RLS test

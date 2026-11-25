@@ -93,6 +93,13 @@ export async function proxy(request: NextRequest) {
         url.search = "";
         return NextResponse.redirect(url);
       }
+      // /admin/modules was folded into the Modules collection screen.
+      if (pathname === "/admin/modules" || pathname === "/admin/modules/") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/admin/collections/kit-modules";
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
     }
     return response;
   }
