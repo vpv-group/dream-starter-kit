@@ -36,6 +36,16 @@ export { useUserTags } from "./hooks/use-tags";
 export type { UserTag } from "./hooks/use-tags";
 export { useNavMenu } from "./hooks/use-nav-menu";
 export type { NavMenuEntry } from "./hooks/use-nav-menu";
+export { useNativeNav, defaultNativeNavConfig } from "./hooks/use-native-nav";
+export type {
+  NativeNavDefault,
+  NativeNavState,
+  UseNativeNavOptions,
+} from "./hooks/use-native-nav";
+export * from "./nav/native-nav";
+export * from "./nav/native-icons";
+export * from "./nav/native-nav-store";
+export * from "./nav/core-nav";
 export {
   useMyWorkspaces,
   useSlugAvailability,

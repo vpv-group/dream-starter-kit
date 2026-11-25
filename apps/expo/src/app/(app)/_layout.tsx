@@ -1,44 +1,54 @@
-import { Pressable, Text } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import { useColorScheme } from "react-native";
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 
 import { ModWidgetsProvider } from "@acme/mod-kit/react";
 
 import { useBrandColors } from "~/lib/brand";
-import { hasModule, modWidgets } from "~/mod/registry.generated";
+import { modWidgets } from "~/mod/registry.generated";
+import { HeaderBell } from "~/nav/header-bell";
+import { NativeNavProvider } from "~/nav/native-nav-provider";
 
-function HeaderBell({ color }: { color: string }) {
-  const router = useRouter();
-  return (
-    <Pressable
-      onPress={() => router.push("/a/notifications")}
-      hitSlop={8}
-      accessibilityLabel="Notifications"
-    >
-      <Text style={{ color, fontSize: 18, marginRight: 12 }}>🔔</Text>
-    </Pressable>
-  );
-}
+// The tab bar is the base of the signed-in app; everything else (module
+// detail screens, hidden modules opened by deep link, items picked from
+// More) pushes over it.
+export const unstable_settings = { initialRouteName: "(tabs)" };
 
 export default function AppLayout() {
-  // The bell is the notifications module's surface — hidden when the
-  // module isn't installed (MODULES-PLAN.md §2.5).
-  const showBell = hasModule("notifications");
   const colors = useBrandColors();
+  const scheme = useColorScheme();
+  const base = scheme === "dark" ? DarkTheme : DefaultTheme;
   return (
-    // Home-screen widgets from the generated registry (all installed; the
-    // runtime kit-modules disable toggle gates native at the menu level).
-    <ModWidgetsProvider widgets={modWidgets}>
-      <Stack
-        screenOptions={{
-          // Dream's reserved volume inside the app: plain ground, ink titles.
-          headerStyle: { backgroundColor: colors.background },
-          headerTintColor: colors.foreground,
-          contentStyle: { backgroundColor: colors.background },
-          ...(showBell
-            ? { headerRight: () => <HeaderBell color={colors.foreground} /> }
-            : {}),
-        }}
-      />
-    </ModWidgetsProvider>
+    // Navigation theme: stops iOS 26 flashing white between native tabs.
+    <ThemeProvider
+      value={{
+        ...base,
+        colors: {
+          ...base.colors,
+          primary: colors.primary,
+          background: colors.background,
+          card: colors.background,
+          text: colors.foreground,
+          border: colors.border,
+        },
+      }}
+    >
+      {/* Home-screen widgets from the generated registry (all installed; the
+          runtime kit-modules disable toggle gates native at the menu level). */}
+      <ModWidgetsProvider widgets={modWidgets}>
+        <NativeNavProvider>
+          <Stack
+            screenOptions={{
+              // Dream's reserved volume inside the app: plain ground, ink titles.
+              headerStyle: { backgroundColor: colors.background },
+              headerTintColor: colors.foreground,
+              contentStyle: { backgroundColor: colors.background },
+              headerRight: () => <HeaderBell color={colors.foreground} />,
+            }}
+          >
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          </Stack>
+        </NativeNavProvider>
+      </ModWidgetsProvider>
+    </ThemeProvider>
   );
 }

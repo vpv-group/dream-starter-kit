@@ -40,11 +40,14 @@ export const getWebNavItems = cache(async (): Promise<NavMenuItem[]> => {
         overrideAccess: true,
       }),
     ]);
+    const mods = modRes.docs.flatMap((d) =>
+      d.slug ? [{ ...d, slug: d.slug }] : [],
+    );
     const disabled = new Set(
-      modRes.docs.filter((d) => d.enabled === false).map((d) => d.slug),
+      mods.filter((d) => d.enabled === false).map((d) => d.slug),
     );
     const allowed = await allowedModules(
-      modRes.docs.map((d) => ({ slug: d.slug, accessCheck: d.accessCheck })),
+      mods.map((d) => ({ slug: d.slug, accessCheck: d.accessCheck })),
     );
     const isStaff = await isCurrentUserStaff();
     const items = navRes.docs

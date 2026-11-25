@@ -2,9 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import type { AppSupabaseClient } from "@acme/api";
 import type { KitModule, NavItem } from "@acme/cms";
 import { useSupabase } from "@acme/api";
+
+import { filterNavForUser } from "../nav/native-nav";
+import { fetchNavUserContext } from "../nav/user-context";
 
 /**
  * The CMS-driven app menu (nav-items collection — staff rename/reorder/
@@ -42,39 +44,6 @@ async function fetchJson<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
-/** `profiles.is_staff` for the signed-in user (false when signed out / on error). */
-async function fetchIsStaff(supabase: AppSupabaseClient): Promise<boolean> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return false;
-  const { data } = await supabase
-    .from("profiles")
-    .select("is_staff")
-    .eq("id", user.id)
-    .maybeSingle();
-  return data?.is_staff ?? false;
-}
-
-/** Slugs of gated modules whose access check denies this user (fails closed). */
-async function fetchDeniedModules(
-  supabase: AppSupabaseClient,
-  mods: KitModule[],
-): Promise<Set<string>> {
-  const denied = new Set<string>();
-  const rpc = supabase.rpc.bind(supabase) as unknown as (
-    fn: string,
-  ) => Promise<{ data: unknown; error: unknown }>;
-  await Promise.all(
-    mods.map(async (m) => {
-      if (!m.accessCheck) return;
-      const { data, error } = await rpc(m.accessCheck);
-      if (error || data !== true) denied.add(m.slug);
-    }),
-  );
-  return denied;
-}
-
 export function useNavMenu(platform: "web" | "native" = "native") {
   const supabase = useSupabase();
   return useQuery({
@@ -87,26 +56,26 @@ export function useNavMenu(platform: "web" | "native" = "native") {
         ),
         fetchJson<Paginated<KitModule>>(`kit-modules?limit=200&depth=0`),
       ]);
-      const disabled = new Set(
-        mods.docs.filter((d) => d.enabled === false).map((d) => d.slug),
+      const modRows = mods.docs.flatMap((d) =>
+        d.slug ? [{ ...d, slug: d.slug }] : [],
       );
-      const [isStaff, denied] = await Promise.all([
-        fetchIsStaff(supabase).catch(() => false),
-        fetchDeniedModules(supabase, mods.docs),
-      ]);
-      return nav.docs
+      const disabled = new Set(
+        modRows.filter((d) => d.enabled === false).map((d) => d.slug),
+      );
+      const user = await fetchNavUserContext(supabase, modRows);
+      const rows = nav.docs
         .filter((d) => (d.platforms ?? []).includes(platform))
-        .filter((d) => isStaff || d.audience !== "staff")
-        .filter((d) => {
-          const mod = typeof d.module === "object" ? d.module?.slug : undefined;
-          return !mod || (!disabled.has(mod) && !denied.has(mod));
-        })
         .map((d) => ({
-          key: d.key,
-          label: d.label,
-          href: d.href,
-          icon: d.icon ?? undefined,
-        }));
+          ...d,
+          module: typeof d.module === "object" ? d.module?.slug : undefined,
+        }))
+        .filter((d) => !d.module || !disabled.has(d.module));
+      return filterNavForUser(rows, user).map((d) => ({
+        key: d.key,
+        label: d.label,
+        href: d.href,
+        icon: d.icon ?? undefined,
+      }));
     },
   });
 }
