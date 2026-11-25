@@ -15,8 +15,9 @@ import {
   buildNextServerRegistry,
   buildStubs,
   buildTranspileJson,
+  gatedDefaultExport,
 } from "./generate";
-import { bumpVersion, nextVersion } from "./migrations";
+import { bumpVersion, dependencyOrder, nextVersion } from "./migrations";
 
 function loaded(
   manifest: Parameters<typeof defineModule>[0],
@@ -239,6 +240,50 @@ describe("migration version assignment", () => {
   });
 });
 
+describe("gated native stubs", () => {
+  it("wrap like Prettier when the line is too long", () => {
+    expect(gatedDefaultExport('"mod_crm_access_ok"', "CrmScreen")).toBe(
+      'export default withModuleAccess("mod_crm_access_ok", CrmScreen);',
+    );
+    expect(
+      gatedDefaultExport('"mod_client_portal_access_ok"', "PortalTicketScreen"),
+    ).toBe(
+      'export default withModuleAccess(\n  "mod_client_portal_access_ok",\n  PortalTicketScreen,\n);',
+    );
+  });
+});
+
+describe("migration pin order", () => {
+  const mod = (slug: string, requires: string[] = []) => ({
+    manifest: { slug, requires },
+  });
+
+  it("puts a module after the modules it requires", () => {
+    const order = dependencyOrder([
+      mod("client-portal", ["crm", "notifications"]),
+      mod("crm", ["notifications"]),
+      mod("chat"),
+      mod("notifications"),
+    ]).map((m) => m.manifest.slug);
+    expect(order.indexOf("notifications")).toBeLessThan(order.indexOf("crm"));
+    expect(order.indexOf("crm")).toBeLessThan(order.indexOf("client-portal"));
+    expect(order).toHaveLength(4);
+  });
+
+  it("keeps the input order when there are no dependencies, and survives cycles", () => {
+    expect(
+      dependencyOrder([mod("b"), mod("a"), mod("c")]).map(
+        (m) => m.manifest.slug,
+      ),
+    ).toEqual(["b", "a", "c"]);
+    expect(
+      dependencyOrder([mod("x", ["y"]), mod("y", ["x"])]).map(
+        (m) => m.manifest.slug,
+      ),
+    ).toHaveLength(2);
+  });
+});
+
 describe("module access + admin settings", () => {
   const crm = loaded({
     slug: "crm",
@@ -303,7 +348,7 @@ describe("module access + admin settings", () => {
     expect(admin).toContain(
       'import { AdminSettings as admin_crm } from "@acme/mod-crm/admin";',
     );
-    expect(admin).toContain('"crm": admin_crm,');
+    expect(admin).toContain("crm: admin_crm,");
     expect(buildNextAdminRegistry([chat])).toContain(
       "modAdminComponents: Record<string, ComponentType> = {};",
     );
