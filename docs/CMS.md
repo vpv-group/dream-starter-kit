@@ -44,6 +44,13 @@ caller's Supabase session and JIT-provisions a `cms.users` row (linked by
 - `users.roles[]` (WordPress-style): **admin** (everything, incl. Users/roles and
   Commerce), **editor** (staff: content + moderation), **author** (may enter
   `/admin`), **member** (app user; no admin access).
+- **Roles decide staff access.** `profiles.is_staff` is derived from the roles —
+  `true` iff the user holds admin, editor or author — and written through to
+  Supabase on every admin save of a user (`sync-user-to-supabase` hook), so there
+  is no separate "grant" step. Only admins can edit `roles`, and an admin can't
+  remove their own `admin` role (it would lock them out). A row with no staff
+  role is refused by the SSO bridge even if a stale `is_staff` says otherwise;
+  re-saving the user re-syncs the flag.
 - Every app signup is mirrored in as a `member` by `ensureCmsUser`
   (`lib/cms/mirror-user.ts`), so the admin Users page lists **all** app users, not
   just staff (the SSO bridge only JIT-provisions staff). Because a session can first
@@ -60,8 +67,11 @@ caller's Supabase session and JIT-provisions a `cms.users` row (linked by
   staff-only today** (member-scoped collections already carry owner-scoped rules
   for the documented member-auth follow-up).
 - The **first signup** is auto-flagged staff (DB trigger) and JIT-provisioned
-  `admin`. Further staff are invited from `/admin → Users → Create New`
-  (`payload/hooks/invite-user.ts` sends a Supabase invite + flags `is_staff`).
+  `admin`. Further users are invited from `/admin → Users → Create New`
+  (`payload/hooks/invite-user.ts` sends a Supabase invite and sets `is_staff`
+  from the chosen roles — pick Admin/Editor/Author for a staff invite; a
+  Member-only invite is an app user). To promote an existing user, change their
+  role and save.
 - Users are **soft-deleted** (`trash: true`); the bridge rejects trashed rows —
   restore from the admin Trash view.
 - **Account editing** (docs/AUTH.md → Account settings): admin edits to a user's
@@ -108,9 +118,9 @@ caller's Supabase session and JIT-provisions a `cms.users` row (linked by
 | `requireCommentsEnabled`                        | Rejects comments whose target has `commentsEnabled: false`                                                                            |
 | `uniquePolymorphic(...)`                        | One row per owner + polymorphic target (open reports)                                                                                 |
 | `incrementReportCount`                          | Denormalizes `reportCount` onto the reported doc                                                                                      |
-| `invite-user`                                   | On staff-created Users rows: Supabase invite email + `is_staff` flag                                                                  |
-| `sync-user-to-supabase`                         | On admin Users updates: write email / display name / phone / job title through to Supabase Auth + `profiles`                           |
-| `notify-contact-change`                         | On Users updates (member sync or admin edit): email the member a masked "phone number changed" security notice (best-effort) |
+| `invite-user`                                   | On staff-created Users rows: Supabase invite email + `is_staff` from the chosen roles                                                 |
+| `sync-user-to-supabase`                         | On admin Users updates: write email / display name / phone / job title through to Supabase Auth + `profiles`                          |
+| `notify-contact-change`                         | On Users updates (member sync or admin edit): email the member a masked "phone number changed" security notice (best-effort)          |
 | `sync-plan-to-stripe` / `sync-coupon-to-stripe` | afterChange → create/update Stripe product, **recreate + archive** immutable prices/coupons; status lands on `syncStatus`/`syncError` |
 | `validate-custom-fields`                        | Validates `users.customFields` against the `profile-fields` global                                                                    |
 
@@ -290,10 +300,11 @@ global, staff-managed `tags`); **Contact tab** (phone, DOB, timezone, language,
 address); **Preferences tab** (push/SMS/marketing opt-ins,
 `notificationPreferences`, `onboardingCompleted`, `lastActiveAt`); **Billing
 tab** (read-only `stripeCustomerID`); joins
-`subscriptions`/`enrollments`/`devices`; UI fields `tagsManager`,
-`grantStaff` and the admin-only `passwordManager`. `email` is admin-only to
-update and, like `displayName`/`phone`/`jobTitle`, writes through to Supabase on
-save (`sync-user-to-supabase` hook). **Access:** admin panel
+`subscriptions`/`enrollments`/`devices`; UI fields `tagsManager` and the
+admin-only `passwordManager`. `email` is admin-only to update and, like
+`displayName`/`phone`/`jobTitle`, writes through to Supabase on save
+(`sync-user-to-supabase` hook); `roles` (admin-only) writes through as
+`profiles.is_staff`. **Access:** admin panel
 `canAccessAdmin`; create `isAdmin` (triggers the invite hook); read/update
 `isAdminOrSelf`; delete `isAdmin`. Trash (soft delete; bridge rejects trashed).
 
@@ -440,16 +451,110 @@ preview · trash · SEO plugin. Seeded docs: `terms-of-service`,
 
 ---
 
+## Modules group
+
+### `kit-modules` — installed modules and their settings
+
+One row per installed module, created and updated only by the boot reconcile
+(`lib/mod/reconcile-nav.ts`). This collection is the whole **Modules** screen
+(docs/MODULES.md → Admin panel + automatic updates): its list adds Version
+(update available), Source and Enabled/System cells, a module-ops status
+banner and an **Install module** drawer; each module's page adds a sidebar
+**Module** panel with Update and Remove. They live in
+`payload/components/modules/` and dispatch module-ops through
+`/api/modules/*` (admin only). The old `/admin/modules` view redirects here.
+
+- **Fields:**
+  - Framework-owned: `slug`, `name`, `version`, `system`, and the hidden
+    `accessCheck` (the module's access-check SQL function). They're
+    list columns and API data; on the module's page they show in the sidebar
+    panel instead of as form fields.
+  - Staff-owned: `enabled` (the runtime on/off switch, in the sidebar).
+  - UI-only: `source` (list column), `moduleInfo` (sidebar panel),
+    `noSettings` (placeholder for modules without settings).
+- **Each module's page is also its settings screen** (docs/MODULES.md →
+  Settings live on the module's page):
+  - a `mod_<slug>` group of the module's `defineModuleSettings` fields, shown
+    only on that module's row (read: staff, or anyone for `publicRead`;
+    update: admin);
+  - and/or the module's own `./admin` settings component.
+- `/admin/module-settings/<slug>` redirects to the row.
+- The old `/admin/globals/mod-<slug>-settings` URLs redirect there too. Saved
+  legacy globals are copied onto the row once (`settingsCopied`).
+- **Access:** read is anyone (the native menu reads it); update is admin;
+  create and delete are framework-only.
+
+### `nav-items` — the CMS-driven app menus ("Navigation")
+
+Shown in `/admin` as **Navigation** (the slug stays `nav-items`). One row per
+menu entry. Manifest `nav` defaults are seeded once; staff own `label`,
+`icon`, `platforms`, `enabled`, order and **`audience`** afterwards.
+
+The screen has two sections:
+
+- **Web App** — the list table, filtered to rows with the `web` platform:
+  the `/a` sidebar. Drag rows to reorder (`_order`), open one to edit it.
+- **iOS and Android App** — the native tab bar editor
+  (`payload/components/navigation/NativeNavigationEditor.tsx`), saved to
+  the `native-navigation` global (below). Staff drag the native rows into
+  an order of their own, choose a **3- or 4-tab** bar, **hide** rows on
+  native, and optionally override a row's native icons (SF Symbol / Material
+  Symbol). The first N visible rows are tabs. Every visible row is listed
+  (icon + name, searchable) on the app's **Search** tab (iOS) / **More** tab
+  (Android), so rows past the tab bar are reachable there. On iOS 26 the
+  Search tab is the system's separate Liquid Glass button: selecting it
+  turns the bottom bar into a full-width search field, with the tabs
+  collapsed into one button that returns to the previous tab. The Home row
+  (`/home`) wears the app logo as its native icon (like Apple News' Today
+  tab), so coming back from Search shows the app's mark; an SF Symbol /
+  Material override replaces it. Hidden rows
+  are reachable by deep link only. Save draft → Publish; the app reads only
+  the published version. The first CMS seed publishes a **4-tab** menu with
+  every native row visible in default order (`lib/mod/native-nav-seed.ts`),
+  unless staff already saved one.
+
+  The **web app on phones and tablets** (below `lg`) shows the same menu as a
+  Liquid Glass bottom tab bar on every signed-in page (`/a/*` and the rest of
+  the app shell), with the same tab count, order and hidden rows; the top
+  header and the desktop sidebar are unchanged. Web differences: icons come
+  from the row's Tabler `icon` (the native SF/Material overrides don't
+  apply), and hrefs map to the web page (`/home` → `/a`, a module's
+  native-only path → its web nav entry, `/content/posts` → `/posts`). The
+  trailing round Search button turns the bar into a search field over a list
+  of every row plus Profile. See `lib/mod/web-tab-menu.ts` and
+  `components/glass-tab-bar.tsx`.
+
+Per-user rules, on both platforms:
+
+- **`audience`:** "Everyone signed in" (default) or "Staff only". Staff-only
+  entries are dropped for users without `profiles.is_staff`: server-side on
+  the web sidebar, and in `useNavMenu()` / `useNativeNav()` on native.
+- Entries of a module with an access check (manifest `access.check`) are also
+  dropped for users the check denies.
+
+**How the native app loads it.** `GET /api/nav/native` (public,
+`lib/mod/native-nav.ts`) merges the published global with the live native
+rows and module enablement; rows the global doesn't list yet (a newly
+installed module) are appended, visible. The Expo app (`useNativeNav` in
+`@acme/app`, `apps/expo/src/nav/`) filters it per user, drops hrefs this
+build has no screen for, and caches the result per user in AsyncStorage.
+Launch order: cached menu → (first launch) network → bundled defaults. A
+menu fetched mid-session is stored as _pending_ and applied at the next
+launch, so the tab bar never changes while someone is using it (Apple HIG;
+NativeTabs also can't change its tabs while mounted). Menu changes need no
+app release; a brand-new module's screens still ship in a build.
+
 ## Globals
 
-| Global                      | Purpose                                                                                                                                                                                                                                                                                                                                                                                                     | Read               | Update    |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | --------- |
-| `site-settings`             | Site chrome: General (siteName, defaultMeta), Header nav + actions, Footer columns/policies/copyright, Social handles — consumed by the Launch UI navbar/footer                                                                                                                                                                                                                                             | `anyone`           | `isStaff` |
-| `pricing-settings`          | `/pricing` page: heading/subheading, `billingToggleDefault`, up to 3 `featuredPlans`, optional `freeTier` group, disclaimer                                                                                                                                                                                                                                                                                 | `anyone`           | `isStaff` |
-| `theme-settings`            | The **front-end** shadcn theme (versioned, drafts→publish): Branding (appName, brandLink, appIcon, light/dark logos), Light/Dark color tokens, Typography (sans/serif/mono, letterSpacing), Other (radius, spacing, shadow). Serialized by `lib/theme/serialize.ts` into `<ThemeStyle />`; branding read by `getBranding()`. The `/admin` chrome uses a separate fixed palette (`lib/theme/admin-theme.ts`) | `publishedOrStaff` | `isStaff` |
-| `profile-fields`            | Admin-defined custom member fields (key, label, type, options, required, visibility, editableByMember, order) — drives `users.customFields` validation + profile UI                                                                                                                                                                                                                                         | `anyone`           | `isStaff` |
-| `image-generation-settings` | **System → Image Generation.** Workspace settings for AI image generation: `enabled` (kill switch), `model` (gateway image-model slug from the `@acme/config` catalog), `systemPrompt` (art direction). Resolution order at generation time: global → env → code default. Also a **post-generation audit** (`auditEnabled`, `auditMaxAttempts`, `auditFailureAction` publish/skip, `auditModel`, `auditInstructions`) and a **Regenerate all images** button (re-renders every image-enabled doc against the current settings; backed by the staff-only `/api/cms/regenerate-images` route)                                                                                                | `isStaff`          | `isStaff` |
+| Global                      | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Read               | Update    |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | --------- |
+| `site-settings`             | Site chrome: General (siteName, defaultMeta), Header nav + actions, Footer columns/policies/copyright, Social handles — consumed by the Launch UI navbar/footer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `anyone`           | `isStaff` |
+| `pricing-settings`          | `/pricing` page: heading/subheading, `billingToggleDefault`, up to 3 `featuredPlans`, optional `freeTier` group, disclaimer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `anyone`           | `isStaff` |
+| `theme-settings`            | The **front-end** shadcn theme (versioned, drafts→publish): Branding (appName, brandLink, appIcon, light/dark logos), Light/Dark color tokens, Typography (sans/serif/mono, letterSpacing), Other (radius, spacing, shadow). Serialized by `lib/theme/serialize.ts` into `<ThemeStyle />`; branding read by `getBranding()`. The `/admin` chrome uses a separate fixed palette (`lib/theme/admin-theme.ts`)                                                                                                                                                                                                                                                                                                                                                   | `publishedOrStaff` | `isStaff` |
+| `profile-fields`            | Admin-defined custom member fields (key, label, type, options, required, visibility, editableByMember, order) — drives `users.customFields` validation + profile UI                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `anyone`           | `isStaff` |
+| `image-generation-settings` | **System → Image Generation.** Workspace settings for AI image generation: `enabled` (kill switch), `model` (gateway image-model slug from the `@acme/config` catalog), `systemPrompt` (art direction). Resolution order at generation time: global → env → code default. Also a **post-generation audit** (`auditEnabled`, `auditMaxAttempts`, `auditFailureAction` publish/skip, `auditModel`, `auditInstructions`) and a **Regenerate all images** button (re-renders every image-enabled doc against the current settings; backed by the staff-only `/api/cms/regenerate-images` route)                                                                                                                                                                   | `isStaff`          | `isStaff` |
 | `authentication-settings`   | **System → Authentication.** Front-end auth config: an **orderable** login-method list (password · magic link · email OTP · Google · Apple · SAML SSO — drag to reorder, toggle on/off; first enabled = primary CTA), sign-up access (invite-only, email-domain allow/block, terms links + checkbox, post-login/signup redirects), security (min password length, Turnstile toggle), copy, and SAML SSO domain routing. A **UI + client-logic** layer — Supabase still gates what each method actually does. Read server-side via `getAuthSettings()` and over the public `GET /api/auth/config` (mobile). Drives `AuthFlow` (web) + the Expo auth screens. Full guide: [docs/AUTH.md](https://github.com/vpv-group/dream-starter-kit/blob/main/docs/AUTH.md) | `anyone`           | `isStaff` |
+| `native-navigation`         | **Hidden — edited from Navigation → iOS and Android App.** The native app tab bar: `tabCount` (3/4) and an ordered `items` array (`item` → `nav-items`, `hidden`, `sfSymbol`, `materialIcon`). Drafts → publish (`versions.drafts`); `GET /api/nav/native` and the web app's phone/tablet tab bar read the published version.                                                                                                                                                                                                                                                                                                                                                                                                                                 | `publishedOrStaff` | `isStaff` |
 
 ---
 

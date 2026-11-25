@@ -27,6 +27,9 @@ export type ModSource =
       slug: string;
       version: string;
       sha256: string;
+      /** GitHub repo to fall back to when the registry can't serve an
+       * update (registry-first — docs/MODULES.md). Optional, added in place. */
+      repo?: string;
     };
 
 export interface ModLockEntry {

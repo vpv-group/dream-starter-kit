@@ -488,7 +488,7 @@ supabase link --project-ref <your-ref>
 supabase db push                          # optional — the app already did this on boot
 supabase functions deploy billing-stripe-webhook  # + delete-account, reminders-process
 
-# Module admin ops (optional — /admin/modules installs via PRs):
+# Module admin ops (optional — /admin → Modules installs via PRs):
 # 1) create a fine-grained PAT (read & write: contents, pull requests, actions, workflows)
 # 2) repo secret MOD_OPS_TOKEN=<pat>; Vercel env GITHUB_OPS_TOKEN=<pat>
 #    (without it module ops is skipped and paid modules stay off; /admin shows the steps)

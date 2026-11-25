@@ -21,7 +21,7 @@ const ROLE = { owner: "Owner", admin: "Admin", member: "Member" } as const;
 /**
  * Workspaces on mobile (docs/WORKSPACES.md): switch the active workspace
  * (profiles.last_org_id, shared with web), join pending invitations, and see
- * who's in the active workspace. Reached from the Profile tab.
+ * who's in the active workspace. Reached from the Profile screen.
  */
 export default function WorkspacesScreen() {
   const settings = useAuthConfig();

@@ -29,7 +29,10 @@ async function disabledModules(): Promise<Set<string>> {
       pagination: false,
       overrideAccess: true,
     });
-    cached = { at: now, disabled: new Set(res.docs.map((d) => d.slug)) };
+    cached = {
+      at: now,
+      disabled: new Set(res.docs.flatMap((d) => (d.slug ? [d.slug] : []))),
+    };
   } catch {
     cached = { at: now, disabled: new Set() };
   }

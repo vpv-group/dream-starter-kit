@@ -4,6 +4,8 @@ import { useRouter } from "expo-router";
 import { Text } from "@acme/ui-native/text";
 
 import { useUnreadCount } from "../index";
+// Side effect: start listening for push taps once the home screen renders.
+import "./push";
 
 /** Home-screen widget: unread notification count. */
 export function NotificationsWidget() {

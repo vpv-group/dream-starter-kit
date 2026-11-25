@@ -16,6 +16,7 @@ import { KIT_VERSION } from "@acme/config";
 
 import type { ModLockEntry, ModSource } from "./lock";
 import type { CatalogModule } from "./registry";
+import type { Source, SourcePlan } from "./source-plan";
 import {
   checkoutModuleTree,
   commitModuleTree,
@@ -46,6 +47,13 @@ import {
   requireLicenseKey,
   requireOpsToken,
 } from "./registry";
+import {
+  fallbackRepo,
+  findInCatalog,
+  planAdd,
+  planUpdate,
+  registryFirstEnabled,
+} from "./source-plan";
 import { sync } from "./sync";
 
 /**
@@ -58,13 +66,8 @@ import { sync } from "./sync";
 const SLUG_FROM_CONFIG = /slug:\s*["']([a-z][a-z0-9-]{1,30})["']/;
 const VERSION_FROM_CONFIG = /version:\s*["'](\d+\.\d+\.\d+[^"']*)["']/;
 
-interface Source {
-  kind: "github" | "zip" | "registry";
-  /** github: clean repo url; zip: file path; registry: dream:<slug>[@x.y.z]. */
-  location: string;
-  /** Requested version — tag (github, vX.Y.Z) or plain x.y.z (registry). */
-  ref?: string;
-}
+/** A bare module slug (`crm`, `crm@1.2.0`) means the Dream registry. */
+const BARE_SLUG = /^[a-z][a-z0-9-]{1,30}(?:@v?\d+\.\d+\.\d+(?:-[\w.-]+)?)?$/;
 
 export function parseSource(
   arg: string,
@@ -75,6 +78,8 @@ export function parseSource(
   baseDir = process.env.INIT_CWD ?? process.cwd(),
 ): Source {
   if (isDreamSource(arg)) return { kind: "registry", location: arg };
+  if (BARE_SLUG.test(arg))
+    return { kind: "registry", location: `dream:${arg}` };
   if (arg.endsWith(".zip"))
     return { kind: "zip", location: path.resolve(baseDir, arg) };
   const [url, ref] = arg.split("#");
@@ -169,6 +174,63 @@ async function fetchSource(
   return { dir: tmp, commit, ref };
 }
 
+/** The registry catalog, or null when it's unreachable (fetched once). */
+let catalogPromise: Promise<CatalogModule[] | null> | undefined;
+function registryCatalog(): Promise<CatalogModule[] | null> {
+  catalogPromise ??= fetchCatalog(registryUrl()).catch(() => null);
+  return catalogPromise;
+}
+
+/**
+ * Fetch the plan's primary source; if it fails and the plan has a GitHub
+ * fallback, say why and fetch that instead. Returns the source actually used.
+ */
+async function fetchPlanned(
+  repoRoot: string,
+  plan: SourcePlan,
+): Promise<{ fetched: Awaited<ReturnType<typeof fetchSource>>; used: Source }> {
+  try {
+    return {
+      fetched: await fetchSource(repoRoot, plan.primary),
+      used: plan.primary,
+    };
+  } catch (err) {
+    if (!plan.fallback) throw err;
+    const why = err instanceof Error ? err.message : String(err);
+    console.warn(
+      `mod: ${plan.primary.location} unavailable (${why}) — falling back to ${plan.fallback.location}`,
+    );
+    return {
+      fetched: await fetchSource(repoRoot, plan.fallback),
+      used: plan.fallback,
+    };
+  }
+}
+
+/** The lock's source entry for what was actually fetched. */
+function lockSource(
+  used: Source,
+  fetched: Awaited<ReturnType<typeof fetchSource>>,
+  repo: string | undefined,
+): ModSource {
+  if (fetched.registry) {
+    return { ...fetched.registry, ...(repo ? { repo } : {}) };
+  }
+  if (used.kind === "zip") {
+    return {
+      type: "zip",
+      sha256: sha256File(used.location),
+      filename: path.basename(used.location),
+    };
+  }
+  return {
+    type: "github",
+    repo: used.location,
+    ref: fetched.ref ?? "",
+    commit: fetched.commit ?? "",
+  };
+}
+
 function readManifestBasics(dir: string): { slug: string; version: string } {
   const config = path.join(dir, "module.config.ts");
   if (!existsSync(config)) {
@@ -188,10 +250,18 @@ async function validateAndSync(repoRoot: string): Promise<void> {
   await sync(repoRoot); // loadModules inside throws on any validation error
 }
 
-/** `pnpm mod add <github-url[#vX.Y.Z] | path.zip | dream:<slug>[@x.y.z]>` */
+/**
+ * `pnpm mod add <github-url[#vX.Y.Z] | path.zip | dream:<slug>[@x.y.z] | <slug>>`
+ *
+ * Registry-first: a GitHub URL the registry lists installs from the registry
+ * (falling back to the repo); `dream:<slug>` falls back to the module's
+ * public repo when the registry can't serve it.
+ */
 export async function add(repoRoot: string, sourceArg: string): Promise<void> {
   const src = parseSource(sourceArg);
-  const fetched = await fetchSource(repoRoot, src);
+  const catalog = src.kind === "zip" ? null : await registryCatalog();
+  const plan = planAdd(src, catalog, { registryFirst: registryFirstEnabled() });
+  const { fetched, used } = await fetchPlanned(repoRoot, plan);
   const { slug, version } = readManifestBasics(fetched.dir);
   if (fetched.registry && fetched.registry.slug !== slug) {
     throw new Error(
@@ -218,20 +288,11 @@ export async function add(repoRoot: string, sourceArg: string): Promise<void> {
   if (entry) {
     entry.baseCommit = baseCommit;
     entry.installedVia = "cli";
-    entry.source =
-      fetched.registry ??
-      (src.kind === "zip"
-        ? {
-            type: "zip",
-            sha256: sha256File(src.location),
-            filename: path.basename(src.location),
-          }
-        : {
-            type: "github",
-            repo: src.location,
-            ref: fetched.ref ?? "",
-            commit: fetched.commit ?? "",
-          });
+    entry.source = lockSource(
+      used,
+      fetched,
+      fallbackRepo(plan, undefined, findInCatalog(catalog, { slug })?.repo),
+    );
     writeLock(repoRoot, lock);
   }
 
@@ -246,11 +307,20 @@ function sha256File(file: string): string {
   return out.split(" ")[0] ?? "";
 }
 
-/** `pnpm mod update <slug> [--to vX.Y.Z] [--continue]` */
+/**
+ * `pnpm mod update <slug> [--to vX.Y.Z] [--from <source>] [--continue]`
+ *
+ * Registry-first: a module the registry lists updates from it (and its lock
+ * origin moves there), falling back to its GitHub repo when the registry
+ * can't serve it. `--from` forces an origin for this and later updates
+ * (`--from dream:crm`, or a GitHub url to leave the registry — combine with
+ * MOD_REGISTRY_FIRST=off to keep it there). The source must serve the same
+ * slug; local edits still 3-way merge.
+ */
 export async function update(
   repoRoot: string,
   slug: string,
-  opts: { to?: string; cont?: boolean },
+  opts: { to?: string; from?: string; cont?: boolean },
 ): Promise<void> {
   const lock = readLock(repoRoot);
   const entry = lock.modules[slug];
@@ -263,29 +333,44 @@ export async function update(
     return;
   }
 
-  if (
-    typeof entry.source !== "object" ||
-    (entry.source.type !== "github" && entry.source.type !== "registry")
-  ) {
+  let plan: SourcePlan | null;
+  let catalog: CatalogModule[] | null = null;
+  if (opts.from) {
+    const src = parseSource(opts.from);
+    if (src.kind === "zip") {
+      throw new Error(
+        `--from takes a GitHub url or dream:<slug> — a zip has no later versions to update from`,
+      );
+    }
+    // --to wins over a version embedded in the source (url#vX / dream:x@y).
+    if (opts.to) src.ref = opts.to;
+    if (src.kind === "registry") src.ref = src.ref?.replace(/^v/, "");
+    plan = { primary: src }; // explicit: no fallback
+  } else {
+    const registryFirst = registryFirstEnabled();
+    if (typeof entry.source === "object" && entry.source.type !== "zip") {
+      catalog = await registryCatalog();
+    }
+    plan = planUpdate(slug, entry.source, catalog, {
+      registryFirst,
+      to: opts.to,
+    });
+  }
+  if (!plan) {
     throw new Error(
-      `"${slug}" has a ${typeof entry.source === "string" ? entry.source : entry.source.type} origin — re-add it from its source to update`,
+      `"${slug}" has a ${typeof entry.source === "string" ? entry.source : entry.source.type} origin — update it with --from <github-url|dream:${slug}>`,
     );
   }
 
-  const fetched =
-    entry.source.type === "github"
-      ? await fetchSource(repoRoot, {
-          kind: "github",
-          location: entry.source.repo,
-          ref: opts.to,
-        })
-      : await fetchSource(repoRoot, {
-          kind: "registry",
-          location: `dream:${entry.source.slug}`,
-          // Omitted = the latest version compatible with this kit.
-          ref: opts.to?.replace(/^v/, ""),
-        });
-  const { version: newVersion } = readManifestBasics(fetched.dir);
+  const { fetched, used } = await fetchPlanned(repoRoot, plan);
+  const { slug: fetchedSlug, version: newVersion } = readManifestBasics(
+    fetched.dir,
+  );
+  if (fetchedSlug !== slug) {
+    throw new Error(
+      `the source serves "${fetchedSlug}", not "${slug}" — aborting the update`,
+    );
+  }
 
   const pinnedBase = entry.baseCommit ?? currentBase(repoRoot, slug);
   if (!pinnedBase) {
@@ -320,14 +405,11 @@ export async function update(
   git(repoRoot, ["update-ref", `refs/mod-base/${slug}`, theirs]);
   entry.baseCommit = theirs;
   entry.version = newVersion;
-  entry.source =
-    entry.source.type === "github"
-      ? {
-          ...entry.source,
-          ref: fetched.ref ?? entry.source.ref,
-          commit: fetched.commit ?? entry.source.commit,
-        }
-      : (fetched.registry ?? entry.source);
+  entry.source = lockSource(
+    used,
+    fetched,
+    fallbackRepo(plan, entry.source, findInCatalog(catalog, { slug })?.repo),
+  );
   writeLock(repoRoot, lock);
 
   if (merged.conflicts.length > 0) {
@@ -558,8 +640,38 @@ export async function status(
   opts: { json?: boolean; checkUpstream?: boolean },
 ): Promise<void> {
   const lock = readLock(repoRoot);
+  // Registry-first: a GitHub-origin module the registry lists is checked
+  // there (its next `update` moves it to the registry) — no ls-remote, so a
+  // private repo needs no token access. Falls back to ls-remote below when
+  // the registry has nothing for it.
+  const viaRegistry = new Set<string>();
+  const upstreamSources: Record<string, ModLockEntry> = { ...lock.modules };
+  if (opts.checkUpstream && registryFirstEnabled()) {
+    const catalog = await registryCatalog();
+    for (const [slug, entry] of Object.entries(lock.modules)) {
+      if (typeof entry.source !== "object" || entry.source.type !== "github") {
+        continue;
+      }
+      const listed = findInCatalog(catalog, {
+        slug,
+        repo: entry.source.repo,
+      });
+      if (!listed) continue;
+      viaRegistry.add(slug);
+      upstreamSources[slug] = {
+        ...entry,
+        source: {
+          type: "registry",
+          registry: registryUrl(),
+          slug: listed.slug,
+          version: entry.version,
+          sha256: "",
+        },
+      };
+    }
+  }
   const registry = opts.checkUpstream
-    ? await registryStates(lock.modules)
+    ? await registryStates(upstreamSources)
     : new Map<string, { latest: string | null; license: LicenseState }>();
 
   const rows = Object.entries(lock.modules).map(([slug, entry]) => {
@@ -572,8 +684,16 @@ export async function status(
       : [];
     let latest: string | null = null;
     let license: LicenseState | undefined;
+    const regState = registry.get(slug);
+    if (regState) {
+      latest = regState.latest;
+      // A GitHub-origin module isn't licensed through the registry — don't
+      // report a license state for it.
+      if (!viaRegistry.has(slug)) license = regState.license;
+    }
     if (
       opts.checkUpstream &&
+      latest === null &&
       typeof entry.source === "object" &&
       entry.source.type === "github"
     ) {
@@ -593,11 +713,6 @@ export async function status(
       } catch {
         latest = null;
       }
-    }
-    const regState = registry.get(slug);
-    if (regState) {
-      latest = regState.latest;
-      license = regState.license;
     }
     return {
       slug,

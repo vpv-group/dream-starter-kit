@@ -55,6 +55,11 @@
       "sha256": "e1a28f3f46759981a162497cffb9602e40403d4fb54d0fb7971537a298071bb6",
       "target": "20261117192629_mod_notifications_002_rename_to_mod_prefix.sql"
     },
+    "notifications/003_contract.sql": {
+      "version": "20261125033155",
+      "sha256": "48a41e73a996c7e61d1189d253097afd81b83b4b0377e82a438a1c7679c79f37",
+      "target": "20261125033155_mod_notifications_003_contract.sql"
+    },
     "reminders/001_initial.sql": {
       "version": "20260612011541",
       "sha256": "2d8177544d43067d8cc08517c690cd70e835b3bcbfddfe1570675e1741296459",

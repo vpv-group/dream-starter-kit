@@ -54,9 +54,19 @@ export const modSeedSteps: ModSeedStep[] = [
   ...payload_docs.seed,
 ];
 
-/** slug → settings definition (admin settings screens, §1.7). */
+/**
+ * slug → settings definition. The fields render on the module's page in
+ * /admin (kit-modules) — see payload/collections/KitModules.ts.
+ */
 export const modSettings: Record<string, ModuleSettings> = {
   "billing": payload_billing.settings,
   "chat": chatSettings,
   "docs": payload_docs.settings,
 };
+
+/**
+ * Modules with their own admin settings component (manifest
+ * admin.settingsComponent) — rendered on the module's page in /admin through
+ * the kit's ModuleAdminSettings wrapper (registry.admin.generated.tsx).
+ */
+export const modAdminSettings: { slug: string }[] = [];

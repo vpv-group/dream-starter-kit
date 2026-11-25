@@ -14,6 +14,7 @@ import {
 } from "@acme/ui/dropdown-menu";
 
 import {
+  notificationHref,
   useMarkNotificationRead,
   useNotifications,
   useUnreadCount,
@@ -67,6 +68,9 @@ export function NotificationBell() {
               className="flex flex-col items-start gap-0.5"
               onClick={() => {
                 if (!n.read_at) void markRead.mutateAsync(n.id);
+                const href = notificationHref(n);
+                // Full navigation keeps the module free of a next dependency.
+                if (href) window.location.assign(href);
               }}
             >
               <span className={n.read_at ? "text-sm" : "text-sm font-medium"}>
