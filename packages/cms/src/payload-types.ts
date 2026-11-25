@@ -233,6 +233,7 @@ export interface Config {
     "mod-billing-settings": ModBillingSetting;
     "mod-chat-settings": ModChatSetting;
     "mod-docs-settings": ModDocsSetting;
+    "payload-jobs-stats": PayloadJobsStat;
   };
   globalsSelect: {
     "site-settings": SiteSettingsSelect<false> | SiteSettingsSelect<true>;
@@ -252,6 +253,8 @@ export interface Config {
       ModChatSettingsSelect<false> | ModChatSettingsSelect<true>;
     "mod-docs-settings":
       ModDocsSettingsSelect<false> | ModDocsSettingsSelect<true>;
+    "payload-jobs-stats":
+      PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
   locale: null;
   widgets: {
@@ -260,6 +263,8 @@ export interface Config {
   user: User;
   jobs: {
     tasks: {
+      "dispatch-notifications": TaskDispatchNotifications;
+      "dream-site-report": TaskDreamSiteReport;
       schedulePublish: TaskSchedulePublish;
       inline: {
         input: unknown;
@@ -831,7 +836,6 @@ export interface Comment {
   parent?: (number | null) | Comment;
   body: string;
   status: "pending" | "approved" | "spam";
-  likeCount?: number | null;
   reportCount?: number | null;
   isPinned?: boolean | null;
   editedAt?: string | null;
@@ -938,8 +942,6 @@ export interface CommunityPost {
    */
   pinned?: boolean | null;
   status: "published" | "pending" | "hidden" | "flagged";
-  likeCount?: number | null;
-  commentCount?: number | null;
   reportCount?: number | null;
   authorName?: string | null;
   publishedAt?: string | null;
@@ -3401,7 +3403,11 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: "inline" | "schedulePublish";
+        taskSlug:
+          | "inline"
+          | "dispatch-notifications"
+          | "dream-site-report"
+          | "schedulePublish";
         taskID: string;
         input?:
           | {
@@ -3434,10 +3440,26 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ("inline" | "schedulePublish") | null;
+  taskSlug?:
+    | (
+        | "inline"
+        | "dispatch-notifications"
+        | "dream-site-report"
+        | "schedulePublish"
+      )
+    | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
+  meta?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -4324,8 +4346,6 @@ export interface CommunityPostsSelect<T extends boolean = true> {
   commentsEnabled?: T;
   pinned?: T;
   status?: T;
-  likeCount?: T;
-  commentCount?: T;
   reportCount?: T;
   authorName?: T;
   publishedAt?: T;
@@ -4345,7 +4365,6 @@ export interface CommentsSelect<T extends boolean = true> {
   parent?: T;
   body?: T;
   status?: T;
-  likeCount?: T;
   reportCount?: T;
   isPinned?: T;
   editedAt?: T;
@@ -5087,6 +5106,7 @@ export interface PayloadJobsSelect<T extends boolean = true> {
   queue?: T;
   waitUntil?: T;
   processing?: T;
+  meta?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -6054,6 +6074,24 @@ export interface ModDocsSetting {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs-stats".
+ */
+export interface PayloadJobsStat {
+  id: number;
+  stats?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site-settings_select".
  */
 export interface SiteSettingsSelect<T extends boolean = true> {
@@ -6487,6 +6525,16 @@ export interface ModDocsSettingsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs-stats_select".
+ */
+export interface PayloadJobsStatsSelect<T extends boolean = true> {
+  stats?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "collections_widget".
  */
 export interface CollectionsWidget {
@@ -6494,6 +6542,22 @@ export interface CollectionsWidget {
     [k: string]: unknown;
   };
   width: "full";
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskDispatch-notifications".
+ */
+export interface TaskDispatchNotifications {
+  input?: unknown;
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskDream-site-report".
+ */
+export interface TaskDreamSiteReport {
+  input?: unknown;
+  output?: unknown;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

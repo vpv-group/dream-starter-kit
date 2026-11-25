@@ -70,7 +70,7 @@ dream-starter-kit/
 ├─ supabase/
 │  ├─ migrations/            # SQL schema + RLS policies (implements ERD.md) — ships as ONE baseline migration
 │  ├─ payload/               # 00_cms_role.sql — provisions the `cms` schema + payload_cms role
-│  ├─ functions/             # edge functions: billing-stripe-webhook, delete-account, reminders-process
+│  ├─ functions/             # edge functions: billing-stripe-webhook, delete-account
 │  ─ (modules/<slug>/ vendor their own supabase/ + src/; `pnpm mod sync`
 │     materializes migrations/functions here — see docs/MODULES.md)
 │  ├─ seed.sql               # ships EMPTY (first signup becomes the founder); add your own demo rows

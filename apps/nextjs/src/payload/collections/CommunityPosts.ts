@@ -15,6 +15,8 @@ import { assignOwner } from "../hooks/assign-owner";
  */
 export const CommunityPosts: CollectionConfig = {
   slug: "community-posts",
+  // A space's feed: published posts, newest first.
+  indexes: [{ fields: ["space", "status", "publishedAt"] }],
   trash: true,
   admin: {
     useAsTitle: "title",
@@ -89,18 +91,6 @@ export const CommunityPosts: CollectionConfig = {
     {
       type: "row",
       fields: [
-        {
-          name: "likeCount",
-          type: "number",
-          defaultValue: 0,
-          admin: { readOnly: true },
-        },
-        {
-          name: "commentCount",
-          type: "number",
-          defaultValue: 0,
-          admin: { readOnly: true },
-        },
         {
           name: "reportCount",
           type: "number",

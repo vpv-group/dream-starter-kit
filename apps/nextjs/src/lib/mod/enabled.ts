@@ -27,6 +27,8 @@ async function disabledModules(): Promise<Set<string>> {
       collection: "kit-modules",
       where: { enabled: { equals: false } },
       pagination: false,
+      depth: 0,
+      select: { slug: true },
       overrideAccess: true,
     });
     cached = {

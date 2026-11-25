@@ -182,7 +182,8 @@ export function defineModuleSettings(
         update: adminUpdate,
         readVersions: staffRead,
       },
-      versions: true,
+      // Keep the last 20 saves (Payload's default keeps every one forever).
+      versions: { max: 20 },
       fields: opts.fields,
     },
   };

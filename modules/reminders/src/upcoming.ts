@@ -1,6 +1,6 @@
 /**
  * Pure reminder scheduling logic — used by the UI and unit-tested. The
- * reminders-process edge function does the equivalent selection in SQL
+ * reminders cron route (mod_reminders_claim) does the equivalent selection in SQL
  * (status = 'pending' and due_at <= now).
  */
 export interface DueReminder {

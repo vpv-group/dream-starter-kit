@@ -114,7 +114,8 @@ export const env = createEnv({
     // Remote MCP server (packages/mcp). MCP_JWT_SECRET signs OAuth access-token
     // JWTs; the MCP surface is OFF until it's set (isMcpConfigured). MCP_ENABLED
     // is an explicit kill switch. CRON_SECRET guards the scheduled notifications
-    // dispatch route (also read by the reminders-process edge function).
+    // endpoints (Payload jobs runner, module cron routes). Optional: derived
+    // from SUPABASE_SERVICE_ROLE_KEY when unset (lib/cron-secret.ts).
     MCP_JWT_SECRET: z.string().min(1).optional(),
     MCP_ENABLED: z.enum(["on", "off"]).optional(),
     CRON_SECRET: z.string().min(1).optional(),

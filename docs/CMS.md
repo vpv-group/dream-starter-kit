@@ -257,8 +257,8 @@ Distinct from editorial `posts`; no drafts — moderation via plain `status`
 (`published`/`pending`/`hidden`/`flagged`, staff-only writes). **Fields:**
 `author`\* (auto-assigned), `space`, optional `title`, `body` (richText),
 `media[]`, `link` (destination), `tags`, `accessLevel`, `commentsEnabled`
-(default true), staff-only `pinned`, read-only
-`likeCount`/`commentCount`/`reportCount`, virtual `authorName`, `publishedAt`;
+(default true), staff-only `pinned`, read-only `reportCount` (recounted when a
+report is filed), virtual `authorName`, `publishedAt`;
 joins `comments`/`reports`. **Access:** read published-or-staff; **create any
 authenticated user**; update/delete `ownsOrStaff("author")`. Hook
 `assignOwner("author")`. Trash.
@@ -268,7 +268,7 @@ authenticated user**; update/delete `ownsOrStaff("author")`. Hook
 Polymorphic `target` → community-posts, posts, videos, audio, photos, events,
 locations; replies via `parent`. **Fields:** `author`_ (auto-assigned),
 `target`_, `parent`, `body`\*, staff-only `status`
-(`pending`/`approved`/`spam`), read-only `likeCount`/`reportCount`, staff-only
+(`pending`/`approved`/`spam`), read-only `reportCount`, staff-only
 `isPinned`, `editedAt`; join `replies`. **Access:** read `approvedOrStaff`;
 **create any authenticated user** (gated by the target's `commentsEnabled` via
 `requireCommentsEnabled`); update/delete `ownsOrStaff("author")`. Trash.
@@ -418,8 +418,12 @@ here.)
 `sentAt`/`sentCount`/`openCount`, `status`
 (`draft`/`scheduled`/`sending`/`sent`/`failed`). **Access:** all `isStaff`.
 Trash. **Delivery:** a `scheduled` notification whose `scheduledAt` has passed is
-sent by the dispatch worker at `POST /api/cms/notifications/dispatch`
-(cron-secret-guarded, Supabase Cron every minute — `kit-notifications-dispatch`).
+sent by the `dispatch-notifications` Payload job (`payload/jobs`, scheduled every
+minute; Supabase Cron runs the Jobs Queue). `POST /api/cms/notifications/dispatch`
+(cron-secret-guarded) runs the same worker on demand. Each due notification is
+claimed atomically, so overlapping runs never send twice; in-app rows go in with
+one set-based, idempotent RPC (`mod_notifications_broadcast`) and push tokens are
+paged, so audiences of any size are complete.
 It resolves the audience (all / `targetUsers` via `cms.users.supabaseUserId` /
 `segment` `{ tags: [...] }`) to Supabase user ids, fans out Expo push and inserts
 in-app feed rows (`public.mod_notifications`), then writes back

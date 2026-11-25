@@ -412,6 +412,8 @@ export const Users: CollectionConfig = {
             {
               name: "stripeCustomerID",
               type: "text",
+              // Looked up by the Stripe webhook.
+              index: true,
               access: { read: staffFieldAccess },
               admin: { readOnly: true },
             },

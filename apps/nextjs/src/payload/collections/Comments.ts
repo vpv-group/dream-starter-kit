@@ -74,12 +74,6 @@ export const Comments: CollectionConfig = {
       admin: { position: "sidebar" },
     },
     {
-      name: "likeCount",
-      type: "number",
-      defaultValue: 0,
-      admin: { readOnly: true, position: "sidebar" },
-    },
-    {
       name: "reportCount",
       type: "number",
       defaultValue: 0,

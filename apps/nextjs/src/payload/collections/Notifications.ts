@@ -11,6 +11,8 @@ import { isStaff } from "../access";
  */
 export const Notifications: CollectionConfig = {
   slug: "notifications",
+  // The dispatcher's "due and scheduled" scan.
+  indexes: [{ fields: ["status", "scheduledAt"] }],
   trash: true,
   admin: {
     useAsTitle: "title",

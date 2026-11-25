@@ -6,6 +6,7 @@ import { draftMode } from "next/headers";
 import type { AuthSettings } from "@acme/app";
 import type {
   Audio as AudioDoc,
+  AuthenticationSetting,
   Event as EventDoc,
   Legal,
   Location as LocationDoc,
@@ -13,6 +14,7 @@ import type {
   Photo,
   Post,
   SiteSetting,
+  ThemeSetting,
   Video,
 } from "@acme/cms";
 import { DEFAULT_AUTH_SETTINGS, normalizeAuthSettings } from "@acme/app";
@@ -277,8 +279,8 @@ export function getLocation(slug: string): Promise<LocationDoc | null> {
  * their own fallback, so this is allowed to throw if the CMS is unavailable.
  */
 export async function getSiteSettings(): Promise<SiteSetting> {
-  const payload = await client();
-  return payload.findGlobal({ slug: "site-settings" });
+  const { readCachedGlobal } = await import("./cms/cached-reads");
+  return readCachedGlobal<SiteSetting>("site-settings", 2);
 }
 
 /**
@@ -296,8 +298,9 @@ export async function getSiteSettings(): Promise<SiteSetting> {
  */
 const themeGlobal = cache(async () => {
   try {
-    const payload = await client();
-    return await payload.findGlobal({ slug: "theme-settings", depth: 1 });
+    // Cross-request cached; invalidated when the global is saved.
+    const { readCachedGlobal } = await import("./cms/cached-reads");
+    return await readCachedGlobal<ThemeSetting>("theme-settings", 1);
   } catch {
     return null;
   }
@@ -325,11 +328,12 @@ export function getThemeSettings(): Promise<ThemeSettingsInput | null> {
  */
 const authSettingsGlobal = cache(async () => {
   try {
-    const payload = await client();
-    return await payload.findGlobal({
-      slug: "authentication-settings",
-      depth: 0,
-    });
+    // Cross-request cached; invalidated when the global is saved.
+    const { readCachedGlobal } = await import("./cms/cached-reads");
+    return await readCachedGlobal<AuthenticationSetting>(
+      "authentication-settings",
+      0,
+    );
   } catch {
     return null;
   }

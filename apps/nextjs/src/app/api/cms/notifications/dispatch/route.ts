@@ -19,7 +19,7 @@ import { createAdminClient } from "~/lib/supabase/admin";
  * pg_net — supabase/migrations/*_scheduler_retention_audit.sql), which adds
  * `Authorization: Bearer ${CRON_SECRET}` to cron requests; pg_cron / manual
  * callers must send the same header. Modeled on supabase/functions/
- * reminders-process (which dispatches mod_reminders the same way).
+ * the reminders module's cron route (which dispatches mod_reminders the same way).
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

@@ -90,7 +90,7 @@ the native graph fails the PR.
 | Payload slugs   | `mod-<slug>-*` (labels stay clean)                                              | `mod-billing-plans`         |
 | Web routes      | `/a/<slug>/…` default; validated `mount` overrides                              | billing mounts `/billing`   |
 | Server API      | `/api/mod/<slug>/…`                                                             | `POST /api/mod/chat/stream` |
-| Edge functions  | `<slug>-*`                                                                      | `reminders-process`         |
+| Edge functions  | `<slug>-*` (prefer a cron route + `kit_register_app_schedule`)                  | `chat-adapter-sendblue-*`   |
 | Env vars        | `MOD_<SLUG>_*` (client keys get `NEXT_PUBLIC_`/`EXPO_PUBLIC_` added by codegen) | `MOD_CHAT_MAX_TOKENS`       |
 
 A best-effort SQL lint verifies migrations only DDL tables the manifest

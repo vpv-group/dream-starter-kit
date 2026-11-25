@@ -7,6 +7,10 @@
       "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
     },
+    "./cron": {
+      "types": "./dist/cron.d.ts",
+      "default": "./src/cron.ts"
+    },
     "./payload": {
       "types": "./dist/payload.d.ts",
       "default": "./src/payload.ts"

@@ -298,7 +298,7 @@ Cloud-session quirks:
 
 - **`supabase start` must exclude edge-runtime** (`-x edge-runtime`): that container
   sets rlimits the sandboxed nested-container runtime forbids. Edge functions
-  (Stripe webhook, `reminders-process`) don't run in cloud sessions.
+  (Stripe webhook, `delete-account`) don't run in cloud sessions.
 - **Unset optional env vars must be absent, not `""`** — empty strings fail the zod
   schema's `min(1)` checks. `pnpm dev:setup` comments them out when writing `.env`.
 - **`pnpm db:reset` heals a stale gateway** (`scripts/db-reset.sh`): after the reset
@@ -327,7 +327,7 @@ the **full** test matrix, same commands as local:
   `pnpm test:e2e` runs `pnpm db:reset` first outside CI (this removes the dev admin;
   rerun `pnpm dev:setup` afterwards to get it back).
 - Out of scope in cloud sessions: anything needing edge functions (Stripe webhook,
-  `reminders-process`) and `expo` device builds.
+  `delete-account`) and `expo` device builds.
 
 **Visual testing:** the desktop Preview pane is local/SSH-only — in cloud sessions
 it is greyed out and there is no embedded browser. Verify UI changes by driving the

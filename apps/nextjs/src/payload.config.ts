@@ -64,6 +64,11 @@ import { NativeNavigation } from "./payload/globals/NativeNavigation";
 import { ProfileFields } from "./payload/globals/ProfileFields";
 import { SiteSettings } from "./payload/globals/SiteSettings";
 import { ThemeSettings } from "./payload/globals/ThemeSettings";
+import {
+  withCollectionCacheInvalidation,
+  withGlobalCacheInvalidation,
+} from "./payload/hooks/revalidate-cache";
+import { coreTasks } from "./payload/jobs";
 import { migrations } from "./payload/migrations";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -237,7 +242,9 @@ export default buildConfig({
     NavItems,
     // Installed modules' collections (generated registry — `pnpm mod sync`)
     ...modCollections,
-  ].map(noDocumentLock),
+  ]
+    .map(noDocumentLock)
+    .map(withCollectionCacheInvalidation),
   globals: [
     SiteSettings,
     ThemeSettings,
@@ -248,17 +255,20 @@ export default buildConfig({
     NativeNavigation,
     // Installed modules' globals incl. their settings screens (§1.7)
     ...modGlobals,
-  ].map(noDocumentLock),
+  ]
+    .map(noDocumentLock)
+    .map(withGlobalCacheInvalidation),
   // One shared, cross-collection folder tree ("Browse by Folder") for the
   // collections that enable `folders: true`.
   folders: { browseByFolder: true },
-  // Payload Jobs Queue. Scheduled publishing (`schedulePublish` on the content
-  // collections) queues its jobs here, and nothing ran them until a scheduler
-  // called the runner. Supabase Cron calls `GET /cms-api/payload-jobs/run`
-  // (and `/handle-schedules`) every minute with the cron bearer secret
-  // (lib/cron-secret.ts); signed-in staff may also trigger it from /admin.
-  // Never `autoRun` — it doesn't work on serverless (Payload docs).
+  // Payload Jobs Queue — the app's background work (payload/jobs) plus
+  // scheduled publishing (`schedulePublish` on the content collections).
+  // Supabase Cron calls `GET /cms-api/payload-jobs/run?allQueues=true` every
+  // minute with the cron bearer secret (lib/cron-secret.ts); the endpoint
+  // queues due scheduled tasks, then runs a bounded batch. Signed-in staff
+  // may also trigger it. Never `autoRun` — it doesn't work on serverless.
   jobs: {
+    tasks: coreTasks,
     access: {
       run: ({ req }) =>
         Boolean(req.user) ||

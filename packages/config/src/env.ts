@@ -91,7 +91,7 @@ export const serverEnvSchema = z.object({
   MCP_ENABLED: z.enum(["on", "off"]).optional(),
   /**
    * Shared secret guarding scheduled worker endpoints (the in-app notifications
-   * dispatch route, and the `reminders-process` edge function). Sent as a bearer
+   * dispatch route, Payload's jobs runner and module cron routes). Sent as a bearer
    * token by Supabase Cron (pg_cron + pg_net). Optional: when unset it is
    * derived from SUPABASE_SERVICE_ROLE_KEY (apps/nextjs/src/lib/cron-secret.ts).
    */

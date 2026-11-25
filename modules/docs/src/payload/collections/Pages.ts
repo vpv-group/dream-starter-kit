@@ -19,7 +19,8 @@ export const Pages: CollectionConfig = {
     defaultColumns: ["title", "category", "order", "source", "_status"],
     listSearchableFields: ["title", "excerpt"],
   },
-  versions: { drafts: true },
+  // Capped like the kit's content collections (Payload's default is 100).
+  versions: { drafts: true, maxPerDoc: 25 },
   access: {
     read: publishedOrStaff,
     create: isStaff,

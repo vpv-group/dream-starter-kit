@@ -89,6 +89,11 @@
       "version": "20261125230848",
       "sha256": "3c9086a6ff14674979d43e7fc1986f0b3fea80f71146378ba541f2e36e5e8db4",
       "target": "20261125230848_mod_reminders_003_claim.sql"
+    },
+    "reminders/004_schedule.sql": {
+      "version": "20261125234501",
+      "sha256": "e308d9ea68ad977c08bfdacd7a6e413e0cf7d4d369986f7e32927882bf0b28aa",
+      "target": "20261125234501_mod_reminders_004_schedule.sql"
     }
   }
 }
