@@ -81,12 +81,30 @@ const runModuleSettingsHooks: CollectionAfterChangeHook<{
   return doc;
 };
 
+/** Modules with no settings of their own get a placeholder on their page. */
+const slugsWithSettings = new Set([
+  ...Object.values(modSettings).map((s) => s.slug),
+  ...modAdminSettings.map((a) => a.slug),
+]);
+
+const COMPONENTS = "~/payload/components/modules";
+
+/** Kept as data + list columns, but shown in the sidebar panel instead. */
+const hiddenInForm = () => false;
+
 /**
  * Framework-owned registry of installed modules (docs/MODULES-PLAN.md
  * §2.5) — one row per module, created/updated ONLY by the boot-time
- * reconcile (lib/mod/reconcile-nav.ts, Local API with overrideAccess). Staff
- * use it for the runtime Enable/Disable toggle; `pnpm mod remove` is the real
- * uninstall.
+ * reconcile (lib/mod/reconcile-nav.ts, Local API with overrideAccess).
+ *
+ * This is THE Modules screen (docs/MODULES.md → Admin panel):
+ * - list: version (+ update available), source/license, enabled/system
+ *   cells; a status banner for module ops; "Install module" in the header
+ *   (catalog, GitHub URL, ZIP) — installs dispatch module-ops and land as PRs.
+ * - module page: its settings in the main column; Enabled + a "Module" panel
+ *   (version, update, source, license, menu link, remove) in the sidebar.
+ * `pnpm mod remove` (or Remove → PR) is the real uninstall; the Enabled
+ * toggle only hides it at runtime.
  *
  * Read access is public: the native app reads `enabled` to filter its menu,
  * and the only data here is slug/name/version metadata already shipped in the
@@ -98,9 +116,19 @@ export const KitModules: CollectionConfig = {
   admin: {
     group: "Modules",
     useAsTitle: "name",
-    defaultColumns: ["name", "slug", "version", "enabled"],
+    defaultColumns: ["name", "version", "source", "enabled"],
     description:
-      "Installed modules. Disabling hides a module's menu items and 404s its pages and API at runtime without uninstalling it.",
+      "Installed modules. Disabling a module hides its menu items and blocks its pages and API without uninstalling it.",
+    components: {
+      beforeListTable: [
+        `${COMPONENTS}/ModulesStatusBanner#ModulesStatusBanner`,
+      ],
+      views: {
+        list: {
+          actions: [`${COMPONENTS}/InstallModuleAction#InstallModuleAction`],
+        },
+      },
+    },
   },
   access: {
     read: anyone,
@@ -116,25 +144,57 @@ export const KitModules: CollectionConfig = {
       required: true,
       unique: true,
       index: true,
-      admin: { readOnly: true },
+      admin: { readOnly: true, condition: hiddenInForm },
     },
-    { name: "name", type: "text", required: true, admin: { readOnly: true } },
+    {
+      name: "name",
+      type: "text",
+      required: true,
+      admin: { readOnly: true, condition: hiddenInForm },
+    },
     {
       name: "version",
       type: "text",
       required: true,
       admin: {
         readOnly: true,
+        condition: hiddenInForm,
         description: "Mirrored from the bundled modules.lock at boot.",
+        components: { Cell: `${COMPONENTS}/ModuleCells#ModuleVersionCell` },
+      },
+    },
+    {
+      // List-only column: where the module came from + license state.
+      name: "source",
+      type: "ui",
+      label: "Source",
+      admin: {
+        components: {
+          Cell: `${COMPONENTS}/ModuleCells#ModuleSourceCell`,
+        },
       },
     },
     {
       name: "enabled",
       type: "checkbox",
+      label: "Enabled",
       defaultValue: true,
       admin: {
+        position: "sidebar",
         description:
-          "Uncheck to hide this module from menus and block its pages/API. Code stays deployed; re-enable any time.",
+          "Uncheck to hide this module from menus and block its pages and API. Code stays deployed; re-enable any time.",
+        components: { Cell: `${COMPONENTS}/ModuleCells#ModuleEnabledCell` },
+      },
+    },
+    {
+      name: "moduleInfo",
+      type: "ui",
+      admin: {
+        position: "sidebar",
+        disableListColumn: true,
+        components: {
+          Field: `${COMPONENTS}/ModuleInfoPanel#ModuleInfoPanel`,
+        },
       },
     },
     {
@@ -143,6 +203,7 @@ export const KitModules: CollectionConfig = {
       defaultValue: false,
       admin: {
         readOnly: true,
+        condition: hiddenInForm,
         description:
           "The app shell depends on this module's mounts (e.g. the home screen) — disabling it will break core navigation.",
       },
@@ -165,5 +226,17 @@ export const KitModules: CollectionConfig = {
     },
     ...settingsFields,
     ...adminSettingsFields,
+    {
+      name: "noSettings",
+      type: "ui",
+      admin: {
+        disableListColumn: true,
+        condition: (data) =>
+          typeof data.slug === "string" && !slugsWithSettings.has(data.slug),
+        components: {
+          Field: `${COMPONENTS}/ModuleInfoPanel#NoModuleSettings`,
+        },
+      },
+    },
   ],
 };

@@ -162,14 +162,9 @@ export default buildConfig({
       // default logout can't end the session. Replace it with one that signs out
       // of Supabase and returns to the host root. See payload/components/LogoutButton.tsx.
       logout: { Button: "~/payload/components/LogoutButton#LogoutButton" },
-      // /admin/modules — install/update/remove modules (catalog, GitHub
-      // URL, zip upload) by dispatching the module-ops workflow. See
-      // payload/components/ModulesView.tsx (MODULES-PLAN.md §6).
+      // Module install/update/remove lives on the Modules collection screen
+      // (payload/collections/KitModules.ts + payload/components/modules/).
       views: {
-        modules: {
-          Component: "~/payload/components/ModulesView#ModulesView",
-          path: "/modules",
-        },
         // /admin/module-settings/<slug> → the module's page (its settings).
         moduleSettings: {
           Component:

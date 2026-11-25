@@ -235,11 +235,27 @@ tombstones the lock (pinned migration versions are never reused).
 
 ## Admin panel + automatic updates
 
-`/admin/modules` lists installed modules (from the **bundled** lock — an
-honest "this deploy contains it" signal), the curated catalog
-(`MOD_CATALOG_URL`, format: `docs/module-catalog.example.json`),
-install-from-GitHub and verified zip-upload forms, and live operations. Every
-mutation dispatches `.github/workflows/module-ops.yml`, which runs the same
+**Modules** in `/admin` (`/admin/collections/kit-modules`, the `kit-modules`
+collection) is the one screen for managing modules:
+
+- **The list** shows every installed module with its version (plus an
+  **Update** pill when a newer installable version exists), its source
+  (Bundled, GitHub, Dream registry — with license state — and Pinned) and
+  whether it's Enabled (plus **System** for modules the app shell depends on).
+  Install state comes from the **bundled** lock — an honest "this deploy
+  contains it" signal.
+- **A banner above the table** says when module ops is off, or lists what's
+  in flight: open module-ops PRs and running or failed workflow runs.
+- **Install module** (top right) opens a drawer: the curated catalog
+  (`MOD_CATALOG_URL`, format: `docs/module-catalog.example.json`), then
+  install from a GitHub URL (`#vX.Y.Z` pins a tag) or a verified ZIP upload.
+  With module ops off, catalog cards show the `pnpm mod add` command instead.
+- **A module's page** has its settings in the main column, and in the
+  sidebar: **Enabled**, then a **Module** panel with version, **Update**,
+  source, license, a link to its menu items and — behind a confirmation —
+  **Remove module…** (not for system modules).
+
+The old `/admin/modules` URL redirects here. Every mutation dispatches `.github/workflows/module-ops.yml`, which runs the same
 CLI on a runner, enforces **path confinement** (the op may only write
 `modules/<slug>/**` + known sync outputs), and opens a labeled PR. The op
 starts a local Supabase on the runner (a few minutes), so `db:gen-types`
@@ -259,7 +275,7 @@ AND the `GITHUB_OPS_TOKEN` env (plus `GITHUB_REPO` off Vercel); enable
 
 **Without the token, module ops is off.** Every job in `module-ops.yml` is
 _skipped_ (a preflight job leaves a notice explaining why) instead of failing,
-`/admin/modules` is read-only, and **paid modules are disabled everywhere**:
+the Modules screen is read-only, and **paid modules are disabled everywhere**:
 the admin panel hides them and never contacts the registry, its API routes
 refuse `dream:` installs and paid updates (`403 paid_modules_disabled`), and
 the CLI refuses `pnpm mod add|update` of a registry module until
@@ -352,7 +368,7 @@ pnpm mod status --check        # update + license state per module
    the CLI. The workflow masks it in logs (`::add-mask::`); the CLI never
    prints it — it travels only in the `X-Dream-License-Key` header.
 4. Optional: `DREAM_REGISTRY_URL` points at a different registry. The
-   `/admin/modules` catalog defaults to `${DREAM_REGISTRY_URL}/catalog?schema=2`;
+   Modules screen's catalog defaults to `${DREAM_REGISTRY_URL}/catalog?schema=2`;
    a self-hoster who sets `MOD_CATALOG_URL` keeps their own catalog.
 
 **How it works.** `mod add dream:<slug>` sends
@@ -363,7 +379,7 @@ URL **immediately** (it expires in minutes), verifies its `sha256` before
 anything touches disk, and then runs the normal zip install path. The lock
 records a `{ type: "registry", registry, slug, version, sha256 }` source, so
 updates are the same pristine-base three-way merge as GitHub sources — local
-edits survive. In `/admin/modules`, paid catalog cards show "Included in
+edits survive. In the Modules screen's **Install module** drawer, paid catalog cards show "Included in
 \<plan\>" with **Install** when the key is entitled (dispatching
 `op: add, source: dream:<slug>` through the same PR pipeline) and
 **Get access** (the module's pricing page) when it isn't or no key is set;
@@ -436,7 +452,7 @@ in `docs/UPDATING.md`, then deploy).
 | `EXT_AUTO_UPDATE`, `EXT_AUTO_MERGE`                      | `MOD_AUTO_UPDATE`, `MOD_AUTO_MERGE` | GitHub repo variables |
 | `EXT_CATALOG_URL`                                        | `MOD_CATALOG_URL`                   | Vercel / `.env`       |
 | `EXT_<SLUG>_*` (and `NEXT_PUBLIC_`/`EXPO_PUBLIC_` forms) | `MOD_<SLUG>_*`                      | Vercel / `.env` / EAS |
-| `/admin/extensions`                                      | `/admin/modules`                    | bookmarks             |
+| `/admin/extensions`                                      | `/admin/collections/kit-modules`    | bookmarks             |
 
 **Modules you added yourself** (anything not shipped with the kit) need the same
 rename before they build again: move the folder to `modules/<slug>`, rename the

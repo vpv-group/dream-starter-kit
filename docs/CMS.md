@@ -119,8 +119,8 @@ caller's Supabase session and JIT-provisions a `cms.users` row (linked by
 | `uniquePolymorphic(...)`                        | One row per owner + polymorphic target (open reports)                                                                                 |
 | `incrementReportCount`                          | Denormalizes `reportCount` onto the reported doc                                                                                      |
 | `invite-user`                                   | On staff-created Users rows: Supabase invite email + `is_staff` from the chosen roles                                                 |
-| `sync-user-to-supabase`                         | On admin Users updates: write email / display name / phone / job title through to Supabase Auth + `profiles`                           |
-| `notify-contact-change`                         | On Users updates (member sync or admin edit): email the member a masked "phone number changed" security notice (best-effort) |
+| `sync-user-to-supabase`                         | On admin Users updates: write email / display name / phone / job title through to Supabase Auth + `profiles`                          |
+| `notify-contact-change`                         | On Users updates (member sync or admin edit): email the member a masked "phone number changed" security notice (best-effort)          |
 | `sync-plan-to-stripe` / `sync-coupon-to-stripe` | afterChange → create/update Stripe product, **recreate + archive** immutable prices/coupons; status lands on `syncStatus`/`syncError` |
 | `validate-custom-fields`                        | Validates `users.customFields` against the `profile-fields` global                                                                    |
 
@@ -456,12 +456,22 @@ preview · trash · SEO plugin. Seeded docs: `terms-of-service`,
 ### `kit-modules` — installed modules and their settings
 
 One row per installed module, created and updated only by the boot reconcile
-(`lib/mod/reconcile-nav.ts`).
+(`lib/mod/reconcile-nav.ts`). This collection is the whole **Modules** screen
+(docs/MODULES.md → Admin panel + automatic updates): its list adds Version
+(update available), Source and Enabled/System cells, a module-ops status
+banner and an **Install module** drawer; each module's page adds a sidebar
+**Module** panel with Update and Remove. They live in
+`payload/components/modules/` and dispatch module-ops through
+`/api/modules/*` (admin only). The old `/admin/modules` view redirects here.
 
 - **Fields:**
   - Framework-owned: `slug`, `name`, `version`, `system`, and the hidden
-    `accessCheck` (the module's access-check SQL function).
-  - Staff-owned: `enabled` (the runtime on/off switch).
+    `accessCheck` (the module's access-check SQL function). They're
+    list columns and API data; on the module's page they show in the sidebar
+    panel instead of as form fields.
+  - Staff-owned: `enabled` (the runtime on/off switch, in the sidebar).
+  - UI-only: `source` (list column), `moduleInfo` (sidebar panel),
+    `noSettings` (placeholder for modules without settings).
 - **Each module's page is also its settings screen** (docs/MODULES.md →
   Settings live on the module's page):
   - a `mod_<slug>` group of the module's `defineModuleSettings` fields, shown

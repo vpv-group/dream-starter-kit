@@ -31,6 +31,13 @@ import { MetaTitleComponent as MetaTitleComponent_a8a977ebc872c5d5ea7ee689724c08
 import { MetaDescriptionComponent as MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { MetaImageComponent as MetaImageComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { PreviewComponent as PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
+import { ModuleVersionCell as ModuleVersionCell_7d6076d2d6d58c512a39eac69617f1e4 } from '~/payload/components/modules/ModuleCells'
+import { ModuleSourceCell as ModuleSourceCell_7d6076d2d6d58c512a39eac69617f1e4 } from '~/payload/components/modules/ModuleCells'
+import { ModuleEnabledCell as ModuleEnabledCell_7d6076d2d6d58c512a39eac69617f1e4 } from '~/payload/components/modules/ModuleCells'
+import { ModuleInfoPanel as ModuleInfoPanel_e45f3c51844d1d1d2064cc8ddaea07fd } from '~/payload/components/modules/ModuleInfoPanel'
+import { NoModuleSettings as NoModuleSettings_e45f3c51844d1d1d2064cc8ddaea07fd } from '~/payload/components/modules/ModuleInfoPanel'
+import { ModulesStatusBanner as ModulesStatusBanner_6258eb62fe74ca5100b8f18310328f15 } from '~/payload/components/modules/ModulesStatusBanner'
+import { InstallModuleAction as InstallModuleAction_16b4d481212f2700435b4ec764108e7d } from '~/payload/components/modules/InstallModuleAction'
 import { FolderTypeField as FolderTypeField_2b8867833a34864a02ddf429b0728a40 } from '@payloadcms/next/client'
 import { RegenerateAllImages as RegenerateAllImages_5552ed3b6af65aa0c30dbc3814b71069 } from '~/payload/components/RegenerateAllImages'
 import { DreamSiteRegister as DreamSiteRegister_8fdc7ad44850bf64e6cb11d7cb127820 } from '~/payload/components/DreamSiteRegister'
@@ -42,7 +49,6 @@ import { ModOpsSetupAlert as ModOpsSetupAlert_a64136bce737fc32670ee2514b18a097 }
 import { DreamSiteSync as DreamSiteSync_951a3f05120106343841bbe15f165aff } from '~/payload/components/DreamSiteSync'
 import { ThemeStyleProvider as ThemeStyleProvider_1ee7cf46bd3ef3bd11106074673f2adc } from '~/payload/components/ThemeStyleProvider'
 import { ModAdminProviders as ModAdminProviders_bfad74fcff187972c1859f01cc8bd34b } from '~/payload/components/ModAdminProviders'
-import { ModulesView as ModulesView_a1e44aff242861345c47d83048f2d37a } from '~/payload/components/ModulesView'
 import { ModuleSettingsRedirect as ModuleSettingsRedirect_d8a20bc588dcf26827ccf79503f6bfcf } from '~/payload/components/ModuleSettingsRedirect'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 import { ModuleAdminSettings as ModuleAdminSettings_6fc8f7dd5c1ebbd6556166b197418f34 } from '~/payload/components/ModuleAdminSettings'
@@ -83,6 +89,13 @@ export const importMap = {
   "@payloadcms/plugin-seo/client#MetaDescriptionComponent": MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860,
   "@payloadcms/plugin-seo/client#MetaImageComponent": MetaImageComponent_a8a977ebc872c5d5ea7ee689724c0860,
   "@payloadcms/plugin-seo/client#PreviewComponent": PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860,
+  "~/payload/components/modules/ModuleCells#ModuleVersionCell": ModuleVersionCell_7d6076d2d6d58c512a39eac69617f1e4,
+  "~/payload/components/modules/ModuleCells#ModuleSourceCell": ModuleSourceCell_7d6076d2d6d58c512a39eac69617f1e4,
+  "~/payload/components/modules/ModuleCells#ModuleEnabledCell": ModuleEnabledCell_7d6076d2d6d58c512a39eac69617f1e4,
+  "~/payload/components/modules/ModuleInfoPanel#ModuleInfoPanel": ModuleInfoPanel_e45f3c51844d1d1d2064cc8ddaea07fd,
+  "~/payload/components/modules/ModuleInfoPanel#NoModuleSettings": NoModuleSettings_e45f3c51844d1d1d2064cc8ddaea07fd,
+  "~/payload/components/modules/ModulesStatusBanner#ModulesStatusBanner": ModulesStatusBanner_6258eb62fe74ca5100b8f18310328f15,
+  "~/payload/components/modules/InstallModuleAction#InstallModuleAction": InstallModuleAction_16b4d481212f2700435b4ec764108e7d,
   "@payloadcms/next/client#FolderTypeField": FolderTypeField_2b8867833a34864a02ddf429b0728a40,
   "~/payload/components/RegenerateAllImages#RegenerateAllImages": RegenerateAllImages_5552ed3b6af65aa0c30dbc3814b71069,
   "~/payload/components/DreamSiteRegister#DreamSiteRegister": DreamSiteRegister_8fdc7ad44850bf64e6cb11d7cb127820,
@@ -94,7 +107,6 @@ export const importMap = {
   "~/payload/components/DreamSiteSync#DreamSiteSync": DreamSiteSync_951a3f05120106343841bbe15f165aff,
   "~/payload/components/ThemeStyleProvider#ThemeStyleProvider": ThemeStyleProvider_1ee7cf46bd3ef3bd11106074673f2adc,
   "~/payload/components/ModAdminProviders#ModAdminProviders": ModAdminProviders_bfad74fcff187972c1859f01cc8bd34b,
-  "~/payload/components/ModulesView#ModulesView": ModulesView_a1e44aff242861345c47d83048f2d37a,
   "~/payload/components/ModuleSettingsRedirect#ModuleSettingsRedirect": ModuleSettingsRedirect_d8a20bc588dcf26827ccf79503f6bfcf,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,
   "~/payload/components/ModuleAdminSettings#ModuleAdminSettings": ModuleAdminSettings_6fc8f7dd5c1ebbd6556166b197418f34,

@@ -18,7 +18,7 @@ export function dreamRegistryUrl(): string {
 }
 
 /**
- * The catalog the /admin/modules store reads. A self-hoster who sets
+ * The catalog the Modules screen's "Install module" drawer reads. A self-hoster who sets
  * MOD_CATALOG_URL keeps it; otherwise it defaults to the Dream registry's
  * schema-2 catalog (which includes paid modules).
  */
