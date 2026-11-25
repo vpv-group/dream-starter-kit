@@ -60,6 +60,9 @@ concurrency:
 permissions:
   contents: write
   pull-requests: write
+  # Labels are created and applied with the built-in GITHUB_TOKEN (not
+  # MOD_OPS_TOKEN), so the founder's PAT doesn't need Issues access.
+  issues: write
 
 jobs:
   # Job-level `if:` can't read secrets, so this turns "is the token set?" into
@@ -237,7 +240,26 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
+          LABEL_TOKEN: ${{ github.token }}
         run: |
+          # Labels go through the built-in GITHUB_TOKEN (LABEL_TOKEN, granted
+          # `issues: write` above), so they work whatever MOD_OPS_TOKEN allows.
+          # Creates the label if missing; warns instead of failing the job.
+          ensure_label() {
+            local err
+            if err=$(GH_TOKEN="$LABEL_TOKEN" gh label create "$1" --color "$2" --description "$3" 2>&1); then return 0; fi
+            case "$err" in *already_exists*|*"already exists"*) return 0 ;; esac
+            echo "::warning title=Can't create label $1::$(echo "$err" | tr '\n' ' ')"
+            return 1
+          }
+          # label_pr <pr-url> <label>... — best effort, never fails the job.
+          label_pr() {
+            local url=$1; shift
+            local args=() l
+            for l in "$@"; do args+=(-f "labels[]=$l"); done
+            GH_TOKEN="$LABEL_TOKEN" gh api --method POST "repos/$GITHUB_REPOSITORY/issues/${url##*/}/labels" "${args[@]}" >/dev/null || \
+              echo "::warning title=PR not labeled::Couldn't add $* to $url."
+          }
           BRANCH="mod/${{ inputs.op }}-${{ inputs.slug || 'new' }}-${{ github.run_id }}"
           git config user.name "module-ops"
           git config user.email "module-ops@users.noreply.github.com"
@@ -246,8 +268,6 @@ jobs:
           git push -u origin "$BRANCH"
           git push origin 'refs/mod-base/*:refs/mod-base/*' || true
           LABEL="module-op"
-          # `gh pr create --label` fails if the label doesn't exist yet.
-          gh label create "$LABEL" --color 5319e7 --description "Automated pnpm mod operation" 2>/dev/null || true
           BODY="Automated \`pnpm mod ${{ inputs.op }}\` run. Review the full diff — installed module code runs server-side with env access (see docs/MODULES-PLAN.md §7)."
           if [ "${{ inputs.op }}" = "remove" ]; then
             BODY="$BODY"$'\n\n'"⚠️ DATA LOSS: this PR includes a drop migration for the module's tables (unless --keep-data). It never auto-merges."
@@ -255,7 +275,12 @@ jobs:
           if grep -q "registers a Payload plugin\|hasPlugins: true" modules/*/module.config.ts 2>/dev/null; then
             BODY="$BODY"$'\n\n'"Note: an installed module registers a Payload plugin (the widest module power)."
           fi
-          PR_URL=$(gh pr create --title "mod: ${{ inputs.op }} ${{ inputs.slug || inputs.source }}" --body "$BODY" --label "$LABEL" || true)
+          # The PR is opened with MOD_OPS_TOKEN (so CI runs on it) and labeled
+          # afterwards with GITHUB_TOKEN — never `gh pr create --label`, which
+          # aborts the whole PR when the label can't be resolved.
+          PR_URL=$(gh pr create --title "mod: ${{ inputs.op }} ${{ inputs.slug || inputs.source }}" --body "$BODY")
+          ensure_label "$LABEL" 5319e7 "Automated pnpm mod operation" || true
+          label_pr "$PR_URL" "$LABEL"
           # Auto-merge installs/updates when allowed (never removals).
           if [ "${{ inputs.op }}" != "remove" ] && [ "${{ vars.MOD_AUTO_MERGE || 'on' }}" = "on" ] && [ -n "$PR_URL" ]; then
             gh pr merge --squash --auto "$PR_URL" || true
@@ -313,6 +338,7 @@ jobs:
     env:
       UPSTREAM_URL: ${{ vars.KIT_UPSTREAM_URL || 'https://github.com/vpv-group/dream-starter-kit.git' }}
       GH_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
+      LABEL_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -327,6 +353,24 @@ jobs:
       - name: Open or refresh the kit update PR
         run: |
           set -euo pipefail
+          # Labels go through the built-in GITHUB_TOKEN (LABEL_TOKEN, granted
+          # `issues: write` above), so they work whatever MOD_OPS_TOKEN allows.
+          # Creates the label if missing; warns instead of failing the job.
+          ensure_label() {
+            local err
+            if err=$(GH_TOKEN="$LABEL_TOKEN" gh label create "$1" --color "$2" --description "$3" 2>&1); then return 0; fi
+            case "$err" in *already_exists*|*"already exists"*) return 0 ;; esac
+            echo "::warning title=Can't create label $1::$(echo "$err" | tr '\n' ' ')"
+            return 1
+          }
+          # label_pr <pr-url> <label>... — best effort, never fails the job.
+          label_pr() {
+            local url=$1; shift
+            local args=() l
+            for l in "$@"; do args+=(-f "labels[]=$l"); done
+            GH_TOKEN="$LABEL_TOKEN" gh api --method POST "repos/$GITHUB_REPOSITORY/issues/${url##*/}/labels" "${args[@]}" >/dev/null || \
+              echo "::warning title=PR not labeled::Couldn't add $* to $url."
+          }
           version_of() { git show "$1:package.json" | jq -r '.version // "unknown"'; }
           LATEST=$(version_of upstream/main)
           if git merge-base --is-ancestor upstream/main HEAD; then
@@ -335,11 +379,12 @@ jobs:
           fi
           CURRENT=$(version_of HEAD)
           BASE=$(git rev-parse --abbrev-ref HEAD)
-          gh label create kit-update --color 0e8a16 --description "Dream Starter Kit update (merge commit, never squash)" 2>/dev/null || true
-          gh label create kit-update-conflicts --color d93f0b --description "Kit update needs conflicts resolved" 2>/dev/null || true
 
           # One open kit-update PR at a time: refresh it instead of stacking.
-          OPEN_PR=$(gh pr list --label kit-update --state open --json number,headRefName --jq '.[0] | select(.) | "\(.number) \(.headRefName)"')
+          # Matched by branch name, not label, so a PR that couldn't be
+          # labeled is still found.
+          OPEN_PR=$(gh pr list --state open --limit 200 --json number,headRefName \
+            --jq '[.[] | select(.headRefName | startswith("sync/upstream-"))][0] | select(.) | "\(.number) \(.headRefName)"')
           if [ -n "$OPEN_PR" ]; then
             read -r PR_NUMBER BRANCH <<< "$OPEN_PR"
             git fetch origin "$BRANCH"
@@ -373,7 +418,9 @@ jobs:
             git commit --no-edit -m "chore(kit): merge Dream Starter Kit $LATEST (upstream/main) — conflicts to resolve"
             LABELS="kit-update,kit-update-conflicts"
           fi
-          git push -u origin "$BRANCH"
+          # The branch is bot-owned and has no open PR (checked above); a
+          # same-day re-run after a failed attempt must be able to replace it.
+          git push --force -u origin "$BRANCH"
 
           BODY="Automated Dream Starter Kit update: **$CURRENT → $LATEST** (merges \`upstream/main\` from $UPSTREAM_URL). Free — no license key needed.
 
@@ -388,6 +435,13 @@ jobs:
           ⚠️ **$(echo "$CONFLICTS" | wc -l) files have conflicts to resolve** (markers committed): $(echo "$CONFLICTS" | head -40 | sed 's/.*/`&`/' | tr '\n' ' ')$( [ "$(echo "$CONFLICTS" | wc -l)" -gt 40 ] && echo "…and more (search the branch for \`<<<<<<<\`)")
           Generated files: take either side and regenerate. Migrations: keep both sides' files. \`pnpm-lock.yaml\`: re-run \`pnpm install\`."
           fi
-          gh pr create --base "$BASE" --head "$BRANCH" \
+          # Opened with MOD_OPS_TOKEN (so CI runs), labeled afterwards with
+          # GITHUB_TOKEN — `gh pr create --label` aborts the whole PR when a
+          # label can't be resolved.
+          PR_URL=$(gh pr create --base "$BASE" --head "$BRANCH" \
             --title "chore(kit): update Dream Starter Kit $CURRENT → $LATEST" \
-            --body "$BODY" --label "$LABELS"
+            --body "$BODY")
+          echo "Opened $PR_URL"
+          ensure_label kit-update 0e8a16 "Dream Starter Kit update (merge commit, never squash)" || true
+          [ "$LABELS" = "kit-update" ] || ensure_label kit-update-conflicts d93f0b "Kit update needs conflicts resolved" || true
+          label_pr "$PR_URL" ${LABELS//,/ }

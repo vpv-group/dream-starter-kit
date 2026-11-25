@@ -29,13 +29,16 @@ no license key. The `kit-update` job:
    - Conflicts are committed as markers, and the PR gets the
      `kit-update-conflicts` label.
 3. Opens one PR labeled `kit-update` that shows the version jump.
-   - Later runs refresh that same PR instead of opening another.
+   - Later runs refresh that same PR instead of opening another (found by
+     its `sync/upstream-` branch, so it works even if it couldn't be labeled).
+   - Labels are created automatically with the workflow's built-in
+     `GITHUB_TOKEN`; `MOD_OPS_TOKEN` needs no extra access for them.
 
 It **never auto-merges**. Review it, run the post-merge validation below, and
 land it with a **merge commit** — never squash.
 
 - Turn it off with the `KIT_AUTO_UPDATE=off` repository variable.
-- Run it now with *Actions → Module ops → Run workflow → `op: kit-update`*.
+- Run it now with _Actions → Module ops → Run workflow → `op: kit-update`_.
 - `KIT_UPSTREAM_URL` (repository variable) points it at a different upstream.
 
 The rest of this guide is the same routine done by hand.
