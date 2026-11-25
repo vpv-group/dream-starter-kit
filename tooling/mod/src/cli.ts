@@ -9,6 +9,7 @@ import {
   update,
 } from "./lifecycle";
 import { ModValidationError } from "./manifests";
+import { planKitUpdate, toGithubOutput } from "./ops/kit-update";
 import { findRepoRoot } from "./paths";
 import { sync } from "./sync";
 
@@ -46,6 +47,12 @@ Commands:
   payload-migrate <slug> <desc>
                              Create a cms migration and relocate it into the
                              module (§3.2 wrapper).
+  ops kit-plan [--upstream <url>] [--github-output]
+                             Which Dream Starter Kit release to offer (the
+                             newest vX.Y.Z tag, never main); fetches it into
+                             refs/remotes/upstream/release. Used by
+                             module-ops.yml (--github-output prints key=value
+                             lines for $GITHUB_OUTPUT instead of JSON).
 `;
 
 async function main(): Promise<void> {
@@ -106,6 +113,24 @@ async function main(): Promise<void> {
         throw new Error("usage: pnpm mod payload-migrate <slug> <desc>");
       await payloadMigrate(root, args[0], args[1]);
       return;
+    case "ops": {
+      if (args[0] !== "kit-plan") {
+        throw new Error("usage: pnpm mod ops kit-plan [--upstream <url>]");
+      }
+      const plan = planKitUpdate({
+        repoRoot: root,
+        upstreamUrl:
+          flagValue("--upstream") ??
+          "https://github.com/vpv-group/dream-starter-kit.git",
+      });
+      // --github-output: key=value lines to append to $GITHUB_OUTPUT.
+      process.stdout.write(
+        flags.has("--github-output")
+          ? toGithubOutput(plan)
+          : `${JSON.stringify(plan)}\n`,
+      );
+      return;
+    }
     case undefined:
     case "help":
     case "--help":
