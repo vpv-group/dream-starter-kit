@@ -36,6 +36,12 @@ export interface EmailPayload {
    * portal) put a signed reply address here.
    */
   replyTo?: string;
+  /**
+   * The call to action, shown as a button. `url` may be an app path
+   * ("/a/…"): producers (SQL triggers especially) don't know the site URL,
+   * so the email channel resolves it.
+   */
+  action?: { label: string; url: string };
   /** Threading headers so replies group with earlier mail in mail clients. */
   headers?: {
     messageId?: string;

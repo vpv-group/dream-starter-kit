@@ -75,15 +75,15 @@ every producer gets it without changes.
 
 ### Fields
 
-| Field       | Notes                                                                                                                                |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `category`  | A registered key. `type` is kept as an alias for producers written before 1.1.                                                       |
-| `url`       | Click-through target: an app path (`/a/…`) or an `https://` URL. Any other form is rejected.                                         |
-| `entity`    | The record the notification is about (`type`, `id`).                                                                                 |
-| `actorId`   | The user whose action caused it.                                                                                                     |
-| `channels`  | Requested channels. Omit to use the category's defaults.                                                                             |
-| `payload`   | Per-channel renderings. `email`: `{ subject, text, html?, replyTo?, headers? }`. `push` / `webPush`: `{ title?, body?, threadId? }`. |
-| `dedupeKey` | Stable key. A repeat for the same user is a no-op: `notify()` returns `null`, `emit` returns `null`.                                 |
+| Field       | Notes                                                                                                                                                                                                                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `category`  | A registered key. `type` is kept as an alias for producers written before 1.1.                                                                                                                                                                                     |
+| `url`       | Click-through target: an app path (`/a/…`) or an `https://` URL. Any other form is rejected.                                                                                                                                                                       |
+| `entity`    | The record the notification is about (`type`, `id`).                                                                                                                                                                                                               |
+| `actorId`   | The user whose action caused it.                                                                                                                                                                                                                                   |
+| `channels`  | Requested channels. Omit to use the category's defaults.                                                                                                                                                                                                           |
+| `payload`   | Per-channel renderings. `email`: `{ subject, text, html?, action?, replyTo?, headers? }`. `action` is `{ label, url }`, and its `url` may be an app path that the email channel resolves against the site URL. `push` / `webPush`: `{ title?, body?, threadId? }`. |
+| `dedupeKey` | Stable key. A repeat for the same user is a no-op: `notify()` returns `null`, `emit` returns `null`.                                                                                                                                                               |
 
 ### Who may emit
 
