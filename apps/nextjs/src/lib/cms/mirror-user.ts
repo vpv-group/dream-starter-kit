@@ -41,7 +41,7 @@ export async function ensureCmsUser(user: {
     phone?: string | null;
     jobTitle?: string | null;
   };
-}): Promise<void> {
+}): Promise<boolean> {
   try {
     const payload = await getPayloadClient();
 
@@ -121,7 +121,7 @@ export async function ensureCmsUser(user: {
         // back (payload/hooks/sync-user-to-supabase.ts).
         context: { skipSupabaseSync: true },
       });
-      return;
+      return true;
     }
 
     // Row exists: backfill the wallet contact/billing onto EMPTY fields only —
@@ -171,16 +171,18 @@ export async function ensureCmsUser(user: {
         context: { skipSupabaseSync: true },
       });
     }
+    return true;
   } catch (e) {
-    // Non-fatal — the SSO bridge JIT-provisions staff anyway, the (app) layout
-    // backstop retries on the next app visit, and `cms:backfill-users` catches
-    // up the rest. Log (don't swallow silently) so a systemic mirror failure is
+    // Non-fatal for request paths — the SSO bridge JIT-provisions staff, and
+    // the `cms-user-sync` job (fed by the profiles queue) retries: it only
+    // acknowledges the queue message when this returns true. Log (don't swallow silently) so a systemic mirror failure is
     // diagnosable in the server logs instead of presenting as a silently empty
     // Users page.
     console.warn(
       `[mirror-user] ensureCmsUser failed for ${user.id}`,
       e instanceof Error ? e.message : e,
     );
+    return false;
   }
 }
 

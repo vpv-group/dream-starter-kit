@@ -491,6 +491,8 @@ export type Database = {
           price_id: string | null;
           quantity: number | null;
           status: string | null;
+          stripe_event_at: string | null;
+          updated_at: string;
           user_id: string;
         };
         Insert: {
@@ -501,6 +503,8 @@ export type Database = {
           price_id?: string | null;
           quantity?: number | null;
           status?: string | null;
+          stripe_event_at?: string | null;
+          updated_at?: string;
           user_id: string;
         };
         Update: {
@@ -511,6 +515,8 @@ export type Database = {
           price_id?: string | null;
           quantity?: number | null;
           status?: string | null;
+          stripe_event_at?: string | null;
+          updated_at?: string;
           user_id?: string;
         };
         Relationships: [
@@ -529,6 +535,24 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      mod_billing_webhook_events: {
+        Row: {
+          id: string;
+          received_at: string;
+          type: string;
+        };
+        Insert: {
+          id: string;
+          received_at?: string;
+          type: string;
+        };
+        Update: {
+          id?: string;
+          received_at?: string;
+          type?: string;
+        };
+        Relationships: [];
       };
       mod_chat_channel_contacts: {
         Row: {
@@ -1247,6 +1271,16 @@ export type Database = {
         Args: { _inv: Database["public"]["Tables"]["invitations"]["Row"] };
         Returns: undefined;
       };
+      cms_user_sync_ack: { Args: { _msg_ids: number[] }; Returns: number };
+      cms_user_sync_enqueue_all: { Args: never; Returns: number };
+      cms_user_sync_read: {
+        Args: { _n?: number; _vt?: number };
+        Returns: {
+          msg_id: number;
+          read_ct: number;
+          user_id: string;
+        }[];
+      };
       confirmed_email: { Args: never; Returns: string };
       create_invitations: {
         Args: {
@@ -1334,6 +1368,10 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      kit_register_app_schedule: {
+        Args: { _cron: string; _name: string; _path: string };
+        Returns: undefined;
+      };
       kit_register_housekeeping: {
         Args: { _fn: string; _module: string };
         Returns: undefined;
@@ -1342,10 +1380,28 @@ export type Database = {
         Args: { _class: string; _description?: string; _keep_days: number };
         Returns: undefined;
       };
+      kit_unregister_app_schedule: {
+        Args: { _name: string };
+        Returns: undefined;
+      };
       kit_unregister_housekeeping: {
         Args: { _module: string };
         Returns: undefined;
       };
+      mod_billing_apply_subscription: {
+        Args: { _event_at: string; _row: Json };
+        Returns: boolean;
+      };
+      mod_billing_purge: { Args: never; Returns: number };
+      mod_billing_set_webhook_secret: {
+        Args: { _secret: string };
+        Returns: undefined;
+      };
+      mod_billing_user_id_by_email: {
+        Args: { _email: string };
+        Returns: string;
+      };
+      mod_billing_webhook_secret: { Args: never; Returns: string };
       mod_notifications_audience: {
         Args: {
           _audience: string;

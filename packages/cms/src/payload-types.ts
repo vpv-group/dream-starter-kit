@@ -68,7 +68,6 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
-    "device-tokens": DeviceToken;
     "feed-tokens": FeedToken;
     enrollments: Enrollment;
     reviews: Review;
@@ -114,7 +113,6 @@ export interface Config {
     users: {
       subscriptions: "mod-billing-subscriptions";
       enrollments: "enrollments";
-      devices: "device-tokens";
     };
     posts: {
       comments: "comments";
@@ -167,7 +165,6 @@ export interface Config {
   };
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
-    "device-tokens": DeviceTokensSelect<false> | DeviceTokensSelect<true>;
     "feed-tokens": FeedTokensSelect<false> | FeedTokensSelect<true>;
     enrollments: EnrollmentsSelect<false> | EnrollmentsSelect<true>;
     reviews: ReviewsSelect<false> | ReviewsSelect<true>;
@@ -265,6 +262,9 @@ export interface Config {
     tasks: {
       "dispatch-notifications": TaskDispatchNotifications;
       "dream-site-report": TaskDreamSiteReport;
+      "account-erasure": TaskAccountErasure;
+      "favorites-cleanup": TaskFavoritesCleanup;
+      "cms-user-sync": TaskCmsUserSync;
       schedulePublish: TaskSchedulePublish;
       inline: {
         input: unknown;
@@ -473,11 +473,6 @@ export interface User {
   };
   enrollments?: {
     docs?: (number | Enrollment)[];
-    hasNextPage?: boolean;
-    totalDocs?: number;
-  };
-  devices?: {
-    docs?: (number | DeviceToken)[];
     hasNextPage?: boolean;
     totalDocs?: number;
   };
@@ -2506,29 +2501,6 @@ export interface Enrollment {
   createdAt: string;
 }
 /**
- * Push notification device registrations.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "device-tokens".
- */
-export interface DeviceToken {
-  id: number;
-  user: number | User;
-  /**
-   * FCM/APNs token.
-   */
-  token: string;
-  platform: "ios" | "android" | "web";
-  deviceModel?: string | null;
-  appVersion?: string | null;
-  osVersion?: string | null;
-  locale?: string | null;
-  pushEnabled?: boolean | null;
-  lastSeenAt?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
  * Tokenized private podcast feed URLs.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -3407,6 +3379,9 @@ export interface PayloadJob {
           | "inline"
           | "dispatch-notifications"
           | "dream-site-report"
+          | "account-erasure"
+          | "favorites-cleanup"
+          | "cms-user-sync"
           | "schedulePublish";
         taskID: string;
         input?:
@@ -3445,6 +3420,9 @@ export interface PayloadJob {
         | "inline"
         | "dispatch-notifications"
         | "dream-site-report"
+        | "account-erasure"
+        | "favorites-cleanup"
+        | "cms-user-sync"
         | "schedulePublish"
       )
     | null;
@@ -3593,27 +3571,9 @@ export interface UsersSelect<T extends boolean = true> {
   stripeCustomerID?: T;
   subscriptions?: T;
   enrollments?: T;
-  devices?: T;
   updatedAt?: T;
   createdAt?: T;
   deletedAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "device-tokens_select".
- */
-export interface DeviceTokensSelect<T extends boolean = true> {
-  user?: T;
-  token?: T;
-  platform?: T;
-  deviceModel?: T;
-  appVersion?: T;
-  osVersion?: T;
-  locale?: T;
-  pushEnabled?: T;
-  lastSeenAt?: T;
-  updatedAt?: T;
-  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -6556,6 +6516,35 @@ export interface TaskDispatchNotifications {
  * via the `definition` "TaskDream-site-report".
  */
 export interface TaskDreamSiteReport {
+  input?: unknown;
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskAccount-erasure".
+ */
+export interface TaskAccountErasure {
+  input: {
+    supabaseUserId: string;
+  };
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskFavorites-cleanup".
+ */
+export interface TaskFavoritesCleanup {
+  input: {
+    collection: string;
+    itemId: string;
+  };
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskCms-user-sync".
+ */
+export interface TaskCmsUserSync {
   input?: unknown;
   output?: unknown;
 }

@@ -37,7 +37,7 @@ describe("buildLocalEnv (local + cloud profiles)", () => {
     'S3_SECRET_ACCESS_KEY=""',
     'CRON_SECRET=""',
     'AI_GATEWAY_API_KEY=""',
-    'STRIPE_WEBHOOKS_ENDPOINT_SECRET=""',
+    '# STRIPE_WEBHOOK_SECRET=""',
     'STRIPE_SECRET_KEY=""',
     'KEEP_ME="set"',
     "",
@@ -55,7 +55,7 @@ describe("buildLocalEnv (local + cloud profiles)", () => {
         S3_SECRET_ACCESS_KEY="s3-secret"
         CRON_SECRET="local-dev-cron-secret"
         AI_GATEWAY_API_KEY="dummy-local-key-not-real"
-        STRIPE_WEBHOOKS_ENDPOINT_SECRET="whsec_e2e_test_secret"
+        STRIPE_WEBHOOK_SECRET="whsec_e2e_test_secret"
         # STRIPE_SECRET_KEY=""
         KEEP_ME="set"
         "
@@ -109,7 +109,7 @@ describe("buildCiEnv (ci profile)", () => {
         "EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY=anon.jwt",
         "EXPO_PUBLIC_API_URL=http://localhost:3000",
-        "STRIPE_WEBHOOKS_ENDPOINT_SECRET=whsec_e2e_test_secret",
+        "STRIPE_WEBHOOK_SECRET=whsec_e2e_test_secret",
         "NEXT_PUBLIC_CMS_URL=http://localhost:3000",
         "S3_ENDPOINT=http://127.0.0.1:54321/storage/v1/s3",
         "S3_REGION=local",

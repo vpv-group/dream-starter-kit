@@ -1,6 +1,10 @@
-import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
-import { createClient } from "jsr:@supabase/supabase-js@2";
-import Stripe from "npm:stripe@23";
+import "server-only";
+
+import type { SupabaseClient as BaseSupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
+import Stripe from "stripe";
+
+import type { Database, Json } from "@acme/api";
 
 import {
   mapPrice,
@@ -9,45 +13,68 @@ import {
   resolveCheckoutCustomer,
   subscriptionCustomerId,
   subscriptionUserIdFromMetadata,
-} from "./mapping.ts";
+} from "./mapping";
+
+type SupabaseClient = BaseSupabaseClient<Database>;
 
 // Stripe webhook → syncs products / prices / customers / subscriptions into the
-// DB using the SERVICE ROLE (clients never write billing rows). Signature is
-// verified; handlers upsert by primary key so redelivered/out-of-order events
-// are idempotent.
+// DB using the SERVICE ROLE (clients never write billing rows). The ONE place
+// Stripe state enters the app (public.mod_billing_* is the source of truth that
+// web, mobile and the CMS read). Signature is verified; every event id is
+// recorded so a redelivery is acknowledged without being applied twice, and
+// subscription writes go through mod_billing_apply_subscription(), which
+// ignores an event older than the one already applied (Stripe doesn't
+// guarantee delivery order).
 //
 // It also drives the "checkout-first" signup flow: when an anonymous visitor
 // pays, this matches the checkout email to an existing user (and attaches the
 // subscription) or creates the account and emails a Supabase invite. Active
 // plans tag the user with the plan name (public.user_tags).
 //
-// config.toml sets verify_jwt = false for this function (Stripe has no Supabase
-// JWT). Local: `stripe listen --forward-to localhost:54321/functions/v1/billing-stripe-webhook`.
+// Served at POST /api/mod/billing/stripe/webhook (a module public route — Stripe
+// has no Supabase session). Local: `stripe listen --forward-to
+// localhost:3000/api/mod/billing/stripe/webhook`.
 
-const stripeSecret = Deno.env.get("STRIPE_SECRET_KEY");
-const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
-const supabaseUrl = Deno.env.get("SUPABASE_URL");
-const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const stripeSecret = process.env.STRIPE_SECRET_KEY;
+const supabaseUrl =
+  process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // Where guest invitees set their password. Must be an allowed Supabase redirect.
 const siteUrl =
-  Deno.env.get("SITE_URL") ??
-  Deno.env.get("NEXT_PUBLIC_APP_URL") ??
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  process.env.NEXT_PUBLIC_APP_URL ??
   "http://localhost:3000";
 
-/** Find an auth user id by email (paged scan — fine at starter-kit scale). */
+/** Find a user id by email — an indexed lookup on profiles.email. */
 async function findUserIdByEmail(
   admin: SupabaseClient,
   email: string,
 ): Promise<string | null> {
-  const target = email.toLowerCase();
-  const perPage = 200;
-  for (let page = 1; ; page++) {
-    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
-    if (error) throw error;
-    const match = data.users.find((u) => u.email?.toLowerCase() === target);
-    if (match) return match.id;
-    if (data.users.length < perPage) return null;
-  }
+  const { data, error } = await admin.rpc("mod_billing_user_id_by_email", {
+    _email: email,
+  });
+  if (error) throw error;
+  // The generated type says string, but the function returns null when no
+  // profile has that email.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  return data ?? null;
+}
+
+/**
+ * Apply a subscription row unless a NEWER Stripe event already did. Returns
+ * whether it was applied.
+ */
+async function applySubscription(
+  admin: SupabaseClient,
+  row: ReturnType<typeof mapSubscription>,
+  eventCreated: number,
+): Promise<boolean> {
+  const { data, error } = await admin.rpc("mod_billing_apply_subscription", {
+    _row: row as unknown as Json,
+    _event_at: new Date(eventCreated * 1000).toISOString(),
+  });
+  if (error) throw error;
+  return data === true;
 }
 
 /**
@@ -64,7 +91,7 @@ async function resolveOrInviteGuest(
     redirectTo: `${siteUrl}/accept-invite`,
     data: displayName ? { display_name: displayName } : undefined,
   });
-  if (!error) return data.user?.id ?? null;
+  if (!error) return data.user.id;
   // Already an app user → link to the existing account (no email sent).
   if (error.code === "email_exists" || /already/i.test(error.message)) {
     return await findUserIdByEmail(admin, email);
@@ -167,7 +194,7 @@ async function persistBuyerDetails(
   details: BuyerContact | null,
 ): Promise<void> {
   if (!details) return;
-  const patch: Record<string, string> = {};
+  const patch: { display_name?: string; phone?: string } = {};
   if (details.name) patch.display_name = details.name;
   if (details.phone) patch.phone = details.phone;
   if (Object.keys(patch).length) {
@@ -196,7 +223,12 @@ async function persistBuyerDetails(
         name: details.name ?? undefined,
         email: details.email ?? undefined,
         phone: details.phone ?? undefined,
-        address: details.address ?? undefined,
+        // Stripe's AddressParam doesn't accept nulls; drop empty fields.
+        address: details.address
+          ? (Object.fromEntries(
+              Object.entries(details.address).filter(([, v]) => v != null),
+            ) as Stripe.AddressParam)
+          : undefined,
       })
       .catch(() => undefined);
   }
@@ -218,15 +250,32 @@ async function persistFromLatestCharge(
   if (bd) await persistBuyerDetails(admin, stripe, userId, customerId, bd);
 }
 
-Deno.serve(async (req) => {
+export interface StripeWebhookDeps {
+  /** Mirror an applied subscription event into the CMS (admin read model). */
+  projectSubscription?: (event: Stripe.Event, stripe: Stripe) => Promise<void>;
+}
+
+export async function handleStripeWebhook(
+  req: Request,
+  deps: StripeWebhookDeps = {},
+): Promise<Response> {
   if (req.method !== "POST")
     return new Response("Method not allowed", { status: 405 });
-  if (!stripeSecret || !webhookSecret || !supabaseUrl || !serviceKey) {
+  if (!supabaseUrl || !serviceKey) {
     return new Response("Server misconfigured", { status: 500 });
   }
 
-  const stripe = new Stripe(stripeSecret);
-  const admin = createClient(supabaseUrl, serviceKey);
+  // Signature verification needs only the endpoint secret; a placeholder key
+  // keeps the handler working for self-signed test events without an account
+  // (Stripe API calls with it fail loudly and are caught per event).
+  const stripe = new Stripe(stripeSecret ?? "sk_test_unconfigured_placeholder");
+  const admin = createClient<Database>(supabaseUrl, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const webhookSecret = await resolveWebhookSecret(admin);
+  if (!webhookSecret) {
+    return new Response("Webhook not connected", { status: 500 });
+  }
 
   const signature = req.headers.get("stripe-signature");
   if (!signature) return new Response("Missing signature", { status: 400 });
@@ -234,7 +283,6 @@ Deno.serve(async (req) => {
   const payload = await req.text();
   let event: Stripe.Event;
   try {
-    // Async variant is required in Deno/edge (no Node crypto).
     event = await stripe.webhooks.constructEventAsync(
       payload,
       signature,
@@ -247,24 +295,34 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Already handled (Stripe redelivers on timeouts and retries): acknowledge.
+  const { data: seen } = await admin
+    .from("mod_billing_webhook_events")
+    .select("id")
+    .eq("id", event.id)
+    .maybeSingle();
+  if (seen) {
+    return Response.json({ received: true, duplicate: true });
+  }
+
   try {
     switch (event.type) {
       case "product.created":
       case "product.updated": {
         await admin
           .from("mod_billing_products")
-          .upsert(mapProduct(event.data.object as Stripe.Product));
+          .upsert(mapProduct(event.data.object));
         break;
       }
       case "price.created":
       case "price.updated": {
         await admin
           .from("mod_billing_prices")
-          .upsert(mapPrice(event.data.object as Stripe.Price));
+          .upsert(mapPrice(event.data.object));
         break;
       }
       case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
+        const session = event.data.object;
         const { userId: refUserId, customerId } =
           resolveCheckoutCustomer(session);
 
@@ -289,7 +347,7 @@ Deno.serve(async (req) => {
             admin,
             stripe,
             userId,
-            customerId,
+            customerId ?? undefined,
             session.customer_details,
           );
         }
@@ -334,9 +392,13 @@ Deno.serve(async (req) => {
               ? session.subscription
               : session.subscription.id;
           const sub = await stripe.subscriptions.retrieve(subId);
-          await admin
-            .from("mod_billing_subscriptions")
-            .upsert(mapSubscription(sub, userId));
+          // The CMS copy follows from the customer.subscription.* event that
+          // Stripe sends for the same subscription.
+          await applySubscription(
+            admin,
+            mapSubscription(sub, userId),
+            event.created,
+          );
           if (sub.status === "active" || sub.status === "trialing") {
             await ensurePlanTag(
               admin,
@@ -350,7 +412,7 @@ Deno.serve(async (req) => {
       case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
-        const sub = event.data.object as Stripe.Subscription;
+        const sub = event.data.object;
         const customerId = subscriptionCustomerId(sub);
         let userId = subscriptionUserIdFromMetadata(sub);
         if (!userId) {
@@ -399,9 +461,23 @@ Deno.serve(async (req) => {
               { user_id: userId, stripe_customer_id: customerId },
               { onConflict: "user_id" },
             );
-          await admin
-            .from("mod_billing_subscriptions")
-            .upsert(mapSubscription(sub, userId));
+          const applied = await applySubscription(
+            admin,
+            mapSubscription(sub, userId),
+            event.created,
+          );
+          // Keep the read-only CMS copy (admin Users / Plans pages) in step —
+          // only when this event is the newest, so it can't roll back either.
+          if (applied && deps.projectSubscription) {
+            try {
+              await deps.projectSubscription(event, stripe);
+            } catch (err) {
+              console.error(
+                "[billing] CMS subscription projection failed",
+                err,
+              );
+            }
+          }
           if (sub.status === "active" || sub.status === "trialing") {
             await ensurePlanTag(
               admin,
@@ -412,7 +488,16 @@ Deno.serve(async (req) => {
           // Embedded checkout has no checkout.session — capture the buyer's
           // identity from the first charge on creation.
           if (event.type === "customer.subscription.created") {
-            await persistFromLatestCharge(admin, stripe, userId, customerId);
+            // Best-effort enrichment: the subscription is already applied, so
+            // a Stripe API hiccup here mustn't fail (and re-deliver) the event.
+            await persistFromLatestCharge(
+              admin,
+              stripe,
+              userId,
+              customerId,
+            ).catch((err: unknown) => {
+              console.warn("[billing] buyer details capture failed", err);
+            });
           }
         }
         break;
@@ -421,12 +506,37 @@ Deno.serve(async (req) => {
         break;
     }
   } catch (err) {
-    console.error("billing-stripe-webhook handler error", err);
+    console.error("[billing] stripe webhook handler error", err);
+    // Not recorded: Stripe retries, and the next attempt re-applies it.
     return new Response("Handler error", { status: 500 });
   }
 
-  return new Response(JSON.stringify({ received: true }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
-});
+  // Recorded only after a successful apply, so a failed attempt is retried.
+  await admin
+    .from("mod_billing_webhook_events")
+    .upsert({ id: event.id, type: event.type }, { onConflict: "id" });
+
+  return Response.json({ received: true });
+}
+
+/**
+ * The endpoint's signing secret: STRIPE_WEBHOOK_SECRET when set, else the one
+ * `ensureStripeWebhook()` stored in Supabase Vault when it registered the
+ * endpoint through the Stripe API (no dashboard step). Cached per instance.
+ */
+let cachedSecret: string | null | undefined;
+async function resolveWebhookSecret(
+  admin: SupabaseClient,
+): Promise<string | null> {
+  if (process.env.STRIPE_WEBHOOK_SECRET)
+    return process.env.STRIPE_WEBHOOK_SECRET;
+  if (cachedSecret) return cachedSecret;
+  const { data } = await admin.rpc("mod_billing_webhook_secret");
+  cachedSecret = data ?? null;
+  return cachedSecret;
+}
+
+/** Forget the cached secret (after ensureStripeWebhook rotates it). */
+export function resetWebhookSecretCache(): void {
+  cachedSecret = undefined;
+}

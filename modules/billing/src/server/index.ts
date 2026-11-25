@@ -250,6 +250,49 @@ async function resolveCustomer(
  * invite). Portal + invoices require a session and live in the authed table.
  */
 export const publicRoutes: ModPublicRouteTable = {
+  /**
+   * The ONE Stripe webhook (signature-verified; Stripe has no session).
+   * Writes public.mod_billing_* and projects subscriptions into the CMS.
+   */
+  "POST /stripe/webhook": async (req, ctx) => {
+    const [{ handleStripeWebhook }, { syncSubscriptionFromStripe }] =
+      await Promise.all([
+        import("./stripe/webhook"),
+        import("../payload/webhooks"),
+      ]);
+    return handleStripeWebhook(req, {
+      projectSubscription: async (event, stripe) => {
+        const payload = await ctx.getPayload();
+        await syncSubscriptionFromStripe({
+          event: event as Parameters<
+            typeof syncSubscriptionFromStripe
+          >[0]["event"],
+          payload: payload,
+          stripe,
+        });
+      },
+    });
+  },
+
+  /**
+   * Hourly (Supabase Cron → kit_register_app_schedule): make sure the Stripe
+   * webhook endpoint exists and its secret is in Vault. No-op once connected.
+   */
+  "GET /cron/connect": async (req) => {
+    const { isCronRequest } = await import("@acme/mod-kit/cron");
+    if (!isCronRequest(req)) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const { ensureStripeWebhook } = await import("./stripe/connect");
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ??
+      (process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}`
+        : (process.env.NEXT_PUBLIC_APP_URL ?? ""));
+    const result = await ensureStripeWebhook(createAdminClient(), siteUrl);
+    return Response.json(result);
+  },
+
   /** Create a Stripe Checkout session for a Payload plan (plan-driven). */
   "POST /checkout": async (req, ctx) => {
     if (!process.env.STRIPE_SECRET_KEY) {

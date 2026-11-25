@@ -436,12 +436,6 @@ export const Users: CollectionConfig = {
       on: "user",
     },
     {
-      name: "devices",
-      type: "join",
-      collection: "device-tokens",
-      on: "user",
-    },
-    {
       name: "tagsManager",
       type: "ui",
       admin: {

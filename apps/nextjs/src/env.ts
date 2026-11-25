@@ -62,9 +62,9 @@ export const env = createEnv({
     IMAGE_GENERATION_SYSTEM_PROMPT: z.string().min(1).optional(),
     STRIPE_SECRET_KEY: z.string().min(1).optional(),
     STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
-    // Signing secret for the PAYLOAD Stripe webhook endpoint
-    // (/cms-api/stripe/webhooks, via @payloadcms/plugin-stripe) — a separate
-    // Stripe endpoint from the Supabase edge function's STRIPE_WEBHOOK_SECRET.
+    // DEPRECATED and unused (the Payload Stripe endpoint is gone; one webhook
+    // remains — STRIPE_WEBHOOK_SECRET or the Vault-stored secret). Still
+    // accepted so existing deployments don't fail validation; remove it.
     STRIPE_WEBHOOKS_ENDPOINT_SECRET: z.string().min(1).optional(),
     STRIPE_PRICE_MONTHLY: z.string().min(1).optional(),
     STRIPE_PRICE_YEARLY: z.string().min(1).optional(),

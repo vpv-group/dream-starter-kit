@@ -469,13 +469,12 @@ app needs — including `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_K
 The SQL schema needs **no manual step** — the deployed app applies
 `supabase/migrations` itself on first boot (see Deploy step 3). Pushing by hand still
 works and stays in sync (both write the Supabase CLI's
-`supabase_migrations.schema_migrations` ledger); edge functions and their secrets are
-the part that's still deployed from the CLI:
+`supabase_migrations.schema_migrations` ledger). The kit ships no edge functions, so
+there is nothing else to deploy from the CLI:
 
 ```bash
 supabase link --project-ref <your-ref>
 supabase db push                          # optional — the app already did this on boot
-supabase functions deploy billing-stripe-webhook  # + delete-account
 
 # Module admin ops (optional — /admin → Modules installs via PRs):
 # 1) create a fine-grained PAT (read & write: contents, pull requests, actions, workflows)

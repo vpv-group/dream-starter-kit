@@ -187,12 +187,13 @@ collection `afterChange` hooks (`payload/hooks/sync-*-to-stripe.ts` →
 `lib/stripe/sync.ts`) — creating a **new price and archiving the old** on any
 amount change, since Stripe prices are immutable (a per-doc `skipSync` checkbox
 opts out; sync failures are recorded on the doc, never failing the save).
-**`@payloadcms/plugin-stripe`** provides the second half of the channel: a
-signature-verified webhook endpoint at **`/cms-api/stripe/webhooks`** (its own
-`STRIPE_WEBHOOKS_ENDPOINT_SECRET`) that mirrors `customer.subscription.*` events
-into the read-only CMS **`subscriptions`** collection. The plugin's Stripe REST
-proxy stays **off** (`rest` omitted) and its declarative sync is unused — it can't
-express price immutability or intro coupons, so the hooks own Payload → Stripe.
+**Stripe → app** is one signature-verified webhook, the billing module's
+`POST /api/mod/billing/stripe/webhook`. It writes `public.mod_billing_*` (the
+source of truth that RLS clients read) and projects `customer.subscription.*`
+into the read-only CMS **`subscriptions`** collection for /admin. It records
+event ids (replays are no-ops) and skips events older than the stored state
+(out-of-order safe). The app registers the endpoint through the Stripe API and
+keeps its secret in Supabase Vault, so the only setup is `STRIPE_SECRET_KEY`.
 
 The `billing-stripe-webhook` **edge function** (signature-verified, idempotent — a
 separate Stripe endpoint with `STRIPE_WEBHOOK_SECRET`) keeps mirroring the

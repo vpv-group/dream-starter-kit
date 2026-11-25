@@ -10,6 +10,11 @@
       "sha256": "3e9f8398b12d2f818eaf417a6a3ff20bcd5d866afbe821a68f2057853d5cca38",
       "target": "20261117192627_mod_billing_002_rename_to_mod_prefix.sql"
     },
+    "billing/003_single_webhook.sql": {
+      "version": "20261125235001",
+      "sha256": "481376e95b6421cf9a9aef3eded0334fa3c77e2760281ecf67a326a91cce43a0",
+      "target": "20261125235001_mod_billing_003_single_webhook.sql"
+    },
     "chat/001_initial.sql": {
       "version": "20260612011539",
       "sha256": "5d8de93e3dd24dbcca2955629de0b89a791e6cd44c1944e4fa3cae5d7cae2d65",

@@ -308,12 +308,10 @@ admin-only `passwordManager`. `email` is admin-only to update and, like
 `canAccessAdmin`; create `isAdmin` (triggers the invite hook); read/update
 `isAdminOrSelf`; delete `isAdmin`. Trash (soft delete; bridge rejects trashed).
 
-### `device-tokens` — push tokens
-
-**Fields:** `user`_ (auto-assigned), unique `token`_, `platform`
-(iOS/Android/Web), `deviceModel`, `appVersion`, `osVersion`, `locale`,
-`pushEnabled`, `lastSeenAt`. **Access:** create any user; the rest
-`ownsOrStaff`.
+Push tokens are not a CMS collection: devices register in
+`public.mod_notifications_push_tokens` (one row per device token, moved to the
+signed-in user by `mod_notifications_register_push_token`). The former
+`device-tokens` collection was never read and has been removed.
 
 ### `feed-tokens` — private podcast feed tokens
 

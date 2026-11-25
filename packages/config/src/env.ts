@@ -58,9 +58,10 @@ export const serverEnvSchema = z.object({
   STRIPE_SECRET_KEY: z.string().min(1).optional(),
   STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
   /**
-   * Signing secret for the Payload Stripe webhook endpoint
-   * (/cms-api/stripe/webhooks) — a SECOND Stripe endpoint, separate from the
-   * Supabase edge function's STRIPE_WEBHOOK_SECRET.
+   * DEPRECATED and unused — the Payload Stripe endpoint was removed; billing
+   * has ONE webhook (STRIPE_WEBHOOK_SECRET, or the secret the app stores in
+   * Vault when it registers the endpoint). Accepted for one release so
+   * existing deployments keep validating.
    */
   STRIPE_WEBHOOKS_ENDPOINT_SECRET: z.string().min(1).optional(),
   STRIPE_PRICE_MONTHLY: z.string().min(1).optional(),

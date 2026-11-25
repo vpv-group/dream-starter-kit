@@ -62,7 +62,7 @@ export const isAdminOrSelf: Access = ({ req: { user } }) => {
 };
 
 /**
- * Owner-scoped rows (favorites, device-tokens, enrollments, …): staff see
+ * Owner-scoped rows (enrollments, reviews, …): staff see
  * everything; an authenticated user only rows whose `ownerField` is them.
  */
 export const ownsOrStaff =

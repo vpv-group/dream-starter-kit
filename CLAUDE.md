@@ -297,8 +297,9 @@ echo "scripts/cloud-setup.sh not found; the SessionStart hook will install every
 Cloud-session quirks:
 
 - **`supabase start` must exclude edge-runtime** (`-x edge-runtime`): that container
-  sets rlimits the sandboxed nested-container runtime forbids. Edge functions
-  (Stripe webhook, `delete-account`) don't run in cloud sessions.
+  sets rlimits the sandboxed nested-container runtime forbids. The kit ships no
+  edge functions (billing, account deletion and reminders run in the Next.js app),
+  so only a module's own edge functions are affected.
 - **Unset optional env vars must be absent, not `""`** — empty strings fail the zod
   schema's `min(1)` checks. `pnpm dev:setup` comments them out when writing `.env`.
 - **`pnpm db:reset` heals a stale gateway** (`scripts/db-reset.sh`): after the reset
@@ -326,8 +327,8 @@ the **full** test matrix, same commands as local:
   `tooling/web-e2e/README.md`). The founder/first-user flow needs a **fresh DB**, so
   `pnpm test:e2e` runs `pnpm db:reset` first outside CI (this removes the dev admin;
   rerun `pnpm dev:setup` afterwards to get it back).
-- Out of scope in cloud sessions: anything needing edge functions (Stripe webhook,
-  `delete-account`) and `expo` device builds.
+- Out of scope in cloud sessions: a module's own edge functions and `expo` device
+  builds.
 
 **Visual testing:** the desktop Preview pane is local/SSH-only — in cloud sessions
 it is greyed out and there is no embedded browser. Verify UI changes by driving the
@@ -390,7 +391,7 @@ a full registry across six admin groups — **Content** (posts, videos incl. ver
 shorts, audio/podcast episodes, photos, series/courses + lessons, locations, events,
 categories/tags), **Community** (space-groups → community-spaces → community-posts,
 one threaded `comments` system, a `reports` moderation queue), **People** (users,
-device-tokens, feed-tokens, enrollments, reviews), **Commerce**
+feed-tokens, enrollments, reviews), **Commerce**
 (plans/coupons/subscriptions), **Marketing** (pages, onboarding, banners,
 notifications, forms) and **System** (the `legal` documents collection —
 rendered under /legal with a TOC sidebar — alongside the settings globals). Collections live in the `cms` schema and are governed by
@@ -494,7 +495,7 @@ in `@acme/app` (`auth-settings.ts`); the web login-05 UI is `AuthFlow`
 mobile via `GET /api/auth/config` (`useAuthConfig`). Full guide:
 [docs/AUTH.md](https://github.com/vpv-group/dream-starter-kit/blob/main/docs/AUTH.md).
 
-## Payments (Payload ⇄ Stripe via @payloadcms/plugin-stripe)
+## Payments (Payload → Stripe catalog, one Stripe webhook → public)
 
 The billing catalog is **authored in Payload**, not the Stripe dashboard. `Plans`,
 `Coupons` and the read-only `Subscriptions` mirror live under the **Commerce** admin nav
@@ -510,15 +511,20 @@ example plans (Monthly/Annual/Lifetime) + a welcome coupon are seeded by `seedCm
   recreate-on-change rule. A per-doc `skipSync` checkbox opts out; failures land on
   `syncStatus`/`syncError` instead of failing the save; the seed skips the hook
   (`context.skipStripeSync`), so seeded plans stay `unsynced` until first saved.
-- **Stripe → Payload** runs through `@payloadcms/plugin-stripe`'s signature-verified
-  webhook endpoint (`POST /cms-api/stripe/webhooks`, secret
-  `STRIPE_WEBHOOKS_ENDPOINT_SECRET`): `customer.subscription.*` events upsert the
-  read-only CMS `subscriptions` collection (`payload/stripe/webhooks.ts`; user resolved
-  via `public.customers`, plan via `stripePriceId`). The plugin's Stripe REST proxy is
-  **off** (`rest: false`) and its declarative sync is unused (it can't express price
-  immutability/intro coupons). The **edge-function webhook** (separate Stripe endpoint,
-  `STRIPE_WEBHOOK_SECRET`) keeps mirroring products/prices/subscriptions into `public.*`
-  for RLS clients — unchanged.
+- **Stripe → app is ONE webhook** — the billing module's public route
+  `POST /api/mod/billing/stripe/webhook` (`modules/billing/src/server/stripe/webhook.ts`).
+  It writes `public.mod_billing_*`, the **source of truth** web and mobile read under
+  RLS, then projects `customer.subscription.*` into the read-only CMS `subscriptions`
+  collection for /admin (`modules/billing/src/payload/webhooks.ts`). Every Stripe event
+  id is recorded (`mod_billing_webhook_events`), so a redelivery isn't applied twice.
+  Subscription writes go through `mod_billing_apply_subscription()`, which ignores an
+  event older than the one already applied: Stripe doesn't guarantee delivery order.
+  **No dashboard step:** an hourly scheduled check (`GET /api/mod/billing/cron/connect`)
+  registers the endpoint through the Stripe API once `STRIPE_SECRET_KEY` is set and the
+  site has a public https URL. It keeps the signing secret in Supabase Vault;
+  `STRIPE_WEBHOOK_SECRET` overrides it, e.g. for `stripe listen` locally. The old edge
+  function and `@payloadcms/plugin-stripe` endpoint are gone, and
+  `STRIPE_WEBHOOKS_ENDPOINT_SECRET` is deprecated.
 - **Intro offers** ("$1 first month, then $19") = a coupon auto-applied at checkout
   (`once` for one intro period, `repeating` for several; years × 12 → Stripe
   `duration_in_months`). **Repeating** coupons take N months _or_ N years the same way.

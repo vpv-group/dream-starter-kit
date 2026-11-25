@@ -35,7 +35,6 @@ import { Categories } from "./payload/collections/Categories";
 import { Comments } from "./payload/collections/Comments";
 import { CommunityPosts } from "./payload/collections/CommunityPosts";
 import { CommunitySpaces } from "./payload/collections/CommunitySpaces";
-import { DeviceTokens } from "./payload/collections/DeviceTokens";
 import { Enrollments } from "./payload/collections/Enrollments";
 import { Events } from "./payload/collections/Events";
 import { FeedTokens } from "./payload/collections/FeedTokens";
@@ -64,6 +63,7 @@ import { NativeNavigation } from "./payload/globals/NativeNavigation";
 import { ProfileFields } from "./payload/globals/ProfileFields";
 import { SiteSettings } from "./payload/globals/SiteSettings";
 import { ThemeSettings } from "./payload/globals/ThemeSettings";
+import { withFavoritesCleanup } from "./payload/hooks/favorites-cleanup";
 import {
   withCollectionCacheInvalidation,
   withGlobalCacheInvalidation,
@@ -207,7 +207,6 @@ export default buildConfig({
   collections: [
     // People
     Users,
-    DeviceTokens,
     FeedTokens,
     Enrollments,
     Reviews,
@@ -244,7 +243,8 @@ export default buildConfig({
     ...modCollections,
   ]
     .map(noDocumentLock)
-    .map(withCollectionCacheInvalidation),
+    .map(withCollectionCacheInvalidation)
+    .map(withFavoritesCleanup),
   globals: [
     SiteSettings,
     ThemeSettings,

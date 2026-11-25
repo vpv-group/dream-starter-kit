@@ -29,6 +29,7 @@ import * as migration_20261124_153215_module_settings from './20261124_153215_mo
 import * as migration_20261125_024658_native_navigation from './20261125_024658_native_navigation';
 import * as migration_20261125_232648_jobs_tasks from './20261125_232648_jobs_tasks';
 import * as migration_20261125_233209_indexes_and_counters from './20261125_233209_indexes_and_counters';
+import * as migration_20261125_234244_jobs_tasks_2 from './20261125_234244_jobs_tasks_2';
 
 export const migrations = [
   {
@@ -184,6 +185,11 @@ export const migrations = [
   {
     up: migration_20261125_233209_indexes_and_counters.up,
     down: migration_20261125_233209_indexes_and_counters.down,
-    name: '20261125_233209_indexes_and_counters'
+    name: '20261125_233209_indexes_and_counters',
+  },
+  {
+    up: migration_20261125_234244_jobs_tasks_2.up,
+    down: migration_20261125_234244_jobs_tasks_2.down,
+    name: '20261125_234244_jobs_tasks_2'
   },
 ];
