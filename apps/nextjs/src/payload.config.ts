@@ -15,6 +15,7 @@ import type { S3ConfigSource } from "./lib/s3-config";
 import { resolveCmsCredentials } from "./lib/cms/derived-credentials";
 import { generateMediaFileURL } from "./lib/cms/media-url";
 import { noDocumentLock } from "./lib/cms/no-document-lock";
+import { mergePayloadMigrations } from "./lib/cms/payload-migrations";
 import { pgConnectionOptions } from "./lib/db/bootstrap-core";
 import { isGuardedPreview } from "./lib/db/preview-guard";
 import { resolveSmtpConfig } from "./lib/email/smtp";
@@ -326,8 +327,9 @@ export default buildConfig({
     // the cms.payload_migrations ledger). After changing a collection, regenerate
     // with `pnpm cms:migrate:create` and commit the new file in payload/migrations.
     push: process.env.NODE_ENV !== "production",
-    // Core + module migrations merged by timestamp prefix; Payload's
-    // cms.payload_migrations ledger keys by name, so boot runs stay idempotent.
+    // Core + module migrations merged by timestamp prefix, each name once;
+    // Payload's cms.payload_migrations ledger keys by name, so boot runs stay
+    // idempotent.
     //
     // NOT registered during `next build`. In production mode the adapter runs
     // `prodMigrations` automatically the first time it connects (db-postgres
@@ -347,9 +349,10 @@ export default buildConfig({
     prodMigrations:
       buildPhase || guardedPreview
         ? undefined
-        : [...migrations, ...modPayloadMigrations].sort((a, b) =>
-            a.name.localeCompare(b.name),
-          ),
+        : // Core + module migrations, each name ONCE: `mod sync` also copies
+          // module migrations into payload/migrations (see
+          // lib/cms/payload-migrations.ts — a duplicate broke fresh boots).
+          mergePayloadMigrations(migrations, modPayloadMigrations),
     migrationDir: path.resolve(dirname, "payload/migrations"),
   }),
   sharp,
