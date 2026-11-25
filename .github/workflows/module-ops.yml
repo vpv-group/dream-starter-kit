@@ -195,14 +195,17 @@ jobs:
       # own tables through the typed client, so the new/changed module's
       # migrations must be applied before types are generated. Same pinned
       # CLI as ci.yml (see the version note there).
+      # A conflicted update leaves conflict markers in the module's files, so
+      # type generation and typecheck can't run on it: skip them and open the
+      # PR with the markers committed for a human to resolve (see below).
       - name: Setup Supabase CLI
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' && steps.cli.outputs.conflicts != 'true'
         uses: supabase/setup-cli@v1
         with:
           version: 2.105.0
 
       - name: Regenerate types + typecheck
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' && steps.cli.outputs.conflicts != 'true'
         run: |
           set -euo pipefail
           supabase start -x studio,logflare,vector,edge-runtime
@@ -243,6 +246,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
           LABEL_TOKEN: ${{ github.token }}
+          CONFLICTS: ${{ steps.cli.outputs.conflicts == 'true' }}
         run: |
           # Labels go through the built-in GITHUB_TOKEN (LABEL_TOKEN, granted
           # `issues: write` above), so they work whatever MOD_OPS_TOKEN allows.
@@ -274,17 +278,29 @@ jobs:
           if [ "${{ inputs.op }}" = "remove" ]; then
             BODY="$BODY"$'\n\n'"⚠️ DATA LOSS: this PR includes a drop migration for the module's tables (unless --keep-data). It never auto-merges."
           fi
+          if [ "$CONFLICTS" = "true" ]; then
+            FILES=$(grep -rlE '^(<<<<<<<|>>>>>>>) ' "modules/${{ inputs.slug }}" 2>/dev/null | head -40 | sed 's/.*/`&`/' | tr '\n' ' ')
+            BODY="$BODY"$'\n\n'"⚠️ **Merge conflicts to resolve** (markers committed; types were not regenerated): ${FILES:-see the branch}. Resolve them, run \`pnpm mod update ${{ inputs.slug }} --continue\`, \`pnpm db:gen-types\` and \`pnpm cms:gen-types\`, then push. This PR never auto-merges."
+          fi
           if grep -q "registers a Payload plugin\|hasPlugins: true" modules/*/module.config.ts 2>/dev/null; then
             BODY="$BODY"$'\n\n'"Note: an installed module registers a Payload plugin (the widest module power)."
           fi
           # The PR is opened with MOD_OPS_TOKEN (so CI runs on it) and labeled
           # afterwards with GITHUB_TOKEN — never `gh pr create --label`, which
           # aborts the whole PR when the label can't be resolved.
-          PR_URL=$(gh pr create --title "mod: ${{ inputs.op }} ${{ inputs.slug || inputs.source }}" --body "$BODY")
+          TITLE="mod: ${{ inputs.op }} ${{ inputs.slug || inputs.source }}"
+          if [ "$CONFLICTS" = "true" ]; then TITLE="$TITLE (conflicts to resolve)"; fi
+          PR_URL=$(gh pr create --title "$TITLE" --body "$BODY")
           ensure_label "$LABEL" 5319e7 "Automated pnpm mod operation" || true
-          label_pr "$PR_URL" "$LABEL"
-          # Auto-merge installs/updates when allowed (never removals).
-          if [ "${{ inputs.op }}" != "remove" ] && [ "${{ vars.MOD_AUTO_MERGE || 'on' }}" = "on" ] && [ -n "$PR_URL" ]; then
+          if [ "$CONFLICTS" = "true" ]; then
+            ensure_label module-op-conflicts d93f0b "Module update needs conflicts resolved" || true
+            label_pr "$PR_URL" "$LABEL" module-op-conflicts
+          else
+            label_pr "$PR_URL" "$LABEL"
+          fi
+          # Auto-merge installs/updates when allowed (never removals, never a
+          # conflicted update).
+          if [ "${{ inputs.op }}" != "remove" ] && [ "$CONFLICTS" != "true" ] && [ "${{ vars.MOD_AUTO_MERGE || 'on' }}" = "on" ] && [ -n "$PR_URL" ]; then
             gh pr merge --squash --auto "$PR_URL" || true
           fi
 
