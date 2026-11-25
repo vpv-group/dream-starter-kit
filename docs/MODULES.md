@@ -233,7 +233,8 @@ its generated widget registry through `@acme/mod-kit/react`'s
 pnpm mod create <slug>            # working scaffold (table+RLS, hooks, screens,
                                   #   widget, settings, ping route, tests)
 pnpm mod add <url[#vX.Y.Z]|.zip>  # vendor + validate + snapshot + lock + sync
-pnpm mod add dream:<slug>[@x.y.z] # paid module from the Dream registry (below)
+pnpm mod add dream:<slug>[@x.y.z] # from the Dream registry (below); a bare
+                                  #   `pnpm mod add <slug>` means the same
 pnpm mod update <slug> [--to vX.Y.Z] [--from <url|dream:<slug>>] [--continue]
 pnpm mod remove <slug> [--keep-data]
 pnpm mod list | status [--json] [--check]
@@ -245,10 +246,33 @@ pnpm mod sync                     # after ANY change under modules/
 Updates are a three-way merge (base = `refs/mod-base/<slug>` pinned in the
 lock, ours = your possibly-modified copy, theirs = upstream) — local edits
 survive clean updates; conflicts get standard markers + `--continue`.
-`--from` switches where a module updates from (and records it in the lock),
-e.g. `pnpm mod update crm --from dream:crm` moves a CRM first added from its
-private GitHub repo onto the Dream registry. In `module-ops.yml`, put the new
-origin in the `source` input of an `update` run.
+
+### Where modules come from (registry-first)
+
+**The Dream registry is the default origin for every module it lists**, free
+or paid. When the registry's catalog has a module (matched by slug, or by
+the GitHub repo URL you passed) and this kit can take one of its releases:
+
+- `pnpm mod add <github-url>` installs it **from the registry**;
+- `pnpm mod update <slug>` of a module added from GitHub updates **from the
+  registry** and moves its lock origin there (`{ type: "registry", …, repo }`
+  — the GitHub repo is kept as the fallback);
+- `pnpm mod status --check` (and so the daily auto-update) checks the
+  registry instead of `git ls-remote`, so a **private module repo needs no
+  token access**.
+
+If the registry can't serve it — no `MOD_OPS_TOKEN`/`DREAM_LICENSE_KEY`, the
+plan doesn't include it, a network error — the CLI warns and **falls back to
+the GitHub repo** (the one you installed from, or the catalog's public repo
+for free modules). Modules the registry doesn't list, zips and local modules
+are unaffected. Set the repo variable / env **`MOD_REGISTRY_FIRST=off`** to
+keep GitHub origins on GitHub.
+
+`--from` forces an origin for one update and records it in the lock, e.g.
+`pnpm mod update crm --from dream:crm`, or `--from <github-url>` to move a
+module back to GitHub (with `MOD_REGISTRY_FIRST=off`, or the next update
+goes registry-first again). `--from` never falls back. In `module-ops.yml`,
+put the origin in the `source` input of an `update` run.
 
 **Install order across dependent modules.** `requires` names a slug, not a
 version, so a module that uses tables a dependency added in a later release
@@ -301,8 +325,8 @@ AND the `GITHUB_OPS_TOKEN` env (plus `GITHUB_REPO` off Vercel); enable
 **private GitHub repos**, give the same PAT read access (Contents: read) to
 each of them too; otherwise `mod update` can't list their tags and the run
 fails with "Can't read the module's repository" (GitHub answers 403). A
-module that's also in the Dream registry can instead switch to it:
-`pnpm mod update <slug> --from dream:<slug>` (no repo access needed).
+module the Dream registry carries doesn't need this: with `DREAM_LICENSE_KEY`
+set, updates come from the registry ([registry-first](#where-modules-come-from-registry-first)).
 
 **Without the token, module ops is off.** Every job in `module-ops.yml` is
 _skipped_ (a preflight job leaves a notice explaining why) instead of failing,

@@ -123,6 +123,9 @@ jobs:
           # need module ops itself: the CLI checks MOD_OPS_TOKEN).
           DREAM_LICENSE_KEY: ${{ secrets.DREAM_LICENSE_KEY }}
           MOD_OPS_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
+          # Registry-first (default): modules the Dream registry lists install
+          # and update from it, falling back to GitHub. `off` keeps GitHub.
+          MOD_REGISTRY_FIRST: ${{ vars.MOD_REGISTRY_FIRST }}
           UPDATE_FROM: ${{ inputs.op == 'update' && inputs.source || '' }}
         run: |
           set -euo pipefail
@@ -145,7 +148,7 @@ jobs:
                   echo "conflicts=true" >> "$GITHUB_OUTPUT"
                 else
                   if grep -q "returned error: 40[34]" /tmp/mod-op.log; then
-                    echo "::error title=Can't read the module's repository::GitHub refused access to ${{ inputs.slug }}'s source repo. For a private module repo, add it to the MOD_OPS_TOKEN fine-grained PAT's repository access with Contents: read (docs/MODULES.md → Founder setup) — or, for a Dream registry module, re-run this update with source dream:${{ inputs.slug }} to switch it to the registry (license key, no repo access needed)."
+                    echo "::error title=Can't read the module's repository::GitHub refused access to ${{ inputs.slug }}'s source repo. For a private module repo, add it to the MOD_OPS_TOKEN fine-grained PAT's repository access with Contents: read (docs/MODULES.md → Founder setup). If the Dream registry carries this module, set the DREAM_LICENSE_KEY secret so updates come from the registry instead (registry-first), or re-run with source dream:${{ inputs.slug }}."
                   fi
                   exit 1
                 fi
@@ -287,6 +290,7 @@ jobs:
           # — they are skipped quietly, never a failure.
           DREAM_LICENSE_KEY: ${{ secrets.DREAM_LICENSE_KEY }}
           MOD_OPS_TOKEN: ${{ secrets.MOD_OPS_TOKEN }}
+          MOD_REGISTRY_FIRST: ${{ vars.MOD_REGISTRY_FIRST }}
         run: |
           pnpm --silent mod status --json > /tmp/status.json || exit 0
           for slug in $(jq -r '.[] | select(.updateAvailable) | .slug' /tmp/status.json); do
