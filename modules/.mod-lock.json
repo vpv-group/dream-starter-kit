@@ -70,6 +70,11 @@
       "sha256": "37b1e286301b352455771ba2c2bef0361cdda68438bfa28a0f8c6508d0b02104",
       "target": "20261126211126_mod_feedback_002_ideas.sql"
     },
+    "feedback/003_changelog.sql": {
+      "version": "20261126212808",
+      "sha256": "0f580d1d8e4534aaef2db5b824008c7ab56691a2579b8cbd95e02a1d7494e3c9",
+      "target": "20261126212808_mod_feedback_003_changelog.sql"
+    },
     "notifications/001_initial.sql": {
       "version": "20260612011540",
       "sha256": "99010f69124c6d4b6ec8a303848d41501a74e5a3866d06bac399c30774ddebc0",

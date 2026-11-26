@@ -96,6 +96,9 @@ export const modulesLock = {
         "apps/expo/src/app/(app)/a/feedback/index.tsx",
         "apps/nextjs/src/app/(frontend)/(app)/a/feedback/layout.tsx",
         "apps/nextjs/src/app/(frontend)/(app)/a/feedback/page.tsx",
+        "apps/nextjs/src/app/(frontend)/(public)/changelog/[slug]/page.tsx",
+        "apps/nextjs/src/app/(frontend)/(public)/changelog/layout.tsx",
+        "apps/nextjs/src/app/(frontend)/(public)/changelog/page.tsx",
         "apps/nextjs/src/app/(frontend)/(public)/feedback/[board]/create/page.tsx",
         "apps/nextjs/src/app/(frontend)/(public)/feedback/[board]/p/[post]/page.tsx",
         "apps/nextjs/src/app/(frontend)/(public)/feedback/[board]/page.tsx",
@@ -105,7 +108,8 @@ export const modulesLock = {
         "apps/nextjs/src/app/(frontend)/(public)/roadmap/layout.tsx",
         "apps/nextjs/src/app/(frontend)/(public)/roadmap/page.tsx",
         "apps/nextjs/src/payload/migrations/20261126_201522_mod_feedback_initial.ts",
-        "apps/nextjs/src/payload/migrations/20261126_203722_mod_feedback_ideas.ts"
+        "apps/nextjs/src/payload/migrations/20261126_203722_mod_feedback_ideas.ts",
+        "apps/nextjs/src/payload/migrations/20261126_211703_mod_feedback_changelog.ts"
       ],
       "edgeFunctions": []
     },

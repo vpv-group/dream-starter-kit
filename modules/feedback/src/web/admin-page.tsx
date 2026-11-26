@@ -57,6 +57,7 @@ import {
   useUpdatePost,
 } from "../hooks/use-feedback";
 import { toneOf } from "../shared/tones";
+import { ChangelogTab } from "./changelog-admin";
 import { IdeaSheet, IdeasTab, RoadmapBoard } from "./ideas";
 
 const dateFmt = new Intl.DateTimeFormat(undefined, {
@@ -156,7 +157,11 @@ export function FeedbackAdminPage() {
           <TabsTrigger value="ideas">Ideas</TabsTrigger>
           <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
           <TabsTrigger value="posts">Posts</TabsTrigger>
+          <TabsTrigger value="changelog">Changelog</TabsTrigger>
         </TabsList>
+        <TabsContent value="changelog" className="pt-4">
+          <ChangelogTab />
+        </TabsContent>
         <TabsContent value="ideas" className="pt-4">
           <IdeasTab
             data={ideas.data}

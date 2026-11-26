@@ -58,6 +58,7 @@ import {
 } from "../hooks/use-feedback";
 import { FIBONACCI, scoreIdea } from "../shared/score";
 import { TONE_DOT, toneOf } from "../shared/tones";
+import { IdeaChangelogLinks } from "./changelog-admin";
 
 export function statsById(data: IdeasPayload | undefined) {
   const map = new Map<string, IdeaVoterStats>();
@@ -739,6 +740,7 @@ export function IdeaSheet({
                 </ul>
               )}
             </div>
+            <IdeaChangelogLinks ideaId={idea.id} />
             <Button
               variant="outline"
               className="self-start"

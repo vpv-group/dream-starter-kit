@@ -1,3 +1,5 @@
+import type { RequiredDataFromCollectionSlug } from "payload";
+
 import type { ModSeedStep } from "@acme/mod-kit/payload";
 
 import { createAdminClient } from "../server/admin-client";
@@ -8,6 +10,22 @@ import { syncAllConfig } from "../server/full-sync";
  * boards, the default statuses/tags (from the settings defaults), and a few
  * posts. Idempotent and scalar-only, like every kit seed step.
  */
+const para = (text: string) => ({
+  type: "paragraph",
+  version: 1,
+  children: [{ type: "text", version: 1, text }],
+});
+const richText = (...texts: string[]) => ({
+  root: {
+    type: "root",
+    version: 1,
+    direction: null,
+    format: "",
+    indent: 0,
+    children: texts.map(para),
+  },
+});
+
 export const seed: ModSeedStep[] = [
   {
     label: "Feedback boards",
@@ -105,6 +123,79 @@ export const seed: ModSeedStep[] = [
           .from("mod_feedback_posts")
           .insert(rows.map((r) => ({ ...r, slug: "pending" })));
         if (error) throw new Error(`[feedback] seed posts: ${error.message}`);
+      }
+    },
+  },
+  {
+    label: "Changelog entries",
+    run: async (payload) => {
+      const existing = await payload.count({
+        collection: "mod-feedback-changelog",
+        overrideAccess: true,
+      });
+      if (existing.totalDocs > 0) return;
+      const labels: Record<string, number | string> = {};
+      for (const [name, tone] of [
+        ["Web app", "info"],
+        ["Mobile", "neutral"],
+      ] as const) {
+        const found = await payload.find({
+          collection: "mod-feedback-changelog-labels",
+          where: { name: { equals: name } },
+          limit: 1,
+          overrideAccess: true,
+        });
+        const doc =
+          found.docs[0] ??
+          (await payload.create({
+            collection: "mod-feedback-changelog-labels",
+            data: { name, tone },
+            overrideAccess: true,
+          }));
+        labels[name] = doc.id;
+      }
+      const day = 86_400_000;
+      for (const entry of [
+        {
+          title: "Feedback portal is live",
+          slug: "feedback-portal-is-live",
+          type: "new" as const,
+          labels: [labels["Web app"]],
+          excerpt: "Share ideas, vote on what matters and follow our roadmap.",
+          body: richText(
+            "You can now post ideas on our feedback boards, vote for the ones you care about, and see what's planned on the public roadmap.",
+            "Every update we ship lands here — subscribe to get it by email.",
+          ),
+          publishedAt: new Date(Date.now() - 2 * day).toISOString(),
+        },
+        {
+          title: "Faster loading on mobile",
+          slug: "faster-loading-on-mobile",
+          type: "improved" as const,
+          labels: [labels.Mobile],
+          excerpt: "Lists now load up to twice as fast on iOS and Android.",
+          body: richText(
+            "We trimmed what the app fetches on launch, so lists appear sooner.",
+          ),
+          publishedAt: new Date(Date.now() - 9 * day).toISOString(),
+        },
+      ]) {
+        await payload.create({
+          collection: "mod-feedback-changelog",
+          data: {
+            ...entry,
+            labels: entry.labels.filter(
+              (l): l is number => typeof l === "number",
+            ),
+            audience: "everyone",
+            notifySubscribers: false,
+            _status: "published",
+            announcedAt: new Date().toISOString(),
+          } as unknown as RequiredDataFromCollectionSlug<"mod-feedback-changelog">,
+          // Seed data announces nothing (no emails, no idea moves).
+          context: { skipChangelogAnnounce: true },
+          overrideAccess: true,
+        });
       }
     },
   },

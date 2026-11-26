@@ -101,6 +101,8 @@ export interface Config {
     "mod-chat-skills": ModChatSkill;
     "mod-docs-pages": ModDocsPage;
     "mod-feedback-boards": ModFeedbackBoard;
+    "mod-feedback-changelog": ModFeedbackChangelog;
+    "mod-feedback-changelog-labels": ModFeedbackChangelogLabel;
     forms: Form;
     "form-submissions": FormSubmission;
     "payload-kv": PayloadKv;
@@ -205,6 +207,11 @@ export interface Config {
     "mod-docs-pages": ModDocsPagesSelect<false> | ModDocsPagesSelect<true>;
     "mod-feedback-boards":
       ModFeedbackBoardsSelect<false> | ModFeedbackBoardsSelect<true>;
+    "mod-feedback-changelog":
+      ModFeedbackChangelogSelect<false> | ModFeedbackChangelogSelect<true>;
+    "mod-feedback-changelog-labels":
+      | ModFeedbackChangelogLabelsSelect<false>
+      | ModFeedbackChangelogLabelsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     "form-submissions":
       FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -3106,6 +3113,16 @@ export interface KitModule {
       | null;
     etaPublicByDefault?: boolean | null;
     votePriorities?: boolean | null;
+    changelogTitle?: string | null;
+    changelogSubtitle?: string | null;
+    changelogSubscriptions?: boolean | null;
+    changelogRss?: boolean | null;
+    changelogReactions?: boolean | null;
+    changelogShare?: boolean | null;
+    /**
+     * An idea stage key (Ideas & Roadmap tab). Its posts move to the mapped status; voters get one “shipped” notification. Empty = don't move ideas.
+     */
+    changelogShipStage?: string | null;
     tags?:
       | {
           name: string;
@@ -3354,6 +3371,79 @@ export interface ModFeedbackBoard {
         id?: string | null;
       }[]
     | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Product updates shown on /changelog (and its RSS feed).
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "mod-feedback-changelog".
+ */
+export interface ModFeedbackChangelog {
+  id: number;
+  title: string;
+  /**
+   * /changelog/<slug>. Filled from the title.
+   */
+  slug: string;
+  type: "new" | "improved" | "fixed";
+  labels?: (number | ModFeedbackChangelogLabel)[] | null;
+  /**
+   * One or two sentences: shown in RSS, emails and the What's new widget.
+   */
+  excerpt?: string | null;
+  body?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ("ltr" | "rtl") | null;
+      format: "left" | "start" | "center" | "right" | "end" | "justify" | "";
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  heroImage?: (number | null) | Media;
+  /**
+   * Members-only entries skip RSS and sharing.
+   */
+  audience: "everyone" | "members";
+  /**
+   * On first publish: email changelog subscribers and tell voters of linked ideas.
+   */
+  notifySubscribers?: boolean | null;
+  /**
+   * Shown as the entry's date. Set on first publish.
+   */
+  publishedAt?: string | null;
+  /**
+   * Ideas this entry shipped — link them in Feedback admin → Ideas → idea → Changelog.
+   */
+  linkedIdeas?: string[] | null;
+  /**
+   * When subscribers and voters were told.
+   */
+  announcedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ("draft" | "published") | null;
+}
+/**
+ * Labels for changelog entries; readers filter by them on /changelog.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "mod-feedback-changelog-labels".
+ */
+export interface ModFeedbackChangelogLabel {
+  id: number;
+  _order?: string | null;
+  name: string;
+  tone?: ("neutral" | "info" | "warning" | "success" | "destructive") | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -5031,6 +5121,13 @@ export interface KitModulesSelect<T extends boolean = true> {
             };
         etaPublicByDefault?: T;
         votePriorities?: T;
+        changelogTitle?: T;
+        changelogSubtitle?: T;
+        changelogSubscriptions?: T;
+        changelogRss?: T;
+        changelogReactions?: T;
+        changelogShare?: T;
+        changelogShipStage?: T;
         tags?:
           | T
           | {
@@ -5263,6 +5360,38 @@ export interface ModFeedbackBoardsSelect<T extends boolean = true> {
             };
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "mod-feedback-changelog_select".
+ */
+export interface ModFeedbackChangelogSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  type?: T;
+  labels?: T;
+  excerpt?: T;
+  body?: T;
+  heroImage?: T;
+  audience?: T;
+  notifySubscribers?: T;
+  publishedAt?: T;
+  linkedIdeas?: T;
+  announcedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "mod-feedback-changelog-labels_select".
+ */
+export interface ModFeedbackChangelogLabelsSelect<T extends boolean = true> {
+  _order?: T;
+  name?: T;
+  tone?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -6500,6 +6629,16 @@ export interface ModFeedbackSetting {
     | null;
   etaPublicByDefault?: boolean | null;
   votePriorities?: boolean | null;
+  changelogTitle?: string | null;
+  changelogSubtitle?: string | null;
+  changelogSubscriptions?: boolean | null;
+  changelogRss?: boolean | null;
+  changelogReactions?: boolean | null;
+  changelogShare?: boolean | null;
+  /**
+   * An idea stage key (Ideas & Roadmap tab). Its posts move to the mapped status; voters get one “shipped” notification. Empty = don't move ideas.
+   */
+  changelogShipStage?: string | null;
   tags?:
     | {
         name: string;
@@ -7038,6 +7177,13 @@ export interface ModFeedbackSettingsSelect<T extends boolean = true> {
       };
   etaPublicByDefault?: T;
   votePriorities?: T;
+  changelogTitle?: T;
+  changelogSubtitle?: T;
+  changelogSubscriptions?: T;
+  changelogRss?: T;
+  changelogReactions?: T;
+  changelogShare?: T;
+  changelogShipStage?: T;
   tags?:
     | T
     | {
@@ -7171,6 +7317,10 @@ export interface TaskSchedulePublish {
       | ({
           relationTo: "legal";
           value: number | Legal;
+        } | null)
+      | ({
+          relationTo: "mod-feedback-changelog";
+          value: number | ModFeedbackChangelog;
         } | null);
     global?: string | null;
     user?: {

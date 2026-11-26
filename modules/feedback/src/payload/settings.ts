@@ -408,6 +408,80 @@ export const settings = defineModuleSettings({
           ],
         },
         {
+          label: "Changelog",
+          description:
+            "The public changelog at /changelog. Entries live in Feedback → Changelog.",
+          fields: [
+            {
+              type: "row",
+              fields: [
+                {
+                  name: "changelogTitle",
+                  label: "Title",
+                  type: "text",
+                  defaultValue: "Changelog",
+                  admin: { width: "50%" },
+                },
+                {
+                  name: "changelogSubtitle",
+                  label: "Subtitle",
+                  type: "text",
+                  defaultValue: "Follow the latest improvements and updates.",
+                  admin: { width: "50%" },
+                },
+              ],
+            },
+            {
+              type: "row",
+              fields: [
+                {
+                  name: "changelogSubscriptions",
+                  label: "Let people subscribe to updates (email)",
+                  type: "checkbox",
+                  defaultValue: true,
+                  admin: { width: "50%" },
+                },
+                {
+                  name: "changelogRss",
+                  label: "Publish an RSS feed",
+                  type: "checkbox",
+                  defaultValue: true,
+                  admin: { width: "50%" },
+                },
+              ],
+            },
+            {
+              type: "row",
+              fields: [
+                {
+                  name: "changelogReactions",
+                  label: "Show likes",
+                  type: "checkbox",
+                  defaultValue: true,
+                  admin: { width: "50%" },
+                },
+                {
+                  name: "changelogShare",
+                  label: "Show share buttons",
+                  type: "checkbox",
+                  defaultValue: true,
+                  admin: { width: "50%" },
+                },
+              ],
+            },
+            {
+              name: "changelogShipStage",
+              label: "On first publish, move linked ideas to stage",
+              type: "text",
+              defaultValue: "shipped",
+              admin: {
+                description:
+                  "An idea stage key (Ideas & Roadmap tab). Its posts move to the mapped status; voters get one “shipped” notification. Empty = don't move ideas.",
+              },
+            },
+          ],
+        },
+        {
           label: "Tags",
           description:
             "Staff-only tags for sorting posts. Drag to reorder. Tags are shared by all boards.",
@@ -570,6 +644,13 @@ export interface FeedbackSettings extends Record<string, unknown> {
   ideaStages: IdeaStageSetting[];
   scoreFactors: ScoreFactor[];
   etaPublicByDefault?: boolean | null;
+  changelogTitle?: string | null;
+  changelogSubtitle?: string | null;
+  changelogSubscriptions?: boolean | null;
+  changelogRss?: boolean | null;
+  changelogReactions?: boolean | null;
+  changelogShare?: boolean | null;
+  changelogShipStage?: string | null;
   votePriorities?: boolean | null;
   portalTabs: PortalTabSetting[];
   portalTitle?: string | null;

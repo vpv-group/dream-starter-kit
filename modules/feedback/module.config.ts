@@ -46,6 +46,20 @@ export default defineModule({
       },
       {
         path: "",
+        component: "ChangelogPage",
+        area: "public",
+        mount: "/changelog",
+        rsc: true,
+      },
+      {
+        path: "[slug]",
+        component: "ChangelogEntryPage",
+        area: "public",
+        mount: "/changelog",
+        rsc: true,
+      },
+      {
+        path: "",
         component: "FeedbackIndexPage",
         area: "public",
         mount: "/feedback",
@@ -100,6 +114,9 @@ export default defineModule({
       "mod_feedback_activity",
       "mod_feedback_idea_stages",
       "mod_feedback_ideas",
+      "mod_feedback_changelog_subscribers",
+      "mod_feedback_changelog_reads",
+      "mod_feedback_changelog_reactions",
     ],
     dml: [
       "mod_notifications",
@@ -109,7 +126,11 @@ export default defineModule({
     ],
   },
   cms: {
-    collections: ["mod-feedback-boards"],
+    collections: [
+      "mod-feedback-boards",
+      "mod-feedback-changelog",
+      "mod-feedback-changelog-labels",
+    ],
     hasSettings: true,
     hasMigrations: true,
     hasSeed: true,

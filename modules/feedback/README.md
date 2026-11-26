@@ -43,6 +43,29 @@ factors (Settings → Ideas & Roadmap → Score factors). Factors can be set by
 staff, or come from votes, vote priority, or voters carrying given user tags
 (e.g. paid plans).
 
+## Changelog
+
+Entries are Payload docs (**/admin → Feedback → Changelog**): rich text,
+a type (New / Improved / Fixed), labels (Feedback → Changelog labels), an
+optional hero image, drafts, **scheduled publishing** and versions. The
+portal renders `/changelog` (date gutter, type + label badges, collapse,
+likes, copy link, share) and `/changelog/<slug>`; the **RSS 2.0** feed is
+`/api/mod/feedback/changelog/rss.xml` (published, everyone-audience
+entries only, with autodiscovery links on the pages).
+
+Link the ideas an entry announces from **Feedback admin → Ideas → idea →
+Changelog**. On the entry's **first publish** (`announcedAt` unset), the
+publish hook:
+
+1. moves each linked idea to the stage in Settings → Changelog (default
+   `shipped`), which moves their posts without a per-post notification;
+2. tells each voter and follower of those posts **once** that it shipped,
+   plus every changelog subscriber (`feedback.changelog.published`);
+3. emails subscribers through Payload's mailer.
+
+Signed-in people can subscribe on `/changelog`; the dashboard widget shows
+What's new with an unread dot (`mod_feedback_changelog_reads`).
+
 ## Anonymous visitors
 
 Each board decides whether anonymous visitors may **vote**, **post** and

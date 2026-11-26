@@ -28,6 +28,7 @@
     "@acme/mod-notifications": "workspace:*",
     "@acme/ui": "workspace:*",
     "@acme/ui-native": "workspace:*",
+    "@payloadcms/richtext-lexical": "catalog:",
     "@supabase/ssr": "catalog:",
     "@supabase/supabase-js": "catalog:",
     "@tanstack/react-query": "catalog:",

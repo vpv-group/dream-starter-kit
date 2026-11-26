@@ -673,3 +673,73 @@ export function useRoadmapPosts(statusIds: string[], boardIds?: string[]) {
     queryFn: () => listRoadmapPosts(supabase, statusIds, boardIds),
   });
 }
+
+// ---------------------------------------------------------------------------
+// Changelog
+// ---------------------------------------------------------------------------
+
+export interface StaffChangelogEntry {
+  id: number | string;
+  title: string;
+  slug: string;
+  type: string;
+  _status?: "draft" | "published" | null;
+  publishedAt?: string | null;
+  linkedIdeas?: string[] | null;
+  updatedAt: string;
+}
+
+export function useStaffChangelog(apiBaseUrl = "") {
+  const supabase = useSupabase();
+  return useQuery({
+    queryKey: [...feedbackKeys.staff(), "changelog"],
+    queryFn: () =>
+      feedbackApi<{ entries: StaffChangelogEntry[] }>(
+        supabase,
+        "/staff/changelog",
+        {
+          apiBaseUrl,
+        },
+      ).then((r) => r.entries),
+  });
+}
+
+export function useLinkChangelog(apiBaseUrl = "") {
+  const supabase = useSupabase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: {
+      entryId: number | string;
+      ideaId: string;
+      linked: boolean;
+    }) =>
+      feedbackApi(supabase, "/staff/changelog/link", {
+        body: args,
+        apiBaseUrl,
+      }),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
+export interface WhatsNew {
+  entries: {
+    id: number | string;
+    title: string;
+    slug: string;
+    type: string;
+    excerpt: string | null;
+    publishedAt: string | null;
+    unread: boolean;
+  }[];
+  unread: number;
+}
+
+export function useWhatsNew(apiBaseUrl = "") {
+  const supabase = useSupabase();
+  return useQuery({
+    queryKey: ["feedback", "whats-new"],
+    queryFn: () =>
+      feedbackApi<WhatsNew>(supabase, "/changelog/unread", { apiBaseUrl }),
+    staleTime: 60_000,
+  });
+}

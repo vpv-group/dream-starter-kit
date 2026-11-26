@@ -26,6 +26,7 @@ import {
   usePostFeed,
   useRoadmapPosts,
   useVote,
+  useWhatsNew,
 } from "../hooks/use-feedback";
 import { TONE_PILL, toneOf } from "../shared/tones";
 
@@ -51,7 +52,9 @@ export function FeedbackScreen() {
   const [boardId, setBoardId] = useState<string | null>(null);
   const [sort, setSort] = useState<Sort>("trending");
   const [view, setView] = useState<View_>({ name: "list" });
-  const [section, setSection] = useState<"roadmap" | "feedback">("feedback");
+  const [section, setSection] = useState<"roadmap" | "feedback" | "changelog">(
+    "feedback",
+  );
   const boards = useMemo(
     () => (config.data?.boards ?? []).filter((b) => b.show_on_portal_home),
     [config.data],
@@ -97,7 +100,7 @@ export function FeedbackScreen() {
 
   const segments = (
     <View className="flex-row gap-1 px-4 pt-3">
-      {(["roadmap", "feedback"] as const).map((s) => (
+      {(["roadmap", "feedback", "changelog"] as const).map((s) => (
         <Pressable
           key={s}
           onPress={() => setSection(s)}
@@ -114,12 +117,26 @@ export function FeedbackScreen() {
                 : "text-muted-foreground",
             )}
           >
-            {s === "roadmap" ? "Roadmap" : "Feedback"}
+            {s === "roadmap"
+              ? "Roadmap"
+              : s === "feedback"
+                ? "Feedback"
+                : "Changelog"}
           </Text>
         </Pressable>
       ))}
     </View>
   );
+
+  if (section === "changelog") {
+    return (
+      <View className="bg-background flex-1">
+        <Stack.Screen options={{ title: config.data?.title ?? "Feedback" }} />
+        {segments}
+        <NativeChangelog />
+      </View>
+    );
+  }
 
   if (section === "roadmap") {
     return (
@@ -205,6 +222,32 @@ export function FeedbackScreen() {
         onOpen={(post) => setView({ name: "post", post })}
       />
     </View>
+  );
+}
+
+/** Changelog: the latest entries (titles + excerpts). */
+function NativeChangelog() {
+  const news = useWhatsNew(API_BASE);
+  return (
+    <ScrollView contentContainerClassName="gap-4 p-4">
+      {(news.data?.entries ?? []).length === 0 ? (
+        <Text className="text-muted-foreground text-center">
+          No updates yet.
+        </Text>
+      ) : (
+        news.data?.entries.map((e) => (
+          <View key={e.id} className="border-border gap-1 border-b pb-4">
+            <Text className="text-muted-foreground text-xs">
+              {e.publishedAt
+                ? new Date(e.publishedAt).toLocaleDateString()
+                : ""}
+            </Text>
+            <Text className="text-lg font-bold">{e.title}</Text>
+            {e.excerpt ? <Text className="text-sm">{e.excerpt}</Text> : null}
+          </View>
+        ))
+      )}
+    </ScrollView>
   );
 }
 

@@ -1011,6 +1011,78 @@ export type Database = {
           },
         ];
       };
+      mod_feedback_changelog_reactions: {
+        Row: {
+          created_at: string;
+          entry_id: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          entry_id: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          entry_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mod_feedback_changelog_reactions_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      mod_feedback_changelog_reads: {
+        Row: {
+          last_seen_at: string;
+          user_id: string;
+        };
+        Insert: {
+          last_seen_at?: string;
+          user_id: string;
+        };
+        Update: {
+          last_seen_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mod_feedback_changelog_reads_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      mod_feedback_changelog_subscribers: {
+        Row: {
+          created_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mod_feedback_changelog_subscribers_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       mod_feedback_comments: {
         Row: {
           attachments: Json;
@@ -2216,6 +2288,14 @@ export type Database = {
         Returns: {
           board_id: string;
           post_count: number;
+        }[];
+      };
+      mod_feedback_changelog_likes: {
+        Args: { _entries: string[] };
+        Returns: {
+          entry_id: string;
+          likes: number;
+          mine: boolean;
         }[];
       };
       mod_feedback_idea_voter_stats: {
