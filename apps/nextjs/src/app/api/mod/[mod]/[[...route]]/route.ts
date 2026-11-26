@@ -8,6 +8,7 @@ import { slidingWindow } from "@acme/config";
 
 import { env, supabaseAnonKey } from "~/env";
 import { isModuleEnabled } from "~/lib/mod/enabled";
+import { hostServices } from "~/lib/mod/host-services";
 import { createClient as createCookieClient } from "~/lib/supabase/server";
 import {
   modPublicRoutes,
@@ -42,6 +43,11 @@ const json = (status: number, body: Record<string, unknown>) =>
  *  - native: `Authorization: Bearer <access token>` (the EXPO_PUBLIC pattern),
  *  - web: the Supabase session cookie.
  * Both yield an RLS-scoped client — module queries run as the caller.
+ *
+ * Anonymous Supabase sessions (`is_anonymous` — the visitor identity minted
+ * for favorites / guest checkout) are NOT authenticated here: they would
+ * otherwise reach every module's authed routes, AI included (golden rule
+ * #6). Flows that must serve them belong in a module's `publicRoutes`.
  */
 async function authenticate(req: NextRequest) {
   const authHeader = req.headers.get("Authorization");
@@ -58,7 +64,7 @@ async function authenticate(req: NextRequest) {
       data: { user },
       error,
     } = await supabase.auth.getUser();
-    if (error || !user) return null;
+    if (error || !user || user.is_anonymous) return null;
     return { user, supabase };
   }
 
@@ -67,7 +73,7 @@ async function authenticate(req: NextRequest) {
     data: { user },
     error,
   } = await supabase.auth.getUser();
-  if (error || !user) return null;
+  if (error || !user || user.is_anonymous) return null;
   return { user, supabase };
 }
 
@@ -125,6 +131,7 @@ async function dispatch(
       supabase,
       params: {},
       getPayload: getPayloadLazy,
+      host: hostServices,
     });
   }
 
@@ -150,6 +157,7 @@ async function dispatch(
     supabase: auth.supabase,
     params: {},
     getPayload: getPayloadLazy,
+    host: hostServices,
   };
 
   // Streaming responses pass through untouched.

@@ -14,8 +14,44 @@ import type { Database } from "@acme/api";
  * then invokes the matching handler — module endpoints are authed +
  * rate-limited by construction (golden rule #6).
  */
+/**
+ * GitHub, as connected through the Meet Dream AI GitHub App (/admin →
+ * Updates). The host mints a short-lived installation token for the ONE
+ * connected repository; modules never see it. `api()` is limited to that
+ * repository's issue and label endpoints (plus `GET ""`, the repo itself),
+ * so a module can't push code or touch workflows.
+ */
+export interface ModHostGithub {
+  /** Whether a token can be minted right now, and for which `owner/repo`. */
+  status(): Promise<
+    | { connected: true; repo: string }
+    | { connected: false; reason: string; message: string }
+  >;
+  /**
+   * Call `https://api.github.com/repos/<repo><path>`. `path` must be `""`
+   * (GET only), or start with `/issues` or `/labels`; anything else is
+   * answered 403 without contacting GitHub. 503 `github_not_connected`
+   * when no token can be minted.
+   */
+  api(path: string, init?: RequestInit): Promise<Response>;
+  /**
+   * GitHub issue search scoped to the connected repo (`is:issue repo:<repo>`
+   * are appended to `query`).
+   */
+  searchIssues(query: string, perPage?: number): Promise<Response>;
+}
+
+/** Host capabilities modules may use (never secrets). */
+export interface ModHostServices {
+  github: ModHostGithub;
+}
+
 export interface ModRouteContext {
-  /** The authenticated Supabase user (the dispatcher rejects anonymous traffic). */
+  /**
+   * The authenticated, non-anonymous Supabase user. The dispatcher answers
+   * 401 to anonymous sessions on these routes; flows that must serve
+   * anonymous users belong in `publicRoutes`.
+   */
   user: User;
   /** RLS-scoped client bound to the caller's session — queries run as the user. */
   supabase: SupabaseClient<Database>;
@@ -29,6 +65,8 @@ export interface ModRouteContext {
    * Local API reads). Lazy so routes that never touch the CMS pay nothing.
    */
   getPayload: () => Promise<BasePayload>;
+  /** Host services (GitHub via the Meet Dream AI App). */
+  host: ModHostServices;
 }
 
 export type ModRouteHandler = (
@@ -60,6 +98,8 @@ export interface ModPublicRouteContext {
   supabase: SupabaseClient<Database>;
   params: Record<string, string>;
   getPayload: () => Promise<BasePayload>;
+  /** Host services (GitHub via the Meet Dream AI App). */
+  host: ModHostServices;
 }
 
 export type ModPublicRouteHandler = (

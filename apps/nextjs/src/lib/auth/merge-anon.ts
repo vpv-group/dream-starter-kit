@@ -83,6 +83,23 @@ export async function mergeAnonUser(
     .eq("user_id", anonId)
     .then(undefined, () => undefined);
 
+  // Modules that let anonymous users create data (e.g. feedback votes) register
+  // a merge handler with kit_register_anon_data; run them all before the
+  // delete below cascades their rows away. Failures are reported, not fatal.
+  const { data: report, error: mergeError } = await admin.rpc(
+    "kit_merge_anon_data",
+    { _from: anonId, _to: realId },
+  );
+  if (mergeError) {
+    console.warn(`[merge-anon] module handlers failed: ${mergeError.message}`);
+  } else if (
+    report &&
+    typeof report === "object" &&
+    Object.values(report).some((v) => v !== "ok")
+  ) {
+    console.warn("[merge-anon] module handlers:", JSON.stringify(report));
+  }
+
   // Finally remove the anonymous user (cascades any leftover owned rows).
   await admin.auth.admin.deleteUser(anonId);
 }

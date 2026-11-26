@@ -1395,6 +1395,14 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      kit_merge_anon_data: {
+        Args: { _from: string; _to: string };
+        Returns: Json;
+      };
+      kit_register_anon_data: {
+        Args: { _has_data_fn: string; _merge_fn: string; _module: string };
+        Returns: undefined;
+      };
       kit_register_app_schedule: {
         Args: { _cron: string; _name: string; _path: string };
         Returns: undefined;
@@ -1408,6 +1416,10 @@ export type Database = {
         Returns: undefined;
       };
       kit_scheduler_status: { Args: never; Returns: Json };
+      kit_unregister_anon_data: {
+        Args: { _module: string };
+        Returns: undefined;
+      };
       kit_unregister_app_schedule: {
         Args: { _name: string };
         Returns: undefined;

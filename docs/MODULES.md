@@ -205,11 +205,35 @@ its own `process.env.MOD_<SLUG>_*` keys without tripping
 every call (session cookie on web, `Authorization: Bearer` on native), applies
 the shared rate limit and the enablement gate, then matches `"METHOD /path"` in
 the module's `routes` table — golden rule #6 holds for every module
-endpoint with zero per-module auth code. `publicRoutes` (manifest
-`server.publicRoutes`) skips the session requirement for genuinely anonymous
-flows (billing's guest checkout) but stays rate-limited; signature-verified
-endpoints (Stripe webhooks) belong in edge functions or Payload plugin
-endpoints instead.
+endpoint with zero per-module auth code. **Anonymous Supabase sessions**
+(`is_anonymous`, the visitor identity behind favorites and guest checkout)
+get **401** on `routes`: a flow that must serve them goes in `publicRoutes`
+(manifest `server.publicRoutes`), which skips the session requirement
+(`ctx.user` is the anonymous user or null) but stays rate-limited per user
+or IP. Signature-verified webhooks (billing's Stripe endpoint) and cron
+endpoints (`isCronRequest`) are public routes too.
+
+**Host services (`ctx.host`)** are on both route contexts:
+
+- `ctx.host.github` reaches the repository connected through the Meet Dream
+  AI GitHub App (/admin → Updates) with its short-lived site token, which
+  the module never sees. `status()` returns `{ connected, repo }` or a
+  reason. `api(path, init)` calls `/repos/<repo><path>`, limited to `""`
+  (GET), `/issues…` and `/labels…`; anything else is a 403 and never
+  reaches GitHub. `searchIssues(query)` runs a GitHub issue search scoped to
+  that repo. With GitHub unconnected, calls answer 503
+  `github_not_connected`, so modules must keep working without it.
+
+**Anonymous-user data.** A module that lets anonymous users own rows
+registers two SQL functions from a migration:
+`select public.kit_register_anon_data('<slug>', 'public.mod_<slug>_merge_anon', 'public.mod_<slug>_anon_has_data');`.
+`merge_anon(_from uuid, _to uuid)` moves the rows when the visitor signs in
+to an existing account (`lib/auth/merge-anon.ts`, before the anonymous user
+is deleted). `anon_has_data(_user uuid) → boolean` keeps the hourly cleanup
+of idle anonymous users from deleting someone whose rows still count.
+Undo it in `drop.sql` with `kit_unregister_anon_data('<slug>')`. The
+`pg_trgm` and `vector` extensions are enabled in `extensions` for module
+search and similarity; embedding models come from `DEFAULT_EMBEDDING_MODEL`.
 
 **Menus are CMS-driven** (`kit-modules` + `nav-items` collections,
 **Modules** admin group): manifest nav entries are _defaults_, seeded by the
