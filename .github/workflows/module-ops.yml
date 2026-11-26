@@ -5,7 +5,7 @@
 # change is a reviewable diff that the full CI gates before it can go live.
 #
 # Sign-in: no secrets. Each job trades its GitHub Actions OIDC token for a
-# one-hour token for THIS repository from Meet Dream's "Dream Updates" GitHub
+# one-hour token for THIS repository from Meet Dream's "Meet Dream AI" GitHub
 # App (.github/actions/dream-session), which the owner connects once in
 # /admin → Updates. Until GitHub is connected every job ends with a notice.
 #
@@ -121,12 +121,12 @@ jobs:
             exit 1
           fi
 
-      - name: Sign git in as Dream Updates
+      - name: Sign git in as Meet Dream AI
         env:
           TOKEN: ${{ steps.dream.outputs.token }}
         run: |
-          git config user.name "dream-updates[bot]"
-          git config user.email "dream-updates[bot]@users.noreply.github.com"
+          git config user.name "meet-dream-ai[bot]"
+          git config user.email "meet-dream-ai[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           # refs/ext-base/* = snapshots from before modules were renamed.
           git fetch origin '+refs/mod-base/*:refs/mod-base/*' || true
@@ -257,7 +257,7 @@ jobs:
             update) TITLE="Update $SLUG${FROM:+ $FROM →}${TO:+ $TO}" ;;
             remove) TITLE="Remove $SLUG" ;;
           esac
-          BODY="Automated \`pnpm mod $OP\` run by Dream Updates. Review the full diff: module code runs server-side with env access (docs/MODULES-PLAN.md §7)."
+          BODY="Automated \`pnpm mod $OP\` run by Meet Dream AI. Review the full diff: module code runs server-side with env access (docs/MODULES-PLAN.md §7)."
           LABELS=(dream-update)
           if [ "$OP" = "remove" ]; then
             BODY="$BODY"$'\n\n'"⚠️ **Data loss:** this PR includes a drop migration for the module's tables (unless kept). It never merges itself."
@@ -331,8 +331,8 @@ jobs:
           TOKEN: ${{ steps.dream.outputs.token }}
         run: |
           set -euo pipefail
-          git config user.name "dream-updates[bot]"
-          git config user.email "dream-updates[bot]@users.noreply.github.com"
+          git config user.name "meet-dream-ai[bot]"
+          git config user.email "meet-dream-ai[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           # A Vercel clone or "Use this template" repo shares no history with
           # the kit: record the release it started from as an ancestor (no

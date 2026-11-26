@@ -371,7 +371,7 @@ Three places in `/admin`, all admin-only:
 ### Connect GitHub (once)
 
 Updates and installs happen as **pull requests on your repository**, opened by
-Meet Dream's **Dream Updates** GitHub App. The owner connects it once: on the
+the **Meet Dream AI** GitHub App. The owner connects it once: on the
 founder's `/cms-setup/connect-code` step after the first sign-in, or with
 **Connect GitHub** in Updates. GitHub asks which repository; pick only this
 app's repository. Nothing is stored in the repository or in env:
@@ -422,7 +422,7 @@ The app accepts the Vercel Supabase integration's variable names as its own:
 | Switch (Updates) | Default | What it does |
 |---|---|---|
 | **Automatic updates** | on | The daily run (06:23 UTC) opens a PR for each outdated module and for a new kit release |
-| **Merge updates automatically** | on | A PR merges itself once every check passes, including `integration` (Supabase, RLS, Playwright) |
+| **Merge updates automatically** | on | A PR merges itself once every check passes, including `integration` (Supabase, RLS, Playwright) and commit statuses such as Vercel's preview deployment |
 
 The founder picks one of three presets on `/cms-setup/app-updates`: install
 automatically (both on), review each update (merge off), or I'll update it

@@ -5,7 +5,7 @@ import { startConnect } from "~/lib/mod/updates";
 import { getSiteUrl } from "~/lib/site-url";
 
 /**
- * "Connect GitHub": asks meetdream.com for the Dream Updates App install URL
+ * "Connect GitHub": asks meetdream.com for the Meet Dream AI App install URL
  * (with a signed state for this site) and returns it for the browser to open.
  * After the owner picks the repository, GitHub sends them back to `returnTo`
  * on this site with `?github=connected`. Staff-gated.
@@ -15,7 +15,7 @@ const bodySchema = z.object({
     .string()
     .regex(/^\/(admin|cms-setup)(\/[\w\-/]*)?$/)
     .default("/admin/updates"),
-  /** github (Dream Updates App) or supabase (configure sign-in). */
+  /** github (Meet Dream AI App) or supabase (configure sign-in). */
   target: z.enum(["github", "supabase"]).default("github"),
 });
 

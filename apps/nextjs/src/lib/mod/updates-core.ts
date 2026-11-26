@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 
 /**
- * Dream Updates client (docs/MODULES.md → Automatic updates). Pure: no env,
+ * Meet Dream AI client (docs/MODULES.md → Automatic updates). Pure: no env,
  * no Payload, injected fetch, so it is unit tested directly
  * (updates-core.test.ts). `updates.ts` wires it to the app.
  *
@@ -13,7 +13,7 @@ import { z } from "zod/v4";
  * - `POST /sites/github-token`  a one-hour token for the connected repo that
  *                               can start module-ops.yml and read PRs, but
  *                               can't change code
- * - `POST /connect/github/start` the "Dream Updates" App install URL
+ * - `POST /connect/github/start` the "Meet Dream AI" App install URL
  */
 
 export const updateSettingsSchema = z.object({
@@ -55,7 +55,7 @@ export interface UpdatesState {
   settings: UpdateSettings;
   /** Meet Dream's global hold on automatic merging, if any. */
   hold: string | null;
-  /** Is the Dream Updates App set up on meetdream.com at all? */
+  /** Is the Meet Dream AI App set up on meetdream.com at all? */
   brokerConfigured: boolean;
   /** Supabase Auth was configured for this site through Meet Dream. */
   backendConfigured: boolean;

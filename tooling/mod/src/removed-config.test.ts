@@ -5,7 +5,7 @@ import { findRepoRoot } from "./paths";
 
 /**
  * Settings removed in 2.4 (docs/UPDATING.md → Removed in 2.4): automatic
- * updates run through the Dream Updates GitHub App and /admin → Updates, so
+ * updates run through the Meet Dream AI GitHub App and /admin → Updates, so
  * none of these may come back. They may only be named in the notes that
  * tell existing installs to delete them, and in historical design docs.
  */
