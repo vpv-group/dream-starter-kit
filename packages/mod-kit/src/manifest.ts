@@ -185,19 +185,6 @@ export const moduleManifestSchema = z.object({
     })
     .optional(),
   /**
-   * Web UI slots the HOST renders (generated `modSlots`), keyed by slot
-   * name → named export from `./web`. Lets host pages host module UI (e.g.
-   * billing's `premium-gate` around premium content) without importing the
-   * module; an absent slot renders its fallback. Needs kit ≥ 2.6.
-   */
-  slots: z
-    .object({
-      web: z
-        .record(z.string().regex(/^[a-z][a-z0-9-]*$/), z.string().min(1))
-        .default({}),
-    })
-    .prefault({}),
-  /**
    * Runtime access gate. `check` names a `mod_<slug>_*` SQL function (no
    * args, returns boolean, callable by `authenticated`) that says whether the
    * CURRENT user may use the module. When false the module's menu entries are

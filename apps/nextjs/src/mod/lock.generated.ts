@@ -12,7 +12,7 @@ export const modulesLock = {
   },
   "modules": {
     "billing": {
-      "version": "1.1.0",
+      "version": "2.0.0",
       "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
@@ -24,6 +24,14 @@ export const modulesLock = {
         "apps/nextjs/src/app/(frontend)/(public)/pricing/page.tsx",
         "apps/nextjs/src/payload/migrations/20260612_023534_ext_billing.ts"
       ],
+      "edgeFunctions": []
+    },
+    "billing-adapter-stripe": {
+      "version": "1.0.0",
+      "kitCompat": ">=2.0.0 <3",
+      "source": "local",
+      "installedVia": "preinstalled",
+      "stubs": [],
       "edgeFunctions": []
     },
     "chat": {

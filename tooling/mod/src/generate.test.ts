@@ -390,14 +390,13 @@ describe("module access + admin settings", () => {
   });
 });
 
-describe("adapters, services and slots", () => {
+describe("adapters and services", () => {
   const core = loaded({
     slug: "billing",
     name: "Billing",
     version: "2.0.0",
     kitCompat: ">=2.0.0 <3",
     server: { routes: true, services: true },
-    slots: { web: { "premium-gate": "PremiumGate" } },
     cms: { collections: ["mod-billing-plans"], hasSettings: true },
   });
   const stripe = loaded({
@@ -446,7 +445,7 @@ describe("adapters, services and slots", () => {
     );
   });
 
-  it("emits client adapters and slots in the client registry", () => {
+  it("emits client adapters in the client registry", () => {
     const client = buildNextClientRegistry([core, stripe]);
     expect(client).toContain(
       'import { webProvider as adapter_billing_adapter_stripe } from "@acme/mod-billing-adapter-stripe/web";',
@@ -454,12 +453,8 @@ describe("adapters, services and slots", () => {
     expect(client).toContain(
       '{ slug: "billing-adapter-stripe", target: "billing", adapter: adapter_billing_adapter_stripe },',
     );
-    expect(client).toContain(
-      'import { PremiumGate as slot_billing_premium_gate } from "@acme/mod-billing/web";',
-    );
-    expect(client).toContain('name: "premium-gate"');
     expect(buildNextClientRegistry([chat])).toContain(
-      "modSlots: { slug: string; name: string; Component: React.ComponentType<Record<string, unknown>> }[] = [];",
+      "modClientAdapters: { slug: string; target: string; adapter: unknown }[] = [];",
     );
   });
 });

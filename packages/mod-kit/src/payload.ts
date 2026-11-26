@@ -318,6 +318,13 @@ export interface AdapterSettingsOptions {
   name: string;
   /** The host module slug whose settings global hosts this tab, e.g. "chat". */
   target: string;
+  /**
+   * Short storage key: the fields live under `adapter_<key>` instead of
+   * `adapter_<slug_snake>`. Use it when the slug is long — Payload builds
+   * column/enum names from target + group + field, and Postgres cuts
+   * identifiers at 63 characters. Never change it once shipped.
+   */
+  key?: string;
   /** Optional tab blurb. */
   description?: string;
   /** The author-controlled fields (stored under a per-adapter group). */
@@ -358,7 +365,9 @@ export function adapterGroupName(slug: string): string {
 export function defineAdapterSettings(
   opts: AdapterSettingsOptions,
 ): AdapterSettings {
-  const groupName = adapterGroupName(opts.slug);
+  const groupName = opts.key
+    ? `adapter_${opts.key.replace(/-/g, "_")}`
+    : adapterGroupName(opts.slug);
   return {
     slug: opts.slug,
     target: opts.target,

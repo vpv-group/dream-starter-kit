@@ -1,5 +1,10 @@
 {
   "pins": {
+    "billing-adapter-stripe/001_initial.sql": {
+      "version": "20261126192140",
+      "sha256": "b633fa947b0929328a4efc3a97f821827b5be50baa34b8c73bcfce26109bb03d",
+      "target": "20261126192140_mod_billing_adapter_stripe_001_initial.sql"
+    },
     "billing/001_initial.sql": {
       "version": "20260612011538",
       "sha256": "1e242bd90723dc6b86175100f961323acf478544a906c313bf39949590625fb2",
@@ -19,6 +24,11 @@
       "version": "20261126030001",
       "sha256": "cbd1373819c284b4b236b646a6f77342badeeb74e54929cf7bc5ef697aef25fa",
       "target": "20261126030001_mod_billing_004_webhook_claims.sql"
+    },
+    "billing/005_provider_neutral.sql": {
+      "version": "20261126190940",
+      "sha256": "bb82c4ebafe79553e7acfa666198084eac9c598dc09502502ff178e03b30cf55",
+      "target": "20261126190940_mod_billing_005_provider_neutral.sql"
     },
     "chat/001_initial.sql": {
       "version": "20260612011539",

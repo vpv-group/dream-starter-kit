@@ -7,15 +7,14 @@ import type { ModRouteContext } from "@acme/mod-kit/server";
 import { slidingWindow } from "@acme/config";
 
 import { env, supabaseAnonKey } from "~/env";
-// Side effect: lets modules use "Connect with …" (Meet Dream) connections.
-import "~/lib/mod/connector-broker";
-
 import { isModuleEnabled } from "~/lib/mod/enabled";
 import { createClient as createCookieClient } from "~/lib/supabase/server";
 import {
   modPublicRoutes,
   modServerRoutes,
 } from "~/mod/registry.server.generated";
+// Side effect: lets modules use "Connect with …" (Meet Dream) connections.
+import "~/lib/mod/connector-broker";
 
 /**
  * The ONE server entry point for every module API route

@@ -6,7 +6,7 @@
 // Continue with Apple/Google). It's *account-first*: by the time the buyer
 // reaches Step 2 they're signed in, so the payment intent stamps their
 // supabase_user_id directly (the anon/guest path stays only as a webhook
-// fallback). Step 2 (Payment) mounts the inline Stripe form. A gated stepper
+// fallback). Step 2 (Payment) mounts the payment provider's inline form. A gated stepper
 // built from shadcn Cards: the future step is disabled until the prior is done,
 // and the Account step collapses to a ✓ + email + edit affordance once complete.
 import { useCallback, useRef, useState } from "react";
@@ -18,12 +18,16 @@ import type { ModBillingPlan } from "@acme/cms";
 import { useSession, useSupabase } from "@acme/api";
 import { isAnonymousUser, signOut } from "@acme/app";
 
-import type { PaidResult } from "~/components/checkout/checkout-payment";
 import type { CheckoutTestimonialData } from "~/components/checkout/checkout-testimonial";
+import type {
+  PaidResult,
+  PurchaseRef,
+} from "~/components/paywall/payment-provider";
 import { AuthFlow } from "~/components/auth/auth-flow";
 import { CheckoutPayment } from "~/components/checkout/checkout-payment";
 import { CheckoutTestimonial } from "~/components/checkout/checkout-testimonial";
 import { PlanSummary } from "~/components/checkout/plan-summary";
+import { useWebPaymentProvider } from "~/components/paywall/payment-provider";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { buildPlanCopy, buildUpsellCopy } from "~/lib/paywall-copy";
@@ -59,6 +63,7 @@ export function CheckoutFlow({
 }) {
   const router = useRouter();
   const supabase = useSupabase();
+  const provider = useWebPaymentProvider();
   const { user } = useSession();
 
   // Authenticated-and-permanent gates Step 2. `justAuthed` advances immediately
@@ -73,7 +78,7 @@ export function CheckoutFlow({
   const [showUpsell, setShowUpsell] = useState(false);
   const [switching, setSwitching] = useState(false);
   const [switchError, setSwitchError] = useState<string | null>(null);
-  const subscriptionRef = useRef<string | undefined>(undefined);
+  const purchaseRef = useRef<PurchaseRef>({});
 
   const copy = buildPlanCopy(plan);
   const canUpsell = Boolean(annualPlan?.id && annualPlan.id !== planId);
@@ -85,7 +90,10 @@ export function CheckoutFlow({
   }, [router]);
 
   const onPaid = useCallback((result: PaidResult) => {
-    subscriptionRef.current = result.subscriptionId;
+    purchaseRef.current = {
+      subscriptionId: result.subscriptionId,
+      customerId: result.customerId,
+    };
     setPaid(true);
   }, []);
 
@@ -106,21 +114,11 @@ export function CheckoutFlow({
     setSwitching(true);
     setSwitchError(null);
     try {
-      const res = await fetch("/api/mod/billing/upgrade-annual", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          planId: annualPlanId,
-          subscriptionId: subscriptionRef.current,
-        }),
+      if (!provider?.switchPlan) throw new Error("Could not switch to annual.");
+      await provider.switchPlan({
+        planId: annualPlanId,
+        ref: purchaseRef.current,
       });
-      const data = (await res.json().catch(() => ({}))) as {
-        ok?: boolean;
-        error?: string;
-      };
-      if (!res.ok || !data.ok) {
-        throw new Error(data.error ?? "Could not switch to annual.");
-      }
       finishToApp();
     } catch (e) {
       setSwitchError(
@@ -128,7 +126,7 @@ export function CheckoutFlow({
       );
       setSwitching(false);
     }
-  }, [annualPlanId, finishToApp]);
+  }, [annualPlanId, finishToApp, provider]);
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-10">

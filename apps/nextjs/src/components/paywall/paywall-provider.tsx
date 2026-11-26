@@ -1,9 +1,9 @@
 "use client";
 
 // Paywall state shared across the premium-gated content pages. Gating reads the
-// real subscription via `usePremium`; opening the flow launches the Stripe
-// paywall modal. On success it invalidates the subscription query so the gate
-// flips without a reload.
+// viewer's entitlements via `usePremium`; opening the flow launches the paywall
+// modal, whose payment step comes from the installed billing payment provider
+// (e.g. Stripe). On success it reloads so the server renders unlocked content.
 import type { ReactNode } from "react";
 import {
   createContext,
@@ -16,10 +16,10 @@ import {
 import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 
-import type { PayMethod } from "./paywall-body";
-import type { CheckoutVariant } from "./stripe";
+import type { CheckoutVariant, PayMethod } from "./payment-provider";
 import type { PlanLite } from "~/lib/paywall-copy";
 import { resolveAnnualPlan, resolvePremiumPlan } from "~/lib/paywall-copy";
+import { useWebPaymentProvider } from "./payment-provider";
 import { usePremium } from "./use-premium";
 
 interface ResolvedPlans {
@@ -28,10 +28,9 @@ interface ResolvedPlans {
   annualPlan: PlanLite | null;
 }
 
-// The paywall modal pulls in @stripe/stripe-js + @stripe/react-stripe-js, which
-// are dead weight until someone opens the paywall. Load it lazily (client-only)
-// so Stripe stays out of the initial JS bundle and off the FCP/TBT critical
-// path; it's only fetched the first time a checkout flow opens.
+// The paywall modal (and the payment provider's SDK it renders, e.g. Stripe.js)
+// is dead weight until someone opens the paywall. Load it lazily (client-only)
+// so it stays out of the initial JS bundle and off the FCP/TBT critical path.
 const PaywallModal = dynamic(
   () => import("./paywall-modal").then((m) => m.PaywallModal),
   { ssr: false },
@@ -95,6 +94,7 @@ export function PaywallProvider({
 }) {
   const { isPremium, isLoading, userEmail } = usePremium();
   const { data: plans } = useResolvedPlan(initialPlan);
+  const provider = useWebPaymentProvider();
   const plan = plans?.plan ?? null;
   const annualPlan = plans?.annualPlan ?? null;
 
@@ -102,18 +102,16 @@ export function PaywallProvider({
   const [variant, setVariant] = useState<CheckoutVariant>("full");
   const [method, setMethod] = useState<PayMethod>("wallet");
 
-  // For a not-yet-premium visitor (who is seeing a gate), eagerly load Stripe.js
-  // + the lazy paywall chunk right after first paint (effects run post-paint, so
-  // this never blocks FCP). The wallet button then mounts with no network wait
-  // on tap, and Stripe's fraud signals collect on-page.
+  // For a not-yet-premium visitor (who is seeing a gate), eagerly load the
+  // provider's SDK + the lazy paywall chunk right after first paint (effects
+  // run post-paint, so this never blocks FCP). The wallet button then mounts
+  // with no network wait on tap (and Stripe's fraud signals collect on-page).
   const gated = !isPremium && !isLoading;
   useEffect(() => {
     if (!gated || typeof window === "undefined") return;
     void import("./paywall-modal");
-    void import("./stripe")
-      .then((m) => m.getStripePromise())
-      .catch(() => undefined);
-  }, [gated]);
+    provider?.prefetch?.();
+  }, [gated, provider]);
 
   const openPaywall = useCallback(
     (v: CheckoutVariant, m: PayMethod = "wallet") => {
@@ -149,22 +147,15 @@ export function PaywallProvider({
 
   return (
     <PaywallContext.Provider value={value}>
-      {/* Warm the TLS/DNS to Stripe's hosts for gated visitors so loadStripe +
-          wallet detection connect faster (React 19 hoists these to <head>). */}
-      {gated && (
-        <>
-          <link rel="preconnect" href="https://js.stripe.com" crossOrigin="" />
-          <link rel="preconnect" href="https://api.stripe.com" crossOrigin="" />
-          <link
-            rel="preconnect"
-            href="https://m.stripe.network"
-            crossOrigin=""
-          />
-        </>
-      )}
+      {/* Warm the TLS/DNS to the provider's hosts for gated visitors so its
+          SDK + wallet detection connect faster (React 19 hoists to <head>). */}
+      {gated &&
+        provider?.preconnect?.map((href) => (
+          <link key={href} rel="preconnect" href={href} crossOrigin="" />
+        ))}
       {children}
       {/* `.paywall-root` so the modal's design tokens resolve. Only mounted once
-          a flow opens, so the lazy Stripe chunk isn't fetched until then. */}
+          a flow opens, so the lazy modal chunk isn't fetched until then. */}
       {open && (
         <div className="paywall-root">
           <PaywallModal

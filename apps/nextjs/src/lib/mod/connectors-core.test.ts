@@ -40,7 +40,7 @@ describe("Meet Dream connectors", () => {
     expect(
       (init?.headers as Record<string, string>)["X-Dream-License-Key"],
     ).toBe("dsk_site");
-    expect(JSON.parse(String(init?.body))).toEqual({
+    expect(JSON.parse(init?.body as string)).toEqual({
       returnTo: "https://app.example.com/admin/collections/kit-modules/3",
       mode: "test",
     });

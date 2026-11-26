@@ -1043,13 +1043,24 @@ export interface SpaceGroup {
   deletedAt?: string | null;
 }
 /**
- * Plans sync to Stripe automatically on save. Stripe prices are immutable, so changing the amount creates a new price and archives the old one.
+ * Plans sync to your payment providers automatically on save (Stripe prices are immutable, so changing the amount creates a new price and archives the old one).
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "mod-billing-plans".
  */
 export interface ModBillingPlan {
   id: number;
+  /**
+   * Content accessLevel this plan unlocks.
+   */
+  entitlement?: ("members" | "premium") | null;
+  /**
+   * Don't push this plan to the payment providers on save.
+   */
+  skipSync?: boolean | null;
+  syncStatus?: ("unsynced" | "synced" | "error") | null;
+  syncError?: string | null;
+  lastSyncedAt?: string | null;
   name: string;
   active?: boolean | null;
   slug: string;
@@ -1088,10 +1099,6 @@ export interface ModBillingPlan {
     introPeriods?: number | null;
   };
   /**
-   * Content accessLevel this plan unlocks.
-   */
-  entitlement?: ("members" | "premium") | null;
-  /**
    * Shown on the public pricing card.
    */
   features?:
@@ -1107,16 +1114,6 @@ export interface ModBillingPlan {
   badge?: string | null;
   highlighted?: boolean | null;
   displayOrder?: number | null;
-  /**
-   * Don't push this plan to Stripe on save.
-   */
-  skipSync?: boolean | null;
-  stripeProductId?: string | null;
-  stripePriceId?: string | null;
-  stripeIntroCouponId?: string | null;
-  syncStatus?: ("unsynced" | "synced" | "error") | null;
-  syncError?: string | null;
-  lastSyncedAt?: string | null;
   subscriptions?: {
     docs?: (number | ModBillingSubscription)[];
     hasNextPage?: boolean;
@@ -1130,11 +1127,14 @@ export interface ModBillingPlan {
     hasNextPage?: boolean;
     totalDocs?: number;
   };
+  stripeProductId?: string | null;
+  stripePriceId?: string | null;
+  stripeIntroCouponId?: string | null;
   updatedAt: string;
   createdAt: string;
 }
 /**
- * Read-only mirror written by the Stripe webhook. Manage billing in Stripe; author the catalog under Plans.
+ * Read-only copy written by the payment providers' webhooks. Manage billing in the provider; author the catalog under Plans.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "mod-billing-subscriptions".
@@ -1157,19 +1157,37 @@ export interface ModBillingSubscription {
    * Cents.
    */
   lastPaymentAmount?: number | null;
-  stripeSubscriptionID: string;
+  /**
+   * Who sold it, e.g. stripe.
+   */
+  provider?: string | null;
+  providerSubscriptionId?: string | null;
+  providerCustomerId?: string | null;
+  stripeSubscriptionID?: string | null;
   stripeCustomerID?: string | null;
   updatedAt: string;
   createdAt: string;
 }
 /**
- * Discounts synced to Stripe on save. Changing amount/duration creates a new Stripe coupon (they're immutable) and archives the old one.
+ * Discounts synced to your payment providers on save. Changing amount/duration creates a new Stripe coupon (they're immutable) and archives the old one.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "mod-billing-coupons".
  */
 export interface ModBillingCoupon {
   id: number;
+  /**
+   * Mirrored from Stripe.
+   */
+  timesRedeemed?: number | null;
+  active?: boolean | null;
+  /**
+   * Don't push this coupon to Stripe on save.
+   */
+  skipSync?: boolean | null;
+  syncStatus?: ("unsynced" | "synced" | "error") | null;
+  syncError?: string | null;
+  lastSyncedAt?: string | null;
   name: string;
   discountType: "percent_off" | "amount_off";
   /**
@@ -1196,11 +1214,6 @@ export interface ModBillingCoupon {
    */
   minimumAmount?: number | null;
   /**
-   * Mirrored from Stripe.
-   */
-  timesRedeemed?: number | null;
-  active?: boolean | null;
-  /**
    * Restrict to specific plans (empty = applies to all).
    */
   appliesTo?: (number | ModBillingPlan)[] | null;
@@ -1212,15 +1225,8 @@ export interface ModBillingCoupon {
    * When set, new free signups get a unique, expiring promotion code for this coupon. Keep at most one active.
    */
   isWelcomeOffer?: boolean | null;
-  /**
-   * Don't push this coupon to Stripe on save.
-   */
-  skipSync?: boolean | null;
   stripeCouponId?: string | null;
   stripePromotionCodeId?: string | null;
-  syncStatus?: ("unsynced" | "synced" | "error") | null;
-  syncError?: string | null;
-  lastSyncedAt?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -2898,6 +2904,72 @@ export interface KitModule {
      * Fine print shown under the pricing grid.
      */
     disclaimer?: string | null;
+    tags?: {
+      enabled?: boolean | null;
+      /**
+       * The member's active plan(s), e.g. Pro. {plan} = plan name.
+       */
+      plan?: {
+        enabled?: boolean | null;
+        template?: string | null;
+      };
+      /**
+       * Free, Trialing, Active, Canceling, Past due or Churned.
+       */
+      status?: {
+        enabled?: boolean | null;
+        template?: string | null;
+      };
+      /**
+       * Monthly, Annual, Lifetime, …
+       */
+      cycle?: {
+        enabled?: boolean | null;
+        template?: string | null;
+      };
+      /**
+       * Where they bought: Web, App Store, Play Store, Promotional.
+       */
+      store?: {
+        enabled?: boolean | null;
+        template?: string | null;
+      };
+      /**
+       * Runs once (also daily on its own). Use after changing the names above.
+       */
+      resyncNow?: boolean | null;
+      lastResync?: string | null;
+    };
+    adapter_stripe?: {
+      /**
+       * Off: new checkouts and catalog sync stop. The webhook keeps recording changes to existing Stripe subscriptions.
+       */
+      enabled?: boolean | null;
+      /**
+       * Off (default): buyers pay on the site — /checkout and the paywall (card, Link, Apple Pay / Google Pay). On: they're redirected to Stripe.
+       */
+      hostedCheckout?: boolean | null;
+      /**
+       * Embedded checkout only. Apple Pay also needs your domain verified in Stripe (Settings → Payment method domains).
+       */
+      expressWallets?: boolean | null;
+      /**
+       * Hosted Checkout. Hidden when a plan's intro offer applies (Stripe allows one discount).
+       */
+      allowPromotionCodes?: boolean | null;
+      /**
+       * Hosted Checkout: calculate tax automatically (needs Stripe Tax set up in your Stripe account).
+       */
+      automaticTax?: boolean | null;
+      /**
+       * Hosted Checkout (otherwise only when needed).
+       */
+      requireBillingAddress?: boolean | null;
+      /**
+       * Hosted Checkout.
+       */
+      phoneNumberCollection?: boolean | null;
+    };
   };
   mod_chat?: {
     /**
@@ -4709,6 +4781,48 @@ export interface KitModulesSelect<T extends boolean = true> {
             };
         featuredReview?: T;
         disclaimer?: T;
+        tags?:
+          | T
+          | {
+              enabled?: T;
+              plan?:
+                | T
+                | {
+                    enabled?: T;
+                    template?: T;
+                  };
+              status?:
+                | T
+                | {
+                    enabled?: T;
+                    template?: T;
+                  };
+              cycle?:
+                | T
+                | {
+                    enabled?: T;
+                    template?: T;
+                  };
+              store?:
+                | T
+                | {
+                    enabled?: T;
+                    template?: T;
+                  };
+              resyncNow?: T;
+              lastResync?: T;
+            };
+        adapter_stripe?:
+          | T
+          | {
+              enabled?: T;
+              hostedCheckout?: T;
+              expressWallets?: T;
+              allowPromotionCodes?: T;
+              automaticTax?: T;
+              requireBillingAddress?: T;
+              phoneNumberCollection?: T;
+            };
       };
   mod_chat?:
     | T
@@ -4780,6 +4894,11 @@ export interface NavItemsSelect<T extends boolean = true> {
  * via the `definition` "mod-billing-plans_select".
  */
 export interface ModBillingPlansSelect<T extends boolean = true> {
+  entitlement?: T;
+  skipSync?: T;
+  syncStatus?: T;
+  syncError?: T;
+  lastSyncedAt?: T;
   name?: T;
   active?: T;
   slug?: T;
@@ -4798,7 +4917,6 @@ export interface ModBillingPlansSelect<T extends boolean = true> {
         introInterval?: T;
         introPeriods?: T;
       };
-  entitlement?: T;
   features?:
     | T
     | {
@@ -4809,15 +4927,11 @@ export interface ModBillingPlansSelect<T extends boolean = true> {
   badge?: T;
   highlighted?: T;
   displayOrder?: T;
-  skipSync?: T;
+  subscriptions?: T;
+  coupons?: T;
   stripeProductId?: T;
   stripePriceId?: T;
   stripeIntroCouponId?: T;
-  syncStatus?: T;
-  syncError?: T;
-  lastSyncedAt?: T;
-  subscriptions?: T;
-  coupons?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -4826,6 +4940,12 @@ export interface ModBillingPlansSelect<T extends boolean = true> {
  * via the `definition` "mod-billing-coupons_select".
  */
 export interface ModBillingCouponsSelect<T extends boolean = true> {
+  timesRedeemed?: T;
+  active?: T;
+  skipSync?: T;
+  syncStatus?: T;
+  syncError?: T;
+  lastSyncedAt?: T;
   name?: T;
   discountType?: T;
   value?: T;
@@ -4836,17 +4956,11 @@ export interface ModBillingCouponsSelect<T extends boolean = true> {
   maxRedemptions?: T;
   redeemBy?: T;
   minimumAmount?: T;
-  timesRedeemed?: T;
-  active?: T;
   appliesTo?: T;
   code?: T;
   isWelcomeOffer?: T;
-  skipSync?: T;
   stripeCouponId?: T;
   stripePromotionCodeId?: T;
-  syncStatus?: T;
-  syncError?: T;
-  lastSyncedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -4867,6 +4981,9 @@ export interface ModBillingSubscriptionsSelect<T extends boolean = true> {
   canceledAt?: T;
   lastPaymentAt?: T;
   lastPaymentAmount?: T;
+  provider?: T;
+  providerSubscriptionId?: T;
+  providerCustomerId?: T;
   stripeSubscriptionID?: T;
   stripeCustomerID?: T;
   updatedAt?: T;
@@ -5924,6 +6041,72 @@ export interface ModBillingSetting {
    * Fine print shown under the pricing grid.
    */
   disclaimer?: string | null;
+  tags?: {
+    enabled?: boolean | null;
+    /**
+     * The member's active plan(s), e.g. Pro. {plan} = plan name.
+     */
+    plan?: {
+      enabled?: boolean | null;
+      template?: string | null;
+    };
+    /**
+     * Free, Trialing, Active, Canceling, Past due or Churned.
+     */
+    status?: {
+      enabled?: boolean | null;
+      template?: string | null;
+    };
+    /**
+     * Monthly, Annual, Lifetime, …
+     */
+    cycle?: {
+      enabled?: boolean | null;
+      template?: string | null;
+    };
+    /**
+     * Where they bought: Web, App Store, Play Store, Promotional.
+     */
+    store?: {
+      enabled?: boolean | null;
+      template?: string | null;
+    };
+    /**
+     * Runs once (also daily on its own). Use after changing the names above.
+     */
+    resyncNow?: boolean | null;
+    lastResync?: string | null;
+  };
+  adapter_stripe?: {
+    /**
+     * Off: new checkouts and catalog sync stop. The webhook keeps recording changes to existing Stripe subscriptions.
+     */
+    enabled?: boolean | null;
+    /**
+     * Off (default): buyers pay on the site — /checkout and the paywall (card, Link, Apple Pay / Google Pay). On: they're redirected to Stripe.
+     */
+    hostedCheckout?: boolean | null;
+    /**
+     * Embedded checkout only. Apple Pay also needs your domain verified in Stripe (Settings → Payment method domains).
+     */
+    expressWallets?: boolean | null;
+    /**
+     * Hosted Checkout. Hidden when a plan's intro offer applies (Stripe allows one discount).
+     */
+    allowPromotionCodes?: boolean | null;
+    /**
+     * Hosted Checkout: calculate tax automatically (needs Stripe Tax set up in your Stripe account).
+     */
+    automaticTax?: boolean | null;
+    /**
+     * Hosted Checkout (otherwise only when needed).
+     */
+    requireBillingAddress?: boolean | null;
+    /**
+     * Hosted Checkout.
+     */
+    phoneNumberCollection?: boolean | null;
+  };
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -6441,6 +6624,48 @@ export interface ModBillingSettingsSelect<T extends boolean = true> {
       };
   featuredReview?: T;
   disclaimer?: T;
+  tags?:
+    | T
+    | {
+        enabled?: T;
+        plan?:
+          | T
+          | {
+              enabled?: T;
+              template?: T;
+            };
+        status?:
+          | T
+          | {
+              enabled?: T;
+              template?: T;
+            };
+        cycle?:
+          | T
+          | {
+              enabled?: T;
+              template?: T;
+            };
+        store?:
+          | T
+          | {
+              enabled?: T;
+              template?: T;
+            };
+        resyncNow?: T;
+        lastResync?: T;
+      };
+  adapter_stripe?:
+    | T
+    | {
+        enabled?: T;
+        hostedCheckout?: T;
+        expressWallets?: T;
+        allowPromotionCodes?: T;
+        automaticTax?: T;
+        requireBillingAddress?: T;
+        phoneNumberCollection?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

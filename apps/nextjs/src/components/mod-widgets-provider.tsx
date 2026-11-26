@@ -2,24 +2,16 @@
 
 import type { ReactNode } from "react";
 
-import {
-  ModAdaptersProvider,
-  ModSlotsProvider,
-  ModWidgetsProvider,
-} from "@acme/mod-kit/react";
+import { ModAdaptersProvider, ModWidgetsProvider } from "@acme/mod-kit/react";
 
-import {
-  modClientAdapters,
-  modSlots,
-  modWidgets,
-} from "~/mod/registry.client.generated";
+import { modClientAdapters, modWidgets } from "~/mod/registry.client.generated";
 
 /**
  * Wires the generated client registries into @acme/mod-kit/react so modules
  * (which can't import host registries) can find each other's UI: dashboard
- * widgets, adapters for an extension point (`useModAdapters`) and
- * host-rendered slots (`<ModSlot />`). `disabledSlugs` (kit-modules toggles)
- * drops runtime-disabled modules without a redeploy.
+ * widgets and adapters for an extension point (`useModAdapters`, e.g. the
+ * billing payment provider the paywall renders). `disabledSlugs` (kit-modules
+ * toggles) drops runtime-disabled modules without a redeploy.
  */
 export function ModClientProviders({
   disabledSlugs = [],
@@ -29,23 +21,20 @@ export function ModClientProviders({
   children: ReactNode;
 }) {
   const enabled = (slug: string) => !disabledSlugs.includes(slug);
-  const slots = Object.fromEntries(
-    modSlots.filter((s) => enabled(s.slug)).map((s) => [s.name, s.Component]),
-  );
   return (
     <ModAdaptersProvider
       adapters={modClientAdapters.filter(
         (a) => enabled(a.slug) && enabled(a.target),
       )}
     >
-      <ModSlotsProvider slots={slots}>{children}</ModSlotsProvider>
+      {children}
     </ModAdaptersProvider>
   );
 }
 
 /**
  * The (app) shell's providers: widgets plus a runtime-filtered copy of the
- * adapters/slots the root layout provides unfiltered (the root stays static,
+ * adapters the root layout provides unfiltered (the root stays static,
  * so it can't read kit-modules; the nearest provider wins).
  */
 export function AppModWidgetsProvider({

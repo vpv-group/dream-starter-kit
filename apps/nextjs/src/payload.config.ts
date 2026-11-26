@@ -13,9 +13,6 @@ import sharp from "sharp";
 import type { SmtpEnv } from "./lib/email/smtp";
 import type { S3ConfigSource } from "./lib/s3-config";
 import { resolveCmsCredentials } from "./lib/cms/derived-credentials";
-// Side effect: module Payload hooks (e.g. billing's plan sync) may use a
-// "Connect with …" (Meet Dream) connection. Lazy inside — CLI-safe.
-import "./lib/mod/connector-broker";
 import { generateMediaFileURL } from "./lib/cms/media-url";
 import { noDocumentLock } from "./lib/cms/no-document-lock";
 import { mergePayloadMigrations } from "./lib/cms/payload-migrations";
@@ -73,6 +70,9 @@ import {
 } from "./payload/hooks/revalidate-cache";
 import { coreTasks } from "./payload/jobs";
 import { migrations } from "./payload/migrations";
+// Side effect: module Payload hooks (e.g. billing's plan sync) may use a
+// "Connect with …" (Meet Dream) connection. Lazy inside — CLI-safe.
+import "./lib/mod/connector-broker";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 

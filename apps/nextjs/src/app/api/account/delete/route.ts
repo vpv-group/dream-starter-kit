@@ -1,7 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-import { env } from "~/env";
 import { createAdminClient } from "~/lib/supabase/admin";
 import { getRequestClient } from "~/lib/supabase/request-client";
 
@@ -75,30 +74,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (env.STRIPE_SECRET_KEY) {
-    try {
-      const { data: customer } = await admin
-        .from("mod_billing_customers")
-        .select("stripe_customer_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (customer?.stripe_customer_id) {
-        const { default: Stripe } = await import("stripe");
-        const stripe = new Stripe(env.STRIPE_SECRET_KEY);
-        const subs = await stripe.subscriptions.list({
-          customer: customer.stripe_customer_id,
-          status: "all",
-        });
-        await Promise.all(
-          subs.data
-            .filter((s) => s.status !== "canceled")
-            .map((s) => stripe.subscriptions.cancel(s.id)),
-        );
-      }
-    } catch (err) {
-      // Never block deletion on Stripe — log and continue.
-      console.error("[account-delete] Stripe cleanup failed", err);
-    }
+  // Billing (when installed) has each payment provider cancel what the user
+  // still pays for. Never blocks deletion — it logs and continues.
+  try {
+    const { billingServices } = await import("~/lib/mod/billing");
+    await (await billingServices())?.onAccountDelete({ userId: user.id });
+  } catch (err) {
+    console.error("[account-delete] billing cleanup failed", err);
   }
 
   const { error: delErr } = await admin.auth.admin.deleteUser(user.id);

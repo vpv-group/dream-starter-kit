@@ -75,24 +75,6 @@ describe("adapter manifests", () => {
       /hasCollectionTabs needs cms.settingsTabFor/,
     );
   });
-
-  it("flags a web slot claimed by two modules", () => {
-    const a = defineModule({
-      ...base,
-      slug: "aaa",
-      name: "A",
-      slots: { web: { "premium-gate": "Gate" } },
-    });
-    const b = defineModule({
-      ...base,
-      slug: "bbb",
-      name: "B",
-      slots: { web: { "premium-gate": "Gate" } },
-    });
-    expect(validateManifestSet([a, b]).join("\n")).toMatch(
-      /web slot "premium-gate" claimed by both "aaa" and "bbb"/,
-    );
-  });
 });
 
 describe("private adapter settings tabs", () => {
@@ -114,6 +96,18 @@ describe("private adapter settings tabs", () => {
       fields: [],
     });
     expect((pub.tab.fields[0] as { access?: unknown }).access).toBeUndefined();
+  });
+
+  it("stores under a short key when given one", () => {
+    const tab = defineAdapterSettings({
+      slug: "billing-adapter-stripe",
+      key: "stripe",
+      name: "Stripe",
+      target: "billing",
+      fields: [],
+    });
+    expect(tab.groupName).toBe("adapter_stripe");
+    expect((tab.tab.fields[0] as { name: string }).name).toBe("adapter_stripe");
   });
 
   it("throws instead of silently dropping tabs when the base has none", () => {

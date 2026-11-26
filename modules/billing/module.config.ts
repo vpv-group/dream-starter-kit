@@ -1,24 +1,29 @@
 import { defineModule } from "@acme/mod-kit";
 
 /**
- * Billing — Stripe-only payments (golden rule #4): plan-driven web checkout
- * (incl. guest checkout via the public route), customer portal, invoices, the
- * billing-stripe-webhook edge function mirroring Stripe state into
- * mod_billing_* for RLS clients, the Payload plans/coupons catalog +
- * subscriptions mirror (Commerce admin group) and the stripePlugin. The
- * pricing page is curated from billing's admin settings screen
- * (mod-billing-settings). Mobile reads the subscriptions mirror read-own —
- * no IAP.
+ * Billing — the provider-neutral billing core (docs/BILLING.md). It owns what
+ * every payment provider shares: the Payload catalog (plans, coupons, the
+ * /pricing page), the purchase ledger in mod_billing_* (customer links,
+ * subscriptions and one-time purchases, keyed by provider), entitlements
+ * (`usePremium`, the mod_billing_entitlements view, the server
+ * `getViewerEntitlement` service), billing tags on users, the read-only CMS
+ * subscriptions list, `/billing` and webhook-claim idempotency.
  *
- * database.dml: the webhook auto-tags users by plan name in the core
- * tags/user_tags tables (core DML whitelist).
+ * Payment providers are ADAPTER modules (`adapter.for: "billing"`):
+ * billing-adapter-stripe ships preinstalled; an in-app purchase adapter
+ * (e.g. RevenueCat) plugs in the same way. Billing calls out to them through
+ * `getModAdapters("billing")` / `useModAdapters("billing")` and never imports
+ * them; they call in through `@acme/mod-billing/server`'s core services.
+ *
+ * database.dml: billing tags live in the core tags/user_tags tables.
  */
 export default defineModule({
   slug: "billing",
   name: "Billing",
-  version: "1.1.0",
+  version: "2.0.0",
   kitCompat: ">=2.0.0 <3",
-  description: "Stripe subscriptions: checkout, portal, webhook mirror.",
+  description:
+    "Plans, purchases and entitlements, with pluggable payment providers.",
   nav: {
     web: [
       { title: "Billing", href: "/billing", icon: "IconCreditCard", order: 50 },
@@ -49,14 +54,17 @@ export default defineModule({
   server: {
     routes: true,
     publicRoutes: true,
+    services: true,
   },
   database: {
     tables: [
       "mod_billing_customers",
+      "mod_billing_customer_links",
       "mod_billing_webhook_events",
       "mod_billing_products",
       "mod_billing_prices",
       "mod_billing_subscriptions",
+      "mod_billing_managed_tags",
     ],
     dml: ["tags", "user_tags"],
   },

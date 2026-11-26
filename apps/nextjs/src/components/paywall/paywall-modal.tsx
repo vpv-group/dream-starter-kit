@@ -1,19 +1,16 @@
 "use client";
 
-// Two-state paywall (offer → terms → paid) wired to REAL Stripe via the billing
-// module's express-intent route.
-//
-// DEFERRED Elements: <Elements> mounts immediately with {mode, amount, currency}
-// — no server round-trip — so the Apple/Google Pay button renders instantly (no
-// "preparing secure checkout" wait). The PaymentIntent/subscription is created
-// only at confirm time (PaywallBody.confirm → createIntent), which also avoids
-// spawning a throwaway incomplete subscription on every open.
+// Two-state paywall (offer → terms → paid). Provider-neutral: the offer screen,
+// the success / "check your email" / annual-upsell screens and the account
+// conversion live here; the consent + payment step is the installed billing
+// payment provider's `PaymentForm` (e.g. billing-adapter-stripe: deferred
+// Stripe Elements with Apple/Google Pay), found through the module adapter
+// registry (./payment-provider.ts). No provider SDK is imported here.
 //
 // All pricing + fine print is pulled from the Payload CMS plan
 // (lib/paywall-copy.ts), never hardcoded.
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Elements } from "@stripe/react-stripe-js";
 import confetti from "canvas-confetti";
 
 import { useSession, useSupabase } from "@acme/api";
@@ -23,22 +20,20 @@ import {
   isAnonymousUser,
 } from "@acme/app";
 
-import type { PayMethod, PaywallStep } from "./paywall-body";
-import type { CheckoutVariant } from "./stripe";
 import type {
-  BuyerDetails,
-  DeferredElementsOptions,
-  PaywallCopy,
-  PlanLite,
-} from "~/lib/paywall-copy";
+  CheckoutVariant,
+  CreatedPurchase,
+  PaidResult,
+  PayMethod,
+  PurchaseRef,
+} from "./payment-provider";
+import type { BuyerDetails, PaywallCopy, PlanLite } from "~/lib/paywall-copy";
 import { useCaptcha } from "~/components/captcha/captcha-provider";
-import {
-  buildPlanCopy,
-  buildUpsellCopy,
-  deferredElementsOptions,
-} from "~/lib/paywall-copy";
-import { PaywallBody } from "./paywall-body";
-import { getStripePromise } from "./stripe";
+import { buildPlanCopy, buildUpsellCopy } from "~/lib/paywall-copy";
+import { useWebPaymentProvider } from "./payment-provider";
+import { PaywallOffer } from "./paywall-offer";
+
+export type PaywallStep = "offer" | "terms";
 
 /**
  * Mirror the just-signed-in buyer into Payload's `users` collection. The guest
@@ -53,22 +48,6 @@ async function mirrorSelf(): Promise<void> {
   } catch {
     /* best-effort — backstopped by the (app) layout + backfill */
   }
-}
-
-interface IntentResponse {
-  clientSecret?: string;
-  mode?: "payment" | "setup";
-  /** Set for recurring plans — used by the 1-click annual upgrade. */
-  subscriptionId?: string;
-  customerId?: string;
-  error?: string;
-}
-
-export interface CreatedIntent {
-  clientSecret: string;
-  mode: "payment" | "setup";
-  subscriptionId?: string;
-  customerId?: string;
 }
 
 export interface PaywallModalProps {
@@ -100,16 +79,14 @@ export interface PaywallModalProps {
   paidTitle?: ReactNode;
   /** Success-screen body override (default "Premium access unlocked."). */
   paidBody?: ReactNode;
-  /** Replace the built-in intent creation (e.g. a one-time purchase route). */
-  createIntent?: (details?: BuyerDetails) => Promise<CreatedIntent>;
+  /** Replace the provider's purchase creation (e.g. a one-time purchase route). */
+  createIntent?: (details?: BuyerDetails) => Promise<CreatedPurchase>;
   /** Run after the payment confirms, before the success screen (e.g. a server
    *  confirm/stamp step). Best-effort; throwing won't block the success screen. */
   onAfterPaid?: (
     intentId?: string,
     details?: BuyerDetails,
   ) => void | Promise<void>;
-  /** Override the deferred <Elements> options (e.g. a one-time amount with no plan). */
-  deferred?: DeferredElementsOptions;
   /** One-time purchase: no anon→permanent identity step or annual upsell — the
    *  success screen finishes straight through `onSuccess`. */
   oneTime?: boolean;
@@ -131,14 +108,15 @@ export function PaywallModal({
   paidBody,
   createIntent: createIntentProp,
   onAfterPaid,
-  deferred: deferredProp,
   oneTime = false,
 }: PaywallModalProps) {
   const supabase = useSupabase();
+  const provider = useWebPaymentProvider();
   const { user } = useSession();
   const { token: captchaToken, reset: resetCaptcha } = useCaptcha();
 
   const [step, setStep] = useState<PaywallStep>(initialStep);
+  const [method, setMethod] = useState<PayMethod>(initialMethod);
   const [paid, setPaid] = useState(false);
   // Post-purchase upsell: shown after a purchase when a distinct annual plan
   // exists. `switching` covers the in-flight switch request.
@@ -148,11 +126,10 @@ export function PaywallModal({
   // Buyer identity captured at checkout (wallet/card) — drives anon→permanent
   // conversion. `checkEmail` shows the "confirm your email" screen afterwards.
   const buyerRef = useRef<BuyerDetails | undefined>(undefined);
-  // The Stripe subscription + customer created at confirm time — threaded to the
-  // annual upgrade and the guest-account route so neither depends on the
-  // (webhook-written) customer mapping.
-  const subscriptionRef = useRef<string | undefined>(undefined);
-  const customerRef = useRef<string | undefined>(undefined);
+  // What was just bought (subscription + customer ids) — threaded to the
+  // annual upgrade and the guest-account step so neither depends on the
+  // (webhook-written) customer link.
+  const purchaseRef = useRef<PurchaseRef>({});
   // Existence-agnostic "check your email" screen — the copy doesn't reveal
   // whether the address already had an account, so a single email is all we track.
   const [checkEmail, setCheckEmail] = useState<null | { email: string }>(null);
@@ -213,33 +190,26 @@ export function PaywallModal({
     }
     // Guest buyer with no anonymous session (e.g. anon sign-in / Turnstile
     // unavailable). Don't just promise an email and bank on the webhook —
-    // create/link the account NOW via the billing guest-account route (it sends
-    // the set-password invite and links the purchase), with the Stripe webhook
-    // as the idempotent backstop. Best-effort: still show the screen on failure.
+    // create/link the account NOW through the payment provider (it sends the
+    // set-password invite and links the purchase), with the provider's
+    // webhook as the idempotent backstop. Best-effort: still show the screen
+    // on failure.
     if (!user) {
       let loginToken: string | undefined;
       try {
-        const res = await fetch("/api/mod/billing/guest-account", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        loginToken = (
+          await provider?.completeGuestPurchase?.({
             email,
-            name: buyerRef.current?.name ?? undefined,
-            phone: buyerRef.current?.phone ?? undefined,
+            name: buyerRef.current?.name,
+            phone: buyerRef.current?.phone,
             // Wallet billing address (incl. zip) → stored on the Supabase user
             // and mirrored into cms.users.address.
-            address: buyerRef.current?.address ?? undefined,
-            subscriptionId: subscriptionRef.current,
-            customerId: customerRef.current,
-          }),
-        });
-        const data = (await res.json().catch(() => ({}))) as {
-          ok?: boolean;
-          loginToken?: string;
-        };
-        loginToken = data.loginToken;
+            address: buyerRef.current?.address,
+            ref: purchaseRef.current,
+          })
+        )?.loginToken;
       } catch {
-        /* best-effort — the Stripe webhook backstops account creation */
+        /* best-effort — the provider's webhook backstops account creation */
       }
       // Log the buyer into THIS browser so access unlocks immediately and they
       // don't depend on the emailed link (which often opens in a different
@@ -303,7 +273,7 @@ export function PaywallModal({
         onSuccess();
       }
     }
-  }, [supabase, user, onSuccess]);
+  }, [supabase, user, onSuccess, provider]);
 
   const annualPlanId = annualPlan?.id;
   // 1-click switch to annual using the card on file (post-purchase upsell).
@@ -312,26 +282,15 @@ export function PaywallModal({
     setSwitching(true);
     setSwitchError(null);
     try {
-      const res = await fetch("/api/mod/billing/upgrade-annual", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          planId: annualPlanId,
-          // Lets the route upgrade this exact subscription without depending on
-          // the (webhook-written, possibly-not-yet-present) customer mapping.
-          subscriptionId: subscriptionRef.current,
-          // Guest (no session) upsell: the route verifies this wallet email
-          // against the subscription's Stripe customer before upgrading.
-          email: buyerRef.current?.email?.trim() || undefined,
-        }),
+      if (!provider?.switchPlan) throw new Error("Could not switch to annual.");
+      await provider.switchPlan({
+        planId: annualPlanId,
+        // This exact subscription, without depending on the (webhook-written,
+        // possibly-not-yet-present) customer link.
+        ref: purchaseRef.current,
+        // Guest (no session) upsell: verified against the purchase.
+        email: buyerRef.current?.email?.trim() || undefined,
       });
-      const data = (await res.json().catch(() => ({}))) as {
-        ok?: boolean;
-        error?: string;
-      };
-      if (!res.ok || !data.ok) {
-        throw new Error(data.error ?? "Could not switch to annual.");
-      }
       await proceedAfterPay();
     } catch (e) {
       setSwitchError(
@@ -339,69 +298,20 @@ export function PaywallModal({
       );
       setSwitching(false);
     }
-  }, [annualPlanId, proceedAfterPay]);
+  }, [annualPlanId, proceedAfterPay, provider]);
 
-  // Deferred Elements options (mode + today's charge). Null while the plan is
-  // still resolving — virtually never seen because the plan query is prefetched
-  // + cached by the provider before the modal opens.
-  const computedDeferred = useMemo(() => deferredElementsOptions(plan), [plan]);
-  const deferred = deferredProp ?? computedDeferred;
-
-  // Create the PaymentIntent / subscription at CONFIRM time (not on open).
-  const defaultCreateIntent = useCallback(
-    async (details?: BuyerDetails): Promise<CreatedIntent> => {
-      if (planId == null) {
-        throw new Error("This plan isn't available yet.");
-      }
-      // Ensure the buyer has a session (anonymous if logged out) BEFORE creating
-      // the subscription, so express-intent stamps supabase_user_id and the
-      // webhook links the subscription to a real account (closes the embedded-
-      // checkout gap). Tokens are single-use — reset after.
-      try {
-        await ensureAnonSession(supabase, { captchaToken });
-      } catch {
-        /* CAPTCHA/anon failed — proceed; guest webhook fallback still applies */
-      } finally {
-        resetCaptcha();
-      }
-      const res = await fetch("/api/mod/billing/express-intent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          planId,
-          // Forward the wallet/card identity so the server stamps the Stripe
-          // customer's email + name (carried onto every future invoice/receipt).
-          email: details?.email ?? undefined,
-          name: details?.name ?? undefined,
-        }),
-      });
-      const data = (await res.json()) as IntentResponse;
-      if (!res.ok || !data.clientSecret) {
-        throw new Error(data.error ?? "Could not start checkout.");
-      }
-      return {
-        clientSecret: data.clientSecret,
-        mode: data.mode ?? "payment",
-        subscriptionId: data.subscriptionId,
-        customerId: data.customerId,
-      };
-    },
-    [planId, supabase, captchaToken, resetCaptcha],
-  );
-  // A caller can inject its own intent route (e.g. a one-time purchase);
-  // otherwise the built-in subscription/express-intent path runs. Either way,
-  // remember the Stripe subscription + customer so the post-purchase annual
-  // upgrade and the guest-account route can target them directly (no reliance
-  // on the webhook-written customer mapping).
-  const createIntent = useCallback(
-    async (details?: BuyerDetails): Promise<CreatedIntent> => {
-      const intent = await (createIntentProp ?? defaultCreateIntent)(details);
-      subscriptionRef.current = intent.subscriptionId;
-      customerRef.current = intent.customerId;
-      return intent;
-    },
-    [createIntentProp, defaultCreateIntent],
-  );
+  // Before the provider creates the purchase: make sure the buyer has a
+  // session (anonymous if logged out) so the purchase links to a real account
+  // (closes the embedded-checkout gap). CAPTCHA tokens are single-use — reset.
+  const beforeCreate = useCallback(async () => {
+    try {
+      await ensureAnonSession(supabase, { captchaToken });
+    } catch {
+      /* CAPTCHA/anon failed — proceed; the guest webhook fallback applies */
+    } finally {
+      resetCaptcha();
+    }
+  }, [supabase, captchaToken, resetCaptcha]);
 
   if (!open) return null;
 
@@ -411,8 +321,9 @@ export function PaywallModal({
     (isFull ? "co-panel" : isDock ? "drawer dock" : "drawer") +
     (step === "terms" && !paid ? " is-terms" : "");
 
-  async function finishPayment(intentId?: string, details?: BuyerDetails) {
+  async function finishPayment({ intentId, details, ...ref }: PaidResult) {
     buyerRef.current = details;
+    purchaseRef.current = ref;
     // Optional server confirm/stamp step (e.g. a one-time purchase). Best-effort —
     // it's idempotent and retryable, so a failure must not block the success UI.
     if (onAfterPaid) {
@@ -513,42 +424,42 @@ export function PaywallModal({
               Continue
             </button>
           </div>
-        ) : deferred ? (
-          // Deferred Elements — mounts instantly, wallet button renders right
-          // away. Keyed by amount so an amount change remounts cleanly.
-          <Elements
-            key={`${deferred.mode}-${deferred.amount ?? 0}`}
-            stripe={getStripePromise()}
-            options={{
-              // Spread the discriminated union whole so stripe-js narrows `mode`
-              // (v10 types require `amount` for payment/subscription).
-              ...deferred,
-              appearance: {
-                theme: "night",
-                labels: "floating",
-                variables: { borderRadius: "8px" },
-              },
+        ) : step === "offer" ? (
+          <PaywallOffer
+            headline={copy.headline}
+            sub={copy.sub}
+            onWallet={() => {
+              setMethod("wallet");
+              setStep("terms");
             }}
-          >
-            <PaywallBody
-              copy={copy}
-              createIntent={createIntent}
-              step={step}
-              setStep={setStep}
-              initialMethod={initialMethod}
-              onPaid={(id, details) => void finishPayment(id, details)}
-              onBack={
-                initialStep === "terms" ? onClose : () => setStep("offer")
-              }
-              onClose={onClose}
-              topSlot={offerTopSlot}
-            />
-          </Elements>
+            onCard={() => {
+              setMethod("card");
+              setStep("terms");
+            }}
+            onClose={onClose}
+            topSlot={offerTopSlot}
+          />
+        ) : provider && plan && planId != null ? (
+          <provider.PaymentForm
+            variant="paywall"
+            planId={planId}
+            plan={plan}
+            cta={copy.cta}
+            fineprint={copy.fineprint}
+            initialMethod={method}
+            beforeCreate={beforeCreate}
+            createPurchase={createIntentProp}
+            onBack={initialStep === "terms" ? onClose : () => setStep("offer")}
+            onPaid={(result) => void finishPayment(result)}
+          />
         ) : (
-          // Plan still resolving (rare — prefetched). Show the offer copy.
+          // Plan still resolving (rare — prefetched), or no payment provider
+          // installed. Show the offer copy.
           <div className="dr-inner">
             <h2 className="dr-offer-h">{copy.headline}</h2>
-            <p className="dr-offer-sub">{copy.sub}</p>
+            <p className="dr-offer-sub">
+              {provider ? copy.sub : "Purchases aren’t available right now."}
+            </p>
             <div className="dr-divider" />
             <div className="dr-foot">
               <button onClick={onClose}>Maybe later</button>
