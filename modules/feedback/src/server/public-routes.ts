@@ -22,6 +22,7 @@ import {
   voteInput,
 } from "../validators";
 import { createAdminClient } from "./admin-client";
+import { semanticSimilar } from "./autopilot-routes";
 import { ensureConfigSynced, syncAllConfig } from "./full-sync";
 import { handle, HttpError, json, must, ok, parseBody } from "./http";
 import {
@@ -208,6 +209,14 @@ export const publicRoutes: ModPublicRouteTable = {
         _limit: Number.isFinite(limit) ? limit : 5,
       }),
     );
+    // Members (signed in, not anonymous) also get matches by meaning.
+    if (ctx.user && !ctx.user.is_anonymous) {
+      const semantic = await semanticSimilar(ctx, q, board).catch(() => []);
+      const seen = new Set(posts.map((p) => p.id));
+      for (const p of semantic) {
+        if (!seen.has(p.id)) posts.push({ ...p, score: p.similarity });
+      }
+    }
     return ok({ posts });
   }),
 

@@ -57,6 +57,7 @@ import {
   useUpdatePost,
 } from "../hooks/use-feedback";
 import { toneOf } from "../shared/tones";
+import { AutopilotInbox } from "./autopilot";
 import { ChangelogTab } from "./changelog-admin";
 import { IdeaSheet, IdeasTab, RoadmapBoard } from "./ideas";
 
@@ -235,6 +236,7 @@ function InboxTab() {
 
   return (
     <div className="grid gap-4 @4xl/main:grid-cols-2">
+      <AutopilotInbox />
       <Card variant="framed" className="@4xl/main:col-span-2">
         <CardHeader>
           <CardTitle>Waiting for approval ({data.pending.length})</CardTitle>

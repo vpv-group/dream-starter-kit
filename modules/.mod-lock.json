@@ -60,6 +60,11 @@
       "sha256": "3d92502cfbf0b105901f6b6beb517f30f6ace3c7f2d3a304d923a0bd2e2bed7e",
       "target": "20260612100001_ext_demo_001_initial.sql"
     },
+    "feedback-source-chat/001_initial.sql": {
+      "version": "20261126215919",
+      "sha256": "341bb52cc30cca15ea1ce4b1ec4c0583b961bca029db60658919d4dcd9e21548",
+      "target": "20261126215919_mod_feedback_source_chat_001_initial.sql"
+    },
     "feedback/001_initial.sql": {
       "version": "20261126202816",
       "sha256": "0fb4895080c9f0b551336c6bb6ccc244a2a3ff63fd8325a5a121242041ec5c43",
@@ -79,6 +84,11 @@
       "version": "20261126213409",
       "sha256": "41cbaada9dc1879a4a212cff9313d13a7a158a4a489bdb34588984b7b9e9f305",
       "target": "20261126213409_mod_feedback_004_integrations.sql"
+    },
+    "feedback/005_autopilot.sql": {
+      "version": "20261126214941",
+      "sha256": "e24967d4e760bae2b1f3f50de7c5c843ac765b9263c0014ee4d8817c6ea1a779",
+      "target": "20261126214941_mod_feedback_005_autopilot.sql"
     },
     "notifications/001_initial.sql": {
       "version": "20260612011540",

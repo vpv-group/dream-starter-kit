@@ -882,3 +882,123 @@ export function useTrackerAction() {
     onSuccess: () => invalidateAll(qc),
   });
 }
+
+// ---------------------------------------------------------------------------
+// Autopilot (staff)
+// ---------------------------------------------------------------------------
+
+export interface InboxItem {
+  id: string;
+  kind: "duplicate" | "extracted";
+  source: string;
+  post_id: string | null;
+  suggested_post_id: string | null;
+  title: string | null;
+  raw_text: string | null;
+  author_email: string | null;
+  author_name: string | null;
+  confidence: number | null;
+  state: "pending" | "accepted" | "merged" | "dismissed";
+  resolved_by: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export interface AutopilotPayload {
+  enabled: boolean;
+  aiConfigured: boolean;
+  actions: "manual" | "automated";
+  items: InboxItem[];
+  posts: {
+    id: string;
+    title: string;
+    slug: string;
+    board_id: string;
+    vote_count: number;
+  }[];
+}
+
+export function useAutopilot(apiBaseUrl = "") {
+  const supabase = useSupabase();
+  return useQuery({
+    queryKey: [...feedbackKeys.staff(), "autopilot"],
+    queryFn: () =>
+      feedbackApi<AutopilotPayload>(supabase, "/staff/autopilot", {
+        apiBaseUrl,
+      }),
+  });
+}
+
+export function useResolveInbox(apiBaseUrl = "") {
+  const supabase = useSupabase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: {
+      id: string;
+      action: "accept" | "merge" | "dismiss";
+      targetPostId?: string | null;
+    }) =>
+      feedbackApi<{ postId?: string }>(supabase, "/staff/autopilot/resolve", {
+        body: args,
+        apiBaseUrl,
+      }),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
+export function useSummarize(apiBaseUrl = "") {
+  const supabase = useSupabase();
+  return useMutation({
+    mutationFn: (args: { postId: string }) =>
+      feedbackApi<{ summary: string }>(supabase, "/staff/summary", {
+        body: args,
+        apiBaseUrl,
+      }),
+  });
+}
+
+export function useDraftChangelog(apiBaseUrl = "") {
+  const supabase = useSupabase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { ideaIds: string[] }) =>
+      feedbackApi<{ id: number | string; title: string }>(
+        supabase,
+        "/staff/changelog/draft",
+        {
+          body: args,
+          apiBaseUrl,
+        },
+      ),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
+export function useApiKeys(apiBaseUrl = "") {
+  const supabase = useSupabase();
+  return useQuery({
+    queryKey: [...feedbackKeys.staff(), "api-keys"],
+    queryFn: () =>
+      feedbackApi<{
+        keys: {
+          id: string;
+          prefix: string;
+          created_at: string;
+          revoked_at: string | null;
+        }[];
+      }>(supabase, "/staff/api-keys", { apiBaseUrl }).then((r) => r.keys),
+  });
+}
+
+export function useRotateApiKey(apiBaseUrl = "") {
+  const supabase = useSupabase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      feedbackApi<{ key: string }>(supabase, "/staff/api-keys/rotate", {
+        body: {},
+        apiBaseUrl,
+      }),
+    onSuccess: () => invalidateAll(qc),
+  });
+}

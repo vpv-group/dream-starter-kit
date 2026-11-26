@@ -12,6 +12,7 @@ import { publicRoutes as publicRoutes_chat_adapter_sendblue } from "@acme/mod-ch
 import { publicRoutes as publicRoutes_chat_adapter_slack } from "@acme/mod-chat-adapter-slack/server";
 import { routes as routes_docs, publicRoutes as publicRoutes_docs } from "@acme/mod-docs/server";
 import { routes as routes_feedback, publicRoutes as publicRoutes_feedback } from "@acme/mod-feedback/server";
+import { publicRoutes as publicRoutes_feedback_source_chat } from "@acme/mod-feedback-source-chat/server";
 import { routes as routes_notifications } from "@acme/mod-notifications/server";
 import { publicRoutes as publicRoutes_reminders } from "@acme/mod-reminders/server";
 
@@ -31,5 +32,6 @@ export const modPublicRoutes: Record<string, ModPublicRouteTable> = {
   "chat-adapter-slack": publicRoutes_chat_adapter_slack,
   "docs": publicRoutes_docs,
   "feedback": publicRoutes_feedback,
+  "feedback-source-chat": publicRoutes_feedback_source_chat,
   "reminders": publicRoutes_reminders,
 };

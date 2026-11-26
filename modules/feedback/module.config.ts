@@ -120,6 +120,8 @@ export default defineModule({
       "mod_feedback_integrations",
       "mod_feedback_issue_links",
       "mod_feedback_sync_outbox",
+      "mod_feedback_inbox",
+      "mod_feedback_api_keys",
     ],
     dml: [
       "mod_notifications",

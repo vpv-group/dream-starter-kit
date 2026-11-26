@@ -1,6 +1,6 @@
 // GENERATED copy (`pnpm mod sync`) of modules/feedback/src/payload/migrations/20261126_213738_mod_feedback_integrations.ts
 // so the local `payload migrate` CLI applies it — do not edit.
-import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'
+import { MigrateDownArgs, MigrateUpArgs, sql } from "@payloadcms/db-postgres";
 
 export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   await db.execute(sql`
@@ -52,10 +52,14 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "mod_feedback_settings_gh_map_order_idx" ON "cms"."mod_feedback_settings_gh_map" USING btree ("_order");
   CREATE INDEX "mod_feedback_settings_gh_map_parent_id_idx" ON "cms"."mod_feedback_settings_gh_map" USING btree ("_parent_id");
   CREATE INDEX "_mod_feedback_settings_v_version_gh_map_order_idx" ON "cms"."_mod_feedback_settings_v_version_gh_map" USING btree ("_order");
-  CREATE INDEX "_mod_feedback_settings_v_version_gh_map_parent_id_idx" ON "cms"."_mod_feedback_settings_v_version_gh_map" USING btree ("_parent_id");`)
+  CREATE INDEX "_mod_feedback_settings_v_version_gh_map_parent_id_idx" ON "cms"."_mod_feedback_settings_v_version_gh_map" USING btree ("_parent_id");`);
 }
 
-export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {
+export async function down({
+  db,
+  payload,
+  req,
+}: MigrateDownArgs): Promise<void> {
   await db.execute(sql`
    DROP TABLE "cms"."kit_modules_mod_feedback_gh_map" CASCADE;
   DROP TABLE "cms"."mod_feedback_settings_gh_map" CASCADE;
@@ -71,5 +75,5 @@ export async function down({ db, payload, req }: MigrateDownArgs): Promise<void>
   DROP TYPE "cms"."enum_mod_feedback_settings_gh_map_ext";
   DROP TYPE "cms"."enum_mod_feedback_settings_gh_map_direction";
   DROP TYPE "cms"."enum__mod_feedback_settings_v_version_gh_map_ext";
-  DROP TYPE "cms"."enum__mod_feedback_settings_v_version_gh_map_direction";`)
+  DROP TYPE "cms"."enum__mod_feedback_settings_v_version_gh_map_direction";`);
 }

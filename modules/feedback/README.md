@@ -102,6 +102,39 @@ It schedules its `GET /cron/sync`, adds a settings tab with
 `defineAdapterSettings({ target: "feedback" })`, and runs
 `runProviderContractTests()` from `@acme/mod-feedback/integrations/testing`.
 
+## Autopilot (AI triage)
+
+Modules → Feedback → **Autopilot**. Everything runs from a cron
+(`GET /cron/autopilot`, every 5 minutes, daily cap) or a staff action, and
+only when `AI_GATEWAY_API_KEY` is set (models from `@acme/config`, output
+token-capped; golden rules #5 and #6). Without AI the portal works as before
+and API feedback still lands in the inbox for manual review.
+
+- **New posts** are processed once: embedded (`DEFAULT_EMBEDDING_MODEL`,
+  pgvector + HNSW), filed into a board category, and compared with older
+  posts. A duplicate over the threshold becomes an inbox suggestion
+  (**Manual review**), or, in **Automated** mode, a portal post is merged as
+  votes into the original and logged in the inbox with **Undo** (unmerge).
+- **Smart replies** (off by default) post one follow-up question on vague
+  posts as the chosen staff user.
+- **Similar feedback** for signed-in members adds meaning-based matches to
+  the full-text + trigram ones every visitor gets; anonymous typing never
+  calls the AI.
+- **Discussion summary** (staff, post page) and **Draft with AI** (staff,
+  Changelog tab) create a summary or a Payload draft to edit.
+- **Sources.** Other feedback enters through `ingestFeedback()`
+  (`@acme/mod-feedback/server`) into `mod_feedback_inbox`: the inbound API
+  (`POST /api/mod/feedback/ingest` with `Authorization: Bearer fbk_…`; the
+  key is shown once in the inbox and only its hash is stored) and the
+  `feedback-source-chat` module. Autopilot titles each message, drops
+  non-feedback and suggests a matching post; staff then **Create post**
+  (on the API board, author matched by email), **Add to that post** (an
+  internal note + the author's vote) or **Dismiss**. Nothing reaches the
+  portal until staff accept it.
+
+`mod_feedback_inbox` and `mod_feedback_api_keys` are staff-only under RLS;
+keys are minted server-side only.
+
 ## Anonymous visitors
 
 Each board decides whether anonymous visitors may **vote**, **post** and
@@ -126,6 +159,10 @@ account. Otherwise the portal opens a "Sign up for …" prompt.
   `POST /staff/unmerge`, `POST /staff/vote` (vote on behalf + priority),
   `POST /staff/comment`, `GET /staff/voters`, `GET /staff/people`,
   `GET /staff/posts`, `GET /staff/inbox`, `POST /staff/resync`.
+- Autopilot: `GET /cron/autopilot` (cron secret), `POST /ingest` (API key);
+  staff `GET /staff/autopilot`, `POST /staff/autopilot/resolve`,
+  `POST /staff/summary`, `POST /staff/changelog/draft`,
+  `GET /staff/api-keys`, `POST /staff/api-keys/rotate`.
 
 ## Notifications
 
@@ -140,4 +177,7 @@ automatically. Merges notify nobody, as in Canny.
 - `pnpm test`: mapping of the copied config, milestones, validators.
 - `pnpm test:rls` (`tests/rls/`): board visibility, anonymous JWTs can't
   write, members vote only as themselves, forced columns, staff-only status
-  and merge, internal notes, and the anonymous-data handlers.
+  and merge, internal notes, and the anonymous-data handlers;
+  `autopilot.test.ts` runs the triage against the live database with a
+  deterministic fake AI (dedupe, automated merge, ingest → accept/merge,
+  summary caching, staff-only inbox and keys).

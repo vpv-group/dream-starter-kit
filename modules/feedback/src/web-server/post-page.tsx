@@ -15,6 +15,7 @@ import {
   getVoters,
   listCategories,
 } from "../data";
+import { AiSummary } from "../web/autopilot";
 import { ActivityFeed, PersonLockup } from "../web/components/activity-feed";
 import { StaffPostMenu, StaffSidebar } from "../web/components/staff-panel";
 import { StatusLabel } from "../web/components/status-badge";
@@ -299,6 +300,7 @@ export async function FeedbackPostPage({
             ) : null}
           </div>
 
+          {staff ? <AiSummary postId={post.id} initial={post.summary} /> : null}
           <ActivityFeed
             postId={post.id}
             entries={entries}

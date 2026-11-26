@@ -888,6 +888,41 @@ export type Database = {
           },
         ];
       };
+      mod_feedback_api_keys: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          key_hash: string;
+          prefix: string;
+          revoked_at: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          key_hash: string;
+          prefix: string;
+          revoked_at?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          key_hash?: string;
+          prefix?: string;
+          revoked_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mod_feedback_api_keys_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       mod_feedback_boards: {
         Row: {
           access: string;
@@ -1264,6 +1299,102 @@ export type Database = {
           },
         ];
       };
+      mod_feedback_inbox: {
+        Row: {
+          author_email: string | null;
+          author_name: string | null;
+          confidence: number | null;
+          created_at: string;
+          id: string;
+          kind: string;
+          origin_ref: Json;
+          post_id: string | null;
+          raw_text: string | null;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          source: string;
+          state: string;
+          suggested_board_id: string | null;
+          suggested_category_id: string | null;
+          suggested_post_id: string | null;
+          title: string | null;
+        };
+        Insert: {
+          author_email?: string | null;
+          author_name?: string | null;
+          confidence?: number | null;
+          created_at?: string;
+          id?: string;
+          kind: string;
+          origin_ref?: Json;
+          post_id?: string | null;
+          raw_text?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          source?: string;
+          state?: string;
+          suggested_board_id?: string | null;
+          suggested_category_id?: string | null;
+          suggested_post_id?: string | null;
+          title?: string | null;
+        };
+        Update: {
+          author_email?: string | null;
+          author_name?: string | null;
+          confidence?: number | null;
+          created_at?: string;
+          id?: string;
+          kind?: string;
+          origin_ref?: Json;
+          post_id?: string | null;
+          raw_text?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          source?: string;
+          state?: string;
+          suggested_board_id?: string | null;
+          suggested_category_id?: string | null;
+          suggested_post_id?: string | null;
+          title?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mod_feedback_inbox_post_id_fkey";
+            columns: ["post_id"];
+            isOneToOne: false;
+            referencedRelation: "mod_feedback_posts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "mod_feedback_inbox_resolved_by_fkey";
+            columns: ["resolved_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "mod_feedback_inbox_suggested_board_id_fkey";
+            columns: ["suggested_board_id"];
+            isOneToOne: false;
+            referencedRelation: "mod_feedback_boards";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "mod_feedback_inbox_suggested_category_id_fkey";
+            columns: ["suggested_category_id"];
+            isOneToOne: false;
+            referencedRelation: "mod_feedback_categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "mod_feedback_inbox_suggested_post_id_fkey";
+            columns: ["suggested_post_id"];
+            isOneToOne: false;
+            referencedRelation: "mod_feedback_posts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       mod_feedback_integrations: {
         Row: {
           capabilities: Json;
@@ -1408,6 +1539,7 @@ export type Database = {
       };
       mod_feedback_posts: {
         Row: {
+          ai_processed_at: string | null;
           approval_state: string;
           attachments: Json;
           author_id: string | null;
@@ -1418,6 +1550,7 @@ export type Database = {
           custom_fields: Json;
           deleted_at: string | null;
           details: string;
+          embedding: string | null;
           eta: string | null;
           eta_public: boolean;
           id: string;
@@ -1431,6 +1564,8 @@ export type Database = {
           source_ref: Json;
           status_changed_at: string;
           status_id: string | null;
+          summary: string | null;
+          summary_comment_count: number | null;
           title: string;
           trend_at: string;
           trend_score: number;
@@ -1438,6 +1573,7 @@ export type Database = {
           vote_count: number;
         };
         Insert: {
+          ai_processed_at?: string | null;
           approval_state?: string;
           attachments?: Json;
           author_id?: string | null;
@@ -1448,6 +1584,7 @@ export type Database = {
           custom_fields?: Json;
           deleted_at?: string | null;
           details?: string;
+          embedding?: string | null;
           eta?: string | null;
           eta_public?: boolean;
           id?: string;
@@ -1461,6 +1598,8 @@ export type Database = {
           source_ref?: Json;
           status_changed_at?: string;
           status_id?: string | null;
+          summary?: string | null;
+          summary_comment_count?: number | null;
           title: string;
           trend_at?: string;
           trend_score?: number;
@@ -1468,6 +1607,7 @@ export type Database = {
           vote_count?: number;
         };
         Update: {
+          ai_processed_at?: string | null;
           approval_state?: string;
           attachments?: Json;
           author_id?: string | null;
@@ -1478,6 +1618,7 @@ export type Database = {
           custom_fields?: Json;
           deleted_at?: string | null;
           details?: string;
+          embedding?: string | null;
           eta?: string | null;
           eta_public?: boolean;
           id?: string;
@@ -1491,6 +1632,8 @@ export type Database = {
           source_ref?: Json;
           status_changed_at?: string;
           status_id?: string | null;
+          summary?: string | null;
+          summary_comment_count?: number | null;
           title?: string;
           trend_at?: string;
           trend_score?: number;
@@ -1577,6 +1720,30 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      mod_feedback_source_chat_state: {
+        Row: {
+          cursor: string;
+          forwarded: number;
+          id: number;
+          scanned: number;
+          updated_at: string;
+        };
+        Insert: {
+          cursor: string;
+          forwarded?: number;
+          id?: number;
+          scanned?: number;
+          updated_at?: string;
+        };
+        Update: {
+          cursor?: string;
+          forwarded?: number;
+          id?: number;
+          scanned?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       mod_feedback_status_changes: {
         Row: {
@@ -2482,6 +2649,7 @@ export type Database = {
           _statuses?: string[];
         };
         Returns: {
+          ai_processed_at: string | null;
           approval_state: string;
           attachments: Json;
           author_id: string | null;
@@ -2492,6 +2660,7 @@ export type Database = {
           custom_fields: Json;
           deleted_at: string | null;
           details: string;
+          embedding: string | null;
           eta: string | null;
           eta_public: boolean;
           id: string;
@@ -2505,6 +2674,8 @@ export type Database = {
           source_ref: Json;
           status_changed_at: string;
           status_id: string | null;
+          summary: string | null;
+          summary_comment_count: number | null;
           title: string;
           trend_at: string;
           trend_score: number;
@@ -2589,6 +2760,25 @@ export type Database = {
           _status: string;
         };
         Returns: string;
+      };
+      mod_feedback_similar_by_embedding: {
+        Args: {
+          _board?: string;
+          _embedding: string;
+          _exclude?: string;
+          _limit?: number;
+        };
+        Returns: {
+          board_id: string;
+          comment_count: number;
+          details: string;
+          id: string;
+          similarity: number;
+          slug: string;
+          status_id: string;
+          title: string;
+          vote_count: number;
+        }[];
       };
       mod_feedback_similar_posts: {
         Args: { _board?: string; _limit?: number; _q: string };

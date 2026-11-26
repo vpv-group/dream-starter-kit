@@ -20,6 +20,7 @@ import {
 
 import { useLinkChangelog, useStaffChangelog } from "../hooks/use-feedback";
 import { CHANGELOG_TYPE_META } from "../shared/changelog";
+import { DraftWithAiButton } from "./autopilot";
 
 const dateFmt = new Intl.DateTimeFormat(undefined, {
   month: "short",
@@ -46,12 +47,15 @@ export function ChangelogTab() {
           Entries are written in /admin. Publishing one ships its linked ideas
           and tells their voters once.
         </p>
-        <Button asChild size="sm">
-          <Link href={`${ADMIN}/create`}>
-            <PlusIcon />
-            New entry
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <DraftWithAiButton />
+          <Button asChild size="sm">
+            <Link href={`${ADMIN}/create`}>
+              <PlusIcon />
+              New entry
+            </Link>
+          </Button>
+        </div>
       </div>
       <div className="overflow-x-auto rounded-md border">
         <Table>

@@ -47,6 +47,7 @@ export const modInstalled: ModInstalled[] = [
   { slug: "dashboard", name: "Dashboard", version: "1.0.0", system: true },
   { slug: "docs", name: "Docs", version: "1.0.1", system: true },
   { slug: "feedback", name: "Feedback", version: "1.0.0", system: true },
+  { slug: "feedback-source-chat", name: "Feedback from Chat", version: "1.0.0", system: false },
   { slug: "notifications", name: "Notifications", version: "1.4.0", system: false },
   { slug: "reminders", name: "Reminders", version: "1.2.1", system: false },
 ];

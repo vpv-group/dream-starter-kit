@@ -6,6 +6,7 @@
   "@acme/mod-dashboard",
   "@acme/mod-docs",
   "@acme/mod-feedback",
+  "@acme/mod-feedback-source-chat",
   "@acme/mod-notifications",
   "@acme/mod-reminders"
 ]

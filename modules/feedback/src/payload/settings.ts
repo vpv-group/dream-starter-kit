@@ -482,6 +482,140 @@ export const settings = defineModuleSettings({
           ],
         },
         {
+          label: "Autopilot",
+          description:
+            "AI triage (Canny's Autopilot). Needs the AI Gateway (AI_GATEWAY_API_KEY). Everything Autopilot does is logged with undo, and feedback from other sources stays internal until staff accept it.",
+          fields: [
+            {
+              name: "ap",
+              label: "Autopilot",
+              type: "group",
+              fields: [
+                {
+                  name: "enabled",
+                  label: "Turn on Autopilot",
+                  type: "checkbox",
+                  defaultValue: true,
+                },
+                {
+                  name: "actions",
+                  label: "Public actions",
+                  type: "select",
+                  defaultValue: "manual",
+                  options: [
+                    {
+                      label: "Manual — suggestions wait in the Inbox",
+                      value: "manual",
+                    },
+                    {
+                      label:
+                        "Automated — Autopilot acts; the Inbox is the audit log",
+                      value: "automated",
+                    },
+                  ],
+                },
+                {
+                  type: "row",
+                  fields: [
+                    {
+                      name: "dedupe",
+                      label: "Find duplicate posts",
+                      type: "checkbox",
+                      defaultValue: true,
+                      admin: { width: "33%" },
+                    },
+                    {
+                      name: "threshold",
+                      label: "Duplicate similarity (0–1)",
+                      type: "number",
+                      min: 0.5,
+                      max: 0.99,
+                      defaultValue: 0.86,
+                      admin: { width: "33%" },
+                    },
+                    {
+                      name: "mergeAsVotes",
+                      label: "Automated: merge portal duplicates as votes",
+                      type: "checkbox",
+                      defaultValue: true,
+                      admin: { width: "33%" },
+                    },
+                  ],
+                },
+                {
+                  type: "row",
+                  fields: [
+                    {
+                      name: "categorize",
+                      label: "File posts into a category",
+                      type: "checkbox",
+                      defaultValue: true,
+                      admin: { width: "33%" },
+                    },
+                    {
+                      name: "summaries",
+                      label: "Comment summaries",
+                      type: "checkbox",
+                      defaultValue: true,
+                      admin: { width: "33%" },
+                    },
+                    {
+                      name: "drafts",
+                      label: "Draft changelog entries",
+                      type: "checkbox",
+                      defaultValue: true,
+                      admin: { width: "33%" },
+                    },
+                  ],
+                },
+                {
+                  name: "dailyCap",
+                  label: "Posts processed per day",
+                  type: "number",
+                  min: 1,
+                  max: 5000,
+                  defaultValue: 200,
+                  admin: {
+                    description: "Caps AI spend; the rest waits for tomorrow.",
+                  },
+                },
+                {
+                  name: "apiBoard",
+                  label: "Board for accepted API / chat feedback (slug)",
+                  type: "text",
+                  defaultValue: "feature-requests",
+                },
+                {
+                  name: "replies",
+                  label: "Smart replies",
+                  type: "checkbox",
+                  defaultValue: false,
+                  admin: {
+                    description:
+                      "Ask a follow-up question on vague new posts, as the staff member below.",
+                  },
+                },
+                {
+                  name: "replyAs",
+                  label: "Reply as (staff user id)",
+                  type: "text",
+                  admin: {
+                    condition: (_, sibling) => Boolean(sibling.replies),
+                  },
+                },
+                {
+                  name: "instructions",
+                  label: "Smart-reply instructions",
+                  type: "textarea",
+                  admin: {
+                    condition: (_, sibling) => Boolean(sibling.replies),
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        {
           label: "Integrations",
           description:
             "Link ideas to issues in your project tracker and keep their status in sync both ways. GitHub works through the repository connected in /admin → Updates; Jira, Linear and Asana come as adapter modules with their own tabs.",
@@ -761,6 +895,21 @@ export interface FeedbackSettings extends Record<string, unknown> {
   changelogReactions?: boolean | null;
   changelogShare?: boolean | null;
   changelogShipStage?: string | null;
+  ap?: {
+    enabled?: boolean | null;
+    actions?: "manual" | "automated" | null;
+    dedupe?: boolean | null;
+    threshold?: number | null;
+    mergeAsVotes?: boolean | null;
+    categorize?: boolean | null;
+    summaries?: boolean | null;
+    drafts?: boolean | null;
+    dailyCap?: number | null;
+    apiBoard?: string | null;
+    replies?: boolean | null;
+    replyAs?: string | null;
+    instructions?: string | null;
+  } | null;
   gh?: {
     enabled?: boolean | null;
     map?:

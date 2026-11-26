@@ -35,6 +35,8 @@ import * as migration_20261126_040551_nav_groups from './20261126_040551_nav_gro
 import * as migration_20261126_201522_mod_feedback_initial from './20261126_201522_mod_feedback_initial';
 import * as migration_20261126_203722_mod_feedback_ideas from './20261126_203722_mod_feedback_ideas';
 import * as migration_20261126_211703_mod_feedback_changelog from './20261126_211703_mod_feedback_changelog';
+import * as migration_20261126_213738_mod_feedback_integrations from './20261126_213738_mod_feedback_integrations';
+import * as migration_20261126_215221_mod_feedback_autopilot from './20261126_215221_mod_feedback_autopilot';
 
 export const migrations = [
   {
@@ -221,5 +223,15 @@ export const migrations = [
     up: migration_20261126_211703_mod_feedback_changelog.up,
     down: migration_20261126_211703_mod_feedback_changelog.down,
     name: '20261126_211703_mod_feedback_changelog',
+  },
+  {
+    up: migration_20261126_213738_mod_feedback_integrations.up,
+    down: migration_20261126_213738_mod_feedback_integrations.down,
+    name: '20261126_213738_mod_feedback_integrations',
+  },
+  {
+    up: migration_20261126_215221_mod_feedback_autopilot.up,
+    down: migration_20261126_215221_mod_feedback_autopilot.down,
+    name: '20261126_215221_mod_feedback_autopilot',
   },
 ];

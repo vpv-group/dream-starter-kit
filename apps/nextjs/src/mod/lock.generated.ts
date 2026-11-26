@@ -110,7 +110,18 @@ export const modulesLock = {
         "apps/nextjs/src/payload/migrations/20261126_201522_mod_feedback_initial.ts",
         "apps/nextjs/src/payload/migrations/20261126_203722_mod_feedback_ideas.ts",
         "apps/nextjs/src/payload/migrations/20261126_211703_mod_feedback_changelog.ts",
-        "apps/nextjs/src/payload/migrations/20261126_213738_mod_feedback_integrations.ts"
+        "apps/nextjs/src/payload/migrations/20261126_213738_mod_feedback_integrations.ts",
+        "apps/nextjs/src/payload/migrations/20261126_215221_mod_feedback_autopilot.ts"
+      ],
+      "edgeFunctions": []
+    },
+    "feedback-source-chat": {
+      "version": "1.0.0",
+      "kitCompat": ">=2.5.0 <3",
+      "source": "local",
+      "installedVia": "preinstalled",
+      "stubs": [
+        "apps/nextjs/src/payload/migrations/20261126_220015_mod_feedback_source_chat_initial.ts"
       ],
       "edgeFunctions": []
     },
