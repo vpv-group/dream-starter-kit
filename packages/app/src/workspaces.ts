@@ -88,6 +88,11 @@ export function labelLower(label: string): string {
   return label.toLowerCase();
 }
 
+/** "Workspace" → "Workspaces", "Practice" → "Practices" (menu headings). */
+export function labelPlural(label: string): string {
+  return /(s|x|ch|sh)$/i.test(label) ? `${label}es` : `${label}s`;
+}
+
 /** The article for a label in running text ("a workspace", "an organization"). */
 export function labelWithArticle(label: string): string {
   const lower = labelLower(label);

@@ -182,3 +182,60 @@ export async function getStepContext(
     revisit,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Staff workspace view (header switcher)
+// ---------------------------------------------------------------------------
+
+/**
+ * Staff-only scope cookie set by the header workspace switcher. Separate from
+ * `active_org` (a member's own, membership-validated workspace): staff aren't
+ * members of the workspaces they look at. It only scopes the UI; RLS and each
+ * module's staff policies still decide what staff can read.
+ */
+export const VIEW_ORG_COOKIE = "view_org";
+
+export interface ServerWorkspaceView {
+  orgId: string | null;
+  name: string | null;
+  logoUrl: string | null;
+  isStaffView: boolean;
+}
+
+/**
+ * The workspace the current user is looking at: for staff, the `view_org`
+ * cookie (re-validated through `staff_workspaces`, so a forged or stale id
+ * falls back to "all workspaces"); for members, their active workspace.
+ * Cached per request.
+ */
+export const getWorkspaceView = cache(
+  async (isStaff: boolean): Promise<ServerWorkspaceView> => {
+    if (isStaff) {
+      const id = (await cookies()).get(VIEW_ORG_COOKIE)?.value;
+      if (!id || !/^[0-9a-f-]{36}$/i.test(id)) {
+        return { orgId: null, name: null, logoUrl: null, isStaffView: true };
+      }
+      const supabase = await createClient();
+      const { data } = await supabase.rpc("staff_workspaces", {
+        _ids: [id],
+        _limit: 1,
+      });
+      const row = data?.[0];
+      return row
+        ? {
+            orgId: row.id,
+            name: row.name,
+            logoUrl: row.logo_url,
+            isStaffView: true,
+          }
+        : { orgId: null, name: null, logoUrl: null, isStaffView: true };
+    }
+    const active = await getActiveOrg();
+    return {
+      orgId: active?.id ?? null,
+      name: active?.name ?? null,
+      logoUrl: active?.logoUrl ?? null,
+      isStaffView: false,
+    };
+  },
+);
