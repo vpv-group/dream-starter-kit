@@ -160,7 +160,11 @@ only, never content or PII.
   function in `public` that anon can execute must check its caller
   (`auth.uid()` / `auth.role()`). Module SQL can't `REVOKE`, so put the guard
   in the function; a function you register for housekeeping
-  (`kit_register_housekeeping`) also loses API execute automatically.
+  (`kit_register_housekeeping`) also loses API execute automatically. It
+  fails only for the kit's own functions (core and preinstalled modules); an
+  installed module's unguarded functions are printed as a warning for the
+  module's author, so they never fail an app's kit update. Module authors:
+  run the same check in your module's CI.
 - `tooling/rls-tests/src/plans.test.ts` (part of `pnpm test:rls`) — EXPLAINs
   the hot queries as a signed-in user: a public security-definer function
   called per row in a policy (`is_org_member(org_id)`) or a per-row SubPlan
