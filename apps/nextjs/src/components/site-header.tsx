@@ -10,6 +10,7 @@ import { Button } from "@acme/ui/button";
 import type { NavMenuItem } from "~/lib/mod/nav-types";
 import { Separator } from "~/components/ui/separator";
 import { SidebarTrigger } from "~/components/ui/sidebar";
+import { WorkspaceViewSwitcher } from "~/components/workspaces/workspace-view-switcher";
 import { hasModule } from "~/mod/registry.client.generated";
 
 /** Authenticated pages that aren't menu entries (so can't be titled from nav). */
@@ -20,9 +21,12 @@ const FALLBACK_TITLES: Record<string, string> = {
 export function SiteHeader({
   navItems,
   isStaff = false,
+  workspaceSwitcher = null,
 }: {
   navItems: NavMenuItem[];
   isStaff?: boolean;
+  /** Staff only: the header workspace switcher (docs/WORKSPACES.md). */
+  workspaceSwitcher?: { label: string; logoUrl: string | null } | null;
 }) {
   const pathname = usePathname();
   // Title comes from the CMS-driven menu (longest matching href wins), so
@@ -39,6 +43,12 @@ export function SiteHeader({
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
+        {workspaceSwitcher ? (
+          <WorkspaceViewSwitcher
+            label={workspaceSwitcher.label}
+            logoUrl={workspaceSwitcher.logoUrl}
+          />
+        ) : null}
         <Separator
           orientation="vertical"
           className="mx-2 data-[orientation=vertical]:h-4"
