@@ -10,7 +10,7 @@ import { defineModule } from "@acme/mod-kit";
 export default defineModule({
   slug: "chat",
   name: "AI Chat",
-  version: "1.0.0",
+  version: "1.1.0",
   kitCompat: ">=2.0.0 <3",
   description: "AI assistant with persisted chat threads.",
   nav: {

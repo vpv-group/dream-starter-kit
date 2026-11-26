@@ -4,16 +4,22 @@ import { useMutation } from "@tanstack/react-query";
 
 import { useSupabase } from "@acme/api";
 
+// `process.env.*_PUBLIC_*` is inlined by each platform's bundler (Metro / Next).
+declare const process: { env: Record<string, string | undefined> };
+const APP_BASE =
+  process.env.EXPO_PUBLIC_CMS_URL ?? process.env.NEXT_PUBLIC_CMS_URL ?? "";
+
 /**
- * Permanently delete the signed-in user's account. Invokes the `delete-account`
- * edge function (which uses the service role to delete auth.users — the DB
- * cascade removes all owned rows), then signs out locally.
+ * Permanently delete the signed-in user's account. Calls the web app's
+ * `POST /api/account/delete` (which uses the service role to delete
+ * auth.users — the DB cascade removes all owned rows — and queues the erasure
+ * of their CMS row and files), then signs out locally.
  *
  * App Store requirement: account deletion must be available in-app.
  *
  * Workspaces: a sole owner of a workspace with other members can't delete
  * their account until they transfer ownership (enforced by a DB trigger; the
- * edge function pre-checks too). We check first so both platforms can name
+ * route pre-checks too). We check first so both platforms can name
  * the workspaces instead of showing a generic failure.
  */
 export class SoleOwnerError extends Error {
@@ -42,12 +48,25 @@ export function useDeleteAccount() {
         throw new SoleOwnerError(blocking.map((w) => w.org_name));
       }
 
-      // invoke() attaches the user's access token automatically. supabase-js
-      // types `functions.invoke` loosely (it resolves to `any`); the response
-      // is `{ data, error }`.
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const { error } = await supabase.functions.invoke("delete-account");
-      if (error) throw error;
+      // Bearer token works on both platforms (cookies only exist on web).
+      const res = await fetch(`${APP_BASE}/api/account/delete`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (res.status === 409) {
+        const body = (await res.json().catch(() => ({}))) as {
+          workspaces?: string[];
+        };
+        throw new SoleOwnerError(body.workspaces ?? []);
+      }
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        throw new Error(
+          body.error ?? `Account deletion failed (${res.status})`,
+        );
+      }
 
       await supabase.auth.signOut();
     },

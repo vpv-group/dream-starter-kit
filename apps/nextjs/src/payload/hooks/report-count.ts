@@ -5,7 +5,11 @@ import type { Report } from "@acme/cms";
 /**
  * Keep the target's denormalized `reportCount` in step when a report is filed,
  * so moderators can sort by most-reported (and auto-hide past a threshold).
- * Best-effort: a failed counter update never fails the report itself.
+ *
+ * It RECOUNTS the target's reports instead of reading the old value and
+ * adding one: read-modify-write loses increments when two reports land at
+ * once, while a recount is right again as soon as the next report (or any
+ * save) runs. Best-effort: a failed counter update never fails the report.
  */
 export const incrementReportCount: CollectionAfterChangeHook<Report> = async ({
   doc,
@@ -20,17 +24,21 @@ export const incrementReportCount: CollectionAfterChangeHook<Report> = async ({
   const relationTo = target.relationTo;
 
   try {
-    const current = await req.payload.findByID({
-      collection: relationTo,
-      id: targetId,
-      depth: 0,
+    const { totalDocs } = await req.payload.count({
+      collection: "reports",
+      where: {
+        and: [
+          { "target.relationTo": { equals: relationTo } },
+          { "target.value": { equals: targetId } },
+        ],
+      },
       overrideAccess: true,
       req,
     });
     await req.payload.update({
       collection: relationTo,
       id: targetId,
-      data: { reportCount: (current.reportCount ?? 0) + 1 },
+      data: { reportCount: totalDocs },
       depth: 0,
       overrideAccess: true,
       // Counter maintenance — marker for any future hooks to skip.
@@ -40,7 +48,7 @@ export const incrementReportCount: CollectionAfterChangeHook<Report> = async ({
   } catch (err) {
     req.payload.logger.warn(
       { err },
-      "reports: failed to increment target reportCount",
+      "reports: failed to update target reportCount",
     );
   }
   return doc;

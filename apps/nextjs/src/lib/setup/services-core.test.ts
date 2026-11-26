@@ -4,7 +4,7 @@ import { allDone, serviceChecks } from "./services-core";
 
 const ready = {
   siteUrl: "https://app.acme.com",
-  env: { CRON_SECRET: "c" },
+  scheduler: { configured: true, reachable: true },
   storageConfigured: true,
   authConfigured: true,
   canFixAuth: true,
@@ -19,7 +19,7 @@ describe("serviceChecks", () => {
     const checks = serviceChecks({
       ...ready,
       siteUrl: "http://localhost:3000",
-      env: {},
+      scheduler: { configured: false, reachable: null },
       storageConfigured: false,
       authConfigured: false,
     });
@@ -33,5 +33,25 @@ describe("serviceChecks", () => {
       serviceChecks({ ...ready, authConfigured: false, canFixAuth: false })[1]
         ?.fix,
     ).toBeUndefined();
+  });
+
+  it("judges scheduled jobs by Supabase Cron, not a CRON_SECRET", () => {
+    const cron = (
+      scheduler: Parameters<typeof serviceChecks>[0]["scheduler"],
+    ) => serviceChecks({ ...ready, scheduler }).find((c) => c.key === "cron");
+    // Set up, no call yet: fine (the first tick is under a minute away).
+    expect(cron({ configured: true, reachable: null })?.status).toBe("done");
+    // The latest call failed: say why.
+    const failing = cron({
+      configured: true,
+      reachable: false,
+      lastFailure: "HTTP 401",
+    });
+    expect(failing?.status).toBe("needs-you");
+    expect(failing?.hint).toContain("HTTP 401");
+    // Not booted against this database yet.
+    expect(cron({ configured: false, reachable: null })?.hint).toContain(
+      "Vault",
+    );
   });
 });

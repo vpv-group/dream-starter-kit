@@ -17,6 +17,7 @@ import { generateMediaFileURL } from "./lib/cms/media-url";
 import { noDocumentLock } from "./lib/cms/no-document-lock";
 import { mergePayloadMigrations } from "./lib/cms/payload-migrations";
 import { CMS_CLI_PROCESS_ENV, cmsPoolSizing } from "./lib/cms/pool-sizing";
+import { isCronAuthorized } from "./lib/cron-secret";
 import { pgConnectionOptions } from "./lib/db/bootstrap-core";
 import { isGuardedPreview } from "./lib/db/preview-guard";
 import { resolveSmtpConfig } from "./lib/email/smtp";
@@ -34,7 +35,6 @@ import { Categories } from "./payload/collections/Categories";
 import { Comments } from "./payload/collections/Comments";
 import { CommunityPosts } from "./payload/collections/CommunityPosts";
 import { CommunitySpaces } from "./payload/collections/CommunitySpaces";
-import { DeviceTokens } from "./payload/collections/DeviceTokens";
 import { Enrollments } from "./payload/collections/Enrollments";
 import { Events } from "./payload/collections/Events";
 import { FeedTokens } from "./payload/collections/FeedTokens";
@@ -63,6 +63,12 @@ import { NativeNavigation } from "./payload/globals/NativeNavigation";
 import { ProfileFields } from "./payload/globals/ProfileFields";
 import { SiteSettings } from "./payload/globals/SiteSettings";
 import { ThemeSettings } from "./payload/globals/ThemeSettings";
+import { withFavoritesCleanup } from "./payload/hooks/favorites-cleanup";
+import {
+  withCollectionCacheInvalidation,
+  withGlobalCacheInvalidation,
+} from "./payload/hooks/revalidate-cache";
+import { coreTasks } from "./payload/jobs";
 import { migrations } from "./payload/migrations";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -211,7 +217,6 @@ export default buildConfig({
   collections: [
     // People
     Users,
-    DeviceTokens,
     FeedTokens,
     Enrollments,
     Reviews,
@@ -246,7 +251,10 @@ export default buildConfig({
     NavItems,
     // Installed modules' collections (generated registry — `pnpm mod sync`)
     ...modCollections,
-  ].map(noDocumentLock),
+  ]
+    .map(noDocumentLock)
+    .map(withCollectionCacheInvalidation)
+    .map(withFavoritesCleanup),
   globals: [
     SiteSettings,
     ThemeSettings,
@@ -257,10 +265,31 @@ export default buildConfig({
     NativeNavigation,
     // Installed modules' globals incl. their settings screens (§1.7)
     ...modGlobals,
-  ].map(noDocumentLock),
+  ]
+    .map(noDocumentLock)
+    .map(withGlobalCacheInvalidation),
   // One shared, cross-collection folder tree ("Browse by Folder") for the
   // collections that enable `folders: true`.
   folders: { browseByFolder: true },
+  // Payload Jobs Queue — the app's background work (payload/jobs) plus
+  // scheduled publishing (`schedulePublish` on the content collections).
+  // Supabase Cron calls `GET /cms-api/payload-jobs/run?allQueues=true` every
+  // minute with the cron bearer secret (lib/cron-secret.ts); the endpoint
+  // queues due scheduled tasks, then runs a bounded batch. Signed-in staff
+  // may also trigger it. Never `autoRun` — it doesn't work on serverless.
+  jobs: {
+    tasks: coreTasks,
+    access: {
+      run: ({ req }) =>
+        Boolean(req.user) ||
+        isCronAuthorized(req.headers.get("authorization"), {
+          CRON_SECRET: process.env.CRON_SECRET,
+          SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+          SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
+        }),
+    },
+    deleteJobOnComplete: true,
+  },
   editor: lexicalEditor(),
   secret: cmsCredentials.secret ?? "",
   // Generated types are published from the @acme/cms package so the Expo app and

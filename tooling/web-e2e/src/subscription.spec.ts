@@ -7,14 +7,15 @@ import { FOUNDER_STORAGE_STATE } from "./helpers/founder";
 /**
  * Subscription pipeline coverage, in two independent layers:
  *
- * 1. "subscriptions webhook mirror" — the @payloadcms/plugin-stripe endpoint
- *    (POST /cms-api/stripe/webhooks) that mirrors customer.subscription.*
- *    events into the read-only CMS `subscriptions` collection. The spec signs
- *    its own synthetic events with STRIPE_WEBHOOKS_ENDPOINT_SECRET (the same
- *    HMAC scheme `stripe listen` uses), so it runs with NO Stripe account —
- *    CI sets a throwaway secret. Also pins the plugin's security posture:
- *    bad signatures are rejected, the REST proxy is off, and the collection's
- *    access control (staff/owner read, no client writes) holds.
+ * 1. "subscriptions webhook" — the ONE Stripe endpoint
+ *    (POST /api/mod/billing/stripe/webhook) that writes public.mod_billing_*
+ *    and projects subscriptions into the read-only CMS `subscriptions`
+ *    collection. The spec signs its own synthetic events with
+ *    STRIPE_WEBHOOK_SECRET (the same HMAC scheme `stripe listen` uses), so it
+ *    runs with NO Stripe account — CI sets a throwaway secret. Also pins the
+ *    security posture: bad signatures are rejected, a replayed event is not
+ *    applied twice, an OLDER event can't roll a subscription back, the REST
+ *    proxy is off, and the collection's access control holds.
  *
  * 2. "stripe checkout (test mode)" — real Stripe Checkout subscription
  *    creation as an authenticated user AND as a guest, paying with the
@@ -26,7 +27,8 @@ import { FOUNDER_STORAGE_STATE } from "./helpers/founder";
  */
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOKS_ENDPOINT_SECRET;
+const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
+const WEBHOOK_PATH = "/api/mod/billing/stripe/webhook";
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
 
 /** Sign a payload the way Stripe does (`t=<unix>,v1=<hmac-sha256>`). */
@@ -39,19 +41,30 @@ function stripeSignature(payload: string, secret: string): string {
   return `t=${t},v1=${v1}`;
 }
 
-/** A minimal customer.subscription.created event the mirror handler reads. */
-function subscriptionEvent(subId: string) {
+/** A minimal customer.subscription.* event the webhook handler reads. */
+function subscriptionEvent(
+  subId: string,
+  opts: {
+    userId?: string;
+    status?: string;
+    type?: string;
+    created?: number;
+    eventId?: string;
+  } = {},
+) {
   const now = Math.floor(Date.now() / 1000);
   return {
-    id: `evt_e2e_${subId}`,
+    id: opts.eventId ?? `evt_e2e_${subId}_${opts.status ?? "active"}`,
     object: "event",
-    type: "customer.subscription.created",
+    type: opts.type ?? "customer.subscription.created",
+    created: opts.created ?? now,
     data: {
       object: {
         id: subId,
         object: "subscription",
         customer: "cus_e2e_does_not_exist",
-        status: "active",
+        status: opts.status ?? "active",
+        metadata: opts.userId ? { supabase_user_id: opts.userId } : {},
         start_date: now,
         trial_end: null,
         cancel_at_period_end: false,
@@ -60,6 +73,7 @@ function subscriptionEvent(subId: string) {
           data: [
             {
               id: "si_e2e",
+              quantity: 1,
               price: { id: "price_e2e_does_not_exist" },
               current_period_start: now,
               current_period_end: now + 30 * 24 * 3600,
@@ -71,81 +85,134 @@ function subscriptionEvent(subId: string) {
   };
 }
 
-test.describe("subscriptions webhook mirror", () => {
+async function postEvent(event: unknown, secret = WEBHOOK_SECRET ?? "") {
+  const body = JSON.stringify(event);
+  const anon = await request.newContext({ baseURL: BASE_URL });
+  const res = await anon.post(WEBHOOK_PATH, {
+    headers: {
+      "content-type": "application/json",
+      "stripe-signature": stripeSignature(body, secret),
+    },
+    data: body,
+  });
+  const out = { status: res.status(), body: await res.text() };
+  await anon.dispose();
+  return out;
+}
+
+/** The founder's Supabase user id (the CMS user's supabaseUserId). */
+async function founderUserId(): Promise<string> {
+  const staff = await request.newContext({
+    baseURL: BASE_URL,
+    storageState: FOUNDER_STORAGE_STATE,
+  });
+  const me = (await (await staff.get("/cms-api/users/me")).json()) as {
+    user: { supabaseUserId: string };
+  };
+  await staff.dispose();
+  return me.user.supabaseUserId;
+}
+
+async function cmsSubscription(subId: string) {
+  const staff = await request.newContext({
+    baseURL: BASE_URL,
+    storageState: FOUNDER_STORAGE_STATE,
+  });
+  const found = await staff.get(
+    `/cms-api/mod-billing-subscriptions?where[stripeSubscriptionID][equals]=${subId}`,
+  );
+  const json = found.ok()
+    ? ((await found.json()) as {
+        totalDocs: number;
+        docs: {
+          status: string;
+          stripeCustomerID: string;
+          cancelAtPeriodEnd: boolean;
+        }[];
+      })
+    : { totalDocs: 0, docs: [] };
+  await staff.dispose();
+  return json;
+}
+
+test.describe("subscriptions webhook", () => {
   test.skip(
     !WEBHOOK_SECRET,
-    "STRIPE_WEBHOOKS_ENDPOINT_SECRET not set — webhook endpoint is inert",
+    "STRIPE_WEBHOOK_SECRET not set — the webhook can't verify test events",
   );
 
-  test("a signed subscription event is mirrored into the CMS", async () => {
+  test("a signed subscription event is applied and projected into the CMS", async () => {
     const subId = `sub_e2e_${Date.now()}`;
-    const body = JSON.stringify(subscriptionEvent(subId));
+    const userId = await founderUserId();
+    const res = await postEvent(subscriptionEvent(subId, { userId }));
+    expect(res.status).toBe(200);
 
-    const anon = await request.newContext({ baseURL: BASE_URL });
-    const res = await anon.post("/cms-api/stripe/webhooks", {
-      headers: {
-        "content-type": "application/json",
-        "stripe-signature": stripeSignature(body, WEBHOOK_SECRET ?? ""),
-      },
-      data: body,
-    });
-    expect(res.status()).toBe(200);
-
-    // Handlers run after the 2xx ack — poll as staff until the doc lands.
-    const staff = await request.newContext({
-      baseURL: BASE_URL,
-      storageState: FOUNDER_STORAGE_STATE,
-    });
     await expect
-      .poll(
-        async () => {
-          const found = await staff.get(
-            `/cms-api/mod-billing-subscriptions?where[stripeSubscriptionID][equals]=${subId}`,
-          );
-          if (!found.ok()) return 0;
-          const json = (await found.json()) as { totalDocs: number };
-          return json.totalDocs;
-        },
-        { timeout: 20_000 },
-      )
+      .poll(async () => (await cmsSubscription(subId)).totalDocs, {
+        timeout: 20_000,
+      })
       .toBe(1);
-
-    const found = await staff.get(
-      `/cms-api/mod-billing-subscriptions?where[stripeSubscriptionID][equals]=${subId}`,
-    );
-    const json = (await found.json()) as {
-      docs: {
-        status: string;
-        stripeCustomerID: string;
-        cancelAtPeriodEnd: boolean;
-      }[];
-    };
-    expect(json.docs[0]).toMatchObject({
+    expect((await cmsSubscription(subId)).docs[0]).toMatchObject({
       status: "active",
       stripeCustomerID: "cus_e2e_does_not_exist",
       cancelAtPeriodEnd: false,
     });
+  });
 
-    await anon.dispose();
-    await staff.dispose();
+  test("a replayed event is acknowledged but not applied twice", async () => {
+    const subId = `sub_e2e_replay_${Date.now()}`;
+    const userId = await founderUserId();
+    const event = subscriptionEvent(subId, { userId });
+    expect((await postEvent(event)).status).toBe(200);
+    const again = await postEvent(event);
+    expect(again.status).toBe(200);
+    expect(JSON.parse(again.body)).toMatchObject({ duplicate: true });
+  });
+
+  test("an older event arriving late doesn't roll the subscription back", async () => {
+    const subId = `sub_e2e_order_${Date.now()}`;
+    const userId = await founderUserId();
+    const now = Math.floor(Date.now() / 1000);
+    // Newer cancellation first, then the older "active" update.
+    expect(
+      (
+        await postEvent(
+          subscriptionEvent(subId, {
+            userId,
+            status: "canceled",
+            type: "customer.subscription.deleted",
+            created: now,
+          }),
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await postEvent(
+          subscriptionEvent(subId, {
+            userId,
+            status: "active",
+            type: "customer.subscription.updated",
+            created: now - 120,
+          }),
+        )
+      ).status,
+    ).toBe(200);
+    await expect
+      .poll(async () => (await cmsSubscription(subId)).docs[0]?.status, {
+        timeout: 20_000,
+      })
+      .not.toBe("active");
   });
 
   test("an event with a bad signature is rejected", async () => {
-    const body = JSON.stringify(subscriptionEvent(`sub_e2e_bad_${Date.now()}`));
-    const anon = await request.newContext({ baseURL: BASE_URL });
-    const res = await anon.post("/cms-api/stripe/webhooks", {
-      headers: {
-        "content-type": "application/json",
-        "stripe-signature": stripeSignature(body, "whsec_wrong_secret"),
-      },
-      data: body,
-    });
-    expect(res.status()).toBe(400);
-    await anon.dispose();
+    const res = await postEvent(
+      subscriptionEvent(`sub_e2e_bad_${Date.now()}`),
+      "whsec_wrong_secret",
+    );
+    expect(res.status).toBe(400);
   });
-});
 
-test.describe("subscriptions access control", () => {
   test("anonymous clients can neither read nor write subscriptions", async () => {
     const anon = await request.newContext({ baseURL: BASE_URL });
     // read: ownsOrStaff → anonymous is denied outright.
@@ -181,7 +248,7 @@ test.describe("subscriptions access control", () => {
       baseURL: BASE_URL,
       storageState: FOUNDER_STORAGE_STATE,
     });
-    // `rest` omitted in the billing module's stripePlugin config — the proxy route must not exist even
+    // The Stripe plugin (and its REST proxy) is gone — the route must not exist even
     // for authenticated staff (credentials stay server-side).
     const res = await staff.post("/cms-api/stripe/rest", {
       data: { stripeMethod: "customers.list", stripeArgs: [] },

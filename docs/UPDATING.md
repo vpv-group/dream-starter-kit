@@ -64,16 +64,30 @@ squash**.
 or repository settings. Once GitHub is connected, delete these if you set
 them; nothing reads them any more:
 
-| Removed | Where it was |
-|---|---|
-| `MOD_OPS_TOKEN`, `DREAM_LICENSE_KEY` | repository secrets |
-| `GITHUB_OPS_TOKEN`, `GITHUB_REPO`, `DREAM_LICENSE_KEY`, `MOD_CATALOG_URL` | Vercel env / `.env` |
-| `MOD_AUTO_UPDATE`, `MOD_AUTO_MERGE`, `KIT_AUTO_UPDATE`, `MOD_REGISTRY_FIRST`, `KIT_UPSTREAM_URL` | repository variables |
-| "Allow auto-merge" | repository settings (no longer needed) |
+| Removed                                                                                          | Where it was                           |
+| ------------------------------------------------------------------------------------------------ | -------------------------------------- |
+| `MOD_OPS_TOKEN`, `DREAM_LICENSE_KEY`                                                             | repository secrets                     |
+| `GITHUB_OPS_TOKEN`, `GITHUB_REPO`, `DREAM_LICENSE_KEY`, `MOD_CATALOG_URL`                        | Vercel env / `.env`                    |
+| `MOD_AUTO_UPDATE`, `MOD_AUTO_MERGE`, `KIT_AUTO_UPDATE`, `MOD_REGISTRY_FIRST`, `KIT_UPSTREAM_URL` | repository variables                   |
+| "Allow auto-merge"                                                                               | repository settings (no longer needed) |
 
 The private `module-uploads` storage bucket is no longer used (ZIP installs
 are CLI-only); it is left in place because Supabase doesn't allow deleting a
 bucket from a migration. Delete it from the dashboard if it's empty.
+
+**Also in 2.5 — background work, billing and data at scale.** The update
+needs nothing from you to keep working; these are the leftovers you can clean
+up once it's live:
+
+| What changed                                                                                                                                                                                                       | What to do                                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scheduled work runs on **Supabase Cron** (installed by the migrations), not Vercel Cron: the app stores its URL and a cron secret in Supabase Vault when it boots. `CRON_SECRET` is optional (derived when unset). | Nothing. /cms-setup/services → **Scheduled jobs** shows whether Supabase reaches the app.                                                         |
+| The kit ships **no edge functions**: billing, account deletion and reminders run in the app. A leftover `reminders-process` pg_cron job is removed by the reminders migration.                                     | `supabase functions delete billing-stripe-webhook delete-account reminders-process`                                                               |
+| **One Stripe webhook** (`/api/mod/billing/stripe/webhook`), registered through the Stripe API within the hour once `STRIPE_SECRET_KEY` is set (docs/STRIPE.md §4).                                                 | After it shows a successful delivery in Stripe, delete the two old endpoints, and remove `STRIPE_WEBHOOKS_ENDPOINT_SECRET` (deprecated, ignored). |
+| Removed CMS fields `likeCount` / `commentCount` and the unused `device-tokens` collection. Their columns/table stay for one release (expand/contract), so a revert is safe.                                        | Nothing; a later release drops them (a `dream:contract` step that waits for your review).                                                         |
+
+This update changes `.github/workflows/ci.yml` (a database-advisors step), so
+under the merge rules its PR waits for you rather than merging itself.
 
 The rest of this guide is the same routine done by hand. (By hand you can merge
 a release tag the same way: `git fetch upstream tag vX.Y.Z` then

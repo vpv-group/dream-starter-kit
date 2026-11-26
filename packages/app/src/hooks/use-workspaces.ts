@@ -299,6 +299,8 @@ export interface WorkspaceMember {
   isYou: boolean;
 }
 
+const MEMBERS_PAGE = 1000;
+
 /** Members of a workspace I belong to (workspace_members — safe columns only). */
 export function useWorkspaceMembers(orgId: string | null | undefined) {
   const supabase = useSupabase();
@@ -307,11 +309,21 @@ export function useWorkspaceMembers(orgId: string | null | undefined) {
     enabled: !!orgId,
     queryFn: async (): Promise<WorkspaceMember[]> => {
       if (!orgId) return [];
-      const { data, error } = await supabase.rpc("workspace_members", {
-        _org: orgId,
-      });
-      if (error) throw error;
-      return data.map((m) => ({
+      // Keyset pages of up to 1000 (the Data API's row cap) until a short page.
+      const rows = [];
+      let after: string | undefined;
+      for (;;) {
+        const { data, error } = await supabase.rpc("workspace_members", {
+          _org: orgId,
+          _limit: MEMBERS_PAGE,
+          _after: after,
+        });
+        if (error) throw error;
+        rows.push(...data);
+        if (data.length < MEMBERS_PAGE) break;
+        after = data[data.length - 1]?.user_id;
+      }
+      return rows.map((m) => ({
         userId: m.user_id,
         displayName: m.display_name,
         avatarUrl: m.avatar_url,

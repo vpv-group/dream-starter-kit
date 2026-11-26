@@ -12,7 +12,7 @@ export const modulesLock = {
   },
   "modules": {
     "billing": {
-      "version": "1.0.0",
+      "version": "1.1.0",
       "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
@@ -24,12 +24,10 @@ export const modulesLock = {
         "apps/nextjs/src/app/(frontend)/(public)/pricing/page.tsx",
         "apps/nextjs/src/payload/migrations/20260612_023534_ext_billing.ts"
       ],
-      "edgeFunctions": [
-        "billing-stripe-webhook"
-      ]
+      "edgeFunctions": []
     },
     "chat": {
-      "version": "1.0.0",
+      "version": "1.1.0",
       "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
@@ -77,7 +75,7 @@ export const modulesLock = {
       "edgeFunctions": []
     },
     "docs": {
-      "version": "1.0.0",
+      "version": "1.0.1",
       "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
@@ -90,7 +88,7 @@ export const modulesLock = {
       "edgeFunctions": []
     },
     "notifications": {
-      "version": "1.1.0",
+      "version": "1.3.1",
       "kitCompat": ">=2.3.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
@@ -102,7 +100,7 @@ export const modulesLock = {
       "edgeFunctions": []
     },
     "reminders": {
-      "version": "1.0.0",
+      "version": "1.2.1",
       "kitCompat": ">=2.0.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
@@ -111,9 +109,7 @@ export const modulesLock = {
         "apps/nextjs/src/app/(frontend)/(app)/a/reminders/layout.tsx",
         "apps/nextjs/src/app/(frontend)/(app)/a/reminders/page.tsx"
       ],
-      "edgeFunctions": [
-        "reminders-process"
-      ]
+      "edgeFunctions": []
     }
   }
 } as const;

@@ -1,4 +1,4 @@
-import { env } from "~/env";
+import { env } from "../env";
 
 /**
  * The public origin of the web app, resolved WITHOUT relying on `window` so it

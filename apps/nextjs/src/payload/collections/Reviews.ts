@@ -9,6 +9,8 @@ import { assignOwner } from "../hooks/assign-owner";
  */
 export const Reviews: CollectionConfig = {
   slug: "reviews",
+  // Moderation queue and approved-review lists, newest first.
+  indexes: [{ fields: ["status", "createdAt"] }],
   trash: true,
   admin: {
     group: "People",

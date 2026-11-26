@@ -16,7 +16,7 @@ import { defineModule } from "@acme/mod-kit";
 export default defineModule({
   slug: "billing",
   name: "Billing",
-  version: "1.0.0",
+  version: "1.1.0",
   kitCompat: ">=2.0.0 <3",
   description: "Stripe subscriptions: checkout, portal, webhook mirror.",
   nav: {
@@ -49,11 +49,11 @@ export default defineModule({
   server: {
     routes: true,
     publicRoutes: true,
-    edgeFunctions: ["billing-stripe-webhook"],
   },
   database: {
     tables: [
       "mod_billing_customers",
+      "mod_billing_webhook_events",
       "mod_billing_products",
       "mod_billing_prices",
       "mod_billing_subscriptions",

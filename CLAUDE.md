@@ -33,11 +33,136 @@ clarity beat cleverness.
 | Shared UI tokens / primitives         |                                                                                   | `packages/ui`                             |
 | Env + constants                       | zod env schema, `DEFAULT_AI_MODEL`, etc.                                          | `packages/config`                         |
 | Payments                              | Stripe (web only) + webhook edge function                                         | `apps/nextjs`, `supabase/functions`       |
-| AI                                    | Vercel AI SDK v6 via the AI Gateway (Claude default)                              | server routes / edge fn                   |
+| AI                                    | Vercel AI SDK v7 via the AI Gateway (Claude default)                              | server routes / edge fn                   |
 | Build/ship                            | EAS (mobile), Vercel (web), Expo Push                                             | `eas.json`, Vercel                        |
 
 > Package scope is `@acme/*` (inherited from the template). It's renameable —
 > see the README. Don't rename mid-build.
+
+## Reference docs (read before changing that layer)
+
+Official docs for everything the kit uses. Before you change a layer, check its
+docs here instead of relying on memory: these products change faster than
+training data. Where a vendor offers a native feature on its free plan, prefer
+it to hand-rolled code (see **Vendor features** under Conventions).
+
+**Monorepo / language**
+
+- Turborepo — https://turborepo.dev/docs
+- pnpm — workspaces https://pnpm.io/workspaces · catalogs https://pnpm.io/catalogs
+- TypeScript — https://www.typescriptlang.org/docs/
+- Zod — https://zod.dev
+
+**Web**
+
+- Next.js — https://nextjs.org/docs
+  - caching: `revalidateTag` https://nextjs.org/docs/app/api-reference/functions/revalidateTag
+    (Next 16 takes a second `profile` argument) · `unstable_cache`
+    https://nextjs.org/docs/app/api-reference/functions/unstable_cache
+  - `after()` https://nextjs.org/docs/app/api-reference/functions/after ·
+    route handlers https://nextjs.org/docs/app/api-reference/file-conventions/route
+- React — https://react.dev
+- Tailwind CSS v4 — https://tailwindcss.com/docs
+- TanStack Query — https://tanstack.com/query/latest/docs
+- React Hook Form — https://react-hook-form.com/docs
+- Icons — Lucide https://lucide.dev · Tabler https://tabler.io/icons
+
+**shadcn/ui** — the web design system: the `components.json` setups in
+`packages/ui` and `apps/nextjs`, the `dashboard-01` app shell, the `login-05`
+auth flow, the sidebar, the tokens in `tooling/tailwind/theme.css`, and the
+Payload admin (via Payload's Tailwind + shadcn guide). `docs/DESIGN-SYSTEM.md`
+stays the kit's own rulebook; these are the upstream reference for primitives.
+Write components from the docs — never copy third-party template code.
+
+- Docs — https://ui.shadcn.com/docs
+- Installation (Next.js) — https://ui.shadcn.com/docs/installation/next
+- Monorepo — https://ui.shadcn.com/docs/monorepo
+- `components.json` — https://ui.shadcn.com/docs/components-json
+- CLI — https://ui.shadcn.com/docs/cli
+- Tailwind v4 — https://ui.shadcn.com/docs/tailwind-v4
+- Theming / CSS variables — https://ui.shadcn.com/docs/theming
+- Dark mode (Next.js) — https://ui.shadcn.com/docs/dark-mode/next
+- Components — https://ui.shadcn.com/docs/components · Sidebar
+  https://ui.shadcn.com/docs/components/sidebar
+- Blocks (`dashboard-01`, `login-05`) — https://ui.shadcn.com/blocks
+- Registry — https://ui.shadcn.com/docs/registry
+
+**Mobile**
+
+- Expo — https://docs.expo.dev/
+- Expo Router — https://docs.expo.dev/router/introduction/
+- EAS Build — https://docs.expo.dev/build/introduction/
+- Expo push — https://docs.expo.dev/push-notifications/overview/ · sending,
+  tickets and receipts https://docs.expo.dev/push-notifications/sending-notifications/
+- Expo + Supabase — https://docs.expo.dev/guides/using-supabase/
+- React Native — https://reactnative.dev/docs/getting-started
+- NativeWind — https://www.nativewind.dev/
+- react-native-reusables — https://reactnativereusables.com/
+
+**Supabase**
+
+- Docs — https://supabase.com/docs · CLI https://supabase.com/docs/reference/cli/introduction
+- supabase-js — https://supabase.com/docs/reference/javascript/introduction
+- SSR for Next.js — https://supabase.com/docs/guides/auth/server-side/creating-a-client
+- Row Level Security — https://supabase.com/docs/guides/database/postgres/row-level-security
+- RLS performance — https://supabase.com/kb/troubleshooting/rls-performance-and-best-practices-Z5Jjwv
+- Auth — https://supabase.com/docs/guides/auth · anonymous sign-ins
+  https://supabase.com/docs/guides/auth/auth-anonymous
+- Storage — https://supabase.com/docs/guides/storage
+- Cron (pg_cron) — https://supabase.com/docs/guides/cron
+- Queues (pgmq) — https://supabase.com/docs/guides/queues
+- Vault — https://supabase.com/docs/guides/database/vault
+- pg_net — https://supabase.com/docs/guides/database/extensions/pg_net
+- Database advisors (`supabase db advisors`) — https://supabase.com/docs/guides/observability/advisors
+- Connecting / pooling — https://supabase.com/docs/guides/database/connecting-to-postgres
+- Edge Functions (for modules) — https://supabase.com/docs/guides/functions
+- Pricing / free-plan limits — https://supabase.com/pricing
+- Postgres best-practice rules for agents — https://github.com/supabase-community/supabase-plugin
+
+**Payload CMS**
+
+- Docs — https://payloadcms.com/docs
+- Postgres adapter — https://payloadcms.com/docs/database/postgres
+- Migrations — https://payloadcms.com/docs/database/migrations
+- Transactions — https://payloadcms.com/docs/database/transactions
+- Indexes — https://payloadcms.com/docs/database/indexes
+- Access control — https://payloadcms.com/docs/access-control/overview
+- Hooks — https://payloadcms.com/docs/hooks/overview
+- Local API — https://payloadcms.com/docs/local-api/overview
+- Queries (depth, select, populate) — https://payloadcms.com/docs/queries/overview
+- Versions & drafts — https://payloadcms.com/docs/versions/overview
+- Trash — https://payloadcms.com/docs/trash/overview
+- Jobs Queue — https://payloadcms.com/docs/jobs-queue/overview
+- Custom views — https://payloadcms.com/docs/custom-components/custom-views
+- Rich text (Lexical) — https://payloadcms.com/docs/rich-text/overview
+- Storage adapters — https://payloadcms.com/docs/upload/storage-adapters
+- Plugins — form builder https://payloadcms.com/docs/plugins/form-builder ·
+  SEO https://payloadcms.com/docs/plugins/seo · nested docs
+  https://payloadcms.com/docs/plugins/nested-docs
+- Performance — https://payloadcms.com/docs/performance/overview
+- Drizzle (Payload's ORM, behind `payload.db.drizzle`) — https://orm.drizzle.team/docs/overview
+
+**Payments / AI / auth / MCP**
+
+- Stripe — https://docs.stripe.com · webhooks https://docs.stripe.com/webhooks ·
+  Checkout https://docs.stripe.com/payments/checkout · Billing
+  https://docs.stripe.com/billing · customer portal
+  https://docs.stripe.com/customer-management · testing https://docs.stripe.com/testing
+- AI SDK — https://ai-sdk.dev/docs · Vercel AI Gateway https://vercel.com/docs/ai-gateway
+- Cloudflare Turnstile — https://developers.cloudflare.com/turnstile/
+- MCP — spec https://modelcontextprotocol.io/specification · TypeScript SDK
+  https://github.com/modelcontextprotocol/typescript-sdk
+
+**Hosting / tooling**
+
+- Vercel — https://vercel.com/docs · function limits
+  https://vercel.com/docs/functions/limitations · pricing https://vercel.com/pricing
+- Vitest — https://vitest.dev
+- Playwright — https://playwright.dev/docs/intro
+- ESLint — https://eslint.org/docs/latest · Prettier https://prettier.io/docs
+- Mailpit — https://mailpit.axllent.org/docs/
+- Nodemailer — https://nodemailer.com
+- Claude Code — https://code.claude.com/docs
 
 ## The golden rules (do not violate)
 
@@ -127,8 +252,11 @@ pnpm test:e2e           # Playwright (web E2E). Needs the local stack (pnpm dev:
                         #   outside CI it resets the DB first (the founder flow needs
                         #   zero users; E2E_REUSE_DB=1 skips). Boots `next dev` itself.
                         #   See tooling/web-e2e/README.md.
-pnpm test:rls           # RLS isolation regression. Needs `supabase start` + .env with
+pnpm test:rls           # RLS isolation regression + query-plan checks (plans.test.ts).
+                        #   Needs `supabase start` + .env with
                         #   NEXT_PUBLIC_SUPABASE_URL/ANON_KEY + SUPABASE_SERVICE_ROLE_KEY.
+pnpm db:advisors        # Supabase Security + Performance Advisor lints on the local DB
+                        #   (fails on warnings) — run before committing a migration
 pnpm license:check      # fail on strong copyleft (GPL/AGPL/SSPL) in the prod tree
 ```
 
@@ -175,8 +303,9 @@ echo "scripts/cloud-setup.sh not found; the SessionStart hook will install every
 Cloud-session quirks:
 
 - **`supabase start` must exclude edge-runtime** (`-x edge-runtime`): that container
-  sets rlimits the sandboxed nested-container runtime forbids. Edge functions
-  (Stripe webhook, `reminders-process`) don't run in cloud sessions.
+  sets rlimits the sandboxed nested-container runtime forbids. The kit ships no
+  edge functions (billing, account deletion and reminders run in the Next.js app),
+  so only a module's own edge functions are affected.
 - **Unset optional env vars must be absent, not `""`** — empty strings fail the zod
   schema's `min(1)` checks. `pnpm dev:setup` comments them out when writing `.env`.
 - **`pnpm db:reset` heals a stale gateway** (`scripts/db-reset.sh`): after the reset
@@ -204,8 +333,8 @@ the **full** test matrix, same commands as local:
   `tooling/web-e2e/README.md`). The founder/first-user flow needs a **fresh DB**, so
   `pnpm test:e2e` runs `pnpm db:reset` first outside CI (this removes the dev admin;
   rerun `pnpm dev:setup` afterwards to get it back).
-- Out of scope in cloud sessions: anything needing edge functions (Stripe webhook,
-  `reminders-process`) and `expo` device builds.
+- Out of scope in cloud sessions: a module's own edge functions and `expo` device
+  builds.
 
 **Visual testing:** the desktop Preview pane is local/SSH-only — in cloud sessions
 it is greyed out and there is no embedded browser. Verify UI changes by driving the
@@ -268,7 +397,7 @@ a full registry across six admin groups — **Content** (posts, videos incl. ver
 shorts, audio/podcast episodes, photos, series/courses + lessons, locations, events,
 categories/tags), **Community** (space-groups → community-spaces → community-posts,
 one threaded `comments` system, a `reports` moderation queue), **People** (users,
-device-tokens, feed-tokens, enrollments, reviews), **Commerce**
+feed-tokens, enrollments, reviews), **Commerce**
 (plans/coupons/subscriptions), **Marketing** (pages, onboarding, banners,
 notifications, forms) and **System** (the `legal` documents collection —
 rendered under /legal with a TOC sidebar — alongside the settings globals). Collections live in the `cms` schema and are governed by
@@ -372,7 +501,7 @@ in `@acme/app` (`auth-settings.ts`); the web login-05 UI is `AuthFlow`
 mobile via `GET /api/auth/config` (`useAuthConfig`). Full guide:
 [docs/AUTH.md](https://github.com/vpv-group/dream-starter-kit/blob/main/docs/AUTH.md).
 
-## Payments (Payload ⇄ Stripe via @payloadcms/plugin-stripe)
+## Payments (Payload → Stripe catalog, one Stripe webhook → public)
 
 The billing catalog is **authored in Payload**, not the Stripe dashboard. `Plans`,
 `Coupons` and the read-only `Subscriptions` mirror live under the **Commerce** admin nav
@@ -388,15 +517,20 @@ example plans (Monthly/Annual/Lifetime) + a welcome coupon are seeded by `seedCm
   recreate-on-change rule. A per-doc `skipSync` checkbox opts out; failures land on
   `syncStatus`/`syncError` instead of failing the save; the seed skips the hook
   (`context.skipStripeSync`), so seeded plans stay `unsynced` until first saved.
-- **Stripe → Payload** runs through `@payloadcms/plugin-stripe`'s signature-verified
-  webhook endpoint (`POST /cms-api/stripe/webhooks`, secret
-  `STRIPE_WEBHOOKS_ENDPOINT_SECRET`): `customer.subscription.*` events upsert the
-  read-only CMS `subscriptions` collection (`payload/stripe/webhooks.ts`; user resolved
-  via `public.customers`, plan via `stripePriceId`). The plugin's Stripe REST proxy is
-  **off** (`rest: false`) and its declarative sync is unused (it can't express price
-  immutability/intro coupons). The **edge-function webhook** (separate Stripe endpoint,
-  `STRIPE_WEBHOOK_SECRET`) keeps mirroring products/prices/subscriptions into `public.*`
-  for RLS clients — unchanged.
+- **Stripe → app is ONE webhook** — the billing module's public route
+  `POST /api/mod/billing/stripe/webhook` (`modules/billing/src/server/stripe/webhook.ts`).
+  It writes `public.mod_billing_*`, the **source of truth** web and mobile read under
+  RLS, then projects `customer.subscription.*` into the read-only CMS `subscriptions`
+  collection for /admin (`modules/billing/src/payload/webhooks.ts`). Every Stripe event
+  id is recorded (`mod_billing_webhook_events`), so a redelivery isn't applied twice.
+  Subscription writes go through `mod_billing_apply_subscription()`, which ignores an
+  event older than the one already applied: Stripe doesn't guarantee delivery order.
+  **No dashboard step:** an hourly scheduled check (`GET /api/mod/billing/cron/connect`)
+  registers the endpoint through the Stripe API once `STRIPE_SECRET_KEY` is set and the
+  site has a public https URL. It keeps the signing secret in Supabase Vault;
+  `STRIPE_WEBHOOK_SECRET` overrides it, e.g. for `stripe listen` locally. The old edge
+  function and `@payloadcms/plugin-stripe` endpoint are gone, and
+  `STRIPE_WEBHOOKS_ENDPOINT_SECRET` is deprecated.
 - **Intro offers** ("$1 first month, then $19") = a coupon auto-applied at checkout
   (`once` for one intro period, `repeating` for several; years × 12 → Stripe
   `duration_in_months`). **Repeating** coupons take N months _or_ N years the same way.
@@ -453,8 +587,8 @@ enters the Expo bundle). It's **gated by `MCP_JWT_SECRET`** (`isMcpConfigured`/`
   `fetch`** (ids are `collection:id`). To expose another collection, add it to
   `MCP_COLLECTIONS`.
 * **Notification delivery:** `notify_schedule` writes a `scheduled` Payload `notification`; the
-  **dispatch worker** (`/api/cms/notifications/dispatch`, `CRON_SECRET`-guarded, Vercel Cron —
-  `apps/nextjs/vercel.json`) sends it. See `docs/CMS.md` → `notifications`.
+  **dispatch worker** (`/api/cms/notifications/dispatch`, cron-secret-guarded, Supabase Cron —
+  `kit-notifications-dispatch`) sends it. See `docs/CMS.md` → `notifications`.
 * **Don't hardcode the origin** — absolute URLs (issuer/resource/metadata) come from
   `getSiteUrl()`. Tests: pure logic (pkce/tokens/oauth flow), an in-memory MCP client↔server
   tool test against a fake Payload, and the dispatch worker all run under `pnpm test` (no
@@ -533,6 +667,20 @@ fonts, logo files and how to swap in your own brand.
   release. Apps' `kit-update` PRs only ever merge published releases.
 - **Don't track create-t3-turbo upstream** (see `docs/ARCHITECTURE.md` → Keeping
   dependencies current): snapshot + cherry-pick only. The forked SHA is in `NOTICE`.
+- **Vendor features (free plan first, minimal setup).** This is an open-source
+  starter, so every default must work on each vendor's **free plan** and need no
+  manual dashboard setup beyond pasting API keys.
+  - Prefer a vendor's native feature over hand-rolled code when it is available
+    on the free plan. Examples: Supabase Cron, Queues and Vault; Payload's Jobs
+    Queue, indexes and versions; Next's tagged data cache.
+  - Anything that needs a paid plan must be optional and degrade gracefully.
+  - If a feature needs a secret or an endpoint, have the kit provision it
+    (derive it, store it in Vault, register it through the vendor API) rather
+    than adding a manual step.
+  - **One exception: compliance (SOC 2 / HIPAA) needs paid tiers.** That means
+    BAAs, the Supabase HIPAA add-on, PITR, and providers that will sign a BAA. A
+    compliance module validates those requirements itself; the kit's free-first
+    defaults stay as they are.
 
 ## Staying current with the kit (upstream sync)
 

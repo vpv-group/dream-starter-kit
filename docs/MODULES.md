@@ -90,7 +90,7 @@ the native graph fails the PR.
 | Payload slugs   | `mod-<slug>-*` (labels stay clean)                                              | `mod-billing-plans`         |
 | Web routes      | `/a/<slug>/…` default; validated `mount` overrides                              | billing mounts `/billing`   |
 | Server API      | `/api/mod/<slug>/…`                                                             | `POST /api/mod/chat/stream` |
-| Edge functions  | `<slug>-*`                                                                      | `reminders-process`         |
+| Edge functions  | `<slug>-*` (prefer a cron route + `kit_register_app_schedule`)                  | `chat-adapter-sendblue-*`   |
 | Env vars        | `MOD_<SLUG>_*` (client keys get `NEXT_PUBLIC_`/`EXPO_PUBLIC_` added by codegen) | `MOD_CHAT_MAX_TOKENS`       |
 
 A best-effort SQL lint verifies migrations only DDL tables the manifest
@@ -107,6 +107,58 @@ those tables must be named `mod_<slug>_*` and dropped in `drop.sql`; the
 lint rejects triggers on any other foreign table. Trigger functions should
 be `security definer`, catch their own errors and never block the core
 write.
+
+**Service-only functions.** Module SQL can't GRANT or REVOKE, so a
+function meant for the server (service role, cron) checks its caller itself:
+`if coalesce((select auth.role()), '') in ('authenticated', 'anon') then
+raise exception … using errcode = '42501'`. See
+`mod_notifications_broadcast` and `mod_reminders_claim`.
+
+**Retention and housekeeping.** Nothing grows forever. A module whose
+tables accumulate rows (logs, history, outboxes, dedupe keys) ships a purge
+function and registers it from a migration; the kit's hourly Supabase Cron
+job (`private.run_housekeeping()`) runs it, isolates failures, and writes
+the per-task counts to the audit log. Windows come from the retention
+policy table, never from literals, so a compliance module can raise them
+and a legal hold can pause them:
+
+```sql
+-- in the module's migration
+select public.kit_register_retention('mod_crm_activity', 365, 'CRM activity timeline');
+create or replace function public.mod_crm_purge() returns integer
+language plpgsql security definer set search_path = '' as $$
+declare _cutoff timestamptz := private.retention_cutoff('mod_crm_activity'); _n integer;
+begin
+  if _cutoff is null then return 0; end if;       -- unknown class or legal hold
+  delete from public.mod_crm_activity a where a.id in (
+    select x.id from public.mod_crm_activity x where x.occurred_at < _cutoff limit 10000);
+  get diagnostics _n = row_count; return _n;
+end $$;
+select public.kit_register_housekeeping('public.mod_crm_purge', 'crm');
+
+-- in drop.sql
+select public.kit_unregister_housekeeping('crm');
+```
+
+Batch deletes (≤10k rows per call; the next hourly run drains a backlog), and
+index the column you delete by (BRIN suits append-only timestamps).
+Audit-class data (who did what) is kept on the long `audit` policy, not
+short-purged. Server code can append to the kit's audit log with the
+service-role RPC `audit_log_event(action, actor_id, …)` — IDs and labels
+only, never content or PII.
+
+**Database guardrails.** Two checks run in CI's integration job and are
+worth running before you commit a migration:
+
+- `pnpm db:advisors` — Supabase's Security + Performance Advisor lints
+  (`supabase db advisors --local`): unindexed foreign keys, `auth.uid()` not
+  wrapped in a select, overlapping permissive policies, duplicate indexes,
+  RLS gaps. Fails on any warning.
+- `tooling/rls-tests/src/plans.test.ts` (part of `pnpm test:rls`) — EXPLAINs
+  the hot queries as a signed-in user: a public security-definer function
+  called per row in a policy (`is_org_member(org_id)`) or a per-row SubPlan
+  fails it, and so does a hot query that stops using its index. Add your
+  module's hot queries to it, or mirror it in `tests/rls/`.
 
 **Module tests.** Unit tests live in `modules/<slug>/tests/*.test.ts` and run
 in `pnpm test` (no database). Suites that need the live database go in
@@ -352,7 +404,7 @@ from its host and database (`lib/setup/services-core.ts`):
 | Your site's address | the app resolves a public URL (`NEXT_PUBLIC_SITE_URL` or Vercel's production URL) |
 | Sign-in links and emails | Meet Dream configured Supabase Auth for the site (below) |
 | File uploads | S3 keys are set, or Supabase Storage works with the service key |
-| Scheduled jobs | `CRON_SECRET` is set (meetdream.com/start sets it on Vercel) |
+| Scheduled jobs | Supabase Cron is set up and reaching the app: the jobs exist, the app stored its URL + cron secret in Vault on boot, and the latest call succeeded (`kit_scheduler_status()`). No `CRON_SECRET` needed — it's derived when unset |
 
 **Connect Supabase** fixes the sign-in row: Supabase asks the owner to allow
 Meet Dream's OAuth app, then meetdream.com sets the project's auth site URL,
@@ -439,9 +491,10 @@ updates and free modules work without anyone creating or pasting a key:
    - The registry returns the site key. It is stored in the admin-only
      **System → Site License** global, which shows only its prefix: the full
      key never leaves the server (rotate it from meetdream.com).
-2. **Daily.** Vercel Cron calls `/api/cms/dream-site/report`
-   (`CRON_SECRET`); without the cron, a staff visit to `/admin` does it at
-   most once a day. Each report sends the kit version and any new
+2. **Daily.** The `dream-site-report` Payload job reports in (Supabase Cron
+   runs the Jobs Queue; `/api/cms/dream-site/report` does the same on demand,
+   guarded by the cron secret). Without the scheduler, a staff visit to
+   `/admin` does it at most once a day. Each report sends the kit version and any new
    admin/editor emails. If the key was rotated, the site registers again.
 3. **Upgrading.** The founder signs in at meetdream.com (their account was
    created with that email, unconfirmed and with no email sent). Under

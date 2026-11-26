@@ -1,12 +1,13 @@
 {
   "name": "@acme/mod-reminders",
-  "version": "1.0.0",
+  "version": "1.2.1",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
     "./native": "./src/native/index.ts",
-    "./web": "./src/web/index.ts"
+    "./web": "./src/web/index.ts",
+    "./server": "./src/server/index.ts"
   },
   "license": "Apache-2.0",
   "scripts": {
@@ -20,12 +21,15 @@
   "dependencies": {
     "@acme/api": "workspace:*",
     "@acme/mod-kit": "workspace:*",
+    "@acme/mod-notifications": "workspace:*",
     "@acme/ui": "workspace:*",
     "@acme/ui-native": "workspace:*",
     "@hookform/resolvers": "catalog:",
+    "@supabase/supabase-js": "catalog:",
     "@tanstack/react-query": "catalog:",
     "expo-router": "~58.0.30",
     "react-hook-form": "catalog:",
+    "server-only": "^0.0.1",
     "zod": "catalog:"
   },
   "peerDependencies": {

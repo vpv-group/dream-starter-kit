@@ -20,27 +20,18 @@ export type { NavMenuItem } from "./nav-types";
  * unreachable (fresh deploy before bootstrap, local Postgres down) so the app
  * shell always renders.
  *
- * Per-request memoized via React cache() like every lib/payload.ts reader —
- * no cross-request cache, so menu edits in /admin appear on the next request.
+ * The menu rows come from a cross-request cache (lib/cms/cached-reads.ts)
+ * that saving a nav item or module invalidates, so menu edits in /admin
+ * still appear on the next request; the per-user filtering is per request.
  */
 export const getWebNavItems = cache(async (): Promise<NavMenuItem[]> => {
   try {
-    const { getPayloadClient } = await import("../cms/payload-client");
-    const payload = await getPayloadClient();
-    const [navRes, modRes] = await Promise.all([
-      payload.find({
-        collection: "nav-items",
-        sort: "_order",
-        pagination: false,
-        overrideAccess: true,
-      }),
-      payload.find({
-        collection: "kit-modules",
-        pagination: false,
-        overrideAccess: true,
-      }),
-    ]);
-    const mods = modRes.docs.flatMap((d) =>
+    // Cross-request cached menu rows (invalidated on save); the per-user
+    // filtering below runs on every request.
+    const { readNavSource } = await import("../cms/cached-reads");
+    const source = await readNavSource();
+    const navRes = { docs: source.navItems };
+    const mods = source.modules.flatMap((d) =>
       d.slug ? [{ ...d, slug: d.slug }] : [],
     );
     const disabled = new Set(

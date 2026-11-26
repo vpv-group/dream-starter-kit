@@ -2,12 +2,13 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { env } from "~/env";
+import { isCronAuthorized, resolveCronSecret } from "~/lib/cron-secret";
 import { DAY_MS } from "~/lib/dream/site-core";
 
 /**
  * Daily site-license report (docs/MODULES.md → Site license): registers this
  * deployment with meetdream.com if it hasn't yet, otherwise sends its kit
- * version + staff emails. Vercel Cron (apps/nextjs/vercel.json) sends
+ * version + staff emails. Supabase Cron (`kit-dream-site-report`, daily) sends
  * `Authorization: Bearer ${CRON_SECRET}`. Without CRON_SECRET the same sync
  * runs at most daily when staff open /admin (DreamSiteSync).
  */
@@ -16,13 +17,18 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 async function handler(req: NextRequest): Promise<Response> {
-  if (!env.CRON_SECRET) {
+  const cronEnv = {
+    CRON_SECRET: env.CRON_SECRET,
+    SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_SECRET_KEY: env.SUPABASE_SECRET_KEY,
+  };
+  if (!resolveCronSecret(cronEnv)) {
     return NextResponse.json(
-      { error: "CRON_SECRET is not configured" },
+      { error: "No cron secret: set CRON_SECRET or SUPABASE_SERVICE_ROLE_KEY" },
       { status: 503 },
     );
   }
-  if (req.headers.get("authorization") !== `Bearer ${env.CRON_SECRET}`) {
+  if (!isCronAuthorized(req.headers.get("authorization"), cronEnv)) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
   const { getPayloadClient } = await import("~/lib/cms/payload-client");

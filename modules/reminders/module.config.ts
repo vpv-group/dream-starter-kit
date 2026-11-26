@@ -1,16 +1,16 @@
 import { defineModule } from "@acme/mod-kit";
 
 /**
- * Reminders — scheduled nudges. The `reminders-process` edge function (run on
- * a schedule via pg_cron or an external trigger) finds due reminders, then
- * fans out through the notifications module via its documented SQL
- * contract: insert into mod_notifications + read mod_notifications_push_tokens
+ * Reminders — scheduled nudges. Supabase Cron calls the module's public cron
+ * route (`GET /api/mod/reminders/cron/process`, registered by
+ * supabase/migrations/004_schedule.sql) every minute; it claims due reminders
+ * and delivers them through the notifications module's `notify()` service
  * (declared below via requires + database.dml).
  */
 export default defineModule({
   slug: "reminders",
   name: "Reminders",
-  version: "1.0.0",
+  version: "1.2.1",
   kitCompat: ">=2.0.0 <3",
   description: "Scheduled reminders with push + in-app delivery.",
   requires: ["notifications"],
@@ -42,6 +42,6 @@ export default defineModule({
   },
   widgets: { web: "RemindersWidget", native: "RemindersWidget" },
   server: {
-    edgeFunctions: ["reminders-process"],
+    publicRoutes: true,
   },
 });

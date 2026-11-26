@@ -10,6 +10,11 @@
       "sha256": "3e9f8398b12d2f818eaf417a6a3ff20bcd5d866afbe821a68f2057853d5cca38",
       "target": "20261117192627_mod_billing_002_rename_to_mod_prefix.sql"
     },
+    "billing/003_single_webhook.sql": {
+      "version": "20261125235001",
+      "sha256": "481376e95b6421cf9a9aef3eded0334fa3c77e2760281ecf67a326a91cce43a0",
+      "target": "20261125235001_mod_billing_003_single_webhook.sql"
+    },
     "chat/001_initial.sql": {
       "version": "20260612011539",
       "sha256": "5d8de93e3dd24dbcca2955629de0b89a791e6cd44c1944e4fa3cae5d7cae2d65",
@@ -40,6 +45,11 @@
       "sha256": "f8047e3fd2a4cecf60314d921c6007ca3357880dea917bcc17fc06d58471faa4",
       "target": "20261117192628_mod_chat_006_rename_to_mod_prefix.sql"
     },
+    "chat/007_scale_indexes.sql": {
+      "version": "20261125231717",
+      "sha256": "69415f05a69f20729753ce3d030062f2fd9b31aa2ca7148c22ad7bbb731fb38c",
+      "target": "20261125231717_mod_chat_007_scale_indexes.sql"
+    },
     "demo/001_initial.sql": {
       "version": "20260612100001",
       "sha256": "3d92502cfbf0b105901f6b6beb517f30f6ace3c7f2d3a304d923a0bd2e2bed7e",
@@ -60,6 +70,21 @@
       "sha256": "48a41e73a996c7e61d1189d253097afd81b83b4b0377e82a438a1c7679c79f37",
       "target": "20261125033155_mod_notifications_003_contract.sql"
     },
+    "notifications/004_delivery_fixes.sql": {
+      "version": "20261125230847",
+      "sha256": "c64d44fd528d3724fc893dea37a32749aa57b6338880bd57683cf2de75d40bc4",
+      "target": "20261125230847_mod_notifications_004_delivery_fixes.sql"
+    },
+    "notifications/005_feed_scale.sql": {
+      "version": "20261125231718",
+      "sha256": "2a3ccaf11ca425f5f4fbe814f3fe7cf061e640cc2451339447a0b2af20d7984f",
+      "target": "20261125231718_mod_notifications_005_feed_scale.sql"
+    },
+    "notifications/006_token_compat.sql": {
+      "version": "20261126002840",
+      "sha256": "5ed72861ba1c8fa9271cd68b62a67907c35ec551bb1c9d1842ab02aa4d5954ff",
+      "target": "20261126002840_mod_notifications_006_token_compat.sql"
+    },
     "reminders/001_initial.sql": {
       "version": "20260612011541",
       "sha256": "2d8177544d43067d8cc08517c690cd70e835b3bcbfddfe1570675e1741296459",
@@ -69,6 +94,21 @@
       "version": "20261117192630",
       "sha256": "7a0679321ea8cd5f2a256b761f793954423ac7b0ef57d1b72fa1c0055d603b1c",
       "target": "20261117192630_mod_reminders_002_rename_to_mod_prefix.sql"
+    },
+    "reminders/003_claim.sql": {
+      "version": "20261125230848",
+      "sha256": "3c9086a6ff14674979d43e7fc1986f0b3fea80f71146378ba541f2e36e5e8db4",
+      "target": "20261125230848_mod_reminders_003_claim.sql"
+    },
+    "reminders/004_schedule.sql": {
+      "version": "20261125234501",
+      "sha256": "e308d9ea68ad977c08bfdacd7a6e413e0cf7d4d369986f7e32927882bf0b28aa",
+      "target": "20261125234501_mod_reminders_004_schedule.sql"
+    },
+    "reminders/005_retire_legacy_schedule.sql": {
+      "version": "20261126002841",
+      "sha256": "8575d6d1c8768fbc2a0d0fd117276c82d9040b12afd84204235b204f33d544a3",
+      "target": "20261126002841_mod_reminders_005_retire_legacy_schedule.sql"
     }
   }
 }

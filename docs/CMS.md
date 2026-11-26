@@ -257,8 +257,8 @@ Distinct from editorial `posts`; no drafts — moderation via plain `status`
 (`published`/`pending`/`hidden`/`flagged`, staff-only writes). **Fields:**
 `author`\* (auto-assigned), `space`, optional `title`, `body` (richText),
 `media[]`, `link` (destination), `tags`, `accessLevel`, `commentsEnabled`
-(default true), staff-only `pinned`, read-only
-`likeCount`/`commentCount`/`reportCount`, virtual `authorName`, `publishedAt`;
+(default true), staff-only `pinned`, read-only `reportCount` (recounted when a
+report is filed), virtual `authorName`, `publishedAt`;
 joins `comments`/`reports`. **Access:** read published-or-staff; **create any
 authenticated user**; update/delete `ownsOrStaff("author")`. Hook
 `assignOwner("author")`. Trash.
@@ -268,7 +268,7 @@ authenticated user**; update/delete `ownsOrStaff("author")`. Hook
 Polymorphic `target` → community-posts, posts, videos, audio, photos, events,
 locations; replies via `parent`. **Fields:** `author`_ (auto-assigned),
 `target`_, `parent`, `body`\*, staff-only `status`
-(`pending`/`approved`/`spam`), read-only `likeCount`/`reportCount`, staff-only
+(`pending`/`approved`/`spam`), read-only `reportCount`, staff-only
 `isPinned`, `editedAt`; join `replies`. **Access:** read `approvedOrStaff`;
 **create any authenticated user** (gated by the target's `commentsEnabled` via
 `requireCommentsEnabled`); update/delete `ownsOrStaff("author")`. Trash.
@@ -308,12 +308,10 @@ admin-only `passwordManager`. `email` is admin-only to update and, like
 `canAccessAdmin`; create `isAdmin` (triggers the invite hook); read/update
 `isAdminOrSelf`; delete `isAdmin`. Trash (soft delete; bridge rejects trashed).
 
-### `device-tokens` — push tokens
-
-**Fields:** `user`_ (auto-assigned), unique `token`_, `platform`
-(iOS/Android/Web), `deviceModel`, `appVersion`, `osVersion`, `locale`,
-`pushEnabled`, `lastSeenAt`. **Access:** create any user; the rest
-`ownsOrStaff`.
+Push tokens are not a CMS collection: devices register in
+`public.mod_notifications_push_tokens` (one row per device token, moved to the
+signed-in user by `mod_notifications_register_push_token`). The former
+`device-tokens` collection was never read and has been removed.
 
 ### `feed-tokens` — private podcast feed tokens
 
@@ -375,8 +373,10 @@ read-only `timesRedeemed`, `active`, `appliesTo` (plans), customer-facing
 
 ### `subscriptions` — read-only Stripe mirror
 
-Written exclusively by the plugin-stripe webhook
-(`POST /cms-api/stripe/webhooks`); keyed by unique `stripeSubscriptionID`.
+A read-only projection of `public.mod_billing_subscriptions` (the source of
+truth), written only by the billing module's Stripe webhook
+(`POST /api/mod/billing/stripe/webhook`) after it applies a newer
+`customer.subscription.*` event; keyed by unique `stripeSubscriptionID`.
 **Fields (all read-only):** `user`, `plan`, `coupon`, `status`
 (`trialing`/`active`/`past_due`/`canceled`/`churned`/`paused`), period/trial
 dates, `cancelAtPeriodEnd`, `canceledAt`, `lastPaymentAt`/`lastPaymentAmount`,
@@ -418,8 +418,12 @@ here.)
 `sentAt`/`sentCount`/`openCount`, `status`
 (`draft`/`scheduled`/`sending`/`sent`/`failed`). **Access:** all `isStaff`.
 Trash. **Delivery:** a `scheduled` notification whose `scheduledAt` has passed is
-sent by the dispatch worker at `POST /api/cms/notifications/dispatch`
-(`CRON_SECRET`-guarded, Vercel Cron every minute — `apps/nextjs/vercel.json`).
+sent by the `dispatch-notifications` Payload job (`payload/jobs`, scheduled every
+minute; Supabase Cron runs the Jobs Queue). `POST /api/cms/notifications/dispatch`
+(cron-secret-guarded) runs the same worker on demand. Each due notification is
+claimed atomically, so overlapping runs never send twice; in-app rows go in with
+one set-based, idempotent RPC (`mod_notifications_broadcast`) and push tokens are
+paged, so audiences of any size are complete.
 It resolves the audience (all / `targetUsers` via `cms.users.supabaseUserId` /
 `segment` `{ tags: [...] }`) to Supabase user ids, fans out Expo push and inserts
 in-app feed rows (`public.mod_notifications`), then writes back

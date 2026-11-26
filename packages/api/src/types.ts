@@ -65,15 +65,7 @@ export type Database = {
           occurred_at?: string;
           user_id?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "auth_events_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
+        Relationships: [];
       };
       content_favorites: {
         Row: {
@@ -499,6 +491,8 @@ export type Database = {
           price_id: string | null;
           quantity: number | null;
           status: string | null;
+          stripe_event_at: string | null;
+          updated_at: string;
           user_id: string;
         };
         Insert: {
@@ -509,6 +503,8 @@ export type Database = {
           price_id?: string | null;
           quantity?: number | null;
           status?: string | null;
+          stripe_event_at?: string | null;
+          updated_at?: string;
           user_id: string;
         };
         Update: {
@@ -519,6 +515,8 @@ export type Database = {
           price_id?: string | null;
           quantity?: number | null;
           status?: string | null;
+          stripe_event_at?: string | null;
+          updated_at?: string;
           user_id?: string;
         };
         Relationships: [
@@ -537,6 +535,24 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      mod_billing_webhook_events: {
+        Row: {
+          id: string;
+          received_at: string;
+          type: string;
+        };
+        Insert: {
+          id: string;
+          received_at?: string;
+          type: string;
+        };
+        Update: {
+          id?: string;
+          received_at?: string;
+          type?: string;
+        };
+        Relationships: [];
       };
       mod_chat_channel_contacts: {
         Row: {
@@ -967,7 +983,9 @@ export type Database = {
       };
       mod_reminders: {
         Row: {
+          attempts: number;
           channel: string;
+          claimed_at: string | null;
           created_at: string;
           due_at: string;
           id: string;
@@ -975,7 +993,9 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          attempts?: number;
           channel?: string;
+          claimed_at?: string | null;
           created_at?: string;
           due_at: string;
           id?: string;
@@ -983,7 +1003,9 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          attempts?: number;
           channel?: string;
+          claimed_at?: string | null;
           created_at?: string;
           due_at?: string;
           id?: string;
@@ -1225,6 +1247,18 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      audit_log_event: {
+        Args: {
+          _action: string;
+          _actor_id?: string;
+          _actor_type?: string;
+          _entity_id?: string;
+          _entity_type?: string;
+          _meta?: Json;
+          _org_id?: string;
+        };
+        Returns: number;
+      };
       blocking_owned_workspaces: {
         Args: { _user: string };
         Returns: {
@@ -1236,6 +1270,16 @@ export type Database = {
       check_invitation_for_caller: {
         Args: { _inv: Database["public"]["Tables"]["invitations"]["Row"] };
         Returns: undefined;
+      };
+      cms_user_sync_ack: { Args: { _msg_ids: number[] }; Returns: number };
+      cms_user_sync_enqueue_all: { Args: never; Returns: number };
+      cms_user_sync_read: {
+        Args: { _n?: number; _vt?: number };
+        Returns: {
+          msg_id: number;
+          read_ct: number;
+          user_id: string;
+        }[];
       };
       confirmed_email: { Args: never; Returns: string };
       create_invitations: {
@@ -1324,6 +1368,79 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      kit_register_app_schedule: {
+        Args: { _cron: string; _name: string; _path: string };
+        Returns: undefined;
+      };
+      kit_register_housekeeping: {
+        Args: { _fn: string; _module: string };
+        Returns: undefined;
+      };
+      kit_register_retention: {
+        Args: { _class: string; _description?: string; _keep_days: number };
+        Returns: undefined;
+      };
+      kit_scheduler_status: { Args: never; Returns: Json };
+      kit_unregister_app_schedule: {
+        Args: { _name: string };
+        Returns: undefined;
+      };
+      kit_unregister_housekeeping: {
+        Args: { _module: string };
+        Returns: undefined;
+      };
+      mod_billing_apply_subscription: {
+        Args: { _event_at: string; _row: Json };
+        Returns: boolean;
+      };
+      mod_billing_purge: { Args: never; Returns: number };
+      mod_billing_set_webhook_secret: {
+        Args: { _secret: string };
+        Returns: undefined;
+      };
+      mod_billing_user_id_by_email: {
+        Args: { _email: string };
+        Returns: string;
+      };
+      mod_billing_webhook_secret: { Args: never; Returns: string };
+      mod_notifications_audience: {
+        Args: {
+          _audience: string;
+          _tag_names?: string[];
+          _user_ids?: string[];
+        };
+        Returns: {
+          user_id: string;
+        }[];
+      };
+      mod_notifications_audience_tokens: {
+        Args: {
+          _after?: string;
+          _audience: string;
+          _limit?: number;
+          _tag_names?: string[];
+          _user_ids?: string[];
+        };
+        Returns: {
+          id: string;
+          token: string;
+        }[];
+      };
+      mod_notifications_broadcast: {
+        Args: {
+          _audience?: string;
+          _body?: string;
+          _category: string;
+          _data?: Json;
+          _dedupe_key: string;
+          _source_module?: string;
+          _tag_names?: string[];
+          _title?: string;
+          _url?: string;
+          _user_ids?: string[];
+        };
+        Returns: number;
+      };
       mod_notifications_emit: {
         Args: {
           _actor?: string;
@@ -1342,6 +1459,7 @@ export type Database = {
         };
         Returns: string;
       };
+      mod_notifications_mark_all_read: { Args: never; Returns: number };
       mod_notifications_register_category: {
         Args: {
           _audience?: string;
@@ -1354,9 +1472,23 @@ export type Database = {
         };
         Returns: undefined;
       };
+      mod_notifications_register_push_token: {
+        Args: { _platform: string; _token: string };
+        Returns: undefined;
+      };
+      mod_notifications_unread_count: { Args: never; Returns: number };
       mod_notifications_unregister_module: {
         Args: { _module: string };
         Returns: undefined;
+      };
+      mod_reminders_claim: {
+        Args: { _limit?: number; _stale_after?: string };
+        Returns: {
+          attempts: number;
+          channel: string;
+          id: string;
+          user_id: string;
+        }[];
       };
       my_blocking_workspaces: {
         Args: never;
@@ -1403,7 +1535,7 @@ export type Database = {
       };
       sha256_hex: { Args: { _value: string }; Returns: string };
       workspace_members: {
-        Args: { _org: string };
+        Args: { _after?: string; _limit?: number; _org: string };
         Returns: {
           avatar_url: string;
           display_name: string;

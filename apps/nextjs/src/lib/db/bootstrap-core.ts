@@ -422,3 +422,22 @@ where id = (
   )
   and not exists (select 1 from public.profiles where is_staff)
 `;
+
+/**
+ * The app origin as the DATABASE must call it (Supabase Cron → pg_net →
+ * app). Locally the database runs in Docker, where `localhost` is the
+ * container itself, so loopback hosts become `host.docker.internal`.
+ */
+export function schedulerAppUrl(siteUrl: string): string {
+  try {
+    const url = new URL(siteUrl);
+    if (["localhost", "127.0.0.1", "0.0.0.0", "[::1]"].includes(url.hostname)) {
+      url.hostname = "host.docker.internal";
+    }
+    return url.toString().replace(/\/+$/, "");
+  } catch {
+    return siteUrl;
+  }
+}
+
+export const SCHEDULER_SECRETS_FN = "private.sync_scheduler_secrets(text,text)";

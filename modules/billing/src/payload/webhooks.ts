@@ -1,4 +1,4 @@
-import type { StripeWebhookHandler } from "@payloadcms/plugin-stripe/types";
+import type { Payload } from "payload";
 import type Stripe from "stripe";
 
 import type { ModBillingSubscription as Subscription, User } from "@acme/cms";
@@ -6,14 +6,12 @@ import type { ModBillingSubscription as Subscription, User } from "@acme/cms";
 import { createAdminClient } from "../server/admin-client";
 
 /**
- * Stripe → CMS `subscriptions` mirror, registered with
- * @payloadcms/plugin-stripe for the customer.subscription.* events
- * (POST /cms-api/stripe/webhooks — its own signing secret,
- * STRIPE_WEBHOOKS_ENDPOINT_SECRET, distinct from the Supabase edge
- * function's endpoint which keeps writing public.* for RLS clients).
- *
- * Upserts are keyed by the Stripe subscription id, so out-of-order /
- * duplicate deliveries settle on the latest state. The user is resolved
+ * Stripe → CMS `subscriptions` projection: the read-only admin copy of
+ * public.mod_billing_subscriptions (the source of truth). Called by the ONE
+ * Stripe webhook (POST /api/mod/billing/stripe/webhook,
+ * src/server/stripe/webhook.ts) after it applied a customer.subscription.*
+ * event — and only when that event was the newest, so the projection can't
+ * roll back. Upserts are keyed by the Stripe subscription id. The user is resolved
  * customer id → public.customers (service-role read; allowed server-side per
  * golden rule #2) → cms users by supabaseUserId, with a customer-email
  * fallback for guest checkouts mirrored before the account existed.
@@ -42,11 +40,18 @@ const mapStatus = (
   }
 };
 
-export const syncSubscriptionFromStripe: StripeWebhookHandler<
-  | Stripe.CustomerSubscriptionCreatedEvent
-  | Stripe.CustomerSubscriptionUpdatedEvent
-  | Stripe.CustomerSubscriptionDeletedEvent
-> = async ({ event, payload, stripe }) => {
+export async function syncSubscriptionFromStripe({
+  event,
+  payload,
+  stripe,
+}: {
+  event:
+    | Stripe.CustomerSubscriptionCreatedEvent
+    | Stripe.CustomerSubscriptionUpdatedEvent
+    | Stripe.CustomerSubscriptionDeletedEvent;
+  payload: Payload;
+  stripe: Stripe;
+}): Promise<void> {
   const sub = event.data.object;
   const deleted = event.type === "customer.subscription.deleted";
   const customerId =
@@ -152,4 +157,4 @@ export const syncSubscriptionFromStripe: StripeWebhookHandler<
       overrideAccess: true,
     });
   }
-};
+}

@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 
 import type { NativeNavConfig, NativeNavRow, NavItemRow } from "@acme/app";
+import type { NativeNavigation } from "@acme/cms";
 import { mergeNativeNav, nativeNavVersion } from "@acme/app";
 
 import { desiredNavItems } from "./reconcile-nav";
@@ -38,29 +39,16 @@ export interface LoadedNativeNav {
  */
 export const loadNativeNav = cache(async (): Promise<LoadedNativeNav> => {
   try {
-    const { getPayloadClient } = await import("../cms/payload-client");
-    const payload = await getPayloadClient();
-    const [navRes, modRes, global] = await Promise.all([
-      payload.find({
-        collection: "nav-items",
-        sort: "_order",
-        pagination: false,
-        depth: 1,
-        overrideAccess: true,
-      }),
-      payload.find({
-        collection: "kit-modules",
-        pagination: false,
-        depth: 0,
-        overrideAccess: true,
-      }),
-      payload.findGlobal({
-        slug: "native-navigation",
-        depth: 1,
-        draft: false,
-        overrideAccess: true,
-      }),
+    // Cross-request cached (invalidated when nav items, modules or the
+    // native-navigation global are saved).
+    const { readCachedGlobal, readNavSource } =
+      await import("../cms/cached-reads");
+    const [source, global] = await Promise.all([
+      readNavSource(),
+      readCachedGlobal<NativeNavigation>("native-navigation", 1),
     ]);
+    const navRes = { docs: source.navItems };
+    const modRes = { docs: source.modules };
     if (navRes.docs.length === 0) return defaultLoadedNativeNav();
 
     const navItems: NavItemRow[] = navRes.docs.map((d) => ({

@@ -13,8 +13,10 @@ import { withCmsSchemaHeal } from "./ensure-schema";
  * any other failure propagates to the caller.
  */
 export async function isCmsSeeded(payload: Payload): Promise<boolean> {
+  // count(), not find({ limit: 0 }): limit 0 means "no pagination" in the
+  // Postgres adapter, which loaded EVERY page at depth 2 just to count them.
   const pages = await withCmsSchemaHeal(payload, () =>
-    payload.find({ collection: "pages", limit: 0 }),
+    payload.count({ collection: "pages", overrideAccess: true }),
   );
   return pages.totalDocs > 0;
 }

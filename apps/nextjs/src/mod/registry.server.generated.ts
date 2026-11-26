@@ -12,6 +12,7 @@ import { publicRoutes as publicRoutes_chat_adapter_sendblue } from "@acme/mod-ch
 import { publicRoutes as publicRoutes_chat_adapter_slack } from "@acme/mod-chat-adapter-slack/server";
 import { routes as routes_docs, publicRoutes as publicRoutes_docs } from "@acme/mod-docs/server";
 import { routes as routes_notifications } from "@acme/mod-notifications/server";
+import { publicRoutes as publicRoutes_reminders } from "@acme/mod-reminders/server";
 
 /** slug → authed route table, dispatched by /api/mod/[mod]/[[...route]]. */
 export const modServerRoutes: Record<string, ModRouteTable> = {
@@ -27,4 +28,5 @@ export const modPublicRoutes: Record<string, ModPublicRouteTable> = {
   "chat-adapter-sendblue": publicRoutes_chat_adapter_sendblue,
   "chat-adapter-slack": publicRoutes_chat_adapter_slack,
   "docs": publicRoutes_docs,
+  "reminders": publicRoutes_reminders,
 };

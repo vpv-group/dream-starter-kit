@@ -76,9 +76,9 @@ export const env = createEnv({
     IMAGE_GENERATION_SYSTEM_PROMPT: z.string().min(1).optional(),
     STRIPE_SECRET_KEY: z.string().min(1).optional(),
     STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
-    // Signing secret for the PAYLOAD Stripe webhook endpoint
-    // (/cms-api/stripe/webhooks, via @payloadcms/plugin-stripe) — a separate
-    // Stripe endpoint from the Supabase edge function's STRIPE_WEBHOOK_SECRET.
+    // DEPRECATED and unused (the Payload Stripe endpoint is gone; one webhook
+    // remains — STRIPE_WEBHOOK_SECRET or the Vault-stored secret). Still
+    // accepted so existing deployments don't fail validation; remove it.
     STRIPE_WEBHOOKS_ENDPOINT_SECRET: z.string().min(1).optional(),
     STRIPE_PRICE_MONTHLY: z.string().min(1).optional(),
     STRIPE_PRICE_YEARLY: z.string().min(1).optional(),
@@ -103,6 +103,10 @@ export const env = createEnv({
     // DB_BOOTSTRAP=on (lib/db/preview-guard.ts): a preview of an unmerged
     // branch must never migrate the production database it shares env with.
     VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
+    // Auto-injected by Vercel: part of the CMS cache key
+    // (lib/cms/cached-reads.ts), so a new deployment never serves menus or
+    // settings cached by the previous one.
+    VERCEL_DEPLOYMENT_ID: z.string().min(1).optional(),
     // Dream module registry (docs/MODULES.md → Paid modules). Installs and
     // updates authenticate with this site's own license key (the dream-site
     // global) and the Dream Updates GitHub App: no tokens in env.
@@ -118,7 +122,8 @@ export const env = createEnv({
     // Remote MCP server (packages/mcp). MCP_JWT_SECRET signs OAuth access-token
     // JWTs; the MCP surface is OFF until it's set (isMcpConfigured). MCP_ENABLED
     // is an explicit kill switch. CRON_SECRET guards the scheduled notifications
-    // dispatch route (also read by the reminders-process edge function).
+    // endpoints (Payload jobs runner, module cron routes). Optional: derived
+    // from SUPABASE_SERVICE_ROLE_KEY when unset (lib/cron-secret.ts).
     MCP_JWT_SECRET: z.string().min(1).optional(),
     MCP_ENABLED: z.enum(["on", "off"]).optional(),
     CRON_SECRET: z.string().min(1).optional(),

@@ -67,7 +67,7 @@ export async function seedCmsContent(
   payload: Payload,
   onProgress?: SeedProgress,
 ): Promise<{ seeded: boolean }> {
-  const existingPages = await payload.find({ collection: "pages", limit: 0 });
+  const existingPages = await payload.count({ collection: "pages" });
   if (existingPages.totalDocs > 0) {
     payload.logger.info("CMS already seeded — skipping.");
     return { seeded: false };

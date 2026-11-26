@@ -35,6 +35,8 @@
 import type { SqlMigration } from "./migrations";
 import { env } from "../../env";
 import { resolveCmsCredentials } from "../cms/derived-credentials";
+import { resolveCronSecret } from "../cron-secret";
+import { getSiteUrl } from "../site-url";
 import {
   BOOTSTRAP_LOCK_KEY,
   CMS_ROLE,
@@ -47,6 +49,8 @@ import {
   pgConnectionOptions,
   PROFILE_BACKFILL_SQL,
   resolveAdminDbUrl,
+  SCHEDULER_SECRETS_FN,
+  schedulerAppUrl,
   summarizeDbError,
 } from "./bootstrap-core";
 import { recordBootstrapResult } from "./bootstrap-status";
@@ -95,6 +99,13 @@ export interface BootstrapDeps {
   migrateCms?: () => Promise<void>;
   /** Delay between connect retries — injectable so tests don't wait. */
   sleep?: (ms: number) => Promise<void>;
+  /**
+   * What Supabase Cron needs to call the app (stored in Vault on every boot,
+   * rewritten only when changed). Defaults to the site URL + the resolved
+   * cron secret (explicit CRON_SECRET, else derived from the service-role
+   * key). `null` skips the sync.
+   */
+  schedulerSecrets?: { appUrl?: string; cronSecret?: string } | null;
 }
 
 export interface BootstrapResult {
@@ -321,6 +332,17 @@ async function runBootstrap(deps: BootstrapDeps): Promise<BootstrapResult> {
     NEXT_PHASE: process.env.NEXT_PHASE,
   };
   const migrations = deps.migrations ?? supabaseMigrations;
+  const schedulerSecrets =
+    deps.schedulerSecrets === undefined
+      ? {
+          appUrl: schedulerAppUrl(getSiteUrl()),
+          cronSecret: resolveCronSecret({
+            CRON_SECRET: env.CRON_SECRET,
+            SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
+            SUPABASE_SECRET_KEY: env.SUPABASE_SECRET_KEY,
+          }),
+        }
+      : deps.schedulerSecrets;
   const none: BootstrapResult = {
     skipped: false,
     appliedVersions: [],
@@ -378,6 +400,7 @@ async function runBootstrap(deps: BootstrapDeps): Promise<BootstrapResult> {
       state.cmsSchemaExists &&
       state.pendingCms.length === 0
     ) {
+      await syncSchedulerSecrets(client, schedulerSecrets, log);
       return { ...none, skipped: "up-to-date" };
     }
 
@@ -431,6 +454,8 @@ async function runBootstrap(deps: BootstrapDeps): Promise<BootstrapResult> {
         }
       }
     }
+
+    await syncSchedulerSecrets(client, schedulerSecrets, log);
 
     let cmsRoleCreated = false;
     try {
@@ -496,5 +521,35 @@ async function runBootstrap(deps: BootstrapDeps): Promise<BootstrapResult> {
       }
       await client.end().catch(() => undefined);
     }
+  }
+}
+
+/**
+ * Store the app URL + cron secret in Supabase Vault for the Cron schedules
+ * (supabase/migrations/*_scheduler_retention_audit.sql). Idempotent and
+ * cheap; a rotated service-role key (→ new derived secret) re-syncs on the
+ * next boot. Skipped when the migration that defines the function hasn't run.
+ */
+async function syncSchedulerSecrets(
+  client: BootstrapClient,
+  secrets: { appUrl?: string; cronSecret?: string } | null,
+  log: Pick<Console, "info" | "warn" | "error">,
+): Promise<void> {
+  if (!secrets) return;
+  try {
+    const { rows } = await client.query(
+      `select to_regprocedure($1) is not null as present`,
+      [SCHEDULER_SECRETS_FN],
+    );
+    if (rows[0]?.present !== true) return;
+    await client.query(`select private.sync_scheduler_secrets($1, $2)`, [
+      secrets.appUrl ?? null,
+      secrets.cronSecret ?? null,
+    ]);
+  } catch (error) {
+    log.warn(
+      "[db-bootstrap] couldn't store the scheduler secrets in Vault — Supabase Cron won't call the app until the next boot",
+      summarizeDbError(error),
+    );
   }
 }

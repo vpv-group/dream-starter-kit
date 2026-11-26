@@ -78,6 +78,7 @@ export async function reconcileModules(payload: Payload): Promise<void> {
   const existingMods = await payload.find({
     collection: "kit-modules",
     pagination: false,
+    depth: 0,
     overrideAccess: true,
   });
   const modRowBySlug = new Map(existingMods.docs.map((d) => [d.slug, d]));
@@ -169,6 +170,7 @@ export async function reconcileModules(payload: Payload): Promise<void> {
   const existingNav = await payload.find({
     collection: "nav-items",
     pagination: false,
+    depth: 0,
     overrideAccess: true,
   });
   const navByKey = new Map(existingNav.docs.map((d) => [d.key, d]));

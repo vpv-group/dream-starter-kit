@@ -1,13 +1,3 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "crons": [
-    {
-      "path": "/api/cms/notifications/dispatch",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/cms/dream-site/report",
-      "schedule": "23 5 * * *"
-    }
-  ]
+  "$schema": "https://openapi.vercel.sh/vercel.json"
 }

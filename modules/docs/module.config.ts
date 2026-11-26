@@ -12,7 +12,7 @@ import { defineModule } from "@acme/mod-kit";
 export default defineModule({
   slug: "docs",
   name: "Docs",
-  version: "1.0.0",
+  version: "1.0.1",
   kitCompat: ">=2.0.0 <3",
   description: "Public developer docs with GitHub sync + Ask-AI.",
   nav: {},

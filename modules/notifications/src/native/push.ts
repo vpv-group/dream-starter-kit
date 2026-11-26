@@ -73,14 +73,13 @@ export async function registerForPushNotifications(
     data: { user },
   } = await supabase.auth.getUser();
   if (user) {
-    await supabase.from("mod_notifications_push_tokens").upsert(
-      {
-        user_id: user.id,
-        token,
-        platform: Platform.OS === "ios" ? "ios" : "android",
-      },
-      { onConflict: "user_id,token" },
-    );
+    // A token identifies the DEVICE: the RPC moves it to the signed-in user,
+    // so a shared or re-logged-in device stops receiving the previous
+    // account's pushes.
+    await supabase.rpc("mod_notifications_register_push_token", {
+      _token: token,
+      _platform: Platform.OS === "ios" ? "ios" : "android",
+    });
   }
 
   return token;

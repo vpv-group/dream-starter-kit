@@ -17,10 +17,24 @@ export interface ServiceCheck {
   fix?: { kind: "backend"; provider: "supabase" };
 }
 
+/**
+ * Supabase Cron's state (public.kit_scheduler_status()). Background work needs
+ * no CRON_SECRET: the runtime bootstrap stores the app URL and a derived cron
+ * secret in Supabase Vault, and the cron jobs call the app with them.
+ */
+export interface SchedulerState {
+  /** Jobs scheduled and the app URL + cron secret are in Vault. */
+  configured: boolean;
+  /** Supabase reached the app recently (null: no call recorded yet). */
+  reachable: boolean | null;
+  /** The latest failed call, e.g. "HTTP 401" or a connection error. */
+  lastFailure?: string | null;
+}
+
 export interface ServiceInput {
   /** The public URL the app resolved (getSiteUrl). */
   siteUrl: string;
-  env: { CRON_SECRET?: string };
+  scheduler: SchedulerState;
   /** Uploads work (S3 keys, or Supabase session-token mode — s3-config.ts). */
   storageConfigured: boolean;
   /** Meet Dream configured Supabase Auth for this site (backend connection). */
@@ -40,8 +54,18 @@ function isLocal(url: string): boolean {
   }
 }
 
+function schedulerHint(input: ServiceInput): string {
+  const { scheduler } = input;
+  if (!scheduler.configured) {
+    return "Scheduled jobs start once the app has booted against this database: it stores its address and a cron secret in Supabase Vault for Supabase Cron. Redeploy if this doesn't clear.";
+  }
+  return `Supabase Cron couldn't reach ${input.siteUrl}${
+    scheduler.lastFailure ? ` (${scheduler.lastFailure})` : ""
+  }. Check the site address, and that deployment protection doesn't block /cms-api/payload-jobs/run.`;
+}
+
 export function serviceChecks(input: ServiceInput): ServiceCheck[] {
-  const { env } = input;
+  const { scheduler } = input;
   return [
     {
       key: "site-url",
@@ -67,8 +91,11 @@ export function serviceChecks(input: ServiceInput): ServiceCheck[] {
     {
       key: "cron",
       title: "Scheduled jobs",
-      status: env.CRON_SECRET ? "done" : "needs-you",
-      hint: "Set CRON_SECRET so scheduled notifications and the daily license report run.",
+      status:
+        scheduler.configured && scheduler.reachable !== false
+          ? "done"
+          : "needs-you",
+      hint: schedulerHint(input),
     },
   ];
 }

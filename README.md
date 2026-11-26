@@ -214,7 +214,7 @@ Every variable is validated by a zod schema (`packages/config/env` + each app's
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`                       | ✅      | same                                                                                                                                     |
 | `SUPABASE_SERVICE_ROLE_KEY`                                                             | 🔒      | same (server-only; bypasses RLS)                                                                                                         |
 | `SUPABASE_DB_URL`                                                                       | 🔒      | local default in `.env.example` / hosted pooler URL                                                                                      |
-| `CRON_SECRET`                                                                           | 🔒      | you choose; guards the `reminders-process` function and the notifications dispatch route                                                 |
+| `CRON_SECRET`                                                                           | 🔒      | optional — derived from the service-role key when unset; guards the scheduled endpoints (Supabase Cron → Payload jobs, module cron routes) |
 | `MCP_JWT_SECRET` / `MCP_ENABLED`                                                        | 🔒      | enables the remote MCP server (`openssl rand -base64 32`); `MCP_ENABLED="off"` is a kill switch — see [docs/MCP.md](./docs/MCP.md)       |
 | `NEXT_PUBLIC_APP_URL` / `EXPO_PUBLIC_API_URL`                                           | ✅      | your web origin (LAN IP in mobile dev). On Vercel the web origin is auto-detected — see `NEXT_PUBLIC_SITE_URL`                           |
 | `NEXT_PUBLIC_SITE_URL`                                                                  | ✅      | optional — pin the public web origin to a custom domain; else auto-detected on Vercel / falls back to `NEXT_PUBLIC_APP_URL`              |
@@ -481,22 +481,23 @@ app accepts the publishable and secret keys as its anon and service-role keys.)
 The SQL schema needs **no manual step** — the deployed app applies
 `supabase/migrations` itself on first boot (see Deploy step 3). Pushing by hand still
 works and stays in sync (both write the Supabase CLI's
-`supabase_migrations.schema_migrations` ledger); edge functions and their secrets are
-the part that's still deployed from the CLI:
+`supabase_migrations.schema_migrations` ledger). The kit ships no edge functions, so
+there is nothing else to deploy from the CLI:
 
 ```bash
 supabase link --project-ref <your-ref>
 supabase db push                          # optional — the app already did this on boot
-supabase functions deploy billing-stripe-webhook  # + delete-account, reminders-process
 
 # Module installs + automatic updates need no setup here: connect GitHub once
-# in /admin → Updates (see docs/MODULES.md).
-supabase secrets set STRIPE_SECRET_KEY=… STRIPE_WEBHOOK_SECRET=… CRON_SECRET=…
+# in /admin → Updates (see docs/MODULES.md). No `supabase secrets set` either:
+# Stripe keys live in the host's env (Vercel), and the scheduler's secret is
+# derived and stored in Supabase Vault by the app.
 ```
 
 Enable OAuth providers and set redirect URLs in the Supabase Dashboard (Auth →
-Providers / URL Configuration). Schedule `reminders-process` (pg_cron / a scheduler)
-with the `CRON_SECRET` in the `Authorization` header.
+Providers / URL Configuration). Background work needs no setup: Supabase Cron
+(installed by the migrations) calls the app every minute, using the app URL and
+cron secret the app stores in Supabase Vault when it boots.
 
 ### Content backend (Payload CMS)
 

@@ -68,7 +68,6 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
-    "device-tokens": DeviceToken;
     "feed-tokens": FeedToken;
     enrollments: Enrollment;
     reviews: Review;
@@ -114,7 +113,6 @@ export interface Config {
     users: {
       subscriptions: "mod-billing-subscriptions";
       enrollments: "enrollments";
-      devices: "device-tokens";
     };
     posts: {
       comments: "comments";
@@ -167,7 +165,6 @@ export interface Config {
   };
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
-    "device-tokens": DeviceTokensSelect<false> | DeviceTokensSelect<true>;
     "feed-tokens": FeedTokensSelect<false> | FeedTokensSelect<true>;
     enrollments: EnrollmentsSelect<false> | EnrollmentsSelect<true>;
     reviews: ReviewsSelect<false> | ReviewsSelect<true>;
@@ -233,6 +230,7 @@ export interface Config {
     "mod-billing-settings": ModBillingSetting;
     "mod-chat-settings": ModChatSetting;
     "mod-docs-settings": ModDocsSetting;
+    "payload-jobs-stats": PayloadJobsStat;
   };
   globalsSelect: {
     "site-settings": SiteSettingsSelect<false> | SiteSettingsSelect<true>;
@@ -252,6 +250,8 @@ export interface Config {
       ModChatSettingsSelect<false> | ModChatSettingsSelect<true>;
     "mod-docs-settings":
       ModDocsSettingsSelect<false> | ModDocsSettingsSelect<true>;
+    "payload-jobs-stats":
+      PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
   locale: null;
   widgets: {
@@ -260,6 +260,11 @@ export interface Config {
   user: User;
   jobs: {
     tasks: {
+      "dispatch-notifications": TaskDispatchNotifications;
+      "dream-site-report": TaskDreamSiteReport;
+      "account-erasure": TaskAccountErasure;
+      "favorites-cleanup": TaskFavoritesCleanup;
+      "cms-user-sync": TaskCmsUserSync;
       schedulePublish: TaskSchedulePublish;
       inline: {
         input: unknown;
@@ -468,11 +473,6 @@ export interface User {
   };
   enrollments?: {
     docs?: (number | Enrollment)[];
-    hasNextPage?: boolean;
-    totalDocs?: number;
-  };
-  devices?: {
-    docs?: (number | DeviceToken)[];
     hasNextPage?: boolean;
     totalDocs?: number;
   };
@@ -831,7 +831,6 @@ export interface Comment {
   parent?: (number | null) | Comment;
   body: string;
   status: "pending" | "approved" | "spam";
-  likeCount?: number | null;
   reportCount?: number | null;
   isPinned?: boolean | null;
   editedAt?: string | null;
@@ -938,8 +937,6 @@ export interface CommunityPost {
    */
   pinned?: boolean | null;
   status: "published" | "pending" | "hidden" | "flagged";
-  likeCount?: number | null;
-  commentCount?: number | null;
   reportCount?: number | null;
   authorName?: string | null;
   publishedAt?: string | null;
@@ -2504,29 +2501,6 @@ export interface Enrollment {
   createdAt: string;
 }
 /**
- * Push notification device registrations.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "device-tokens".
- */
-export interface DeviceToken {
-  id: number;
-  user: number | User;
-  /**
-   * FCM/APNs token.
-   */
-  token: string;
-  platform: "ios" | "android" | "web";
-  deviceModel?: string | null;
-  appVersion?: string | null;
-  osVersion?: string | null;
-  locale?: string | null;
-  pushEnabled?: boolean | null;
-  lastSeenAt?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
  * Tokenized private podcast feed URLs.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -3401,7 +3375,14 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: "inline" | "schedulePublish";
+        taskSlug:
+          | "inline"
+          | "dispatch-notifications"
+          | "dream-site-report"
+          | "account-erasure"
+          | "favorites-cleanup"
+          | "cms-user-sync"
+          | "schedulePublish";
         taskID: string;
         input?:
           | {
@@ -3434,10 +3415,29 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ("inline" | "schedulePublish") | null;
+  taskSlug?:
+    | (
+        | "inline"
+        | "dispatch-notifications"
+        | "dream-site-report"
+        | "account-erasure"
+        | "favorites-cleanup"
+        | "cms-user-sync"
+        | "schedulePublish"
+      )
+    | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
+  meta?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -3571,27 +3571,9 @@ export interface UsersSelect<T extends boolean = true> {
   stripeCustomerID?: T;
   subscriptions?: T;
   enrollments?: T;
-  devices?: T;
   updatedAt?: T;
   createdAt?: T;
   deletedAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "device-tokens_select".
- */
-export interface DeviceTokensSelect<T extends boolean = true> {
-  user?: T;
-  token?: T;
-  platform?: T;
-  deviceModel?: T;
-  appVersion?: T;
-  osVersion?: T;
-  locale?: T;
-  pushEnabled?: T;
-  lastSeenAt?: T;
-  updatedAt?: T;
-  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -4324,8 +4306,6 @@ export interface CommunityPostsSelect<T extends boolean = true> {
   commentsEnabled?: T;
   pinned?: T;
   status?: T;
-  likeCount?: T;
-  commentCount?: T;
   reportCount?: T;
   authorName?: T;
   publishedAt?: T;
@@ -4345,7 +4325,6 @@ export interface CommentsSelect<T extends boolean = true> {
   parent?: T;
   body?: T;
   status?: T;
-  likeCount?: T;
   reportCount?: T;
   isPinned?: T;
   editedAt?: T;
@@ -5087,6 +5066,7 @@ export interface PayloadJobsSelect<T extends boolean = true> {
   queue?: T;
   waitUntil?: T;
   processing?: T;
+  meta?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -6054,6 +6034,24 @@ export interface ModDocsSetting {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs-stats".
+ */
+export interface PayloadJobsStat {
+  id: number;
+  stats?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site-settings_select".
  */
 export interface SiteSettingsSelect<T extends boolean = true> {
@@ -6487,6 +6485,16 @@ export interface ModDocsSettingsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs-stats_select".
+ */
+export interface PayloadJobsStatsSelect<T extends boolean = true> {
+  stats?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "collections_widget".
  */
 export interface CollectionsWidget {
@@ -6494,6 +6502,51 @@ export interface CollectionsWidget {
     [k: string]: unknown;
   };
   width: "full";
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskDispatch-notifications".
+ */
+export interface TaskDispatchNotifications {
+  input?: unknown;
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskDream-site-report".
+ */
+export interface TaskDreamSiteReport {
+  input?: unknown;
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskAccount-erasure".
+ */
+export interface TaskAccountErasure {
+  input: {
+    supabaseUserId: string;
+  };
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskFavorites-cleanup".
+ */
+export interface TaskFavoritesCleanup {
+  input: {
+    collection: string;
+    itemId: string;
+  };
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskCms-user-sync".
+ */
+export interface TaskCmsUserSync {
+  input?: unknown;
+  output?: unknown;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

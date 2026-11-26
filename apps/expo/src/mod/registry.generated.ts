@@ -36,14 +36,14 @@ export interface ModNavDefault {
 }
 
 export const modInstalled: ModInstalled[] = [
-  { slug: "billing", name: "Billing", version: "1.0.0", system: true },
-  { slug: "chat", name: "AI Chat", version: "1.0.0", system: false },
+  { slug: "billing", name: "Billing", version: "1.1.0", system: true },
+  { slug: "chat", name: "AI Chat", version: "1.1.0", system: false },
   { slug: "chat-adapter-sendblue", name: "Sendblue Adapter", version: "1.0.0", system: false },
   { slug: "chat-adapter-slack", name: "Slack Adapter", version: "1.0.0", system: false },
   { slug: "dashboard", name: "Dashboard", version: "1.0.0", system: true },
-  { slug: "docs", name: "Docs", version: "1.0.0", system: true },
-  { slug: "notifications", name: "Notifications", version: "1.1.0", system: false },
-  { slug: "reminders", name: "Reminders", version: "1.0.0", system: false },
+  { slug: "docs", name: "Docs", version: "1.0.1", system: true },
+  { slug: "notifications", name: "Notifications", version: "1.3.1", system: false },
+  { slug: "reminders", name: "Reminders", version: "1.2.1", system: false },
 ];
 
 /** Native nav defaults — the bundled first-launch menu (useNativeNav fallback). */

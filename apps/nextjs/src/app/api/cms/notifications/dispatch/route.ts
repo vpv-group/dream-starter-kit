@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { runDispatch } from "@acme/mcp";
 
 import { env } from "~/env";
+import { isCronAuthorized, resolveCronSecret } from "~/lib/cron-secret";
 import { summarizeDbError } from "~/lib/db/bootstrap-core";
 import { createAdminClient } from "~/lib/supabase/admin";
 
@@ -14,10 +15,11 @@ import { createAdminClient } from "~/lib/supabase/admin";
  * the Payload Local API (cms schema) and the service-role Supabase client
  * (public schema: device tokens + mod_notifications); see packages/mcp dispatch.
  *
- * Triggered by Vercel Cron every minute (apps/nextjs/vercel.json). Vercel adds
+ * Triggered by Supabase Cron every minute (`kit-notifications-dispatch`, via
+ * pg_net — supabase/migrations/*_scheduler_retention_audit.sql), which adds
  * `Authorization: Bearer ${CRON_SECRET}` to cron requests; pg_cron / manual
  * callers must send the same header. Modeled on supabase/functions/
- * reminders-process (which dispatches mod_reminders the same way).
+ * the reminders module's cron route (which dispatches mod_reminders the same way).
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,13 +31,18 @@ const getPayloadLazy = async () => {
 };
 
 async function handler(req: NextRequest): Promise<Response> {
-  if (!env.CRON_SECRET) {
+  const cronEnv = {
+    CRON_SECRET: env.CRON_SECRET,
+    SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_SECRET_KEY: env.SUPABASE_SECRET_KEY,
+  };
+  if (!resolveCronSecret(cronEnv)) {
     return NextResponse.json(
-      { error: "CRON_SECRET is not configured" },
+      { error: "No cron secret: set CRON_SECRET or SUPABASE_SERVICE_ROLE_KEY" },
       { status: 503 },
     );
   }
-  if (req.headers.get("authorization") !== `Bearer ${env.CRON_SECRET}`) {
+  if (!isCronAuthorized(req.headers.get("authorization"), cronEnv)) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -53,9 +60,15 @@ async function handler(req: NextRequest): Promise<Response> {
     );
   }
   const admin = createAdminClient();
-  const result = await runDispatch({ payload, admin });
+  const { claimScheduledNotification } =
+    await import("~/lib/cms/claim-notification");
+  const result = await runDispatch({
+    payload,
+    admin,
+    claim: (id) => claimScheduledNotification(payload, id),
+  });
   return NextResponse.json(result);
 }
 
-// Vercel Cron sends GET; allow POST for pg_cron / manual triggering.
+// Supabase Cron sends GET; POST works for manual triggering.
 export { handler as GET, handler as POST };

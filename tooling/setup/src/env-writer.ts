@@ -86,8 +86,8 @@ export function buildLocalEnv(input: {
       'AI_GATEWAY_API_KEY="dummy-local-key-not-real"',
     ],
     [
-      /^STRIPE_WEBHOOKS_ENDPOINT_SECRET=.*$/gm,
-      'STRIPE_WEBHOOKS_ENDPOINT_SECRET="whsec_e2e_test_secret"',
+      /^#? ?STRIPE_WEBHOOK_SECRET=.*$/gm,
+      'STRIPE_WEBHOOK_SECRET="whsec_e2e_test_secret"',
     ],
   ];
   let text = input.example;
@@ -141,10 +141,10 @@ export function buildCiEnv(status: SupabaseStatus): string {
     "# takes — both are derived from SUPABASE_SERVICE_ROLE_KEY (+ the",
     "# admin DB URL) by lib/cms/derived-credentials.ts, and the runtime",
     "# bootstrap creates the payload_cms role with the derived password.",
-    "# Throwaway signing secret for the Payload Stripe webhook endpoint so",
-    "# subscription.spec.ts can exercise the mirror with self-signed events",
+    "# Throwaway signing secret for the billing Stripe webhook so",
+    "# subscription.spec.ts can exercise it with self-signed events",
     "# (no Stripe account involved; never used against the Stripe API).",
-    "STRIPE_WEBHOOKS_ENDPOINT_SECRET=whsec_e2e_test_secret",
+    "STRIPE_WEBHOOK_SECRET=whsec_e2e_test_secret",
     "NEXT_PUBLIC_CMS_URL=http://localhost:3000",
     `S3_ENDPOINT=${apiUrl}/storage/v1/s3`,
     "S3_REGION=local",

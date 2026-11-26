@@ -5,7 +5,7 @@ import { isCmsSeeded } from "./seed-status";
 
 function fakePayload(totalDocs: number): Payload {
   return {
-    find: () => Promise.resolve({ totalDocs }),
+    count: () => Promise.resolve({ totalDocs }),
   } as unknown as Payload;
 }
 
@@ -20,7 +20,7 @@ describe("isCmsSeeded", () => {
 
   it("propagates non-42P01 query failures to the caller", async () => {
     const payload = {
-      find: () => Promise.reject(new Error("connection refused")),
+      count: () => Promise.reject(new Error("connection refused")),
     } as unknown as Payload;
     await expect(isCmsSeeded(payload)).rejects.toThrow("connection refused");
   });
