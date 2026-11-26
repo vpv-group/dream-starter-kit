@@ -57,6 +57,7 @@ import { ModuleSettingsRedirect as ModuleSettingsRedirect_d8a20bc588dcf26827ccf7
 import { UpdatesView as UpdatesView_12eb572e6e090fae1d07aeebe9547c8d } from '~/payload/components/updates/UpdatesView'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 import { ModuleAdminSettings as ModuleAdminSettings_6fc8f7dd5c1ebbd6556166b197418f34 } from '~/payload/components/ModuleAdminSettings'
+import { LabelRowLabel as LabelRowLabel_5eaf297a4b8a4736f5a55eb7cd0def54 } from '~/payload/components/LabelRowLabel'
 import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
 
 /** @type import('payload').ImportMap */
@@ -120,5 +121,6 @@ export const importMap = {
   "~/payload/components/updates/UpdatesView#UpdatesView": UpdatesView_12eb572e6e090fae1d07aeebe9547c8d,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,
   "~/payload/components/ModuleAdminSettings#ModuleAdminSettings": ModuleAdminSettings_6fc8f7dd5c1ebbd6556166b197418f34,
+  "~/payload/components/LabelRowLabel#LabelRowLabel": LabelRowLabel_5eaf297a4b8a4736f5a55eb7cd0def54,
   "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24
 }

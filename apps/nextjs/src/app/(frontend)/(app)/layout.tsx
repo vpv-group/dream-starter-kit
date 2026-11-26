@@ -12,6 +12,7 @@ import { ReloadOnBfcacheRestore } from "~/components/reload-on-bfcache-restore";
 import { SiteHeader } from "~/components/site-header";
 import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
 import { HomeGettingStarted } from "~/components/workspaces/home-getting-started";
+import { WorkspaceViewClientProvider } from "~/components/workspaces/workspace-view-switcher";
 import { disabledModuleSlugs } from "~/lib/mod/enabled";
 import { getWebNavItems } from "~/lib/mod/nav";
 import { flattenNav } from "~/lib/mod/nav-tree";
@@ -19,7 +20,7 @@ import { getWebTabMenu } from "~/lib/mod/web-tab-menu";
 import { getAuthSettings, getBranding } from "~/lib/payload";
 import { createClient } from "~/lib/supabase/server";
 import { buildChecklist } from "~/lib/workspaces/checklist";
-import { getWorkspaceContext } from "~/lib/workspaces/server";
+import { getWorkspaceContext, getWorkspaceView } from "~/lib/workspaces/server";
 
 /**
  * Server-side guard for the authenticated area (belt-and-suspenders with
@@ -103,6 +104,14 @@ export default async function AppLayout({
     }
   }
 
+  // Workspace scope (docs/WORKSPACES.md → Staff workspace view): staff pick
+  // any workspace in the header switcher; members see their active one.
+  // Modules read it with useWorkspaceView() — UI scoping only, RLS decides.
+  const view =
+    isStaff || settings.accountModel !== "consumer"
+      ? await getWorkspaceView(isStaff)
+      : { orgId: null, name: null, logoUrl: null, isStaffView: false };
+
   return (
     <BrandingProvider value={branding}>
       {/* After logout, Back must not restore this entitled shell from bfcache
@@ -125,13 +134,29 @@ export default async function AppLayout({
             (62px bar + its bottom offset + a 12px gap); 0 on desktop.
             Full-height screens (chat) subtract it. */}
         <SidebarInset className="[--app-bottom-inset:calc(62px_+_max(20px,env(safe-area-inset-bottom))_+_12px)] lg:[--app-bottom-inset:0px]">
-          <SiteHeader isStaff={isStaff} navItems={flatNav} />
-          <AppModWidgetsProvider disabledSlugs={disabledSlugs}>
-            {gettingStarted ? (
-              <HomeGettingStarted data={gettingStarted} />
-            ) : null}
-            {children}
-          </AppModWidgetsProvider>
+          <WorkspaceViewClientProvider
+            value={{
+              orgId: view.orgId,
+              name: view.name,
+              isStaffView: view.isStaffView,
+            }}
+          >
+            <SiteHeader
+              isStaff={isStaff}
+              navItems={flatNav}
+              workspaceSwitcher={
+                isStaff
+                  ? { label: settings.workspaceLabel, logoUrl: view.logoUrl }
+                  : null
+              }
+            />
+            <AppModWidgetsProvider disabledSlugs={disabledSlugs}>
+              {gettingStarted ? (
+                <HomeGettingStarted data={gettingStarted} />
+              ) : null}
+              {children}
+            </AppModWidgetsProvider>
+          </WorkspaceViewClientProvider>
           <div aria-hidden className="h-(--app-bottom-inset) shrink-0" />
         </SidebarInset>
         <GlassTabBar tabs={tabMenu.tabs} all={tabMenu.all} routes={flatNav} />

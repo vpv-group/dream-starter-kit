@@ -247,6 +247,13 @@ fields })` from `./payload` and set `cms.hasSettings: true`. The fields
   `updateModuleSettings(payload, settings, data, { req })`. `afterChange`
   hooks set on `settings.global.hooks` run when the module's page is saved,
   with the module's settings as `doc`. Secrets stay in the zod env schema.
+  - **Array row labels:** modules can't add Payload import-map entries, so
+    the kit pins one generic row label. Set
+    `admin: { components: { RowLabel: ROW_LABEL_COMPONENT } }` on an array
+    field (`ROW_LABEL_COMPONENT` from `@acme/mod-kit/payload`, kit ≥ 2.6)
+    and its rows read "Backlog · backlog" (the row's `label`, `name` or
+    `title`, then its `key`, plus an "archived" pill when `archived` is
+    set) instead of "Row 01".
   - **Upgrading from kit ≤2.1:** settings used to be a separate global at
     `/admin/globals/mod-<slug>-settings`. On first boot the reconcile copies
     a saved global onto the module's row once (`settingsCopied`); the old

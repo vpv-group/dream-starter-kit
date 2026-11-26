@@ -35,6 +35,14 @@ export type { ChangePasswordResult } from "./hooks/use-account";
 export { useDeleteAccount, SoleOwnerError } from "./hooks/use-delete-account";
 export { useUserTags } from "./hooks/use-tags";
 export type { UserTag } from "./hooks/use-tags";
+export {
+  WorkspaceViewProvider,
+  useWorkspaceView,
+  useSetWorkspaceView,
+  useStaffWorkspaces,
+  staffWorkspacesKey,
+} from "./hooks/use-workspace-view";
+export type { WorkspaceView, StaffWorkspace } from "./hooks/use-workspace-view";
 export { useNavMenu } from "./hooks/use-nav-menu";
 export type { NavMenuEntry } from "./hooks/use-nav-menu";
 export { useNativeNav, defaultNativeNavConfig } from "./hooks/use-native-nav";

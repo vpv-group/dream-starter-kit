@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { Payload } from "payload";
 import { describe, expect, it } from "vitest";
 
@@ -8,6 +9,7 @@ import {
   defineModuleSettings,
   getAdapterSettings,
   getModuleSettings,
+  ROW_LABEL_COMPONENT,
   settingsGroupName,
   updateModuleSettings,
 } from "./payload";
@@ -164,5 +166,18 @@ describe("module settings on the kit-modules row", () => {
     expect(updates).toEqual([
       expect.objectContaining({ id: 7, data: { mod_chat: { maxHistory: 9 } } }),
     ]);
+  });
+});
+
+describe("ROW_LABEL_COMPONENT", () => {
+  it("is pinned in the host's import map", () => {
+    const importMap = readFileSync(
+      new URL(
+        "../../../apps/nextjs/src/app/(payload)/admin/importMap.js",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    expect(importMap).toContain(`"${ROW_LABEL_COMPONENT}"`);
   });
 });

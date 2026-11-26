@@ -1806,6 +1806,16 @@ export type Database = {
         Returns: undefined;
       };
       sha256_hex: { Args: { _value: string }; Returns: string };
+      staff_workspaces: {
+        Args: { _ids?: string[]; _limit?: number; _q?: string };
+        Returns: {
+          id: string;
+          logo_url: string;
+          member_count: number;
+          name: string;
+          slug: string;
+        }[];
+      };
       workspace_members: {
         Args: { _after?: string; _limit?: number; _org: string };
         Returns: {

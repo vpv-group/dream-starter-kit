@@ -17,6 +17,16 @@ import { settingsGlobalSlug } from "./validate";
  * and is reachable only from the web/server side — never from clients.
  */
 
+/**
+ * The kit's generic array RowLabel (kit ≥ 2.6): shows a row's `label` /
+ * `name` / `title`, its `key` and an "archived" pill instead of "Row 01".
+ * Modules can't add import-map entries, so the host pins this one
+ * (payload.config.ts → admin.dependencies). Use it as
+ * `admin: { components: { RowLabel: ROW_LABEL_COMPONENT } }` on an array.
+ */
+export const ROW_LABEL_COMPONENT =
+  "~/payload/components/LabelRowLabel#LabelRowLabel";
+
 const STAFF_ROLES = ["admin", "editor"];
 
 const roles = (req: { user?: unknown }): string[] =>

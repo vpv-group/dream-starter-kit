@@ -228,6 +228,15 @@ One framed card with a flush body, laid out top to bottom:
 Tables scroll horizontally inside the inset panel on small screens. The page itself
 never scrolls sideways.
 
+**In code:** `DataTable` from `@acme/ui/data-table` inside `<Card variant="framed">`
+→ `<CardContent className="p-0">`. Columns are `{ id, header, cell, sortValue?,
+align?, enableHiding? }`; pass `data` (paged) or `groups` (collapsible sections — a
+record may sit in several). Put search and `Filters` (`@acme/ui/filters`) in
+`toolbar`, the view switcher in `toolbarEnd`, bulk actions in `selectionActions`.
+Evaluate a filter query with `matchesFilters` from `@acme/ui/filters-query` (pure,
+also usable on the server and on native), and keep it in the URL with
+`encodeFilters` / `decodeFilters`.
+
 ### 4.4 Record form (create / edit)
 
 - **Container:** a `Dialog`. Use `sm:max-w-2xl` for record forms with two-column
@@ -294,6 +303,12 @@ text-primary-foreground`, upcoming steps are `bg-muted`, and a closed-lost or
   keys to move between columns).
 - Dropping a card writes the new value at once (optimistic update). On failure it
   rolls back with a toast.
+
+**In code:** `Board` + `BoardCard` from `@acme/ui/board`. Render `columns` from your
+data and apply `onMove` (`{ itemId, fromColumn, toColumn, toIndex, beforeId,
+afterId }`) optimistically. Keyboard: focus a card, Space picks it up, arrows move,
+Space drops, Esc cancels, Enter opens (`onOpenItem`). Set `column.disabled` for
+columns that can't take drops.
 
 ### 4.7 Lists inside cards (task rows, compact items)
 
@@ -388,12 +403,12 @@ tone is used consistently as a **dot** (tables, filters, board columns), a **bad
 
 ## 7. Where it lives in code
 
-| Layer             | Package                      | Contents                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| ----------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tokens            | `tooling/tailwind/theme.css` | colours, status tones, radius, shadows (BRAND.md)                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| Primitives        | `@acme/ui`                   | button, badge (tones `neutral` / `info` / `success` / `warning` / `danger`), card (`variant="framed"`, `size="sm"`), input, select, field, dropdown-menu, separator, dialog, alert-dialog, sheet, tabs (`variant="line"`), popover, command (cmdk), checkbox, avatar, tooltip, skeleton, progress, textarea, switch, table, toggle, toggle-group, radio-group, scroll-area, alert, kbd, empty, status-dot (`Tone`). Not in the kit yet: calendar, chart, combobox (compose popover + command) |
-| Generic blocks    | `@acme/ui`                   | page header, stat tile, data-table shell (toolbar / selection bar / pagination), filters builder, status dot + tone map type, empty state, board (kanban) shell, timeline                                                                                                                                                                                                                                                                                                                     |
-| Domain composites | the owning module            | e.g. the CRM's record form, path, related lists and pipeline board, all built from the blocks above                                                                                                                                                                                                                                                                                                                                                                                           |
+| Layer             | Package                      | Contents                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ----------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tokens            | `tooling/tailwind/theme.css` | colours, status tones, radius, shadows (BRAND.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Primitives        | `@acme/ui`                   | button, badge (tones `neutral` / `info` / `success` / `warning` / `danger`), card (`variant="framed"`, `size="sm"`), input, select, field, dropdown-menu, separator, dialog, alert-dialog, sheet, tabs (`variant="line"`), popover, command (cmdk), checkbox, avatar, tooltip, skeleton, progress, textarea, switch, table, toggle, toggle-group, radio-group, scroll-area, alert, kbd, empty, status-dot (`Tone`), calendar, date-picker (`yyyy-MM-dd` values). Not in the kit yet: chart, combobox (compose popover + command) |
+| Generic blocks    | `@acme/ui`                   | **Shipped (kit 2.6):** `data-table` (toolbar / selection bar / sortable headers / Columns menu / groups / pagination, client or server), `filters` + `filters-query` (chips builder; pure matcher and URL encoding), `board` (kanban shell: columns, sortable cards, keyboard dragging), status dot + tone map type, empty state. **Not yet:** page header, stat tile, timeline                                                                                                                                                  |
+| Domain composites | the owning module            | e.g. the CRM's record form, path, related lists and pipeline board, all built from the blocks above                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 Existing pages keep the current card look. The framed variant is opt-in
 (`<Card variant="framed">`), so adopting the system is incremental. The `/admin`
