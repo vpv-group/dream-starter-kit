@@ -21,21 +21,24 @@ installed modules need.
 
    ```js
    // modules/<slug>/app.plugin.js
-   const { withPlugins } = require("expo/config-plugins");
+   // Require the package's plugin directly: it's the module's dependency,
+   // so a plugin *name* wouldn't resolve from the app. Plugins built from
+   // TypeScript export `default`.
+   const imagePicker = require("expo-image-picker/app.plugin");
+   const withImagePicker = imagePicker.default ?? imagePicker;
 
    module.exports = (config) =>
-     withPlugins(config, [
-       [
-         "expo-image-picker",
-         { photosPermission: "Attach photos to your tasks." },
-       ],
-     ]);
+     withImagePicker(config, {
+       photosPermission: "Attach photos to your tasks.",
+       microphonePermission: false, // also removes RECORD_AUDIO on Android
+     });
    ```
 
    Export it from `package.json` (`"./app.plugin.js": "./app.plugin.js"`)
    and set `native: { plugin: true }` in `module.config.ts`. `pnpm mod sync`
    adds the module to `apps/expo/src/mod/plugins.generated.json`, which
    `app.config.ts` appends to its `plugins`.
+
 3. **Import the package from `./native` only** (Metro sees `.` and `./native`;
    see [MODULES.md](./MODULES.md) → Bundle safety).
 
