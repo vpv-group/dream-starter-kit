@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { lstatSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -44,9 +44,86 @@ const baseRef = (slug: string) => `refs/mod-base/${slug}`;
 /** Where snapshots lived before modules (once "extensions") were renamed. */
 const legacyBaseRef = (slug: string) => `refs/ext-base/${slug}`;
 
+/** NUL-separated `git ls-files` output, as a list. */
+function lsFiles(repoRoot: string, args: string[]): string[] {
+  return execFileSync("git", ["ls-files", "-z", ...args], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  })
+    .split("\0")
+    .filter(Boolean);
+}
+
+const existsOnDisk = (file: string) => {
+  try {
+    lstatSync(file); // lstat: a dangling symlink still counts
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * The files of modules/<slug>/ as git sees them: everything the repo tracks
+ * that is still on disk, plus untracked files .gitignore doesn't exclude.
+ * Ignored files never count, even though an installed module has plenty of
+ * them (node_modules/ full of pnpm symlinks, .cache/tsbuildinfo.json,
+ * node_modules/.vite, .turbo/): they are not module source, the working tree
+ * never commits them, and in a snapshot they read as local modifications.
+ */
+export function moduleFiles(repoRoot: string, slug: string): string[] {
+  const dir = `modules/${slug}`;
+  const tracked = lsFiles(repoRoot, ["--", dir]);
+  const untracked = lsFiles(repoRoot, [
+    "--others",
+    "--exclude-standard",
+    "--",
+    dir,
+  ]);
+  return [...new Set([...tracked, ...untracked])]
+    .filter((file) => !file.endsWith("/")) // a nested repo, not a file
+    .filter((file) => existsOnDisk(path.join(repoRoot, file)))
+    .sort();
+}
+
+/**
+ * Write the tree of the CURRENT worktree state of modules/<slug>/ (exactly
+ * moduleFiles(), through a throwaway index) and return its sha.
+ */
+export function writeModuleTree(repoRoot: string, slug: string): string {
+  const indexFile = path.join(
+    mkdtempSync(path.join(tmpdir(), "mod-index-")),
+    "index",
+  );
+  const env = { ...process.env, GIT_INDEX_FILE: indexFile };
+  const run = (args: string[], input?: string) =>
+    execFileSync("git", args, {
+      cwd: repoRoot,
+      encoding: "utf8",
+      env,
+      input,
+      maxBuffer: 64 * 1024 * 1024,
+    }).trim();
+  try {
+    run(["read-tree", "--empty"]);
+    const files = moduleFiles(repoRoot, slug);
+    if (files.length > 0) {
+      run(
+        ["update-index", "--add", "-z", "--stdin"],
+        files.map((file) => `${file}\0`).join(""),
+      );
+    }
+    return run(["write-tree"]);
+  } finally {
+    rmSync(path.dirname(indexFile), { recursive: true, force: true });
+  }
+}
+
 /**
  * Synthetic commit of the CURRENT worktree state of modules/<slug>/ (no
  * ref update) — the building block for snapshots and three-way merges.
+ * Ignored files are left out (see moduleFiles).
  */
 export function commitModuleTree(
   repoRoot: string,
@@ -54,26 +131,31 @@ export function commitModuleTree(
   message: string,
   parent?: string,
 ): string {
-  const indexFile = path.join(
-    mkdtempSync(path.join(tmpdir(), "mod-index-")),
-    "index",
+  const tree = writeModuleTree(repoRoot, slug);
+  return commitTree(repoRoot, [
+    tree,
+    ...(parent ? ["-p", parent] : []),
+    "-m",
+    message,
+  ]);
+}
+
+/**
+ * Extract `modules/<slug>` of a tree-ish into `dest`, with the module folder
+ * as the root (symlinks and file modes kept, as git stores them).
+ */
+export function exportModuleTree(
+  repoRoot: string,
+  slug: string,
+  treeish: string,
+  dest: string,
+): void {
+  const archive = execFileSync(
+    "git",
+    ["archive", "--format=tar", `${treeish}:modules/${slug}`],
+    { cwd: repoRoot, maxBuffer: 1024 * 1024 * 1024 },
   );
-  const env = { ...process.env, GIT_INDEX_FILE: indexFile };
-  const run = (args: string[]) =>
-    execFileSync("git", args, { cwd: repoRoot, encoding: "utf8", env }).trim();
-  try {
-    run(["read-tree", "--empty"]);
-    run(["add", "-f", `modules/${slug}`]);
-    const tree = run(["write-tree"]);
-    return commitTree(repoRoot, [
-      tree,
-      ...(parent ? ["-p", parent] : []),
-      "-m",
-      message,
-    ]);
-  } finally {
-    rmSync(path.dirname(indexFile), { recursive: true, force: true });
-  }
+  execFileSync("tar", ["-x", "-C", dest], { input: archive });
 }
 
 export function currentBase(repoRoot: string, slug: string): string | null {
@@ -147,7 +229,12 @@ export function snapshotModule(
   return commit;
 }
 
-/** Files under modules/<slug>/ differing from the pinned pristine base. */
+/**
+ * Files under modules/<slug>/ differing from the pinned pristine base. The
+ * worktree side is the module as moduleFiles() sees it, so a just-vendored
+ * module that isn't committed yet, or one with untracked new files, compares
+ * correctly, and ignored files (node_modules/, .cache/) never count.
+ */
 export function modifiedFiles(
   repoRoot: string,
   slug: string,
@@ -158,6 +245,7 @@ export function modifiedFiles(
       "diff",
       "--name-only",
       baseCommit,
+      writeModuleTree(repoRoot, slug),
       "--",
       `modules/${slug}`,
     ]);

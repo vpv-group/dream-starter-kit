@@ -1,16 +1,25 @@
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { git, snapshotModule, supportsMergeBase } from "./git";
-import { mergeUpstream, parseSource } from "./lifecycle";
+import type { ModulesLock } from "./lock";
+import { git, modifiedFiles, snapshotModule, supportsMergeBase } from "./git";
+import {
+  eject,
+  EJECT_GITIGNORE,
+  ensureEjectGitignore,
+  mergeUpstream,
+  parseSource,
+} from "./lifecycle";
 
 describe("parseSource", () => {
   it("resolves a relative zip against the directory pnpm was run in", () => {
@@ -175,5 +184,140 @@ describe("mergeUpstream failure", () => {
 
     expect(read(repo, "a.txt")).toBe("a local\n");
     expect(git(repo, ["rev-parse", "refs/mod-base/demo"])).toBe(oldBase);
+  });
+});
+
+describe("eject", () => {
+  beforeEach(() => {
+    // The ejected repo's commit uses the user's identity; CI may have none.
+    vi.stubEnv("GIT_AUTHOR_NAME", "test");
+    vi.stubEnv("GIT_AUTHOR_EMAIL", "test@example.com");
+    vi.stubEnv("GIT_COMMITTER_NAME", "test");
+    vi.stubEnv("GIT_COMMITTER_EMAIL", "test@example.com");
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  /** A kit repo with modules/demo installed, committed, and built. */
+  function kitWithInstalledModule(): string {
+    const repo = tempDir("mod-eject-test-");
+    git(repo, ["init", "-q"]);
+    git(repo, ["config", "user.email", "test@example.com"]);
+    git(repo, ["config", "user.name", "test"]);
+    writeFiles(repo, { ".gitignore": "node_modules\n.cache\n" });
+    writeFiles(path.join(repo, "modules/demo"), {
+      "package.json": "{}\n",
+      "src/index.ts": "export {};\n",
+    });
+    const lock: ModulesLock = {
+      lockVersion: 1,
+      modules: {
+        demo: {
+          version: "1.2.0",
+          kitCompat: "*",
+          source: "local",
+          stubs: [],
+          edgeFunctions: [],
+        },
+      },
+      tombstones: {},
+    };
+    writeFiles(repo, { "modules.lock": `${JSON.stringify(lock, null, 2)}\n` });
+    git(repo, ["add", "-A"]);
+    git(repo, ["commit", "-q", "-m", "init"]);
+    // What `pnpm install` + a test run leave in an installed module.
+    const dir = path.join(repo, "modules/demo");
+    mkdirSync(path.join(dir, "node_modules/@acme"), { recursive: true });
+    symlinkSync("../../../config", path.join(dir, "node_modules/@acme/x"));
+    writeFiles(dir, {
+      "node_modules/.vite/vitest/results.json": "{}\n",
+      ".cache/tsbuildinfo.json": "{}\n",
+    });
+    return repo;
+  }
+
+  function bareRemote(): string {
+    const remote = path.join(tempDir("mod-eject-remote-"), "demo.git");
+    git(path.dirname(remote), ["init", "-q", "--bare", remote]);
+    return remote;
+  }
+
+  const readLockFile = (repo: string) =>
+    JSON.parse(
+      readFileSync(path.join(repo, "modules.lock"), "utf8"),
+    ) as ModulesLock;
+
+  it("pushes only module source, then pins the lock to the new repo", async () => {
+    const repo = kitWithInstalledModule();
+    const remote = bareRemote();
+
+    await eject(repo, "demo", remote);
+
+    expect(files(remote, "v1.2.0")).toEqual([
+      ".gitignore",
+      "package.json",
+      "src/index.ts",
+    ]);
+    expect(git(remote, ["show", "v1.2.0:.gitignore"]).split("\n")).toEqual(
+      EJECT_GITIGNORE,
+    );
+    const entry = readLockFile(repo).modules.demo;
+    expect(entry?.source).toEqual({
+      type: "github",
+      repo: remote,
+      ref: "v1.2.0",
+      commit: git(remote, ["rev-parse", "main"]),
+    });
+    const base = entry?.baseCommit ?? "";
+    expect(files(repo, base)).toEqual([
+      "modules/demo/package.json",
+      "modules/demo/src/index.ts",
+    ]);
+    expect(modifiedFiles(repo, "demo", base)).toEqual([]);
+  });
+
+  it("keeps the prepared repo when the push fails, and --resume finishes", async () => {
+    const repo = kitWithInstalledModule();
+    const missing = path.join(tempDir("mod-eject-none-"), "nope.git");
+    const before = readFileSync(path.join(repo, "modules.lock"), "utf8");
+
+    const err = await eject(repo, "demo", missing).then(
+      () => null,
+      (e: unknown) => e as Error,
+    );
+
+    expect(err?.message).toMatch(/pushing demo to .* failed/);
+    const kept = /--resume (\S+)/.exec(err?.message ?? "")?.[1] ?? "";
+    dirs.push(kept);
+    expect(err?.message).toContain(`The module repo is ready at ${kept}`);
+    expect(existsSync(path.join(kept, ".git"))).toBe(true);
+    expect(readFileSync(path.join(repo, "modules.lock"), "utf8")).toBe(before);
+
+    const remote = bareRemote();
+    await eject(repo, "demo", remote, { resume: kept });
+
+    expect(existsSync(kept)).toBe(false);
+    expect(files(remote, "v1.2.0")).not.toContain("node_modules/@acme/x");
+    expect(readLockFile(repo).modules.demo?.source).toMatchObject({
+      repo: remote,
+      commit: git(remote, ["rev-parse", "main"]),
+    });
+  });
+});
+
+describe("ensureEjectGitignore", () => {
+  it("adds only the entries a module's own .gitignore lacks", () => {
+    const dir = tempDir("mod-gitignore-test-");
+    writeFiles(dir, { ".gitignore": "node_modules/\n.env" });
+
+    ensureEjectGitignore(dir);
+    ensureEjectGitignore(dir);
+
+    expect(readFileSync(path.join(dir, ".gitignore"), "utf8")).toBe(
+      ["node_modules/", ".env", ...EJECT_GITIGNORE.slice(1)].join("\n") + "\n",
+    );
   });
 });
