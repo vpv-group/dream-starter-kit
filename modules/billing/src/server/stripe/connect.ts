@@ -43,7 +43,7 @@ export type ConnectResult =
  * and read by the webhook. Idempotent: an existing endpoint with a stored
  * secret is left alone; one without a usable secret is replaced.
  *
- * Runs even when STRIPE_WEBHOOK_SECRET is set: installs upgraded from 2.3
+ * Runs even when STRIPE_WEBHOOK_SECRET is set: installs upgraded from 2.4 or earlier
  * have that set for the old edge-function endpoint, and would otherwise
  * never get the new one (the webhook accepts either secret). An endpoint at
  * the new URL that you created yourself — with its secret in

@@ -280,7 +280,7 @@ export async function handleStripeWebhook(
 
   const payload = await req.text();
   // Either secret may have signed it: STRIPE_WEBHOOK_SECRET (an endpoint you
-  // manage, or a pre-2.4 install's) or the one the app registered (Vault).
+  // manage, or a pre-2.5 install's) or the one the app registered (Vault).
   let event: Stripe.Event | null = null;
   let lastError = "unknown";
   for (const secret of secrets) {
@@ -527,7 +527,7 @@ export async function handleStripeWebhook(
 
 /**
  * The signing secrets a delivery may carry: STRIPE_WEBHOOK_SECRET when set
- * (an endpoint you manage — or, on installs upgraded from 2.3, the old edge
+ * (an endpoint you manage — or, on installs upgraded from 2.4 or earlier, the old edge
  * function's secret), then the one `ensureStripeWebhook()` stored in Supabase
  * Vault when it registered the endpoint through the Stripe API. Vault value
  * cached per instance.
