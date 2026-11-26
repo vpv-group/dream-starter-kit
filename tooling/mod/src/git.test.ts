@@ -1,4 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -7,7 +13,10 @@ import {
   commitModuleTree,
   currentBase,
   git,
+  modifiedFiles,
+  moduleFiles,
   rerootLegacyBase,
+  snapshotModule,
   supportsMergeBase,
 } from "./git";
 
@@ -90,6 +99,87 @@ describe("commitModuleTree without a git identity", () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+});
+
+/**
+ * An installed module: source files plus what `pnpm install` and a build
+ * leave behind (pnpm's node_modules symlinks, a tsbuildinfo cache), under
+ * the kit's own ignore rules.
+ */
+function installedModule(repo: string): void {
+  writeFileSync(path.join(repo, ".gitignore"), "node_modules\n.cache\n");
+  const dir = path.join(repo, "modules/demo");
+  mkdirSync(path.join(dir, "src"), { recursive: true });
+  writeFileSync(path.join(dir, "package.json"), "{}\n");
+  writeFileSync(path.join(dir, "src/index.ts"), "export {};\n");
+  mkdirSync(path.join(dir, "node_modules/.bin"), { recursive: true });
+  mkdirSync(path.join(dir, "node_modules/@acme"), { recursive: true });
+  symlinkSync("../../../config", path.join(dir, "node_modules/@acme/config"));
+  symlinkSync(
+    "../vitest/vitest.mjs",
+    path.join(dir, "node_modules/.bin/vitest"),
+  );
+  mkdirSync(path.join(dir, "node_modules/.vite"), { recursive: true });
+  writeFileSync(path.join(dir, "node_modules/.vite/results.json"), "{}\n");
+  mkdirSync(path.join(dir, ".cache"), { recursive: true });
+  writeFileSync(path.join(dir, ".cache/tsbuildinfo.json"), "{}\n");
+}
+
+const SOURCE_FILES = ["modules/demo/package.json", "modules/demo/src/index.ts"];
+
+describe("module snapshots skip ignored files", () => {
+  it("leaves node_modules/ and .cache/ out of the snapshot", () => {
+    const repo = tempRepo();
+    installedModule(repo);
+
+    expect(moduleFiles(repo, "demo")).toEqual(SOURCE_FILES);
+    const base = snapshotModule(repo, "demo", "1.0.0");
+    expect(files(repo, base)).toEqual(SOURCE_FILES);
+  });
+
+  it("has no modified files right after a snapshot, committed or not", () => {
+    const repo = tempRepo();
+    installedModule(repo);
+    const base = snapshotModule(repo, "demo", "1.0.0");
+
+    // Just vendored (`pnpm mod add`): nothing tracked yet.
+    expect(modifiedFiles(repo, "demo", base)).toEqual([]);
+    // After the user commits it (and after `pnpm mod eject`).
+    git(repo, ["add", "-A"]);
+    git(repo, ["commit", "-q", "-m", "add demo"]);
+    expect(modifiedFiles(repo, "demo", base)).toEqual([]);
+  });
+
+  it("reports edits, deletions and untracked new files", () => {
+    const repo = tempRepo();
+    installedModule(repo);
+    const base = snapshotModule(repo, "demo", "1.0.0");
+    git(repo, ["add", "-A"]);
+    git(repo, ["commit", "-q", "-m", "add demo"]);
+
+    writeFileSync(path.join(repo, "modules/demo/src/index.ts"), "edit\n");
+    rmSync(path.join(repo, "modules/demo/package.json"));
+    writeFileSync(path.join(repo, "modules/demo/src/new.ts"), "new\n");
+    writeFileSync(path.join(repo, "modules/demo/.cache/more.json"), "{}\n");
+
+    expect(modifiedFiles(repo, "demo", base)).toEqual([
+      "modules/demo/package.json",
+      "modules/demo/src/index.ts",
+      "modules/demo/src/new.ts",
+    ]);
+  });
+
+  it("keeps a file the repo tracks even when it matches an ignore rule", () => {
+    const repo = tempRepo();
+    installedModule(repo);
+    writeFileSync(path.join(repo, "modules/demo/.cache/keep.json"), "{}\n");
+    git(repo, ["add", "-f", "modules/demo/.cache/keep.json"]);
+
+    expect(moduleFiles(repo, "demo")).toEqual([
+      "modules/demo/.cache/keep.json",
+      ...SOURCE_FILES,
+    ]);
   });
 });
 

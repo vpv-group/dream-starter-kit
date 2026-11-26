@@ -56,7 +56,9 @@ Commands:
   list | status [--json] [--check]
                              Installed modules, local modifications, and
                              (--check) upstream update availability.
-  eject <slug> --repo <url>  Publish a local module to its own GitHub repo.
+  eject <slug> --repo <url> [--resume <dir>]
+                             Publish a local module to its own GitHub repo.
+                             --resume pushes the repo a failed eject kept.
   payload-migrate <slug> <desc>
                              Create a cms migration and relocate it into the
                              module (§3.2 wrapper).
@@ -133,8 +135,10 @@ async function main(): Promise<void> {
     case "eject": {
       const repo = flagValue("--repo");
       if (!args[0] || !repo)
-        throw new Error("usage: pnpm mod eject <slug> --repo <url>");
-      await eject(root, args[0], repo);
+        throw new Error(
+          "usage: pnpm mod eject <slug> --repo <url> [--resume <dir>]",
+        );
+      await eject(root, args[0], repo, { resume: flagValue("--resume") });
       return;
     }
     case "payload-migrate":
