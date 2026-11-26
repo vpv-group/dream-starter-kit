@@ -307,7 +307,11 @@ pnpm mod add dream:<slug>[@x.y.z] # from the Dream registry (below); a bare
 pnpm mod update <slug> [--to vX.Y.Z] [--from <url|dream:<slug>>] [--continue]
 pnpm mod remove <slug> [--keep-data]
 pnpm mod list | status [--json] [--check]
-pnpm mod eject <slug> --repo <url>
+pnpm mod eject <slug> --repo <url> [--resume <dir>]
+                                  # publish: pushes the module's tracked and
+                                  #   non-ignored files (never node_modules/ or
+                                  #   .cache/) + a .gitignore; on a failed push
+                                  #   it keeps the repo and prints --resume <dir>
 pnpm mod payload-migrate <slug> <desc>
 pnpm mod sync                     # after ANY change under modules/
 ```

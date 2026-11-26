@@ -22,11 +22,13 @@ import {
   checkoutModuleTree,
   commitModuleTree,
   currentBase,
+  exportModuleTree,
   git,
   mergeTrees,
   modifiedFiles,
   rerootLegacyBase,
   snapshotModule,
+  writeModuleTree,
 } from "./git";
 import { installWorkspace } from "./install";
 import { readLock, readPins, writeLock } from "./lock";
@@ -830,43 +832,143 @@ export async function payloadMigrate(
   );
 }
 
-/** `pnpm mod eject <slug> --repo <url>` — publish to its own repo. */
+/** What an ejected module repo never commits (merged into its .gitignore). */
+export const EJECT_GITIGNORE = [
+  "node_modules/",
+  ".turbo/",
+  ".cache/",
+  ".vite/",
+  "coverage/",
+  "*.tsbuildinfo",
+];
+
+/** Add the EJECT_GITIGNORE entries a module's own .gitignore lacks. */
+export function ensureEjectGitignore(dir: string): void {
+  const file = path.join(dir, ".gitignore");
+  const current = existsSync(file) ? readFileSync(file, "utf8") : "";
+  const have = new Set(current.split("\n").map((l) => l.trim()));
+  const missing = EJECT_GITIGNORE.filter((entry) => !have.has(entry));
+  if (missing.length === 0) return;
+  const sep = current === "" || current.endsWith("\n") ? "" : "\n";
+  writeFileSync(file, `${current}${sep}${missing.join("\n")}\n`);
+}
+
+/**
+ * The module repo eject pushes, built in a temp dir: the module's files as
+ * git sees them (tracked + untracked-but-not-ignored — never node_modules/,
+ * .cache/ or other build output), the module CI template and a .gitignore,
+ * committed on `main` and tagged v<version>. Removes the dir on failure.
+ */
+function prepareEjectRepo(
+  repoRoot: string,
+  slug: string,
+  version: string,
+): string {
+  const tmp = mkdtempSync(path.join(tmpdir(), "mod-eject-"));
+  try {
+    exportModuleTree(repoRoot, slug, writeModuleTree(repoRoot, slug), tmp);
+    // Drop in the template module CI (validates tag/version match, then
+    // installs the module into a fresh kit clone and runs the full gates).
+    const ciTemplate = toAbs(repoRoot, "tooling/mod/templates/module-ci.yml");
+    if (existsSync(ciTemplate)) {
+      cpSync(ciTemplate, path.join(tmp, ".github/workflows/ci.yml"));
+    }
+    ensureEjectGitignore(tmp);
+    const run = (args: string[]) =>
+      execFileSync("git", args, { cwd: tmp, stdio: "pipe", encoding: "utf8" });
+    run(["init", "-b", "main"]);
+    run(["add", "-A"]);
+    run(["commit", "-m", `${slug} v${version}`]);
+    run(["tag", `v${version}`]);
+    return tmp;
+  } catch (err) {
+    rmSync(tmp, { recursive: true, force: true });
+    throw err;
+  }
+}
+
+/**
+ * `pnpm mod eject <slug> --repo <url> [--resume <dir>]` — publish to its own
+ * repo, then pin the lock to it (source + a fresh pristine base).
+ *
+ * When the push fails the prepared repo is kept and the lock is left alone;
+ * the error names the dir, and `--resume <dir>` pushes that same repo and
+ * finishes the eject (re-running without it would build a new root commit the
+ * remote then rejects).
+ */
 // eslint-disable-next-line @typescript-eslint/require-await
 export async function eject(
   repoRoot: string,
   slug: string,
   repoUrl: string,
+  opts: { resume?: string } = {},
 ): Promise<void> {
   const lock = readLock(repoRoot);
   const entry = lock.modules[slug];
   if (!entry) throw new Error(`"${slug}" is not installed`);
+  const tag = `v${entry.version}`;
 
-  const tmp = mkdtempSync(path.join(tmpdir(), "mod-eject-"));
-  cpSync(toAbs(repoRoot, `modules/${slug}`), tmp, { recursive: true });
-  // Drop in the template module CI (validates tag/version match, then
-  // installs the module into a fresh kit clone and runs the full gates).
-  const ciTemplate = toAbs(repoRoot, "tooling/mod/templates/module-ci.yml");
-  if (existsSync(ciTemplate)) {
-    cpSync(ciTemplate, path.join(tmp, ".github/workflows/ci.yml"));
+  let tmp: string;
+  if (opts.resume) {
+    tmp = path.resolve(opts.resume);
+    if (!existsSync(path.join(tmp, ".git"))) {
+      throw new Error(
+        `${tmp} is not the repo an earlier eject prepared (no .git) — ` +
+          `run \`pnpm mod eject ${slug} --repo ${repoUrl}\` without --resume`,
+      );
+    }
+  } else {
+    tmp = prepareEjectRepo(repoRoot, slug, entry.version);
   }
   const run = (args: string[]) =>
     execFileSync("git", args, { cwd: tmp, stdio: "pipe", encoding: "utf8" });
-  run(["init", "-b", "main"]);
-  run(["add", "-A"]);
-  run(["commit", "-m", `${slug} v${entry.version}`]);
-  run(["tag", `v${entry.version}`]);
-  run(["remote", "add", "origin", repoUrl]);
-  run(["push", "-u", "origin", "main", "--tags"]);
+  try {
+    run(["rev-parse", "--verify", "--quiet", `refs/tags/${tag}`]);
+  } catch {
+    throw new Error(
+      `${tmp} has no ${tag} tag — it was prepared for another version of ` +
+        `${slug}; run \`pnpm mod eject ${slug} --repo ${repoUrl}\` without --resume`,
+    );
+  }
   const commit = run(["rev-parse", "HEAD"]).trim();
+
+  try {
+    const remotes = run(["remote"]).split("\n");
+    run(
+      remotes.includes("origin")
+        ? ["remote", "set-url", "origin", repoUrl]
+        : ["remote", "add", "origin", repoUrl],
+    );
+    run(["push", "-u", "origin", "main", `refs/tags/${tag}`]);
+  } catch (err) {
+    const stderr = (err as { stderr?: string | Buffer }).stderr
+      ?.toString()
+      .trim();
+    throw new Error(
+      [
+        `pushing ${slug} to ${repoUrl} failed` +
+          (stderr ? `:\n${stderr.replace(/^/gm, "  ")}` : "."),
+        "",
+        `The module repo is ready at ${tmp}`,
+        `(commit ${commit.slice(0, 12)} on main, tag ${tag}); modules.lock was not changed.`,
+        "Remaining steps:",
+        `  1. Fix the cause: the repo must exist, be empty, and accept your push.`,
+        `  2. pnpm mod eject ${slug} --repo ${repoUrl} --resume ${tmp}`,
+        `     (pushes main + ${tag} from that dir, pins modules.lock to the new`,
+        `     repo, then deletes the dir)`,
+      ].join("\n"),
+      { cause: err },
+    );
+  }
   rmSync(tmp, { recursive: true, force: true });
 
   entry.source = {
     type: "github",
     repo: repoUrl,
-    ref: `v${entry.version}`,
+    ref: tag,
     commit,
   };
   entry.baseCommit = snapshotModule(repoRoot, slug, entry.version);
   writeLock(repoRoot, lock);
-  console.log(`Ejected ${slug} to ${repoUrl} (tag v${entry.version}).`);
+  console.log(`Ejected ${slug} to ${repoUrl} (tag ${tag}).`);
 }
