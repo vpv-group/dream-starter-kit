@@ -3123,6 +3123,26 @@ export interface KitModule {
      * An idea stage key (Ideas & Roadmap tab). Its posts move to the mapped status; voters get one “shipped” notification. Empty = don't move ideas.
      */
     changelogShipStage?: string | null;
+    gh?: {
+      enabled?: boolean | null;
+      /**
+       * Each row maps an issue state to an idea stage key. Going either way, the first matching row wins; unmapped states and stages don't sync.
+       */
+      map?:
+        | {
+            ext: "unstarted" | "started" | "completed" | "canceled";
+            stage: string;
+            direction: "both" | "inbound" | "outbound";
+            id?: string | null;
+          }[]
+        | null;
+      /**
+       * An open issue with one of these labels counts as started; moving an idea to a started stage adds the first one.
+       */
+      inProgressLabels?: string[] | null;
+      newIssueLabels?: string[] | null;
+      backlinkComment?: boolean | null;
+    };
     tags?:
       | {
           name: string;
@@ -5128,6 +5148,22 @@ export interface KitModulesSelect<T extends boolean = true> {
         changelogReactions?: T;
         changelogShare?: T;
         changelogShipStage?: T;
+        gh?:
+          | T
+          | {
+              enabled?: T;
+              map?:
+                | T
+                | {
+                    ext?: T;
+                    stage?: T;
+                    direction?: T;
+                    id?: T;
+                  };
+              inProgressLabels?: T;
+              newIssueLabels?: T;
+              backlinkComment?: T;
+            };
         tags?:
           | T
           | {
@@ -6639,6 +6675,26 @@ export interface ModFeedbackSetting {
    * An idea stage key (Ideas & Roadmap tab). Its posts move to the mapped status; voters get one “shipped” notification. Empty = don't move ideas.
    */
   changelogShipStage?: string | null;
+  gh?: {
+    enabled?: boolean | null;
+    /**
+     * Each row maps an issue state to an idea stage key. Going either way, the first matching row wins; unmapped states and stages don't sync.
+     */
+    map?:
+      | {
+          ext: "unstarted" | "started" | "completed" | "canceled";
+          stage: string;
+          direction: "both" | "inbound" | "outbound";
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * An open issue with one of these labels counts as started; moving an idea to a started stage adds the first one.
+     */
+    inProgressLabels?: string[] | null;
+    newIssueLabels?: string[] | null;
+    backlinkComment?: boolean | null;
+  };
   tags?:
     | {
         name: string;
@@ -7184,6 +7240,22 @@ export interface ModFeedbackSettingsSelect<T extends boolean = true> {
   changelogReactions?: T;
   changelogShare?: T;
   changelogShipStage?: T;
+  gh?:
+    | T
+    | {
+        enabled?: T;
+        map?:
+          | T
+          | {
+              ext?: T;
+              stage?: T;
+              direction?: T;
+              id?: T;
+            };
+        inProgressLabels?: T;
+        newIssueLabels?: T;
+        backlinkComment?: T;
+      };
   tags?:
     | T
     | {

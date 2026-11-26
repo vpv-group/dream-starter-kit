@@ -128,7 +128,14 @@ export const ideaRoutes: ModRouteTable = {
         .is("deleted_at", null)
         .order("vote_count", { ascending: false }),
     );
-    return ok({ idea, posts });
+    const links = must(
+      await ctx.supabase
+        .from("mod_feedback_issue_links")
+        .select("*")
+        .eq("idea_id", id)
+        .order("provider"),
+    );
+    return ok({ idea, posts, links });
   }),
 
   "POST /staff/ideas": staff(async (req, ctx) => {

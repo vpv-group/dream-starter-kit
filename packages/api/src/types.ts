@@ -1264,6 +1264,118 @@ export type Database = {
           },
         ];
       };
+      mod_feedback_integrations: {
+        Row: {
+          capabilities: Json;
+          created_at: string;
+          cursor: string | null;
+          enabled: boolean;
+          label: string;
+          last_error: string | null;
+          last_synced_at: string | null;
+          provider: string;
+          route_base: string;
+        };
+        Insert: {
+          capabilities?: Json;
+          created_at?: string;
+          cursor?: string | null;
+          enabled?: boolean;
+          label: string;
+          last_error?: string | null;
+          last_synced_at?: string | null;
+          provider: string;
+          route_base: string;
+        };
+        Update: {
+          capabilities?: Json;
+          created_at?: string;
+          cursor?: string | null;
+          enabled?: boolean;
+          label?: string;
+          last_error?: string | null;
+          last_synced_at?: string | null;
+          provider?: string;
+          route_base?: string;
+        };
+        Relationships: [];
+      };
+      mod_feedback_issue_links: {
+        Row: {
+          backlink_comment_id: string | null;
+          created_at: string;
+          external_id: string;
+          id: string;
+          idea_id: string;
+          key: string;
+          labels: string[];
+          last_synced_at: string | null;
+          linked_by: string | null;
+          provider: string;
+          state_category: string;
+          state_raw: string;
+          sync_enabled: boolean;
+          title: string;
+          url: string;
+        };
+        Insert: {
+          backlink_comment_id?: string | null;
+          created_at?: string;
+          external_id: string;
+          id?: string;
+          idea_id: string;
+          key: string;
+          labels?: string[];
+          last_synced_at?: string | null;
+          linked_by?: string | null;
+          provider: string;
+          state_category?: string;
+          state_raw?: string;
+          sync_enabled?: boolean;
+          title?: string;
+          url: string;
+        };
+        Update: {
+          backlink_comment_id?: string | null;
+          created_at?: string;
+          external_id?: string;
+          id?: string;
+          idea_id?: string;
+          key?: string;
+          labels?: string[];
+          last_synced_at?: string | null;
+          linked_by?: string | null;
+          provider?: string;
+          state_category?: string;
+          state_raw?: string;
+          sync_enabled?: boolean;
+          title?: string;
+          url?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mod_feedback_issue_links_idea_id_fkey";
+            columns: ["idea_id"];
+            isOneToOne: false;
+            referencedRelation: "mod_feedback_ideas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "mod_feedback_issue_links_linked_by_fkey";
+            columns: ["linked_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "mod_feedback_issue_links_provider_fkey";
+            columns: ["provider"];
+            isOneToOne: false;
+            referencedRelation: "mod_feedback_integrations";
+            referencedColumns: ["provider"];
+          },
+        ];
+      };
       mod_feedback_post_tags: {
         Row: {
           post_id: string;
@@ -1599,6 +1711,50 @@ export type Database = {
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      mod_feedback_sync_outbox: {
+        Row: {
+          attempts: number;
+          created_at: string;
+          desired_stage: string;
+          done_at: string | null;
+          id: number;
+          last_error: string | null;
+          link_id: string;
+          next_attempt_at: string;
+          provider: string;
+        };
+        Insert: {
+          attempts?: number;
+          created_at?: string;
+          desired_stage: string;
+          done_at?: string | null;
+          id?: never;
+          last_error?: string | null;
+          link_id: string;
+          next_attempt_at?: string;
+          provider: string;
+        };
+        Update: {
+          attempts?: number;
+          created_at?: string;
+          desired_stage?: string;
+          done_at?: string | null;
+          id?: never;
+          last_error?: string | null;
+          link_id?: string;
+          next_attempt_at?: string;
+          provider?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mod_feedback_sync_outbox_link_id_fkey";
+            columns: ["link_id"];
+            isOneToOne: false;
+            referencedRelation: "mod_feedback_issue_links";
             referencedColumns: ["id"];
           },
         ];
@@ -2398,6 +2554,15 @@ export type Database = {
         }[];
       };
       mod_feedback_readable_board_ids: { Args: never; Returns: string[] };
+      mod_feedback_register_provider: {
+        Args: {
+          _capabilities?: Json;
+          _label: string;
+          _provider: string;
+          _route_base: string;
+        };
+        Returns: undefined;
+      };
       mod_feedback_require_staff: { Args: never; Returns: undefined };
       mod_feedback_set_idea_stage: {
         Args: {
@@ -2442,6 +2607,10 @@ export type Database = {
       mod_feedback_slugify: { Args: { _text: string }; Returns: string };
       mod_feedback_unmerge_post: {
         Args: { _source: string };
+        Returns: undefined;
+      };
+      mod_feedback_unregister_provider: {
+        Args: { _provider: string };
         Returns: undefined;
       };
       mod_notifications_audience: {

@@ -34,6 +34,7 @@ import * as migration_20261126_024654_notifications_attempts_receipts from './20
 import * as migration_20261126_040551_nav_groups from './20261126_040551_nav_groups';
 import * as migration_20261126_201522_mod_feedback_initial from './20261126_201522_mod_feedback_initial';
 import * as migration_20261126_203722_mod_feedback_ideas from './20261126_203722_mod_feedback_ideas';
+import * as migration_20261126_211703_mod_feedback_changelog from './20261126_211703_mod_feedback_changelog';
 
 export const migrations = [
   {
@@ -215,5 +216,10 @@ export const migrations = [
     up: migration_20261126_203722_mod_feedback_ideas.up,
     down: migration_20261126_203722_mod_feedback_ideas.down,
     name: '20261126_203722_mod_feedback_ideas',
+  },
+  {
+    up: migration_20261126_211703_mod_feedback_changelog.up,
+    down: migration_20261126_211703_mod_feedback_changelog.down,
+    name: '20261126_211703_mod_feedback_changelog',
   },
 ];

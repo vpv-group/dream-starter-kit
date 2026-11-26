@@ -224,6 +224,14 @@ endpoints (`isCronRequest`) are public routes too.
   that repo. With GitHub unconnected, calls answer 503
   `github_not_connected`, so modules must keep working without it.
 
+**Extending another module.** A module can be built to be extended by
+adapter modules, the way `chat` takes channel adapters and `feedback` takes
+issue trackers: the core exports a typed contract plus a route factory from
+a server-only entry (`@acme/mod-feedback/integrations`), adapters declare
+`requires: ["<core>"]`, mount the factory's routes, register themselves in
+the core's table from a migration (`mod_feedback_register_provider(...)`),
+and contribute a settings tab with `defineAdapterSettings({ target })`.
+
 **Anonymous-user data.** A module that lets anonymous users own rows
 registers two SQL functions from a migration:
 `select public.kit_register_anon_data('<slug>', 'public.mod_<slug>_merge_anon', 'public.mod_<slug>_anon_has_data');`.

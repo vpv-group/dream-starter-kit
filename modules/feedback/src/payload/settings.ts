@@ -482,6 +482,116 @@ export const settings = defineModuleSettings({
           ],
         },
         {
+          label: "Integrations",
+          description:
+            "Link ideas to issues in your project tracker and keep their status in sync both ways. GitHub works through the repository connected in /admin → Updates; Jira, Linear and Asana come as adapter modules with their own tabs.",
+          fields: [
+            {
+              // Short names: generated table/enum names stay under Postgres's
+              // 63-character limit (labels carry the readable names).
+              name: "gh",
+              label: "GitHub",
+              type: "group",
+              fields: [
+                {
+                  name: "enabled",
+                  label: "Sync with GitHub issues",
+                  type: "checkbox",
+                  defaultValue: true,
+                },
+                {
+                  name: "map",
+                  label: "Status mapping",
+                  type: "array",
+                  labels: { singular: "Mapping", plural: "Mappings" },
+                  admin: {
+                    description:
+                      "Each row maps an issue state to an idea stage key. Going either way, the first matching row wins; unmapped states and stages don't sync.",
+                  },
+                  defaultValue: [
+                    { ext: "unstarted", stage: "planned", direction: "both" },
+                    { ext: "started", stage: "in-progress", direction: "both" },
+                    { ext: "completed", stage: "shipped", direction: "both" },
+                    { ext: "canceled", stage: "wont-do", direction: "both" },
+                  ],
+                  fields: [
+                    {
+                      type: "row",
+                      fields: [
+                        {
+                          name: "ext",
+                          label: "GitHub issue",
+                          type: "select",
+                          required: true,
+                          options: [
+                            { label: "Open", value: "unstarted" },
+                            {
+                              label: "Open + in-progress label",
+                              value: "started",
+                            },
+                            {
+                              label: "Closed as completed",
+                              value: "completed",
+                            },
+                            {
+                              label: "Closed as not planned",
+                              value: "canceled",
+                            },
+                          ],
+                          admin: { width: "40%" },
+                        },
+                        {
+                          name: "stage",
+                          label: "Idea stage key",
+                          type: "text",
+                          required: true,
+                          admin: { width: "30%" },
+                        },
+                        {
+                          name: "direction",
+                          type: "select",
+                          required: true,
+                          defaultValue: "both",
+                          options: [
+                            { label: "Both ways", value: "both" },
+                            { label: "GitHub → idea", value: "inbound" },
+                            { label: "Idea → GitHub", value: "outbound" },
+                          ],
+                          admin: { width: "30%" },
+                        },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  name: "inProgressLabels",
+                  label: "In-progress labels",
+                  type: "text",
+                  hasMany: true,
+                  defaultValue: ["in progress"],
+                  admin: {
+                    description:
+                      "An open issue with one of these labels counts as started; moving an idea to a started stage adds the first one.",
+                  },
+                },
+                {
+                  name: "newIssueLabels",
+                  label: "Labels for new issues",
+                  type: "text",
+                  hasMany: true,
+                  defaultValue: ["feedback"],
+                },
+                {
+                  name: "backlinkComment",
+                  label: "Comment on the issue with a link back to the idea",
+                  type: "checkbox",
+                  defaultValue: true,
+                },
+              ],
+            },
+          ],
+        },
+        {
           label: "Tags",
           description:
             "Staff-only tags for sorting posts. Drag to reorder. Tags are shared by all boards.",
@@ -651,6 +761,19 @@ export interface FeedbackSettings extends Record<string, unknown> {
   changelogReactions?: boolean | null;
   changelogShare?: boolean | null;
   changelogShipStage?: string | null;
+  gh?: {
+    enabled?: boolean | null;
+    map?:
+      | {
+          ext: "backlog" | "unstarted" | "started" | "completed" | "canceled";
+          stage: string;
+          direction: "both" | "inbound" | "outbound";
+        }[]
+      | null;
+    inProgressLabels?: string[] | null;
+    newIssueLabels?: string[] | null;
+    backlinkComment?: boolean | null;
+  } | null;
   votePriorities?: boolean | null;
   portalTabs: PortalTabSetting[];
   portalTitle?: string | null;

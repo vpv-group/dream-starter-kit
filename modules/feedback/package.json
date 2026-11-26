@@ -5,11 +5,13 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./integrations": "./src/integrations/index.ts",
     "./native": "./src/native/index.ts",
     "./payload": "./src/payload/index.ts",
     "./server": "./src/server/index.ts",
     "./web": "./src/web/index.ts",
-    "./web-server": "./src/web-server/index.ts"
+    "./web-server": "./src/web-server/index.ts",
+    "./integrations/testing": "./src/integrations/testing.ts"
   },
   "license": "Apache-2.0",
   "scripts": {

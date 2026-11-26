@@ -59,6 +59,7 @@ import {
 import { FIBONACCI, scoreIdea } from "../shared/score";
 import { TONE_DOT, toneOf } from "../shared/tones";
 import { IdeaChangelogLinks } from "./changelog-admin";
+import { IssuePanel } from "./issue-panel";
 
 export function statsById(data: IdeasPayload | undefined) {
   const map = new Map<string, IdeaVoterStats>();
@@ -740,6 +741,7 @@ export function IdeaSheet({
                 </ul>
               )}
             </div>
+            <IssuePanel ideaId={idea.id} links={detail.data?.links ?? []} />
             <IdeaChangelogLinks ideaId={idea.id} />
             <Button
               variant="outline"

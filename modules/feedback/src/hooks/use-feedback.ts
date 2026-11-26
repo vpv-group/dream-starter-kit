@@ -598,6 +598,7 @@ export function useIdea(id: string | null, apiBaseUrl = "") {
           vote_count: number;
           comment_count: number;
         }[];
+        links: IssueLink[];
       }>(supabase, `/staff/idea?id=${encodeURIComponent(id ?? "")}`, {
         apiBaseUrl,
       }),
@@ -741,5 +742,143 @@ export function useWhatsNew(apiBaseUrl = "") {
     queryFn: () =>
       feedbackApi<WhatsNew>(supabase, "/changelog/unread", { apiBaseUrl }),
     staleTime: 60_000,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Issue trackers (GitHub built in; adapters register more)
+// ---------------------------------------------------------------------------
+
+export interface TrackerRow {
+  provider: string;
+  label: string;
+  route_base: string;
+  capabilities: Record<string, boolean>;
+  enabled: boolean;
+}
+
+export interface TrackerStatus {
+  provider: string;
+  label: string;
+  connected: boolean;
+  enabled: boolean;
+  target?: string;
+  reason?: string;
+  message?: string;
+  lastSyncedAt: string | null;
+  lastError: string | null;
+}
+
+export interface TrackerIssue {
+  externalId: string;
+  key: string;
+  url: string;
+  title: string;
+  state: { category: string; raw: string };
+}
+
+export interface IssueLink {
+  id: string;
+  provider: string;
+  external_id: string;
+  key: string;
+  url: string;
+  title: string;
+  state_category: string;
+  state_raw: string;
+  sync_enabled: boolean;
+  last_synced_at: string | null;
+}
+
+/** Calls a provider's standard routes at its route_base (any module). */
+async function trackerApi<T>(
+  supabase: AppSupabaseClient,
+  routeBase: string,
+  path: string,
+  body?: unknown,
+): Promise<T> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const res = await fetch(`${routeBase}${path}`, {
+    method: body === undefined ? "GET" : "POST",
+    headers: {
+      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+      ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const json = (await res.json().catch(() => null)) as
+    (T & { error?: string; code?: string }) | null;
+  if (!res.ok)
+    throw new FeedbackApiError(
+      res.status,
+      json?.error ?? "Request failed",
+      json?.code,
+    );
+  return json as T;
+}
+
+export function useTrackers() {
+  const supabase = useSupabase();
+  return useQuery({
+    queryKey: [...feedbackKeys.staff(), "trackers"],
+    queryFn: () =>
+      feedbackApi<{ providers: TrackerRow[] }>(supabase, "/integrations").then(
+        (r) => r.providers,
+      ),
+    staleTime: 60_000,
+  });
+}
+
+export function useTrackerStatus(tracker: TrackerRow | undefined) {
+  const supabase = useSupabase();
+  return useQuery({
+    queryKey: [...feedbackKeys.staff(), "tracker-status", tracker?.provider],
+    enabled: Boolean(tracker),
+    staleTime: 60_000,
+    retry: false,
+    queryFn: () =>
+      trackerApi<TrackerStatus>(supabase, tracker?.route_base ?? "", "/status"),
+  });
+}
+
+export function useTrackerSearch(tracker: TrackerRow | undefined, q: string) {
+  const supabase = useSupabase();
+  const query = q.trim();
+  return useQuery({
+    queryKey: [
+      ...feedbackKeys.staff(),
+      "tracker-search",
+      tracker?.provider,
+      query,
+    ],
+    enabled: Boolean(tracker) && query.length >= 1,
+    retry: false,
+    queryFn: () =>
+      trackerApi<{ issues: TrackerIssue[] }>(
+        supabase,
+        tracker?.route_base ?? "",
+        `/search?q=${encodeURIComponent(query)}`,
+      ).then((r) => r.issues),
+  });
+}
+
+export function useTrackerAction() {
+  const supabase = useSupabase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: {
+      tracker: TrackerRow;
+      action: "link" | "create" | "unlink" | "sync";
+      body: Record<string, unknown>;
+    }) =>
+      trackerApi<unknown>(
+        supabase,
+        args.tracker.route_base,
+        `/${args.action}`,
+        args.body,
+      ),
+    onSuccess: () => invalidateAll(qc),
   });
 }

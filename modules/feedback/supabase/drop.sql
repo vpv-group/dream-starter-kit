@@ -1,8 +1,12 @@
 -- Teardown for `pnpm mod remove feedback` (skipped with --keep-data).
 select public.kit_unregister_app_schedule('mod-feedback-config-sync');
+select public.kit_unregister_app_schedule('mod-feedback-integrations-sync');
 select public.kit_unregister_anon_data('feedback');
 select public.mod_notifications_unregister_module('feedback');
 
+drop table if exists public.mod_feedback_sync_outbox cascade;
+drop table if exists public.mod_feedback_issue_links cascade;
+drop table if exists public.mod_feedback_integrations cascade;
 drop table if exists public.mod_feedback_changelog_reactions cascade;
 drop table if exists public.mod_feedback_changelog_reads cascade;
 drop table if exists public.mod_feedback_changelog_subscribers cascade;
@@ -26,6 +30,9 @@ drop function if exists public.mod_feedback_link_post(uuid, uuid);
 drop function if exists public.mod_feedback_set_idea_stage(uuid, text, text, boolean, text, uuid);
 drop function if exists public.mod_feedback_posts_idea_votes();
 drop function if exists public.mod_feedback_ideas_before_write();
+drop function if exists public.mod_feedback_unregister_provider(text);
+drop function if exists public.mod_feedback_register_provider(text, text, text, jsonb);
+drop function if exists public.mod_feedback_ideas_enqueue_sync();
 drop function if exists public.mod_feedback_changelog_likes(text[]);
 drop function if exists public.mod_feedback_merge_anon(uuid, uuid);
 drop function if exists public.mod_feedback_anon_has_data(uuid);

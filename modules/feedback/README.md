@@ -66,6 +66,42 @@ publish hook:
 Signed-in people can subscribe on `/changelog`; the dashboard widget shows
 What's new with an unread dot (`mod_feedback_changelog_reads`).
 
+## Issue trackers (GitHub; Jira, Linear, Asana as adapters)
+
+An idea links to at most one issue per tracker (idea sheet → **Issue
+tracker**: search or `#number`, or **Create issue**, which writes the idea,
+its posts and vote total into the issue and adds a back-link comment).
+Status syncs **both ways** through Settings → Integrations → GitHub →
+**Status mapping**: one row per issue state (Open · Open + in-progress label ·
+Closed as completed · Closed as not planned) ↔ an idea stage key, with a
+direction. The first matching row wins each way; unmapped states don't sync.
+
+- **Outbound:** moving an idea writes `mod_feedback_sync_outbox` rows
+  (trigger); the 2-minute cron (`GET /cron/integrations-sync`) or **Sync
+  now** applies them. `setState` reads the issue first and only writes when
+  it differs.
+- **Inbound:** the same cron polls GitHub for issues updated since the last
+  cursor and moves the idea's stage (which moves its posts and notifies
+  voters), unless the idea is **locked**.
+- **Loop guard:** a move that came from a provider never enqueues a sync back
+  to it (`mod_feedback.origin`), and both directions are no-ops when nothing
+  differs.
+
+GitHub uses the repository connected with the Meet Dream AI GitHub App
+(`ctx.host.github`). The module never sees the token, and the host only
+allows issue and label endpoints. Without it, the panel shows **Connect
+GitHub** and everything else works.
+
+**Adapters.** A `feedback-adapter-<tool>` module (`requires: ["feedback"]`)
+implements `IssueTrackerProvider` from `@acme/mod-feedback/integrations`,
+exports `createIssueTrackerRoutes({ provider, base: "", loadSettings })` as
+its `routes` / `publicRoutes`, and registers in a migration with
+`select public.mod_feedback_register_provider('linear', 'Linear',
+'/api/mod/feedback-adapter-linear', '{"search":true,"create":true}')`.
+It schedules its `GET /cron/sync`, adds a settings tab with
+`defineAdapterSettings({ target: "feedback" })`, and runs
+`runProviderContractTests()` from `@acme/mod-feedback/integrations/testing`.
+
 ## Anonymous visitors
 
 Each board decides whether anonymous visitors may **vote**, **post** and

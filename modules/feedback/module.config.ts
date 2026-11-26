@@ -117,6 +117,9 @@ export default defineModule({
       "mod_feedback_changelog_subscribers",
       "mod_feedback_changelog_reads",
       "mod_feedback_changelog_reactions",
+      "mod_feedback_integrations",
+      "mod_feedback_issue_links",
+      "mod_feedback_sync_outbox",
     ],
     dml: [
       "mod_notifications",
