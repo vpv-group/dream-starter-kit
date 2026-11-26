@@ -341,6 +341,30 @@ Until GitHub is connected, Modules is read-only (catalog cards show the
 `module-ops.yml` job ends with a notice. On localhost the site never
 registers with meetdream.com, so none of this appears; develop with the CLI.
 
+### Finish connecting your services
+
+After the update settings, the founder's `/cms-setup/services` step (and
+`GET /api/health/setup`, staff-only) checks what this deployment still needs
+from its host and database (`lib/setup/services-core.ts`):
+
+| Check | Done when |
+|---|---|
+| Your site's address | the app resolves a public URL (`NEXT_PUBLIC_SITE_URL` or Vercel's production URL) |
+| Sign-in links and emails | Meet Dream configured Supabase Auth for the site (below) |
+| File uploads | S3 keys are set, or Supabase Storage works with the service key |
+| Scheduled jobs | `CRON_SECRET` is set (meetdream.com/start sets it on Vercel) |
+
+**Connect Supabase** fixes the sign-in row: Supabase asks the owner to allow
+Meet Dream's OAuth app, then meetdream.com sets the project's auth site URL,
+adds this site and the Expo deep link to its redirect URLs, and applies the
+kit's email templates (meet-dream `docs/PAID-MODULES.md` → First install). The
+token is used once and not kept. The step is skipped when everything is done,
+and on localhost.
+
+The app accepts the Vercel Supabase integration's variable names as its own:
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` for the anon key and
+`SUPABASE_SECRET_KEY` for the service-role key.
+
 ### What happens automatically
 
 | Switch (Updates) | Default | What it does |

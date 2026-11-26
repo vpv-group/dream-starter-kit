@@ -33,7 +33,16 @@ const updatesSchema = z.object({
     source: z
       .object({ provider: z.string(), repo: z.string().nullable() })
       .nullable(),
+    /** Meet Dream configured the database's auth for this site (Supabase). */
+    backend: z
+      .object({ provider: z.string(), configuredAt: z.string().nullable() })
+      .nullable()
+      .default(null),
   }),
+  /** Which "Connect …" flows Meet Dream can run right now. */
+  connect: z
+    .object({ backend: z.boolean().default(false) })
+    .default({ backend: false }),
   settings: updateSettingsSchema,
   hold: z.string().nullable().default(null),
   brokerConfigured: z.boolean().default(true),
@@ -48,6 +57,10 @@ export interface UpdatesState {
   hold: string | null;
   /** Is the Dream Updates App set up on meetdream.com at all? */
   brokerConfigured: boolean;
+  /** Supabase Auth was configured for this site through Meet Dream. */
+  backendConfigured: boolean;
+  /** Meet Dream can run "Connect Supabase" (its OAuth app is set up). */
+  canConfigureBackend: boolean;
 }
 
 /** Why the registry couldn't answer, as a calm state for the UI. */
@@ -126,6 +139,8 @@ export async function fetchUpdates(
     settings: parsed.data.settings,
     hold: parsed.data.hold,
     brokerConfigured: parsed.data.brokerConfigured,
+    backendConfigured: Boolean(parsed.data.connections.backend?.configuredAt),
+    canConfigureBackend: parsed.data.connect.backend,
   };
 }
 
@@ -163,13 +178,24 @@ export async function fetchSiteToken(
     : { status: "refused", message: "Unexpected answer from Meet Dream." };
 }
 
-export async function connectGithubUrl(
+/** What "Connect …" can start: GitHub (source) or Supabase (backend). */
+export type ConnectTarget = "github" | "supabase";
+
+const CONNECT_PATHS: Record<ConnectTarget, string> = {
+  github: "/connect/github/start",
+  supabase: "/connect/backend/supabase/start",
+};
+
+export async function connectUrl(
   opts: CallOpts,
+  target: ConnectTarget,
   returnTo: string,
+  /** supabase: the site's public NEXT_PUBLIC_SUPABASE_URL (its project). */
+  supabaseUrl?: string,
 ): Promise<{ status: "ok"; url: string } | UpdatesProblem> {
-  const res = await call(opts, "/connect/github/start", {
+  const res = await call(opts, CONNECT_PATHS[target], {
     method: "POST",
-    body: { returnTo },
+    body: target === "supabase" ? { returnTo, supabaseUrl } : { returnTo },
   });
   if (!("ok" in res)) return res;
   const parsed = z.object({ url: z.url() }).safeParse(res.body);

@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 
 import { requireAdmin } from "~/lib/mod/admin-ops";
-import { githubConnectUrl } from "~/lib/mod/updates";
+import { startConnect } from "~/lib/mod/updates";
 import { getSiteUrl } from "~/lib/site-url";
 
 /**
@@ -15,6 +15,8 @@ const bodySchema = z.object({
     .string()
     .regex(/^\/(admin|cms-setup)(\/[\w\-/]*)?$/)
     .default("/admin/updates"),
+  /** github (Dream Updates App) or supabase (configure sign-in). */
+  target: z.enum(["github", "supabase"]).default("github"),
 });
 
 export async function POST(req: Request) {
@@ -24,7 +26,10 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json({ error: "Invalid return path" }, { status: 400 });
   }
-  const res = await githubConnectUrl(`${getSiteUrl()}${parsed.data.returnTo}`);
+  const res = await startConnect(
+    parsed.data.target,
+    `${getSiteUrl()}${parsed.data.returnTo}`,
+  );
   if (res.status !== "ok") {
     return Response.json(res, { status: 502 });
   }

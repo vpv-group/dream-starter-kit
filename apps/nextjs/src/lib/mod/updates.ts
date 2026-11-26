@@ -1,11 +1,12 @@
 import "server-only";
 
-import type { SiteToken, UpdateSettings } from "./updates-core";
+import type { ConnectTarget, SiteToken, UpdateSettings } from "./updates-core";
+import { env } from "~/env";
 import { getPayloadClient } from "~/lib/cms/payload-client";
 import { siteLicenseKey } from "~/lib/dream/site";
 import { dreamRegistryUrl } from "./dream-registry";
 import {
-  connectGithubUrl,
+  connectUrl,
   fetchSiteToken,
   fetchUpdates,
   saveSettings,
@@ -49,12 +50,14 @@ export async function putUpdateSettings(
   );
 }
 
-export async function githubConnectUrl(returnTo: string) {
+export async function startConnect(target: ConnectTarget, returnTo: string) {
   const key = await siteKey();
   if (!key) return NO_KEY;
-  return await connectGithubUrl(
+  return await connectUrl(
     { registry: dreamRegistryUrl(), siteKey: key },
+    target,
     returnTo,
+    env.NEXT_PUBLIC_SUPABASE_URL,
   );
 }
 

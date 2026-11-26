@@ -30,8 +30,14 @@ no license key or stored secret. The `kit-update` job:
    source archive from the tag and checks it with `gh attestation verify`
    against the kit repository. A release that doesn't verify is never merged.
 3. Merges the release into a `dream/kit-update-<date>` branch.
-   - The first merge on a "Use this template" repo uses
-     `--allow-unrelated-histories` automatically.
+   - A repo that shares no history with the kit (a Vercel clone, "Use this
+     template") first gets a **baseline**: `pnpm mod ops baseline` records
+     the kit release matching its `package.json` version as an ancestor
+     with `git merge -s ours` (no file changes), pushed to the default
+     branch, or carried in the update PR when branch protection refuses.
+     The update is then a normal three-way merge. Only when the kit has no
+     release for that version does it fall back to
+     `--allow-unrelated-histories`.
    - Conflicts in **generated** files (lockfile, Payload and Supabase types,
      the migrations bundle, `*.generated.*`) take the release's side
      (`pnpm mod ops resolve-generated`), then everything is regenerated:
