@@ -172,7 +172,7 @@ global (kill switch / model / art-direction prompt).
 
 The tools operate over an allowlist defined in `packages/mcp/src/tools/registry.ts`
 (`MCP_COLLECTIONS`) — editorial, community, and marketing content plus `notifications`.
-**Auth/PII-management collections (`users`, `device-tokens`, `feed-tokens`) and internal
+**Auth/PII-management collections (`users`, `feed-tokens`) and internal
 ones (`media`, `nav-items`, `kit-modules`) are intentionally excluded.** Per-operation
 authorization is still Payload's job; the allowlist just bounds the surface.
 
@@ -185,10 +185,12 @@ The `collection` enum on the content tools and `list_collections` update automat
 ## Notifications & delivery
 
 `notify_schedule` writes a Payload `notification` with `status: "scheduled"` and a
-`scheduledAt`. Delivery is performed by the **dispatch worker** at
-`POST /api/cms/notifications/dispatch` (`apps/nextjs/src/app/api/cms/notifications/dispatch/route.ts`),
-triggered by **Supabase Cron** every minute (`kit-notifications-dispatch`, pg_cron + pg_net)
-and guarded by the cron bearer secret — `CRON_SECRET`, or derived from the service-role key
+`scheduledAt`. Delivery is performed by the **`dispatch-notifications` Payload task**
+(`apps/nextjs/src/payload/jobs/index.ts`, logic in `@acme/mcp`'s `runDispatch`), which
+Payload's Jobs Queue runs every minute when **Supabase Cron** calls
+`/cms-api/payload-jobs/run` (`kit-payload-jobs`, pg_cron + pg_net). The manual route
+`POST /api/cms/notifications/dispatch` stays for one-off runs. Both are guarded by the
+cron bearer secret — `CRON_SECRET`, or derived from the service-role key
 when unset. The runtime bootstrap stores the app URL and secret in Supabase Vault, so there
 is nothing to configure.
 

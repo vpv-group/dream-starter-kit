@@ -213,21 +213,21 @@ erDiagram
 
 **Workspace RPCs** _(all `security definer`, `set search_path = ''`, executable by `authenticated` only)_ — every cross-boundary write goes through these; errors are stable snake_case messages (`slug_unavailable`, `invite_expired`, …) the clients map to copy:
 
-| Function | What it does |
-| --- | --- |
-| `is_slug_available(_slug)` | Format + reserved + uniqueness check (debounced from the Name your workspace form). |
-| `create_workspace(_name, _slug)` | Non-anonymous caller creates a workspace; the existing trigger enrolls them as `owner`; sets `last_org_id`. |
-| `accept_invitation(_token)` | Hashes the token; requires a pending, unexpired invite whose email equals the caller's **confirmed** email; inserts the membership (idempotent), stamps `accepted_*`, sets `last_org_id`. |
-| `join_workspace_by_link(_token)` | Joins as `member` when the link is enabled and the caller's confirmed email passes `allowed_domains`. |
-| `my_pending_invitations()` | The invitee's only window onto their invites (org name/slug/logo, inviter, role, expiry). Never returns tokens. |
-| `save_onboarding_progress(_org_id, _step, _completed, _done)` | A member records their own stepper position (memberships are otherwise admin-write). |
-| `accept_pending_invitation(_invitation_id)` | Join from "You've been invited" (no token; the confirmed email must match). |
-| `create_invitations(_org, _emails, _role, _expires_days)` | Owners/admins invite by email: dedupes, skips members and invalid addresses, rotates a pending invite's token, ~50 per workspace per day. Returns each new token once. |
-| `resend_invitation(_invitation_id, _expires_days)` | Rotate a pending invite's token and expiry (the old link stops working). |
-| `workspace_members(_org)` | Members of a workspace I belong to — name, photo, title, email, role only. |
-| `invitation_preview(_token)` / `join_link_preview(_token)` | What the public `/invite` and `/join` pages show; callable signed out; never return hashes. |
-| `reset_join_link(_org)` / `set_join_link(_org, _enabled, _allowed_domains)` | Owners/admins rotate the invite link (plaintext returned once), turn it on or off, and restrict it to company domains (free mail refused). |
-| `my_blocking_workspaces()` | Workspaces where I'm the only owner and others are members (the delete-account pre-check). |
+| Function                                                                    | What it does                                                                                                                                                                              |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `is_slug_available(_slug)`                                                  | Format + reserved + uniqueness check (debounced from the Name your workspace form).                                                                                                       |
+| `create_workspace(_name, _slug)`                                            | Non-anonymous caller creates a workspace; the existing trigger enrolls them as `owner`; sets `last_org_id`.                                                                               |
+| `accept_invitation(_token)`                                                 | Hashes the token; requires a pending, unexpired invite whose email equals the caller's **confirmed** email; inserts the membership (idempotent), stamps `accepted_*`, sets `last_org_id`. |
+| `join_workspace_by_link(_token)`                                            | Joins as `member` when the link is enabled and the caller's confirmed email passes `allowed_domains`.                                                                                     |
+| `my_pending_invitations()`                                                  | The invitee's only window onto their invites (org name/slug/logo, inviter, role, expiry). Never returns tokens.                                                                           |
+| `save_onboarding_progress(_org_id, _step, _completed, _done)`               | A member records their own stepper position (memberships are otherwise admin-write).                                                                                                      |
+| `accept_pending_invitation(_invitation_id)`                                 | Join from "You've been invited" (no token; the confirmed email must match).                                                                                                               |
+| `create_invitations(_org, _emails, _role, _expires_days)`                   | Owners/admins invite by email: dedupes, skips members and invalid addresses, rotates a pending invite's token, ~50 per workspace per day. Returns each new token once.                    |
+| `resend_invitation(_invitation_id, _expires_days)`                          | Rotate a pending invite's token and expiry (the old link stops working).                                                                                                                  |
+| `workspace_members(_org)`                                                   | Members of a workspace I belong to — name, photo, title, email, role only.                                                                                                                |
+| `invitation_preview(_token)` / `join_link_preview(_token)`                  | What the public `/invite` and `/join` pages show; callable signed out; never return hashes.                                                                                               |
+| `reset_join_link(_org)` / `set_join_link(_org, _enabled, _allowed_domains)` | Owners/admins rotate the invite link (plaintext returned once), turn it on or off, and restrict it to company domains (free mail refused).                                                |
+| `my_blocking_workspaces()`                                                  | Workspaces where I'm the only owner and others are members (the delete-account pre-check).                                                                                                |
 
 **Workspace policies and guards** — members see each other only through `workspace_members()`; the earlier `profiles: co-members read` policy was dropped (`20261119000000_workspace_invitations.sql`) because it exposed whole profile rows, phone included. Only owners may grant, change or remove the owner role (`memberships_guard_owner_role`), and a sole owner of a workspace with other members can't be deleted (`profiles_guard_delete`) until ownership is transferred. RESTRICTIVE `no anon` policies on `organizations`, `memberships` and `invitations` keep anonymous (Turnstile) sessions out entirely. A trigger blocks removing or demoting a workspace's **last owner** (cascades from deleting the workspace or the profile are exempt). `is_staff` and `memberships.role` never imply each other.
 
@@ -346,3 +346,33 @@ Rules of thumb for the Supabase side:
 - **No AI** → drop `chat_threads` / `chat_messages`. **No uploads** → drop `files`. **No reminders** → drop `reminders` / `push_tokens`.
 
 This base lives in `supabase/migrations/20260609000001_initial.sql` (schema + the RLS policies above). `supabase/seed.sql` ships **empty** — the first signup becomes the founder/staff user; add your own demo rows there as you build.
+
+## Follow-ups from the 2.5 data-architecture plan
+
+2.5 shipped the scale and correctness work plus the hardening its review asked
+for. These parts of the plan are deferred on purpose, not dropped:
+
+- **Users sync:** an admin → Supabase write-back job (today a synchronous hook),
+  the `after()` fast path on `/welcome` and `/auth/callback`, the "Free" tag
+  inserted in SQL by `handle_new_user()`, and `pnpm cms:backfill-users` through
+  the `cms_user_sync` queue. Keeping `phone` out of `cms.users` needs a `ui`
+  field first, because admins edit it in /admin → Users.
+- **Compliance seams:** a shared baseline-policy helper, data classes in module
+  manifests, generic push text for sensitive notification categories, audit
+  events from the Stripe webhook, user sync, role changes and MCP tools, and
+  anonymizing authored content on erasure.
+- **Billing:** a nightly reconcile from Stripe and a "Connect Stripe" screen
+  (the hourly auto-connect covers setup and disables the old endpoints).
+- **Reads and retention:** keyset paging for chat messages and older
+  notification pages; purges for read notifications and chat bookkeeping.
+- **Payload:** skip the module reconcile when the registry is unchanged,
+  React `cache()` for the app layout's session reads, the polymorphic-unique
+  and `stripePriceId` indexes, a periodic orphaned-favorites sweep.
+- **Bootstrap:** run `create index concurrently` outside a transaction, like the
+  Supabase CLI.
+- **Scheduler cost:** skip the per-minute app call when no job is due, if the
+  2.5 canary soak shows meaningful Vercel Hobby CPU use.
+- **Module repos:** CRM per-query RLS arrays, BRIN indexes and UNION ALL
+  timelines; the client portal's identity helper and unread-count rewrite.
+- **2.6 contract release:** drop `like_count`, `comment_count` and the
+  `device_tokens` table, marked `-- dream:contract` (it waits for review).

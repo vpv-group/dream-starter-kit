@@ -39,7 +39,7 @@ Two ideas make it maintainable:
 | Authorization                | Postgres **Row-Level Security** on every app table                                             |
 | Data layer                   | `@supabase/supabase-js` typed client + react-query hooks                                       |
 | Content / CMS                | **Payload CMS v3** (web/server only) — own `cms` schema, admin at `/admin`, REST at `/cms-api` |
-| Payments                     | Stripe (web subscriptions) + a webhook edge function                                           |
+| Payments                     | Stripe (web subscriptions) + one self-registering webhook (billing module route)               |
 | AI                           | Vercel AI SDK v6 through the **Vercel AI Gateway** (Claude default)                            |
 | Remote MCP                   | `@acme/mcp` server at `/mcp` — OAuth 2.1 (Supabase login), staff-only                          |
 | Mobile build / submit / push | Expo EAS + Expo Push                                                                           |
@@ -70,7 +70,7 @@ dream-starter-kit/
 ├─ supabase/
 │  ├─ migrations/            # SQL schema + RLS policies (implements ERD.md) — ships as ONE baseline migration
 │  ├─ payload/               # 00_cms_role.sql — provisions the `cms` schema + payload_cms role
-│  ├─ functions/             # edge functions: billing-stripe-webhook, delete-account
+│  ├─ functions/             # module edge functions only (the kit itself ships none)
 │  ─ (modules/<slug>/ vendor their own supabase/ + src/; `pnpm mod sync`
 │     materializes migrations/functions here — see docs/MODULES.md)
 │  ├─ seed.sql               # ships EMPTY (first signup becomes the founder); add your own demo rows
@@ -153,13 +153,19 @@ as a **single baseline migration** (`20260609000001_initial.sql` — identity,
 orgs, billing, engagement, files/storage, chat, CMS staff flag); your features
 extend it with **new** migrations (append-only — never edit a shipped one).
 
-Three edge functions run server-side with the service-role key:
+The kit ships no edge functions. Server-side work that needs the service-role
+key runs in the Next.js app:
 
-- **`billing-stripe-webhook`** — verifies Stripe signatures and syncs billing state.
-- **`delete-account`** — verifies the caller, then deletes their auth user
-  (the database cascades clean-up) and cancels any live Stripe subscription.
-- **`reminders-process`** — a scheduled job that turns due reminders into
-  notifications and push messages.
+- **Stripe webhook** — the billing module's `POST /api/mod/billing/stripe/webhook`
+  verifies signatures and syncs billing state (§4.8).
+- **Account deletion** — `POST /api/account/delete` verifies the caller, queues
+  the erasure job, cancels live Stripe subscriptions and deletes the auth user
+  (the database cascades clean-up).
+- **Scheduled work** — Supabase Cron (pg_cron + pg_net) calls the app's Payload
+  Jobs Queue and module cron routes, with a secret kept in Supabase Vault; SQL
+  retention runs inside the database (`private.run_housekeeping()`).
+
+Modules may still ship their own edge functions.
 
 ### 4.6 Security model (the non-negotiables)
 
@@ -195,12 +201,8 @@ event ids (replays are no-ops) and skips events older than the stored state
 (out-of-order safe). The app registers the endpoint through the Stripe API and
 keeps its secret in Supabase Vault, so the only setup is `STRIPE_SECRET_KEY`.
 
-The `billing-stripe-webhook` **edge function** (signature-verified, idempotent — a
-separate Stripe endpoint with `STRIPE_WEBHOOK_SECRET`) keeps mirroring the
-product/price catalog and subscription status into the RLS-governed `public.*`
-tables for app clients. So: **Payload → Stripe** via hooks; **Stripe → CMS
-`subscriptions`** via the Payload webhook; **Stripe → `public.*`** via the edge
-function. Defaults: Example Monthly ($9.99/mo), Annual ($99.99/yr, 7-day trial)
+So: **Payload → Stripe** via hooks; **Stripe → `public.*`** (and the read-only
+CMS `subscriptions` projection) via that one webhook. Defaults: Example Monthly ($9.99/mo), Annual ($99.99/yr, 7-day trial)
 and Lifetime ($399 one-time).
 
 Subscriptions are sold on the **web** with Stripe Checkout (plan-driven, with
@@ -249,8 +251,8 @@ the endpoint + region — zero S3-specific env on a Vercel↔Supabase deploy).
 
 In-app notifications and reminders are ordinary RLS-protected tables with shared
 hooks and web + native screens. The native app registers an Expo push token; the
-`reminders-process` edge function (run on a schedule) finds due reminders and
-sends notifications + push. A web notification bell and a native header bell
+reminders module's cron route (`/api/mod/reminders/cron/process`, called by
+Supabase Cron) claims due reminders and sends notifications + push. A web notification bell and a native header bell
 surface unread items.
 
 ### 4.10 Content — Payload CMS
@@ -270,7 +272,7 @@ The registry spans five admin groups:
 - **Community** — `space-groups` (nested) → `community-spaces` →
   `community-posts`, with one `comments` system (threaded, gated per document
   by `commentsEnabled`) and a `reports` moderation queue.
-- **People** — the single `users` collection (see SSO below), `device-tokens`,
+- **People** — the single `users` collection (see SSO below),
   `feed-tokens`, `enrollments` and `reviews`. (Favorites are **not** a CMS
   collection — they live in the RLS table `public.content_favorites`, §identity.)
 - **Commerce** — `plans`, `coupons` and the webhook-written `subscriptions`
@@ -292,7 +294,7 @@ can first appear — the server auth routes `/welcome` + `/auth/callback`, the
 `/confirm-email` page, the paywall guest-checkout flow (client-side sign-in →
 `POST /api/cms/mirror-self`), and a best-effort backstop in the `(app)` shell layout
 — all idempotent; `pnpm cms:backfill-users` catches up anything missed.
-Member-scoped collections (comments, device-tokens, enrollments, …) carry
+Member-scoped collections (comments, enrollments, …) carry
 owner-scoped access rules (`ownsOrStaff`), with the owner forced to the
 requesting user on create — but note the **SSO bridge currently authenticates
 staff only**, so members reach this data through your own server routes for

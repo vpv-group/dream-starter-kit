@@ -32,7 +32,7 @@ clarity beat cleverness.
 | Shared features                       | cross-platform validators, react-query hooks, logic                               | `packages/app`                            |
 | Shared UI tokens / primitives         |                                                                                   | `packages/ui`                             |
 | Env + constants                       | zod env schema, `DEFAULT_AI_MODEL`, etc.                                          | `packages/config`                         |
-| Payments                              | Stripe (web only) + webhook edge function                                         | `apps/nextjs`, `supabase/functions`       |
+| Payments                              | Stripe (web only) + one self-registering webhook (billing module route)           | `apps/nextjs`, `modules/billing`          |
 | AI                                    | Vercel AI SDK v7 via the AI Gateway (Claude default)                              | server routes / edge fn                   |
 | Build/ship                            | EAS (mobile), Vercel (web), Expo Push                                             | `eas.json`, Vercel                        |
 
@@ -252,17 +252,21 @@ pnpm test:e2e           # Playwright (web E2E). Needs the local stack (pnpm dev:
                         #   outside CI it resets the DB first (the founder flow needs
                         #   zero users; E2E_REUSE_DB=1 skips). Boots `next dev` itself.
                         #   See tooling/web-e2e/README.md.
-pnpm test:rls           # RLS isolation regression + query-plan checks (plans.test.ts).
-                        #   Needs `supabase start` + .env with
-                        #   NEXT_PUBLIC_SUPABASE_URL/ANON_KEY + SUPABASE_SERVICE_ROLE_KEY.
+pnpm test:rls           # Supabase advisors (scripts/db-advisors-ci.sh: strict in the
+                        #   kit repo, advisory in apps) + RLS isolation, query-plan and
+                        #   definer-guard checks. Cases of first-party modules an app
+                        #   removed are skipped (modules.lock). Needs `supabase start` +
+                        #   .env with NEXT_PUBLIC_SUPABASE_URL/ANON_KEY + SUPABASE_SERVICE_ROLE_KEY.
 pnpm db:advisors        # Supabase Security + Performance Advisor lints on the local DB
-                        #   (fails on warnings) — run before committing a migration
+                        #   (always fails on warnings) — run before committing a migration
 pnpm license:check      # fail on strong copyleft (GPL/AGPL/SSPL) in the prod tree
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of these on every PR: lint · format ·
 typecheck · unit · license, plus an `integration` job that boots Supabase and runs
-`test:rls` + Playwright.
+`test:rls` (advisors included) + Playwright. Keep new checks inside package scripts
+rather than new workflow steps: an app's kit update that changes `.github/workflows`
+always waits for a person's review.
 
 ## Cloud sessions (Claude Code on the web)
 
@@ -587,8 +591,9 @@ enters the Expo bundle). It's **gated by `MCP_JWT_SECRET`** (`isMcpConfigured`/`
   `fetch`** (ids are `collection:id`). To expose another collection, add it to
   `MCP_COLLECTIONS`.
 * **Notification delivery:** `notify_schedule` writes a `scheduled` Payload `notification`; the
-  **dispatch worker** (`/api/cms/notifications/dispatch`, cron-secret-guarded, Supabase Cron —
-  `kit-notifications-dispatch`) sends it. See `docs/CMS.md` → `notifications`.
+  `dispatch-notifications` **Payload task** sends it (Payload's Jobs Queue, run every minute by
+  Supabase Cron via `kit-payload-jobs`; `/api/cms/notifications/dispatch` stays for manual runs).
+  See `docs/CMS.md` → `notifications`.
 * **Don't hardcode the origin** — absolute URLs (issuer/resource/metadata) come from
   `getSiteUrl()`. Tests: pure logic (pkce/tokens/oauth flow), an in-memory MCP client↔server
   tool test against a fake Payload, and the dispatch worker all run under `pnpm test` (no
