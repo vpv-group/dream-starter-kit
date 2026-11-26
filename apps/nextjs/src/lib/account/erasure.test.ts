@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { eraseAccountOutsidePublic } from "./erasure";
 
-type Entry = { name: string; id: string | null };
+interface Entry {
+  name: string;
+  id: string | null;
+}
 
 function fakeAdmin(opts: {
   userExists?: boolean;

@@ -14,9 +14,9 @@ export interface ErasureResult {
 }
 
 /** The storage + auth admin surface erasure needs (the service-role client). */
-type AdminClient = Pick<SupabaseClient, "storage" | "rpc"> & {
+interface AdminClient extends Pick<SupabaseClient, "storage" | "rpc"> {
   auth: { admin: Pick<SupabaseClient["auth"]["admin"], "getUserById"> };
-};
+}
 
 /** Every object path under `prefix` in a bucket, descending into folders. */
 async function listAll(

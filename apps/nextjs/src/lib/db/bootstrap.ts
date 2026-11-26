@@ -557,7 +557,7 @@ async function syncSchedulerSecrets(
       secrets.appUrl ?? null,
       secrets.cronSecret ?? null,
     ]);
-    if (rows[0]?.bypass === true) {
+    if (rows[0].bypass === true) {
       await client.query(`select private.sync_scheduler_bypass($1)`, [
         secrets.bypassSecret ?? null,
       ]);
