@@ -1,11 +1,11 @@
 import "server-only";
 
 import type { SupabaseClient as BaseSupabaseClient } from "@supabase/supabase-js";
-import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 
 import type { Database, Json } from "@acme/api";
 
+import { createAdminClient } from "../admin-client";
 import {
   mapPrice,
   mapProduct,
@@ -36,9 +36,6 @@ type SupabaseClient = BaseSupabaseClient<Database>;
 // localhost:3000/api/mod/billing/stripe/webhook`.
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
-const supabaseUrl =
-  process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // Where guest invitees set their password. Must be an allowed Supabase redirect.
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -261,7 +258,11 @@ export async function handleStripeWebhook(
 ): Promise<Response> {
   if (req.method !== "POST")
     return new Response("Method not allowed", { status: 405 });
-  if (!supabaseUrl || !serviceKey) {
+  let admin: SupabaseClient;
+  try {
+    // The module's service-role client (accepts SUPABASE_SECRET_KEY too).
+    admin = createAdminClient();
+  } catch {
     return new Response("Server misconfigured", { status: 500 });
   }
 
@@ -269,11 +270,8 @@ export async function handleStripeWebhook(
   // keeps the handler working for self-signed test events without an account
   // (Stripe API calls with it fail loudly and are caught per event).
   const stripe = new Stripe(stripeSecret ?? "sk_test_unconfigured_placeholder");
-  const admin = createClient<Database>(supabaseUrl, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  const webhookSecret = await resolveWebhookSecret(admin);
-  if (!webhookSecret) {
+  const secrets = await resolveWebhookSecrets(admin);
+  if (secrets.length === 0) {
     return new Response("Webhook not connected", { status: 500 });
   }
 
@@ -281,16 +279,24 @@ export async function handleStripeWebhook(
   if (!signature) return new Response("Missing signature", { status: 400 });
 
   const payload = await req.text();
-  let event: Stripe.Event;
-  try {
-    event = await stripe.webhooks.constructEventAsync(
-      payload,
-      signature,
-      webhookSecret,
-    );
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "unknown";
-    return new Response(`Signature verification failed: ${message}`, {
+  // Either secret may have signed it: STRIPE_WEBHOOK_SECRET (an endpoint you
+  // manage, or a pre-2.4 install's) or the one the app registered (Vault).
+  let event: Stripe.Event | null = null;
+  let lastError = "unknown";
+  for (const secret of secrets) {
+    try {
+      event = await stripe.webhooks.constructEventAsync(
+        payload,
+        signature,
+        secret,
+      );
+      break;
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : "unknown";
+    }
+  }
+  if (!event) {
+    return new Response(`Signature verification failed: ${lastError}`, {
       status: 400,
     });
   }
@@ -520,20 +526,21 @@ export async function handleStripeWebhook(
 }
 
 /**
- * The endpoint's signing secret: STRIPE_WEBHOOK_SECRET when set, else the one
- * `ensureStripeWebhook()` stored in Supabase Vault when it registered the
- * endpoint through the Stripe API (no dashboard step). Cached per instance.
+ * The signing secrets a delivery may carry: STRIPE_WEBHOOK_SECRET when set
+ * (an endpoint you manage — or, on installs upgraded from 2.3, the old edge
+ * function's secret), then the one `ensureStripeWebhook()` stored in Supabase
+ * Vault when it registered the endpoint through the Stripe API. Vault value
+ * cached per instance.
  */
 let cachedSecret: string | null | undefined;
-async function resolveWebhookSecret(
-  admin: SupabaseClient,
-): Promise<string | null> {
-  if (process.env.STRIPE_WEBHOOK_SECRET)
-    return process.env.STRIPE_WEBHOOK_SECRET;
-  if (cachedSecret) return cachedSecret;
-  const { data } = await admin.rpc("mod_billing_webhook_secret");
-  cachedSecret = data ?? null;
-  return cachedSecret;
+async function resolveWebhookSecrets(admin: SupabaseClient): Promise<string[]> {
+  if (cachedSecret === undefined) {
+    const { data } = await admin.rpc("mod_billing_webhook_secret");
+    cachedSecret = data ?? null;
+  }
+  return [process.env.STRIPE_WEBHOOK_SECRET, cachedSecret].filter(
+    (s): s is string => Boolean(s),
+  );
 }
 
 /** Forget the cached secret (after ensureStripeWebhook rotates it). */

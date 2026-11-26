@@ -10,7 +10,7 @@ import { defineModule } from "@acme/mod-kit";
 export default defineModule({
   slug: "reminders",
   name: "Reminders",
-  version: "1.2.0",
+  version: "1.2.1",
   kitCompat: ">=2.0.0 <3",
   description: "Scheduled reminders with push + in-app delivery.",
   requires: ["notifications"],

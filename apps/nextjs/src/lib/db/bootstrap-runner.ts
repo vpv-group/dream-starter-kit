@@ -57,12 +57,15 @@ export async function warmCms(): Promise<void> {
  */
 async function resolveCmsMigrationNames(): Promise<string[] | undefined> {
   try {
-    const [{ migrations }, { modPayloadMigrations }, { mergePayloadMigrations }] =
-      await Promise.all([
-        import("../../payload/migrations"),
-        import("../../mod/registry.payload.generated"),
-        import("../cms/merge-migrations"),
-      ]);
+    const [
+      { migrations },
+      { modPayloadMigrations },
+      { mergePayloadMigrations },
+    ] = await Promise.all([
+      import("../../payload/migrations"),
+      import("../../mod/registry.payload.generated"),
+      import("../cms/payload-migrations"),
+    ]);
     return mergePayloadMigrations(migrations, modPayloadMigrations).map(
       (m) => m.name,
     );

@@ -14,7 +14,11 @@ const BATCH = 100;
 function serviceClient(): SupabaseClient<Database> {
   const url =
     process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  // SUPABASE_SECRET_KEY: Vercel's Supabase Marketplace name for it.
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.SUPABASE_SECRET_KEY ??
+    "";
   if (!url || !key) {
     throw new Error("reminders: SUPABASE_SERVICE_ROLE_KEY is not set");
   }

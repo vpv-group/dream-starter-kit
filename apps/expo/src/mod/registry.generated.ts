@@ -42,8 +42,8 @@ export const modInstalled: ModInstalled[] = [
   { slug: "chat-adapter-slack", name: "Slack Adapter", version: "1.0.0", system: false },
   { slug: "dashboard", name: "Dashboard", version: "1.0.0", system: true },
   { slug: "docs", name: "Docs", version: "1.0.1", system: true },
-  { slug: "notifications", name: "Notifications", version: "1.3.0", system: false },
-  { slug: "reminders", name: "Reminders", version: "1.2.0", system: false },
+  { slug: "notifications", name: "Notifications", version: "1.3.1", system: false },
+  { slug: "reminders", name: "Reminders", version: "1.2.1", system: false },
 ];
 
 /** Native nav defaults — the bundled first-launch menu (useNativeNav fallback). */

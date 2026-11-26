@@ -39,21 +39,17 @@ import {
   fetchEntitlements,
   isDreamSource,
   latestCompatible,
-  licenseKey,
-  opsToken,
   parseDreamSource,
   registryUrl,
   repoIdentity,
   requestDownload,
-  requireLicenseKey,
-  requireOpsToken,
 } from "./registry";
+import { requireRegistryAuth, resolveRegistryAuth } from "./registry-auth";
 import {
   fallbackRepo,
   findInCatalog,
   planAdd,
   planUpdate,
-  registryFirstEnabled,
 } from "./source-plan";
 import { sync } from "./sync";
 
@@ -116,11 +112,10 @@ async function fetchSource(
 
   if (src.kind === "registry") {
     const dreamRef = parseDreamSource(src.location);
-    requireOpsToken();
     const registry = registryUrl();
     const grant = await requestDownload({
       registry,
-      licenseKey: requireLicenseKey(),
+      auth: await requireRegistryAuth(registry),
       slug: dreamRef.slug,
       version: src.ref ?? dreamRef.version,
       kitVersion: KIT_VERSION,
@@ -261,7 +256,7 @@ async function validateAndSync(repoRoot: string): Promise<void> {
 export async function add(repoRoot: string, sourceArg: string): Promise<void> {
   const src = parseSource(sourceArg);
   const catalog = src.kind === "zip" ? null : await registryCatalog();
-  const plan = planAdd(src, catalog, { registryFirst: registryFirstEnabled() });
+  const plan = planAdd(src, catalog, { registryFirst: true });
   const { fetched, used } = await fetchPlanned(repoRoot, plan);
   const { slug, version } = readManifestBasics(fetched.dir);
   if (fetched.registry && fetched.registry.slug !== slug) {
@@ -363,8 +358,8 @@ export function mergeUpstream(
  * Registry-first: a module the registry lists updates from it (and its lock
  * origin moves there), falling back to its GitHub repo when the registry
  * can't serve it. `--from` forces an origin for this and later updates
- * (`--from dream:crm`, or a GitHub url to leave the registry — combine with
- * MOD_REGISTRY_FIRST=off to keep it there). The source must serve the same
+ * (`--from dream:crm`, or a GitHub url to leave the registry for this
+ * update). The source must serve the same
  * slug; local edits still 3-way merge.
  */
 export async function update(
@@ -412,12 +407,11 @@ export async function update(
     if (src.kind === "registry") src.ref = src.ref?.replace(/^v/, "");
     plan = { primary: src }; // explicit: no fallback
   } else {
-    const registryFirst = registryFirstEnabled();
     if (typeof entry.source === "object" && entry.source.type !== "zip") {
       catalog = await registryCatalog();
     }
     plan = planUpdate(slug, entry.source, catalog, {
-      registryFirst,
+      registryFirst: true,
       to: opts.to,
     });
   }
@@ -515,7 +509,8 @@ export async function remove(
     const version = nextVersion(taken, new Date());
     writeFileSync(
       path.join(hostDir, `${version}_drop_mod_${slug.replace(/-/g, "_")}.sql`),
-      `-- Teardown for the removed "${slug}" module (pnpm mod remove).\n${dropSql}`,
+      `-- Teardown for the removed "${slug}" module (pnpm mod remove).\n` +
+        `-- dream:contract removes the module's tables (removal PRs never auto-merge)\n${dropSql}`,
     );
   }
 
@@ -607,7 +602,7 @@ export async function down(_args: MigrateDownArgs): Promise<void> {
  * distinct registry. Entitlement/network problems become calm license
  * states (updates simply pause) — status never crashes on them.
  */
-type LicenseState = "active" | "inactive" | "no-key" | "unknown" | "disabled";
+type LicenseState = "active" | "inactive" | "no-key" | "unknown";
 
 async function registryStates(
   modules: Record<string, ModLockEntry>,
@@ -629,22 +624,13 @@ async function registryStates(
     byRegistry.set(entry.source.registry, list);
   }
 
-  // No module ops → paid modules are off: report it, call nothing.
-  if (!opsToken()) {
-    for (const mods of byRegistry.values()) {
-      for (const mod of mods) {
-        states.set(mod.slug, { latest: null, license: "disabled" });
-      }
-    }
-    return states;
-  }
-
-  const key = licenseKey();
   for (const [registry, mods] of byRegistry) {
-    let license: LicenseState = key ? "active" : "no-key";
+    // The workflow's OIDC sign-in or DREAM_TOKEN (registry-auth.ts).
+    const auth = await resolveRegistryAuth(registry).catch(() => null);
+    let license: LicenseState = auth ? "active" : "no-key";
     let entitled: Set<string> | null = null;
-    if (key) {
-      const ent = await fetchEntitlements({ registry, licenseKey: key });
+    if (auth) {
+      const ent = await fetchEntitlements({ registry, auth });
       if (ent.status === "active") {
         entitled = new Set(ent.entitlements.map((e) => e.slug));
       } else if (ent.status === "inactive") {
@@ -682,8 +668,7 @@ async function registryStates(
 
 const LICENSE_NOTES: Partial<Record<LicenseState, string>> = {
   inactive: "license inactive — updates paused",
-  disabled: "paid modules off — set MOD_OPS_TOKEN (module ops)",
-  "no-key": "no license key — updates paused",
+  "no-key": "not signed in to Dream (DREAM_TOKEN) — updates paused",
 };
 
 /** `pnpm mod list` / `pnpm mod status [--json]` */
@@ -698,7 +683,7 @@ export async function status(
   // the registry has nothing for it.
   const viaRegistry = new Set<string>();
   const upstreamSources: Record<string, ModLockEntry> = { ...lock.modules };
-  if (opts.checkUpstream && registryFirstEnabled()) {
+  if (opts.checkUpstream) {
     const catalog = await registryCatalog();
     for (const [slug, entry] of Object.entries(lock.modules)) {
       if (typeof entry.source !== "object" || entry.source.type !== "github") {

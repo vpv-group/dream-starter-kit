@@ -1380,6 +1380,7 @@ export type Database = {
         Args: { _class: string; _description?: string; _keep_days: number };
         Returns: undefined;
       };
+      kit_scheduler_status: { Args: never; Returns: Json };
       kit_unregister_app_schedule: {
         Args: { _name: string };
         Returns: undefined;

@@ -10,14 +10,11 @@ import {
   fetchEntitlements,
   isDreamSource,
   latestCompatible,
-  licenseKey,
-  opsToken,
   parseDreamSource,
   REGISTRY_ERROR_MESSAGES,
   RegistryError,
   registryUrl,
   requestDownload,
-  requireOpsToken,
   sha256Hex,
 } from "./registry";
 
@@ -85,11 +82,6 @@ describe("parseDreamSource", () => {
 });
 
 describe("env helpers", () => {
-  it("licenseKey reads DREAM_LICENSE_KEY and never defaults", () => {
-    expect(licenseKey({})).toBeNull();
-    expect(licenseKey({ DREAM_LICENSE_KEY: "  key-1  " })).toBe("key-1");
-  });
-
   it("registryUrl defaults to the Dream registry and strips trailing slashes", () => {
     expect(registryUrl({})).toBe(
       "https://www.meetdream.com/api/mod/modules/v1",
@@ -143,7 +135,7 @@ describe("requestDownload", () => {
     requestDownload(
       {
         registry: REGISTRY,
-        licenseKey: "key-1",
+        auth: { kind: "key", key: "key-1" },
         slug: "crm",
         kitVersion: "2.0.0",
         repo: "acme/app",
@@ -259,7 +251,10 @@ describe("downloadVerified", () => {
 /* ------------------------------- entitlements ------------------------------- */
 
 describe("fetchEntitlements", () => {
-  const opts = { registry: REGISTRY, licenseKey: "key-1" };
+  const opts = {
+    registry: REGISTRY,
+    auth: { kind: "key", key: "key-1" } as const,
+  };
 
   it("normalizes slugs given as strings or objects", async () => {
     const result = await fetchEntitlements(
@@ -333,19 +328,5 @@ describe("latestCompatible", () => {
     ).toBeNull();
     expect(latestCompatible({ slug: "crm", latest: "not-semver" })).toBeNull();
     expect(latestCompatible(undefined)).toBeNull();
-  });
-});
-
-describe("module ops gate for paid modules", () => {
-  it("reads MOD_OPS_TOKEN, falling back to GITHUB_OPS_TOKEN", () => {
-    expect(opsToken({ MOD_OPS_TOKEN: " t1 " })).toBe("t1");
-    expect(opsToken({ GITHUB_OPS_TOKEN: "t2" })).toBe("t2");
-    expect(opsToken({ MOD_OPS_TOKEN: "" })).toBeNull();
-    expect(opsToken({})).toBeNull();
-  });
-
-  it("refuses paid-module work without a token", () => {
-    expect(() => requireOpsToken({})).toThrow(/module ops/);
-    expect(() => requireOpsToken({ MOD_OPS_TOKEN: "t" })).not.toThrow();
   });
 });

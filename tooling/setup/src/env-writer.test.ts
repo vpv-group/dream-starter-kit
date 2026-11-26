@@ -6,6 +6,7 @@ import {
   buildCiEnv,
   buildLocalEnv,
   commentOutEmpty,
+  isCiEnv,
   parseSupabaseStatus,
 } from "./env-writer";
 
@@ -127,5 +128,15 @@ describe("buildCiEnv (ci profile)", () => {
     expect(
       buildCiEnv({ ...status, DB_URL: "postgresql://h/db?x=1" }),
     ).toContain("SUPABASE_DB_URL=postgresql://h/db?x=1&sslmode=require");
+  });
+});
+
+describe("isCiEnv", () => {
+  it("recognizes a ci-profile .env so local and cloud replace it", () => {
+    expect(isCiEnv(buildCiEnv(parseSupabaseStatus(STATUS_OUTPUT)))).toBe(true);
+    expect(isCiEnv("AI_GATEWAY_API_KEY=dummy-ci-key-not-real\n")).toBe(true);
+    expect(isCiEnv("NEXT_PUBLIC_SUPABASE_URL=x\nPAYLOAD_SECRET=y\n")).toBe(
+      false,
+    );
   });
 });

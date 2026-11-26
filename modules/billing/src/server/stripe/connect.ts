@@ -31,7 +31,7 @@ const LEGACY_PATHS = [
 ];
 
 export type ConnectResult =
-  | { status: "skipped"; reason: "no_stripe_key" | "not_public" | "env_secret" }
+  | { status: "skipped"; reason: "no_stripe_key" | "not_public" }
   | { status: "connected"; url: string; created: boolean }
   | { status: "error"; message: string };
 
@@ -43,9 +43,12 @@ export type ConnectResult =
  * and read by the webhook. Idempotent: an existing endpoint with a stored
  * secret is left alone; one without a usable secret is replaced.
  *
- * Skipped when STRIPE_WEBHOOK_SECRET is set (you manage the endpoint), when
- * the site URL isn't a public https origin (local dev uses `stripe listen`),
- * or without a Stripe key.
+ * Runs even when STRIPE_WEBHOOK_SECRET is set: installs upgraded from 2.3
+ * have that set for the old edge-function endpoint, and would otherwise
+ * never get the new one (the webhook accepts either secret). An endpoint at
+ * the new URL that you created yourself — with its secret in
+ * STRIPE_WEBHOOK_SECRET — is left alone. Skipped when the site URL isn't a
+ * public https origin (local dev uses `stripe listen`) or without a key.
  */
 export async function ensureStripeWebhook(
   admin: SupabaseClient,
@@ -53,9 +56,6 @@ export async function ensureStripeWebhook(
 ): Promise<ConnectResult> {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return { status: "skipped", reason: "no_stripe_key" };
-  if (process.env.STRIPE_WEBHOOK_SECRET) {
-    return { status: "skipped", reason: "env_secret" };
-  }
   let origin: URL;
   try {
     origin = new URL(siteUrl);
@@ -76,7 +76,8 @@ export async function ensureStripeWebhook(
     const endpoints = await stripe.webhookEndpoints.list({ limit: 100 });
     const existing = endpoints.data.find((e) => e.url === url);
 
-    if (existing && stored) {
+    // Ours (secret in Vault) or yours (secret in STRIPE_WEBHOOK_SECRET).
+    if (existing && (stored || process.env.STRIPE_WEBHOOK_SECRET)) {
       return { status: "connected", url, created: false };
     }
     // An endpoint whose secret we don't hold can't be verified — replace it.

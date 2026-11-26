@@ -13,14 +13,14 @@ and an **Expo (iOS + Android) app** that share **one Supabase backend**
 a Vercel-AI-Gateway assistant, Expo push notifications, and a **Payload CMS** content
 backend are wired in. Clone it, rename a few things, and extend it into a real product.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvpv-group%2Fdream-starter-kit&root-directory=apps%2Fnextjs&project-name=dream-starter-kit&repository-name=dream-starter-kit)
+[![Deploy](https://vercel.com/button)](https://www.meetdream.com/start?host=vercel)
 
-> Deploys the **web app** to Vercel with no env required — it builds with placeholder
-> Supabase config, so the deploy **succeeds**. To make it actually work, connect the
-> **Vercel↔Supabase integration** (it injects `NEXT_PUBLIC_SUPABASE_URL` +
-> `NEXT_PUBLIC_SUPABASE_ANON_KEY`) or add them in Project Settings, apply the migrations,
-> and **redeploy** — see [Deploy](#deploy). If you fork this repo, update the org/name in
-> the button URL to point at your fork.
+> Opens meetdream.com/start, which deploys the **web app** to Vercel with a Supabase
+> project attached: Vercel's Supabase integration injects the database keys, and the
+> app sets up its own schema on first boot. Then sign up on your new site: the first
+> account is the admin, and `/cms-setup` walks you through connecting GitHub (for
+> automatic updates) and finishing your services. See [Deploy](#deploy). Forks: point
+> the button at `https://vercel.com/new/clone?repository-url=<your fork>&root-directory=apps%2Fnextjs`.
 
 > **Not an engineer?** You can still use this. Setup is copy-paste (below), and the
 > kit is structured so an AI coding assistant like [Claude Code](https://claude.com/claude-code)
@@ -108,7 +108,15 @@ on Vercel an OIDC token is injected automatically; locally set `AI_GATEWAY_API_K
 
 ## Get started
 
-The fastest path is to **fork → run locally → make it yours**. (Prefer to host
+The fastest path is one command, which clones the kit's newest release with its
+history (so kit updates merge cleanly), sets up the local stack and signs you in
+as a dev admin:
+
+```bash
+npx create-dream-app my-app
+```
+
+Or do it by hand: **fork → run locally → make it yours**, below. (Prefer to host
 first? Use the [Deploy button](#dream-starter-kit) above.)
 
 ### 1. Fork & clone
@@ -324,8 +332,11 @@ then merge `upstream/main` into a `sync/…` branch and open a PR — **never sq
 PRs** (it breaks the shared-history relationship and forces a full re-merge next time).
 Full tested routine, conflict hotspots, and the `merge=ours` pinning trick for files
 you intentionally diverge on: **[`docs/UPDATING.md`](./docs/UPDATING.md)**.
-With module ops set up (`MOD_OPS_TOKEN`), a daily job opens these kit-update PRs
-for you. They are free, never auto-merge, and must be merged with a merge commit.
+Connect GitHub once in **/admin → Updates** and a daily job opens these kit
+update PRs for you, from the kit's newest published release (never its `main`
+branch; the release's build attestation is verified first). They are free,
+land with a merge commit, and merge themselves once every check passes unless
+you turn that off.
 
 **Free site license.** After the first CMS seed, your deployment registers with
 meetdream.com: it sends its domain, the admin and editor emails, the kit version
@@ -353,8 +364,9 @@ Playwright. See [`tooling/web-e2e/README.md`](./tooling/web-e2e/README.md).
 
 The [**Supabase integration**](https://vercel.com/marketplace/supabase) on the Vercel
 Marketplace provisions a Postgres/Auth/Storage project and **auto-injects** the env the
-app needs — including `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and
-`SUPABASE_SERVICE_ROLE_KEY` (plus `POSTGRES_*`) — so you type no Supabase secrets by hand.
+app needs — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+`SUPABASE_SECRET_KEY` and `POSTGRES_*` — so you type no Supabase secrets by hand. (The
+app accepts the publishable and secret keys as its anon and service-role keys.)
 
 1. **Deploy** — click [Deploy with Vercel](#dream-starter-kit) at the top. Vercel clones
    the repo and builds with placeholder Supabase config (no env required upfront), so the
@@ -476,12 +488,10 @@ there is nothing else to deploy from the CLI:
 supabase link --project-ref <your-ref>
 supabase db push                          # optional — the app already did this on boot
 
-# Module admin ops (optional — /admin → Modules installs via PRs):
-# 1) create a fine-grained PAT (read & write: contents, pull requests, actions, workflows)
-# 2) repo secret MOD_OPS_TOKEN=<pat>; Vercel env GITHUB_OPS_TOKEN=<pat>
-#    (without it module ops is skipped and paid modules stay off; /admin shows the steps)
-# 3) repo Settings → enable "Allow auto-merge"   (see docs/MODULES.md)
-supabase secrets set STRIPE_SECRET_KEY=… STRIPE_WEBHOOK_SECRET=… CRON_SECRET=…
+# Module installs + automatic updates need no setup here: connect GitHub once
+# in /admin → Updates (see docs/MODULES.md). No `supabase secrets set` either:
+# Stripe keys live in the host's env (Vercel), and the scheduler's secret is
+# derived and stored in Supabase Vault by the app.
 ```
 
 Enable OAuth providers and set redirect URLs in the Supabase Dashboard (Auth →

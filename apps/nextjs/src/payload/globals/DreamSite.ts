@@ -1,13 +1,14 @@
 import type { GlobalConfig } from "payload";
 
-import { adminFieldAccess, isAdmin } from "../access";
+import { isAdmin } from "../access";
 
 /**
  * This deployment's free site license on meetdream.com (docs/MODULES.md →
  * Site license). Written only by the server (lib/dream/site.ts, with
  * overrideAccess) — registered automatically after the first CMS seed and
- * reported daily. Admins can read it (incl. the key, to copy into the
- * DREAM_LICENSE_KEY repo secret for paid modules); nobody edits it here.
+ * reported daily. Admins see the key's prefix only: the full key is used by
+ * the server (updates, paid modules) and never shown or sent to the browser
+ * (rotate it from meetdream.com). Nobody edits it here.
  * Without a key, a "Generate license key" button registers on demand
  * (/api/cms/dream-site/register).
  */
@@ -42,21 +43,24 @@ export const DreamSite: GlobalConfig = {
       admin: { readOnly: true, description: "Registered domain." },
     },
     {
+      // Server-only (read with overrideAccess): never returned by the API or
+      // shown in the admin.
       name: "licenseKey",
       type: "text",
-      access: { read: adminFieldAccess },
+      access: { read: () => false },
+      admin: { hidden: true },
+    },
+    {
+      name: "licenseKeyPrefix",
+      type: "text",
+      label: "License key",
       admin: {
         readOnly: true,
         description:
-          "The site license key. Add it as the GitHub repository secret " +
-          "DREAM_LICENSE_KEY so module ops can install modules. Keep it secret.",
-        // Masked, with Reveal + Copy — the only place the full key exists.
-        components: {
-          Field: "~/payload/components/DreamSiteLicenseKey#DreamSiteLicenseKey",
-        },
+          "The start of this site's key. The full key never leaves the " +
+          "server; rotate it from meetdream.com.",
       },
     },
-    { name: "licenseKeyPrefix", type: "text", admin: { readOnly: true } },
     { name: "registeredAt", type: "date", admin: { readOnly: true } },
     { name: "lastReportedAt", type: "date", admin: { readOnly: true } },
     {

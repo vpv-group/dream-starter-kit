@@ -14,20 +14,28 @@ import { isPaidOp } from "~/lib/mod/paid-ops";
  * Module operations (docs/MODULES-PLAN.md §6): every mutation dispatches
  * .github/workflows/module-ops.yml, which runs the real `pnpm mod` CLI on a
  * runner and opens a labeled PR — installed/updated code is always reviewed as
- * a diff and gated by CI before it can run. `kit-update` runs the workflow's
- * Dream Starter Kit check now instead of waiting for the daily schedule.
+ * a diff and gated by CI before it can run. Installs from /admin come from the
+ * Dream catalog only (`dream:<slug>`); GitHub-URL and zip installs are CLI-only
+ * for module authors. Clicking Install or Update approves that PR, so it
+ * merges once its checks pass. `kit-update` and `check` run the daily checks
+ * now; `merge` merges whatever is ready.
  * GET lists in-flight runs plus open module and kit update PRs.
  */
 
+const SLUG = /^[a-z][a-z0-9-]{0,63}$/;
+
 const opSchema = z.object({
-  op: z.enum(["add", "update", "remove", "kit-update"]),
-  /** add: github url (#vX.Y.Z ok) or a signed zip URL; update/remove: unused. */
-  source: z.string().optional(),
-  slug: z.string().optional(),
-  version: z.string().optional(),
+  op: z.enum(["add", "update", "remove", "kit-update", "check", "merge"]),
+  /** add: dream:<slug>[@x.y.z]. update: optional dream:<slug> to switch to. */
+  source: z
+    .string()
+    .regex(/^dream:[a-z][a-z0-9-]{0,63}(@v?\d+\.\d+\.\d+(?:[-.][\w.-]+)?)?$/)
+    .optional(),
+  slug: z.string().regex(SLUG).optional(),
+  version: z.string().max(40).optional(),
   keepData: z.boolean().optional(),
-  /** zip installs: sha256 the runner re-verifies after download. */
-  sha256: z.string().optional(),
+  /** merge: the PR an admin chose with "Merge now". */
+  pr: z.number().int().positive().optional(),
 });
 
 export async function POST(req: Request) {
@@ -38,8 +46,14 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json({ error: "Invalid op" }, { status: 400 });
   }
-  const { op, source, slug, version, keepData, sha256 } = parsed.data;
-  if (isPaidOp({ op, source, slug }) && !paidModulesEnabled()) {
+  const { op, source, slug, version, keepData, pr } = parsed.data;
+  if (op === "add" && !source) {
+    return Response.json(
+      { error: "Pick a module from the Dream catalog." },
+      { status: 400 },
+    );
+  }
+  if (isPaidOp({ op, source, slug }) && !(await paidModulesEnabled())) {
     return Response.json(PAID_MODULES_DISABLED, { status: 403 });
   }
 
@@ -55,7 +69,8 @@ export async function POST(req: Request) {
     method: "POST",
     body: JSON.stringify(
       dispatchBody(
-        { op, source, slug, version, keepData, sha256 },
+        // Clicking Install or Update in /admin is the approval.
+        { op, source, slug, version, keepData, pr, approved: true },
         defaultBranch,
       ),
     ),

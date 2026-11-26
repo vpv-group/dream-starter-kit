@@ -15,33 +15,98 @@ once, never squash it away, and updates stay easy forever.
 
 ---
 
-## Automatic update PRs (module ops)
+## Automatic update PRs
 
-With module ops set up (the `MOD_OPS_TOKEN` secret — see
+Once GitHub is connected in **/admin → Updates** (see
 [`MODULES.md`](./MODULES.md#admin-panel--automatic-updates)), the daily
 `module-ops.yml` run does this routine for you. Kit updates are free and need
-no license key. The `kit-update` job:
+no license key or stored secret. The `kit-update` job:
 
-1. Fetches `upstream/main`. If it's already merged, it exits.
-2. Merges `upstream/main` into a `sync/upstream-<date>` branch.
-   - The first merge on a "Use this template" repo uses
-     `--allow-unrelated-histories` automatically.
-   - Conflicts are committed as markers, and the PR gets the
-     `kit-update-conflicts` label.
-3. Opens one PR labeled `kit-update` that shows the version jump.
-   - Later runs refresh that same PR instead of opening another (found by
-     its `sync/upstream-` branch, so it works even if it couldn't be labeled).
-   - Labels are created automatically with the workflow's built-in
-     `GITHUB_TOKEN`; `MOD_OPS_TOKEN` needs no extra access for them.
+1. Finds the kit's newest **published release**: the highest `vX.Y.Z` tag
+   (`pnpm mod ops kit-plan`). Never `main`, never a pre-release such as
+   `v2.4.0-rc.1`. If that release is already merged, or the kit hasn't
+   published one yet, it exits with a notice.
+2. Verifies the release's **build attestation**: it rebuilds the release's
+   source archive from the tag and checks it with `gh attestation verify`
+   against the kit repository. A release that doesn't verify is never merged.
+3. Merges the release into a `dream/kit-update-<date>` branch.
+   - A repo that shares no history with the kit (a Vercel clone, "Use this
+     template") first gets a **baseline**: `pnpm mod ops baseline` records
+     the kit release matching its `package.json` version as an ancestor
+     with `git merge -s ours` (no file changes), pushed to the default
+     branch, or carried in the update PR when branch protection refuses.
+     The update is then a normal three-way merge. Only when the kit has no
+     release for that version does it fall back to
+     `--allow-unrelated-histories`.
+   - Conflicts in **generated** files (lockfile, Payload and Supabase types,
+     the migrations bundle, `*.generated.*`) take the release's side
+     (`pnpm mod ops resolve-generated`), then everything is regenerated:
+     `pnpm install`, `pnpm mod sync`, `pnpm db:gen-migrations` and both
+     gen-types against a Supabase started on the runner.
+   - Conflicts in hand-written files are committed as markers, and the PR
+     gets the `dream-update-conflicts` label.
+4. Opens one PR labeled `dream-update` that shows the version jump. Later
+   runs refresh that same PR instead of opening another.
 
-It **never auto-merges**. Review it, run the post-merge validation below, and
-land it with a **merge commit** — never squash.
+**Merging.** With **Merge updates automatically** on (the default), the
+`merge` job merges the PR with a **merge commit** once every check passes,
+there are no conflicts, and the release has soaked for 72 hours. Major
+versions, migrations that remove data and changes to `.github/workflows/`
+always wait for you, and a failed production deploy pauses automatic merging
+(MODULES.md has the full list). With it off, review the PR, run the
+post-merge validation below and merge it yourself — **merge commit, never
+squash**.
 
-- Turn it off with the `KIT_AUTO_UPDATE=off` repository variable.
-- Run it now with _Actions → Module ops → Run workflow → `op: kit-update`_.
-- `KIT_UPSTREAM_URL` (repository variable) points it at a different upstream.
+- Turn the daily check off with **Automatic updates** in /admin → Updates.
+- Run it now with **Check now** there.
 
-The rest of this guide is the same routine done by hand.
+**Removed in 2.4.** Automatic updates no longer use a personal access token
+or repository settings. Once GitHub is connected, delete these if you set
+them; nothing reads them any more:
+
+| Removed | Where it was |
+|---|---|
+| `MOD_OPS_TOKEN`, `DREAM_LICENSE_KEY` | repository secrets |
+| `GITHUB_OPS_TOKEN`, `GITHUB_REPO`, `DREAM_LICENSE_KEY`, `MOD_CATALOG_URL` | Vercel env / `.env` |
+| `MOD_AUTO_UPDATE`, `MOD_AUTO_MERGE`, `KIT_AUTO_UPDATE`, `MOD_REGISTRY_FIRST`, `KIT_UPSTREAM_URL` | repository variables |
+| "Allow auto-merge" | repository settings (no longer needed) |
+
+The private `module-uploads` storage bucket is no longer used (ZIP installs
+are CLI-only); it is left in place because Supabase doesn't allow deleting a
+bucket from a migration. Delete it from the dashboard if it's empty.
+
+**Also in 2.4 — background work, billing and data at scale.** The update
+needs nothing from you to keep working; these are the leftovers you can clean
+up once it's live:
+
+| What changed | What to do |
+|---|---|
+| Scheduled work runs on **Supabase Cron** (installed by the migrations), not Vercel Cron: the app stores its URL and a cron secret in Supabase Vault when it boots. `CRON_SECRET` is optional (derived when unset). | Nothing. /cms-setup/services → **Scheduled jobs** shows whether Supabase reaches the app. |
+| The kit ships **no edge functions**: billing, account deletion and reminders run in the app. A leftover `reminders-process` pg_cron job is removed by the reminders migration. | `supabase functions delete billing-stripe-webhook delete-account reminders-process` |
+| **One Stripe webhook** (`/api/mod/billing/stripe/webhook`), registered through the Stripe API within the hour once `STRIPE_SECRET_KEY` is set (docs/STRIPE.md §4). | After it shows a successful delivery in Stripe, delete the two old endpoints, and remove `STRIPE_WEBHOOKS_ENDPOINT_SECRET` (deprecated, ignored). |
+| Removed CMS fields `likeCount` / `commentCount` and the unused `device-tokens` collection. Their columns/table stay for one release (expand/contract), so a revert is safe. | Nothing; a later release drops them (a `dream:contract` step that waits for your review). |
+
+This update changes `.github/workflows/ci.yml` (a database-advisors step), so
+under the merge rules its PR waits for you rather than merging itself.
+
+The rest of this guide is the same routine done by hand. (By hand you can merge
+a release tag the same way: `git fetch upstream tag vX.Y.Z` then
+`git merge vX.Y.Z`. Merging `upstream/main` also works, but gets unreleased work.)
+
+### How kit releases work (maintainers)
+
+Kit releases are made by `.github/workflows/release.yml` in the kit repository:
+
+1. Bump `version` in the root `package.json` (`KIT_VERSION` follows; a unit test
+   keeps them equal) and merge it to `main`.
+2. Tag the merge commit `vX.Y.Z` and push the tag. Use `vX.Y.Z-rc.N` first to
+   publish a release candidate (a GitHub pre-release; apps never receive it).
+3. The workflow checks the tag matches the version, runs the full CI suite with
+   the E2E against a production build (`next build && next start`), then
+   attests the source archive and publishes the GitHub Release.
+
+Until the first `vX.Y.Z` release exists, the daily check reports "No kit release
+yet" and opens nothing.
 
 ---
 
@@ -141,11 +206,11 @@ not line-by-line:
   rebuild:
   - `packages/cms/src/payload-types.ts` → `pnpm cms:gen-types`
   - Supabase types (`packages/api`) → `pnpm db:gen-types`
-  Both scripts pipe their output through `prettier --write`, so the regenerated
-  files already pass `pnpm format` (raw generator output uses single quotes / no
-  semicolons and would fail CI's `format` job). If a regenerate still shows a diff
-  with no real type change, your clone predates that — pull the kit's
-  `package.json` scripts rather than discarding or hand-formatting the file.
+    Both scripts pipe their output through `prettier --write`, so the regenerated
+    files already pass `pnpm format` (raw generator output uses single quotes / no
+    semicolons and would fail CI's `format` job). If a regenerate still shows a diff
+    with no real type change, your clone predates that — pull the kit's
+    `package.json` scripts rather than discarding or hand-formatting the file.
 - **Migrations are append-only.** Never edit a shipped migration; **keep BOTH
   sides'** migration files (yours _and_ the kit's new ones). After merging, run
   `pnpm db:reset` to apply the combined sequence, then `pnpm db:gen-migrations` if

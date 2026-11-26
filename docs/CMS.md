@@ -373,8 +373,10 @@ read-only `timesRedeemed`, `active`, `appliesTo` (plans), customer-facing
 
 ### `subscriptions` — read-only Stripe mirror
 
-Written exclusively by the plugin-stripe webhook
-(`POST /cms-api/stripe/webhooks`); keyed by unique `stripeSubscriptionID`.
+A read-only projection of `public.mod_billing_subscriptions` (the source of
+truth), written only by the billing module's Stripe webhook
+(`POST /api/mod/billing/stripe/webhook`) after it applies a newer
+`customer.subscription.*` event; keyed by unique `stripeSubscriptionID`.
 **Fields (all read-only):** `user`, `plan`, `coupon`, `status`
 (`trialing`/`active`/`past_due`/`canceled`/`churned`/`paused`), period/trial
 dates, `cancelAtPeriodEnd`, `canceledAt`, `lastPaymentAt`/`lastPaymentAmount`,

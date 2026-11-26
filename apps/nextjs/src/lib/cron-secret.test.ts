@@ -23,6 +23,12 @@ describe("resolveCronSecret", () => {
     expect(a).not.toBe(deriveCronSecret("other"));
   });
 
+  it("accepts Vercel's SUPABASE_SECRET_KEY name for the service key", () => {
+    expect(resolveCronSecret({ SUPABASE_SECRET_KEY: "srk" })).toBe(
+      deriveCronSecret("srk"),
+    );
+  });
+
   it("is undefined with nothing to derive from", () => {
     expect(resolveCronSecret({})).toBeUndefined();
   });

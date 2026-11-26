@@ -339,6 +339,7 @@ async function runBootstrap(deps: BootstrapDeps): Promise<BootstrapResult> {
           cronSecret: resolveCronSecret({
             CRON_SECRET: env.CRON_SECRET,
             SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
+            SUPABASE_SECRET_KEY: env.SUPABASE_SECRET_KEY,
           }),
         }
       : deps.schedulerSecrets;

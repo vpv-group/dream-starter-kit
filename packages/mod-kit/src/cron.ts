@@ -19,6 +19,8 @@ const CRON_SECRET_CONTEXT = "dream-starter-kit:cron-secret";
 export interface CronSecretSource {
   CRON_SECRET?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
+  /** Vercel's Supabase Marketplace name for the service-role key. */
+  SUPABASE_SECRET_KEY?: string;
 }
 
 export function deriveCronSecret(seed: string): string {
@@ -29,10 +31,9 @@ export function resolveCronSecret(
   source: CronSecretSource,
 ): string | undefined {
   if (source.CRON_SECRET) return source.CRON_SECRET;
-  if (source.SUPABASE_SERVICE_ROLE_KEY) {
-    return deriveCronSecret(source.SUPABASE_SERVICE_ROLE_KEY);
-  }
-  return undefined;
+  const serviceKey =
+    source.SUPABASE_SERVICE_ROLE_KEY ?? source.SUPABASE_SECRET_KEY;
+  return serviceKey ? deriveCronSecret(serviceKey) : undefined;
 }
 
 /** True when `authorization` is exactly `Bearer <cron secret>`. */
@@ -57,5 +58,6 @@ export function isCronRequest(req: Request): boolean {
     // Server-side module code reads the host's env directly (see MODULES.md).
     CRON_SECRET: process.env.CRON_SECRET,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
   });
 }

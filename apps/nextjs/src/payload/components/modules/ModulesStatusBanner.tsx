@@ -6,8 +6,8 @@ import { Banner } from "@payloadcms/ui";
 import { useModulesAdmin } from "./use-modules-admin";
 
 /**
- * Above the Modules table (collection `beforeListTable`): says when module
- * ops is off (the screen is read-only), or lists what's in flight — open
+ * Above the Modules table (collection `beforeListTable`): says when GitHub
+ * isn't connected (the screen is read-only), or lists what's in flight — open
  * module and kit update PRs plus running or failed workflow runs. Renders nothing when
  * there's nothing to say, or for staff who aren't admins.
  */
@@ -15,13 +15,12 @@ export function ModulesStatusBanner() {
   const { registry, ops } = useModulesAdmin();
   if (!registry) return null;
 
-  if (!registry.opsConfigured) {
+  if (!registry.githubConnected) {
     return (
       <Banner type="info" className="kit-modules-banner">
-        <strong>Module ops is off.</strong> Installing, updating and removing
-        modules from here is unavailable, and paid modules are hidden. Free
-        modules still install from the CLI (<code>pnpm mod add</code>).{" "}
-        <Link href="/admin">Set up module ops</Link>
+        <strong>Connect GitHub to install modules.</strong> Modules install and
+        update through pull requests on your repository.{" "}
+        <Link href="/admin/updates">Connect GitHub</Link>
       </Banner>
     );
   }
@@ -48,7 +47,11 @@ export function ModulesStatusBanner() {
             —{" "}
             {pr.conflicts
               ? "has conflicts to resolve"
-              : "waiting for review and merge"}
+              : pr.needsReview
+                ? "needs your review"
+                : pr.approved
+                  ? "merges itself once its checks pass"
+                  : "waiting to merge (see Updates)"}
           </li>
         ))}
         {runs.map((run) => (

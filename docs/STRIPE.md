@@ -176,9 +176,10 @@ Vault, so there is no Stripe dashboard step and no second secret to copy. It run
 within the hour of your first deploy; check **Developers → Webhooks** in Stripe for an
 endpoint described "Dream Starter Kit — billing (created automatically)".
 
-Want to manage the endpoint yourself instead? Create it in the dashboard with the events
-above and set `STRIPE_WEBHOOK_SECRET` to its `whsec_…`. When that variable is set, the
-app never creates or replaces the endpoint.
+Want to manage the endpoint yourself instead? Create it at that exact URL in the
+dashboard with the events above and set `STRIPE_WEBHOOK_SECRET` to its `whsec_…`; the
+app then leaves it alone. The webhook accepts a signature from either secret (yours or
+the Vault one).
 
 ### 4.2 Local development (Stripe CLI — no public URL needed)
 
@@ -201,8 +202,10 @@ Kits before this change used two endpoints:
 
 To upgrade:
 
-1. Deploy. The scheduled check registers the new endpoint, unless you set
-   `STRIPE_WEBHOOK_SECRET` yourself. In that case, point your endpoint at the new URL.
+1. Deploy. The scheduled check registers the new endpoint within the hour, even though
+   `STRIPE_WEBHOOK_SECRET` is still set from the old edge function (the webhook accepts
+   either secret). The old endpoints keep working meanwhile, as long as the edge
+   function is still deployed.
 2. Confirm a delivery succeeds on the new endpoint in **Developers → Webhooks**.
 3. Delete the two old endpoints in Stripe, and remove
    `STRIPE_WEBHOOKS_ENDPOINT_SECRET` from your env. It's deprecated and ignored.

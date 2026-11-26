@@ -34,6 +34,7 @@ async function handler(req: NextRequest): Promise<Response> {
   const cronEnv = {
     CRON_SECRET: env.CRON_SECRET,
     SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_SECRET_KEY: env.SUPABASE_SECRET_KEY,
   };
   if (!resolveCronSecret(cronEnv)) {
     return NextResponse.json(

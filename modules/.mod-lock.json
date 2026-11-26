@@ -80,6 +80,11 @@
       "sha256": "2a3ccaf11ca425f5f4fbe814f3fe7cf061e640cc2451339447a0b2af20d7984f",
       "target": "20261125231718_mod_notifications_005_feed_scale.sql"
     },
+    "notifications/006_token_compat.sql": {
+      "version": "20261126002840",
+      "sha256": "5ed72861ba1c8fa9271cd68b62a67907c35ec551bb1c9d1842ab02aa4d5954ff",
+      "target": "20261126002840_mod_notifications_006_token_compat.sql"
+    },
     "reminders/001_initial.sql": {
       "version": "20260612011541",
       "sha256": "2d8177544d43067d8cc08517c690cd70e835b3bcbfddfe1570675e1741296459",
@@ -99,6 +104,11 @@
       "version": "20261125234501",
       "sha256": "e308d9ea68ad977c08bfdacd7a6e413e0cf7d4d369986f7e32927882bf0b28aa",
       "target": "20261125234501_mod_reminders_004_schedule.sql"
+    },
+    "reminders/005_retire_legacy_schedule.sql": {
+      "version": "20261126002841",
+      "sha256": "8575d6d1c8768fbc2a0d0fd117276c82d9040b12afd84204235b204f33d544a3",
+      "target": "20261126002841_mod_reminders_005_retire_legacy_schedule.sql"
     }
   }
 }

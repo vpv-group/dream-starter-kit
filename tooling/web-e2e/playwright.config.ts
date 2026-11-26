@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const baseURL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const STUB_URL = "http://localhost:4010";
 
 export default defineConfig({
   testDir: "./src",
@@ -74,10 +75,34 @@ export default defineConfig({
   // sign-up / favorites need no token. To exercise the widget locally, set
   // NEXT_PUBLIC_TURNSTILE_SITE_KEY (Cloudflare's always-pass test key
   // 1x00000000000000000000AA) in .env — see docs/TURNSTILE.md.
-  webServer: {
-    command: "pnpm --filter @acme/nextjs dev",
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  //
+  // E2E_SERVER=prod (the kit's release.yml) runs against a production build
+  // instead — `next build && next start` — so the production boot path
+  // (runtime DB bootstrap, Payload prodMigrations) is exercised too.
+  //
+  // The stub server (stub-services.mjs) stands in for meetdream.com and the
+  // GitHub API, which the app calls server-side (updates.spec.ts). A dev
+  // server you started yourself is reused as is, so start it with the same
+  // DREAM_REGISTRY_URL / DREAM_GITHUB_API_URL to run updates.spec.ts against it.
+  webServer: [
+    {
+      command: "node stub-services.mjs",
+      url: `${STUB_URL}/health`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 10_000,
+    },
+    {
+      command:
+        process.env.E2E_SERVER === "prod"
+          ? "pnpm --filter @acme/nextjs build && pnpm --filter @acme/nextjs start"
+          : "pnpm --filter @acme/nextjs dev",
+      url: baseURL,
+      reuseExistingServer: !process.env.CI,
+      timeout: process.env.E2E_SERVER === "prod" ? 900_000 : 120_000,
+      env: {
+        DREAM_REGISTRY_URL: `${STUB_URL}/registry`,
+        DREAM_GITHUB_API_URL: `${STUB_URL}/github`,
+      },
+    },
+  ],
 });

@@ -14,8 +14,8 @@ import type { SmtpEnv } from "./lib/email/smtp";
 import type { S3ConfigSource } from "./lib/s3-config";
 import { resolveCmsCredentials } from "./lib/cms/derived-credentials";
 import { generateMediaFileURL } from "./lib/cms/media-url";
-import { mergePayloadMigrations } from "./lib/cms/merge-migrations";
 import { noDocumentLock } from "./lib/cms/no-document-lock";
+import { mergePayloadMigrations } from "./lib/cms/payload-migrations";
 import { CMS_CLI_PROCESS_ENV, cmsPoolSizing } from "./lib/cms/pool-sizing";
 import { isCronAuthorized } from "./lib/cron-secret";
 import { pgConnectionOptions } from "./lib/db/bootstrap-core";
@@ -165,9 +165,9 @@ export default buildConfig({
       // disables once the CMS has content. See payload/components/SeedGate.tsx.
       beforeDashboard: [
         "~/payload/components/SeedGate#SeedGate",
-        // Module ops setup steps (MOD_OPS_TOKEN) until it's configured —
-        // see payload/components/ModOpsSetupAlert.tsx.
-        "~/payload/components/ModOpsSetupAlert#ModOpsSetupAlert",
+        // One "Finish setup" row until GitHub is connected for updates —
+        // see payload/components/FinishSetupRow.tsx.
+        "~/payload/components/FinishSetupRow#FinishSetupRow",
         "~/payload/components/DreamSiteSync#DreamSiteSync",
       ],
       // Wraps every admin route and injects the site-wide shadcn theme as a
@@ -186,6 +186,10 @@ export default buildConfig({
       // Sidebar with accordion groups: one open at a time, and the group of
       // the current page open on load. See payload/components/AdminNav.tsx.
       Nav: "~/payload/components/AdminNav#AdminNav",
+      // "Updates" link for admins (payload/components/updates/).
+      afterNavLinks: [
+        "~/payload/components/updates/UpdatesNavLink#UpdatesNavLink",
+      ],
       // Module install/update/remove lives on the Modules collection screen
       // (payload/collections/KitModules.ts + payload/components/modules/).
       views: {
@@ -194,6 +198,12 @@ export default buildConfig({
           Component:
             "~/payload/components/ModuleSettingsRedirect#ModuleSettingsRedirect",
           path: "/module-settings/:slug",
+        },
+        // /admin/updates — automatic updates for the kit and modules
+        // (payload/components/updates/UpdatesView.tsx).
+        updates: {
+          Component: "~/payload/components/updates/UpdatesView#UpdatesView",
+          path: "/updates",
         },
       },
     },
@@ -275,6 +285,7 @@ export default buildConfig({
         isCronAuthorized(req.headers.get("authorization"), {
           CRON_SECRET: process.env.CRON_SECRET,
           SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+          SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
         }),
     },
     deleteJobOnComplete: true,
@@ -363,10 +374,9 @@ export default buildConfig({
     // the cms.payload_migrations ledger). After changing a collection, regenerate
     // with `pnpm cms:migrate:create` and commit the new file in payload/migrations.
     push: process.env.NODE_ENV !== "production",
-    // Core + module migrations merged by timestamp prefix and DEDUPED by name:
-    // `mod sync` copies module migrations into the core dir, and Payload's
-    // migrate() reads its ledger once, so a duplicate name would run twice on a
-    // fresh database (see lib/cms/merge-migrations.ts).
+    // Core + module migrations merged by timestamp prefix, each name once;
+    // Payload's cms.payload_migrations ledger keys by name, so boot runs stay
+    // idempotent.
     //
     // NOT registered during `next build`. In production mode the adapter runs
     // `prodMigrations` automatically the first time it connects (db-postgres
@@ -386,7 +396,10 @@ export default buildConfig({
     prodMigrations:
       buildPhase || guardedPreview
         ? undefined
-        : mergePayloadMigrations(migrations, modPayloadMigrations),
+        : // Core + module migrations, each name ONCE: `mod sync` also copies
+          // module migrations into payload/migrations (see
+          // lib/cms/payload-migrations.ts — a duplicate broke fresh boots).
+          mergePayloadMigrations(migrations, modPayloadMigrations),
     migrationDir: path.resolve(dirname, "payload/migrations"),
   }),
   sharp,

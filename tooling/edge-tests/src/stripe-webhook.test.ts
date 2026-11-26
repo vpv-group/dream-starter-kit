@@ -1,11 +1,12 @@
 /**
  * Unit tests for the Stripe-webhook mapping helpers. These pure functions turn
- * Stripe event objects into the rows the edge function upserts; the edge
- * function (`modules/billing/supabase/functions/billing-stripe-webhook/index.ts`) imports the same
- * module, so this is real coverage of the sync logic without a live Stripe.
+ * Stripe event objects into the rows the billing webhook upserts; the route
+ * (`modules/billing/src/server/stripe/webhook.ts`) imports the same module,
+ * so this is real coverage of the sync logic without a live Stripe. (The
+ * webhook used to be an edge function; the package name is historical.)
  *
- * The edge function itself is Deno (npm:/jsr: imports + signature verification +
- * service-role writes) and is not unit-tested here — only the portable mapping.
+ * Signature verification, replay and ordering are covered end to end by
+ * tooling/web-e2e/src/subscription.spec.ts.
  */
 import { describe, expect, it } from "vitest";
 
@@ -17,7 +18,7 @@ import {
   resolveCheckoutCustomer,
   subscriptionCustomerId,
   subscriptionUserIdFromMetadata,
-} from "../../../modules/billing/supabase/functions/billing-stripe-webhook/mapping";
+} from "../../../modules/billing/src/server/stripe/mapping";
 
 describe("isoOrNull", () => {
   it("converts Unix seconds to an ISO timestamp", () => {
