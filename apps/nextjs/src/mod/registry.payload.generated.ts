@@ -66,7 +66,8 @@ export const modSettings: Record<string, ModuleSettings> = {
 
 /**
  * Modules with their own admin settings component (manifest
- * admin.settingsComponent) — rendered on the module's page in /admin through
- * the kit's ModuleAdminSettings wrapper (registry.admin.generated.tsx).
+ * admin.settingsComponent) — rendered on the module's page in /admin (or, for
+ * an adapter, on `page`: its target module's page) through the kit's
+ * ModuleAdminSettings wrapper (registry.admin.generated.tsx).
  */
-export const modAdminSettings: { slug: string }[] = [];
+export const modAdminSettings: { slug: string; page?: string }[] = [];

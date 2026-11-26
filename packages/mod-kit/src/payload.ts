@@ -1,5 +1,6 @@
 import type {
   Access,
+  CollectionConfig,
   Field,
   FieldAccess,
   GlobalConfig,
@@ -321,6 +322,12 @@ export interface AdapterSettingsOptions {
   description?: string;
   /** The author-controlled fields (stored under a per-adapter group). */
   fields: Field[];
+  /**
+   * Let anonymous clients read this tab when the target's settings are
+   * `publicRead`. Default false: adapter tabs (API config, connector state)
+   * stay staff-only even inside a public settings group.
+   */
+  publicRead?: boolean;
 }
 
 export interface AdapterSettings {
@@ -367,6 +374,9 @@ export function defineAdapterSettings(
           name: groupName,
           type: "group",
           label: opts.name,
+          // Field-level access applies inside the target's group, so a
+          // public target (e.g. billing's pricing page) never leaks this tab.
+          ...(opts.publicRead ? {} : { access: { read: staffFieldAccess } }),
           fields: opts.fields,
         },
       ],
@@ -386,12 +396,20 @@ export function composeSettingsTabs(
   adapters: AdapterSettings[],
 ): ModuleSettings {
   if (adapters.length === 0) return base;
-  const fields = base.global.fields.map((field) => {
-    if ("type" in field && field.type === "tabs" && Array.isArray(field.tabs)) {
-      return { ...field, tabs: [...field.tabs, ...adapters.map((a) => a.tab)] };
-    }
-    return field;
-  });
+  const at = base.global.fields.findIndex(
+    (f) => "type" in f && f.type === "tabs" && Array.isArray(f.tabs),
+  );
+  if (at === -1) {
+    // Silently dropping the tabs would hide adapter config from admins.
+    throw new Error(
+      `[${base.slug}] settings have no top-level "tabs" field, so adapter tabs (${adapters.map((a) => a.slug).join(", ")}) can't be added — wrap the module's settings fields in tabs`,
+    );
+  }
+  const fields = base.global.fields.map((field, i) =>
+    i === at && field.type === "tabs"
+      ? { ...field, tabs: [...field.tabs, ...adapters.map((a) => a.tab)] }
+      : field,
+  );
   const defaults = { ...base.defaults };
   for (const a of adapters) defaults[a.groupName] = a.defaults;
   return {
@@ -423,6 +441,88 @@ export async function getAdapterSettings<
   } catch {
     return adapter.defaults as T;
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Collection tabs — adapter fields merged into a target module's collection   */
+/* (e.g. the Stripe adapter's product/price ids on billing's Plans).           */
+/* -------------------------------------------------------------------------- */
+
+export interface AdapterCollectionTabOptions {
+  /** The contributing module's slug. */
+  slug: string;
+  /** Target module slug (the adapter's `cms.settingsTabFor`). */
+  target: string;
+  /** The target collection slug, e.g. "mod-billing-plans". */
+  collection: string;
+  /** Tab label, e.g. "Stripe". */
+  label: string;
+  description?: string;
+  fields: Field[];
+}
+
+export type AdapterCollectionTab = AdapterCollectionTabOptions;
+
+/**
+ * Define an UNNAMED tab an adapter adds to a target module's collection.
+ * Unnamed tabs keep their fields at the document root, so adding or removing
+ * the adapter never moves columns. The target collection must have a
+ * top-level `tabs` field; the generated payload registry merges the tab in
+ * via `composeCollectionTabs`.
+ */
+export function defineAdapterCollectionTab(
+  opts: AdapterCollectionTabOptions,
+): AdapterCollectionTab {
+  return { ...opts };
+}
+
+/**
+ * Append adapter tabs to the matching collections' first top-level `tabs`
+ * field. Throws when a tab targets a collection that has none (or isn't
+ * installed), so a misconfigured adapter fails `pnpm mod sync`/boot loudly.
+ */
+export function composeCollectionTabs(
+  collections: CollectionConfig[],
+  tabs: AdapterCollectionTab[],
+): CollectionConfig[] {
+  if (tabs.length === 0) return collections;
+  const used = new Set<AdapterCollectionTab>();
+  const out = collections.map((collection) => {
+    const mine = tabs.filter((t) => t.collection === collection.slug);
+    if (mine.length === 0) return collection;
+    const at = collection.fields.findIndex(
+      (f) => "type" in f && f.type === "tabs" && Array.isArray(f.tabs),
+    );
+    if (at === -1) {
+      throw new Error(
+        `[${mine.map((t) => t.slug).join(", ")}] collection "${collection.slug}" has no top-level "tabs" field to add the adapter tab to`,
+      );
+    }
+    const fields = collection.fields.map((field, i) =>
+      i === at && field.type === "tabs"
+        ? {
+            ...field,
+            tabs: [
+              ...field.tabs,
+              ...mine.map((t) => ({
+                label: t.label,
+                ...(t.description ? { description: t.description } : {}),
+                fields: t.fields,
+              })),
+            ],
+          }
+        : field,
+    );
+    mine.forEach((t) => used.add(t));
+    return { ...collection, fields };
+  });
+  const orphan = tabs.find((t) => !used.has(t));
+  if (orphan) {
+    throw new Error(
+      `[${orphan.slug}] collection tab targets "${orphan.collection}", which isn't installed`,
+    );
+  }
+  return out;
 }
 
 /**

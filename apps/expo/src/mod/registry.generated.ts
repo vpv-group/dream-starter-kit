@@ -79,6 +79,9 @@ export const modWidgets: { slug: string; Widget: React.ComponentType }[] = [
   { slug: "reminders", Widget: widget_reminders },
 ];
 
+/** Native adapters (manifest adapter.native) — for ModAdaptersProvider. */
+export const modClientAdapters: { slug: string; target: string; adapter: unknown }[] = [];
+
 export function hasModule(slug: string): boolean {
   return modInstalled.some((e) => e.slug === slug);
 }

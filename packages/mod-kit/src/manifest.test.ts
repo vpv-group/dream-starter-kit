@@ -20,6 +20,7 @@ describe("defineModule", () => {
       routes: false,
       publicRoutes: false,
       edgeFunctions: [],
+      services: false,
     });
     expect(m.database.tables).toEqual([]);
     expect(m.cms.hasSettings).toBe(false);

@@ -37,3 +37,85 @@ export function ModWidgetsProvider({
 export function useModWidgets(): ModWidgetEntry[] {
   return useContext(ModWidgetsContext);
 }
+
+/* -------------------------------------------------------------------------- */
+/* Client adapters (manifest `adapter.web` / `adapter.native`) — the host      */
+/* passes the generated `modClientAdapters` (filtered to enabled modules) in   */
+/* once; the target module reads its own with `useModAdapters(target)`.        */
+/* -------------------------------------------------------------------------- */
+
+export interface ModClientAdapterEntry<T = unknown> {
+  /** The adapter module's slug. */
+  slug: string;
+  /** The module the adapter plugs into (manifest `adapter.for`). */
+  target: string;
+  /** The adapter's `./web` (or `./native`) contract export. */
+  adapter: T;
+}
+
+const ModAdaptersContext = createContext<ModClientAdapterEntry[]>([]);
+
+export function ModAdaptersProvider({
+  adapters,
+  children,
+}: {
+  adapters: ModClientAdapterEntry[];
+  children: ReactNode;
+}) {
+  return (
+    <ModAdaptersContext.Provider value={adapters}>
+      {children}
+    </ModAdaptersContext.Provider>
+  );
+}
+
+/** The installed-and-enabled client adapters for a target module. */
+export function useModAdapters<T>(target: string): ModClientAdapterEntry<T>[] {
+  const all = useContext(ModAdaptersContext);
+  return all.filter((a) => a.target === target) as ModClientAdapterEntry<T>[];
+}
+
+/* -------------------------------------------------------------------------- */
+/* Slots (manifest `slots.web`) — host-rendered module UI. The host passes the */
+/* generated `modSlots` (enabled modules only) in once and renders             */
+/* `<ModSlot name="…" fallback={…} {...props} />` where module UI may appear.  */
+/* -------------------------------------------------------------------------- */
+
+export type ModSlotMap = Record<string, ComponentType<Record<string, unknown>>>;
+
+const ModSlotsContext = createContext<ModSlotMap>({});
+
+export function ModSlotsProvider({
+  slots,
+  children,
+}: {
+  slots: ModSlotMap;
+  children: ReactNode;
+}) {
+  return (
+    <ModSlotsContext.Provider value={slots}>
+      {children}
+    </ModSlotsContext.Provider>
+  );
+}
+
+/** Whether an installed, enabled module fills the slot. */
+export function useHasModSlot(name: string): boolean {
+  return name in useContext(ModSlotsContext);
+}
+
+/**
+ * Render the module component filling `name` with the remaining props, or
+ * `fallback` when no installed module fills it (e.g. billing removed →
+ * premium content renders without a paywall; the server still strips
+ * premium fields).
+ */
+export function ModSlot({
+  name,
+  fallback = null,
+  ...props
+}: { name: string; fallback?: ReactNode } & Record<string, unknown>) {
+  const Slot = useContext(ModSlotsContext)[name];
+  if (!Slot) return <>{fallback}</>;
+  return <Slot {...props} />;
+}

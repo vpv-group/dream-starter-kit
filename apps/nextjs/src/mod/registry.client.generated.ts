@@ -29,3 +29,12 @@ export const modIcons: Record<string, React.ComponentType<{ className?: string }
   IconDashboard: IconDashboard,
   IconMessageCircle: IconMessageCircle,
 };
+
+/**
+ * Client adapters (manifest adapter.web) — handed to ModAdaptersProvider
+ * (enabled modules only); the target reads them with useModAdapters().
+ */
+export const modClientAdapters: { slug: string; target: string; adapter: unknown }[] = [];
+
+/** Host-rendered UI slots (manifest slots.web) — see <ModSlot />. */
+export const modSlots: { slug: string; name: string; Component: React.ComponentType<Record<string, unknown>> }[] = [];

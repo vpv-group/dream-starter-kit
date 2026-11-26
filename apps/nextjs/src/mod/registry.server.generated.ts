@@ -4,7 +4,7 @@
 // `pnpm test` via apps/nextjs/src/mod/registry-drift.test.ts.
 import "server-only";
 
-import type { ModPublicRouteTable, ModRouteTable } from "@acme/mod-kit/server";
+import type { ModPublicRouteTable, ModRouteTable, ModServices } from "@acme/mod-kit/server";
 
 import { routes as routes_billing, publicRoutes as publicRoutes_billing } from "@acme/mod-billing/server";
 import { routes as routes_chat } from "@acme/mod-chat/server";
@@ -30,3 +30,9 @@ export const modPublicRoutes: Record<string, ModPublicRouteTable> = {
   "docs": publicRoutes_docs,
   "reminders": publicRoutes_reminders,
 };
+
+/**
+ * slug → the module's host-facing services (manifest server.services). Host
+ * code calls `modServices.<slug>?.fn(...)` instead of importing modules.
+ */
+export const modServices: Record<string, ModServices> = {};

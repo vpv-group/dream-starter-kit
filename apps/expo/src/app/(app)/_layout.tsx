@@ -1,10 +1,10 @@
 import { useColorScheme } from "react-native";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 
-import { ModWidgetsProvider } from "@acme/mod-kit/react";
+import { ModAdaptersProvider, ModWidgetsProvider } from "@acme/mod-kit/react";
 
 import { useBrandColors } from "~/lib/brand";
-import { modWidgets } from "~/mod/registry.generated";
+import { modClientAdapters, modWidgets } from "~/mod/registry.generated";
 import { HeaderBell } from "~/nav/header-bell";
 import { NativeNavProvider } from "~/nav/native-nav-provider";
 
@@ -35,19 +35,22 @@ export default function AppLayout() {
       {/* Home-screen widgets from the generated registry (all installed; the
           runtime kit-modules disable toggle gates native at the menu level). */}
       <ModWidgetsProvider widgets={modWidgets}>
-        <NativeNavProvider>
-          <Stack
-            screenOptions={{
-              // Dream's reserved volume inside the app: plain ground, ink titles.
-              headerStyle: { backgroundColor: colors.background },
-              headerTintColor: colors.foreground,
-              contentStyle: { backgroundColor: colors.background },
-              headerRight: () => <HeaderBell color={colors.foreground} />,
-            }}
-          >
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          </Stack>
-        </NativeNavProvider>
+        {/* Native adapters (e.g. a future in-app purchase provider for billing). */}
+        <ModAdaptersProvider adapters={modClientAdapters}>
+          <NativeNavProvider>
+            <Stack
+              screenOptions={{
+                // Dream's reserved volume inside the app: plain ground, ink titles.
+                headerStyle: { backgroundColor: colors.background },
+                headerTintColor: colors.foreground,
+                contentStyle: { backgroundColor: colors.background },
+                headerRight: () => <HeaderBell color={colors.foreground} />,
+              }}
+            >
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            </Stack>
+          </NativeNavProvider>
+        </ModAdaptersProvider>
       </ModWidgetsProvider>
     </ThemeProvider>
   );
