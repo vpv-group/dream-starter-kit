@@ -36,7 +36,13 @@ function walk(node: PlanNode, out: PlanNode[] = []): PlanNode[] {
   return out;
 }
 
-const client = new pg.Client({ connectionString: DB_URL });
+// This suite only ever targets the local stack. The CI profile's .env adds
+// `sslmode=require` to SUPABASE_DB_URL to exercise the hosted-TLS path
+// elsewhere; node-postgres reads that as verify-full, which the local
+// certificate fails (and a local stack may not serve TLS at all). Drop it.
+const dbUrl = new URL(DB_URL);
+dbUrl.searchParams.delete("sslmode");
+const client = new pg.Client({ connectionString: dbUrl.toString() });
 let userId = "";
 let threadId = "";
 
