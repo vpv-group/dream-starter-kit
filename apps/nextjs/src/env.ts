@@ -23,6 +23,18 @@ export const SUPABASE_URL_PLACEHOLDER = "http://127.0.0.1:54321";
 export const SUPABASE_ANON_KEY_PLACEHOLDER = "set-in-vercel-env";
 
 /**
+ * Vercel's Supabase Marketplace integration sets the server key as
+ * SUPABASE_SECRET_KEY (Supabase's new key names), not
+ * SUPABASE_SERVICE_ROLE_KEY. Treat it as the service-role key everywhere —
+ * the admin client, invites, the derived CMS credentials, storage and the
+ * modules that read process.env — so a one-click deploy needs no renaming.
+ * An explicit SUPABASE_SERVICE_ROLE_KEY always wins.
+ */
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.SUPABASE_SECRET_KEY) {
+  process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SECRET_KEY;
+}
+
+/**
  * Web app environment. Server vars are secrets (never bundled to the client);
  * client vars MUST be `NEXT_PUBLIC_`-prefixed. The shared, platform-agnostic
  * schema lives in `@acme/config` (used by edge functions); this file is the
@@ -42,6 +54,8 @@ export const env = createEnv({
     // user from /admin fails with a clear error until it's set. Supabase edge
     // functions receive the service role from Supabase's injected env.
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+    // The Marketplace integration's name for it (aliased above).
+    SUPABASE_SECRET_KEY: z.string().min(1).optional(),
     SUPABASE_DB_URL: z.url().optional(),
     // Postgres URLs auto-injected by the Vercel<->Supabase integration. The
     // runtime DB bootstrap (lib/db/bootstrap.ts → resolveAdminDbUrl) uses them

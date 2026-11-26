@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  connectGithubUrl,
+  connectUrl,
   fetchSiteToken,
   fetchUpdates,
   saveSettings,
@@ -43,6 +43,8 @@ describe("Dream Updates client", () => {
       },
       hold: null,
       brokerConfigured: true,
+      backendConfigured: false,
+      canConfigureBackend: false,
     });
     const [url, init] = fetcher.mock.calls[0] ?? [];
     expect(url).toBe(`${REGISTRY}/sites/updates`);
@@ -102,12 +104,13 @@ describe("Dream Updates client", () => {
 
   it("gets the install URL for Connect GitHub", async () => {
     expect(
-      await connectGithubUrl(
+      await connectUrl(
         opts(
           fake(200, {
             url: "https://github.com/apps/dream-updates/installations/new?state=s",
           }),
         ),
+        "github",
         "https://app.acme.com/admin/updates",
       ),
     ).toEqual({
@@ -125,5 +128,25 @@ describe("tokenCache", () => {
     expect(cache.get()?.token).toBe("t");
     now = Date.parse("2026-12-01T10:56:00Z");
     expect(cache.get()).toBeNull();
+  });
+});
+
+describe("Connect Supabase", () => {
+  it("names the site's Supabase project", async () => {
+    const fetcher = fake(200, {
+      url: "https://api.supabase.com/v1/oauth/authorize?x",
+    });
+    await connectUrl(
+      opts(fetcher),
+      "supabase",
+      "https://app.acme.com/cms-setup/services",
+      "https://abcdefghijklmnopqrst.supabase.co",
+    );
+    const [url, init] = fetcher.mock.calls[0] ?? [];
+    expect(url).toBe(`${REGISTRY}/connect/backend/supabase/start`);
+    expect(JSON.parse(init?.body as string)).toEqual({
+      returnTo: "https://app.acme.com/cms-setup/services",
+      supabaseUrl: "https://abcdefghijklmnopqrst.supabase.co",
+    });
   });
 });

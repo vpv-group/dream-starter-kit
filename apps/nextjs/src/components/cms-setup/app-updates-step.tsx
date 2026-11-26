@@ -72,7 +72,7 @@ export function AppUpdatesStep({
         body: JSON.stringify({ ...SETTINGS[choice], paused: [], skipped: [] }),
       });
       if (res.ok) {
-        window.location.assign("/admin");
+        window.location.assign("/cms-setup/services");
         return;
       }
       const data = (await res.json().catch(() => ({}))) as {
@@ -95,7 +95,7 @@ export function AppUpdatesStep({
       title="How should your app stay up to date?"
       description={`${repo ? `Connected to ${repo}. ` : ""}You can change this later in Admin › Updates.`}
       howLong="under a minute"
-      next="Next you land in your admin."
+      next="Next we check your hosting and database settings."
       actions={
         <Button
           size="lg"

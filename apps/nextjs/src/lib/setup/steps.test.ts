@@ -15,10 +15,11 @@ describe("setup steps", () => {
       "content",
       "connect-code",
       "app-updates",
+      "services",
     ]);
     expect(stepPosition("app-updates", ctx)).toEqual({
       index: "04",
-      total: "04",
+      total: "05",
     });
   });
 
@@ -27,7 +28,7 @@ describe("setup steps", () => {
     expect(stepPosition("connect-code", connected)).toBeNull();
     expect(stepPosition("app-updates", connected)).toEqual({
       index: "03",
-      total: "03",
+      total: "04",
     });
   });
 

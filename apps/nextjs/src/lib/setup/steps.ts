@@ -6,7 +6,7 @@
  */
 
 export type SetupStepKey =
-  "account-model" | "content" | "connect-code" | "app-updates";
+  "account-model" | "content" | "connect-code" | "app-updates" | "services";
 
 export interface SetupContext {
   /** The account model hasn't been chosen yet. */
@@ -29,6 +29,9 @@ const ORDER: { key: SetupStepKey; applies: (ctx: SetupContext) => boolean }[] =
       applies: (ctx) => ctx.updatesAvailable && !ctx.githubConnected,
     },
     { key: "app-updates", applies: (ctx) => ctx.updatesAvailable },
+    // Host and database checks (lib/setup/services-core.ts): only on a
+    // public deployment, where they can be wrong.
+    { key: "services", applies: (ctx) => ctx.updatesAvailable },
   ];
 
 export function setupSteps(ctx: SetupContext): SetupStepKey[] {
