@@ -12,6 +12,8 @@
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { kitOwnsFunction } from "./installed";
+
 const DB_URL =
   process.env.SUPABASE_DB_URL ??
   "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
@@ -53,7 +55,16 @@ describe("SECURITY DEFINER functions reachable by anon check their caller", () =
       .filter((r) => !/auth\.(uid|role|jwt)\s*\(/i.test(r.src))
       .map((r) => r.name)
       .sort();
-    expect(unguarded).toEqual([]);
+    // Only the kit's own functions fail the suite. Other modules' are
+    // reported for their authors (they may guard through a helper this
+    // check can't see), never failing an app's kit update.
+    const others = unguarded.filter((n) => !kitOwnsFunction(n));
+    if (others.length > 0) {
+      console.warn(
+        `[definer-guards] module functions anon can execute with no auth.* check in their body (review in the module): ${others.join(", ")}`,
+      );
+    }
+    expect(unguarded.filter(kitOwnsFunction)).toEqual([]);
   });
 
   it("revokes API execute on registered housekeeping functions", async () => {
