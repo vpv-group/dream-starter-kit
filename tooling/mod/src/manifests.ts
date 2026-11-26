@@ -36,6 +36,63 @@ export interface LoadedModule {
    * prodMigrations; the cms ledger dedupes).
    */
   payloadMigrations: { name: string; content: string }[];
+  /**
+   * Native packages this module adds to the Expo app (name → range): its
+   * `expo-*` / `react-native-*` dependencies that the app doesn't already
+   * list. Recorded in native.generated.json; a change needs a new native build.
+   */
+  nativePackages: Record<string, string>;
+}
+
+const NATIVE_PACKAGE =
+  /^(expo$|expo-|@expo\/|react-native$|react-native-|@react-native)/;
+
+/**
+ * A module's native dependencies, checked against the Expo app's own:
+ * host-provided packages must use a compatible range (they're the app's
+ * copy); other `expo-*` packages must target the app's Expo SDK major.
+ * Returns the packages the module adds, plus any problems.
+ */
+export function nativeDependencies(
+  slug: string,
+  deps: Record<string, string>,
+  hostDeps: Record<string, string>,
+): { packages: Record<string, string>; errors: string[] } {
+  const errors: string[] = [];
+  const packages: Record<string, string> = {};
+  const sdk = hostDeps.expo
+    ? semver.minVersion(hostDeps.expo)?.major
+    : undefined;
+  for (const [name, range] of Object.entries(deps).sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
+    if (!NATIVE_PACKAGE.test(name)) continue;
+    if (range.startsWith("workspace:") || range.startsWith("catalog:"))
+      continue;
+    const host = hostDeps[name];
+    if (host) {
+      if (
+        semver.validRange(host) &&
+        semver.validRange(range) &&
+        !semver.intersects(host, range)
+      ) {
+        errors.push(
+          `[${slug}] ${name}@"${range}" doesn't match the app's "${host}" (apps/expo/package.json) — use "${host}"`,
+        );
+      }
+      continue;
+    }
+    const major = semver.validRange(range)
+      ? semver.minVersion(range)?.major
+      : undefined;
+    if (name.startsWith("expo-") && sdk !== undefined && major !== sdk) {
+      errors.push(
+        `[${slug}] ${name}@"${range}" targets Expo SDK ${major ?? "?"}, but the app is on SDK ${sdk} — use "~${sdk}.0.0" (the version \`npx expo install ${name}\` picks)`,
+      );
+    }
+    packages[name] = range;
+  }
+  return { packages, errors };
 }
 
 interface EnvModule {
@@ -67,6 +124,14 @@ export async function loadModules(repoRoot: string): Promise<LoadedModule[]> {
 
   const errors: string[] = [];
   const loaded: LoadedModule[] = [];
+  const expoPkgFile = toAbs(repoRoot, MOD_PATHS.expoPackageJson);
+  const hostDeps = existsSync(expoPkgFile)
+    ? ((
+        JSON.parse(readFileSync(expoPkgFile, "utf8")) as {
+          dependencies?: Record<string, string>;
+        }
+      ).dependencies ?? {})
+    : {};
 
   for (const dirName of dirs) {
     const dir = path.join(modDir, dirName);
@@ -97,13 +162,35 @@ export async function loadModules(repoRoot: string): Promise<LoadedModule[]> {
 
     const packageName = `@acme/mod-${manifest.slug}`;
     const pkgFile = path.join(dir, "package.json");
+    let nativePackages: Record<string, string> = {};
     if (!existsSync(pkgFile)) {
       errors.push(`[${manifest.slug}] missing package.json`);
     } else {
       const pkg = JSON.parse(readFileSync(pkgFile, "utf8")) as {
         name?: string;
         version?: string;
+        dependencies?: Record<string, string>;
+        exports?: Record<string, unknown>;
       };
+      const native = nativeDependencies(
+        manifest.slug,
+        pkg.dependencies ?? {},
+        hostDeps,
+      );
+      nativePackages = native.packages;
+      errors.push(...native.errors);
+      if (manifest.native.plugin) {
+        if (!existsSync(path.join(dir, "app.plugin.js"))) {
+          errors.push(
+            `[${manifest.slug}] native.plugin is true but app.plugin.js is missing at the package root`,
+          );
+        }
+        if (!pkg.exports || !("./app.plugin.js" in pkg.exports)) {
+          errors.push(
+            `[${manifest.slug}] native.plugin is true: add "./app.plugin.js": "./app.plugin.js" to package.json exports (Expo resolves the plugin through it)`,
+          );
+        }
+      }
       if (pkg.name !== packageName) {
         errors.push(
           `[${manifest.slug}] package.json name "${pkg.name}" must be "${packageName}"`,
@@ -186,6 +273,7 @@ export async function loadModules(repoRoot: string): Promise<LoadedModule[]> {
       envClientKeys,
       envServerKeys,
       payloadMigrations,
+      nativePackages,
     });
   }
 

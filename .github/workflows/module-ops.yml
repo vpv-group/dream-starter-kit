@@ -269,6 +269,12 @@ jobs:
             TITLE="$TITLE (conflicts to resolve)"
             LABELS+=(dream-update-conflicts)
           fi
+          # Native code changed (a module's expo-* packages or config plugin):
+          # the apps need a new native (EAS) build — see docs/NATIVE.md.
+          if ! git diff --quiet HEAD~1 HEAD -- apps/expo/src/mod/native.generated.json 2>/dev/null; then
+            BODY="$BODY"$'\n\n'"📱 **Needs a new native build:** this changes the native code in the iOS/Android apps (\`apps/expo/src/mod/native.generated.json\`). Merging is fine; ship it with a new EAS build — an over-the-air update isn't enough. See docs/NATIVE.md."
+            LABELS+=(dream-native-rebuild)
+          fi
           # Clicking Install or Update in /admin is the approval.
           [ "$APPROVED" = "true" ] && [ "$OP" != "remove" ] && LABELS+=(dream-approved)
           BODY="$BODY"$'\n\n'"$MARKER"
@@ -281,6 +287,7 @@ jobs:
           ensure_label dream-remove b60205 "Removes a module and its data"
           ensure_label dream-approved 0e8a16 "Approved in /admin: merges when checks pass"
           ensure_label dream-review fbca04 "A Dream update that needs a person"
+          ensure_label dream-native-rebuild 1d76db "Needs a new native (EAS) build"
           PR_URL=$(gh pr create --title "$TITLE" --body "$BODY")
           for label in "${LABELS[@]}"; do
             gh pr edit "$PR_URL" --add-label "$label" || echo "::warning::Couldn't add $label to $PR_URL"

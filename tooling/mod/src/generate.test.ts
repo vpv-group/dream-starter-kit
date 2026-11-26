@@ -7,6 +7,8 @@ import {
   applyEnvExampleBlock,
   buildAllGeneratedFiles,
   buildEnvExampleBlock,
+  buildExpoNativeJson,
+  buildExpoPluginsJson,
   buildExpoRegistry,
   buildNextAdminRegistry,
   buildNextClientRegistry,
@@ -31,6 +33,7 @@ function loaded(
     envClientKeys,
     envServerKeys: [],
     payloadMigrations: [],
+    nativePackages: {},
   };
 }
 
@@ -387,5 +390,37 @@ describe("module access + admin settings", () => {
     expect(buildNextAdminRegistry([chat])).toContain(
       "modAdminComponents: Record<string, ComponentType> = {};",
     );
+  });
+});
+
+describe("native packages and config plugins", () => {
+  const withNative = {
+    ...loaded({
+      slug: "projects",
+      name: "Projects",
+      version: "0.1.0",
+      kitCompat: ">=2.6.0 <3",
+      native: { plugin: true },
+    }),
+    nativePackages: { "expo-image-picker": "~58.0.4" },
+  };
+
+  it("lists modules that ship a config plugin", () => {
+    expect(JSON.parse(buildExpoPluginsJson([chat, withNative]))).toEqual([
+      "@acme/mod-projects",
+    ]);
+  });
+
+  it("records what each module adds to the native build", () => {
+    expect(JSON.parse(buildExpoNativeJson([chat, withNative]))).toEqual({
+      projects: { plugin: true, packages: { "expo-image-picker": "~58.0.4" } },
+    });
+    expect(buildExpoNativeJson([chat])).toBe("{}\n");
+  });
+
+  it("is part of the generated set", () => {
+    const paths = buildAllGeneratedFiles([withNative]).map((f) => f.path);
+    expect(paths).toContain("apps/expo/src/mod/plugins.generated.json");
+    expect(paths).toContain("apps/expo/src/mod/native.generated.json");
   });
 });

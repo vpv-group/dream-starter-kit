@@ -71,6 +71,10 @@ export async function sync(repoRoot: string): Promise<void> {
   pruneEmptyDirs(repoRoot, previousStubs);
 
   const files = buildAllGeneratedFiles(mods);
+  const nativeAbs = toAbs(repoRoot, MOD_PATHS.expoNative);
+  const nativeBefore = existsSync(nativeAbs)
+    ? readFileSync(nativeAbs, "utf8")
+    : "{}\n";
   for (const file of files) {
     const abs = toAbs(repoRoot, file.path);
     mkdirSync(path.dirname(abs), { recursive: true });
@@ -125,6 +129,16 @@ export async function sync(repoRoot: string): Promise<void> {
     `\nmod sync: ${mods.length} module(s), ${files.length} generated file(s), ` +
       `${migrationResult.added.length} newly pinned migration(s).`,
   );
+  const nativeAfter = files.find(
+    (f) => f.path === MOD_PATHS.expoNative,
+  )?.content;
+  if (nativeAfter !== undefined && nativeAfter !== nativeBefore) {
+    console.log(
+      "\n⚠️  Native code changed (apps/expo/src/mod/native.generated.json): " +
+        "iOS and Android need a new native build (EAS) for this change. " +
+        "An over-the-air update isn't enough. See docs/NATIVE.md.",
+    );
+  }
   console.log(
     `Next steps: pnpm db:reset && pnpm db:gen-types${cmsTouched ? " && pnpm cms:gen-types" : ""}, then commit the generated files.`,
   );

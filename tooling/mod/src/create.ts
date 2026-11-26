@@ -44,6 +44,10 @@ export default defineModule({
   server: { routes: true },
   database: { tables: ["${table}"] },
   cms: { hasSettings: true },
+  // Native packages: list expo-* packages in package.json "dependencies"
+  // (\`npx expo install <pkg>\` versions). If the module needs permissions
+  // or other native config, ship an app.plugin.js and set:
+  // native: { plugin: true },
 });
 `,
     "package.json": `{

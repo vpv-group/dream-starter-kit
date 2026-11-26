@@ -597,6 +597,41 @@ export function buildTranspileJson(mods: LoadedModule[]): string {
   )}\n`;
 }
 
+/**
+ * apps/expo/src/mod/plugins.generated.json — installed modules that ship an
+ * Expo config plugin (`native.plugin`); app.config.ts appends them to
+ * `plugins`, after the app's own.
+ */
+export function buildExpoPluginsJson(mods: LoadedModule[]): string {
+  return `${JSON.stringify(
+    mods.filter((m) => m.manifest.native.plugin).map((m) => m.packageName),
+    null,
+    2,
+  )}\n`;
+}
+
+/**
+ * apps/expo/src/mod/native.generated.json — what each module adds to the
+ * native binary (packages the app doesn't list itself, and its config
+ * plugin). When this file changes, the app needs a new native build; an
+ * over-the-air update can't deliver native code.
+ */
+export function buildExpoNativeJson(mods: LoadedModule[]): string {
+  const modules: Record<
+    string,
+    { plugin: boolean; packages: Record<string, string> }
+  > = {};
+  for (const m of mods) {
+    if (!m.manifest.native.plugin && Object.keys(m.nativePackages).length === 0)
+      continue;
+    modules[m.manifest.slug] = {
+      plugin: m.manifest.native.plugin,
+      packages: m.nativePackages,
+    };
+  }
+  return `${JSON.stringify(modules, null, 2)}\n`;
+}
+
 /** Generated route stubs for both apps (machine-owned subtrees). */
 /**
  * `export default withModuleAccess(check, Component);`, wrapped the way
@@ -749,6 +784,8 @@ export function buildAllGeneratedFiles(mods: LoadedModule[]): GeneratedFile[] {
     { path: MOD_PATHS.nextTranspileJson, content: buildTranspileJson(mods) },
     { path: MOD_PATHS.expoRegistry, content: buildExpoRegistry(mods) },
     { path: MOD_PATHS.expoEnv, content: buildExpoEnv(mods) },
+    { path: MOD_PATHS.expoPlugins, content: buildExpoPluginsJson(mods) },
+    { path: MOD_PATHS.expoNative, content: buildExpoNativeJson(mods) },
     ...buildStubs(mods),
     ...buildPayloadMigrationCopies(mods),
   ];
