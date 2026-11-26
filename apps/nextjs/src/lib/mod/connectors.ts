@@ -9,11 +9,25 @@ import { dreamRegistryUrl } from "./dream-registry";
  * The signed-call options for meetdream.com, or null when the site has no
  * license key yet (or opted out with DREAM_TELEMETRY=off, which never
  * registers one). Server-only: the key never reaches the browser.
+ *
+ * The key is cached for a few minutes: connector lookups run inside Payload
+ * hooks (catalog sync), and a fresh read each time would take an extra pool
+ * connection while the save's transaction holds one.
  */
+const TTL_MS = 5 * 60_000;
+let cached: { key: string | null; at: number } | null = null;
+
 export async function connectorCallOpts(): Promise<CallOpts | null> {
   try {
-    const key = await siteLicenseKey(await getPayloadClient());
-    return key ? { registry: dreamRegistryUrl(), siteKey: key } : null;
+    if (!cached || Date.now() - cached.at > TTL_MS) {
+      cached = {
+        key: await siteLicenseKey(await getPayloadClient()),
+        at: Date.now(),
+      };
+    }
+    return cached.key
+      ? { registry: dreamRegistryUrl(), siteKey: cached.key }
+      : null;
   } catch {
     return null;
   }

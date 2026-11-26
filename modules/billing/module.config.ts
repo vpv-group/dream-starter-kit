@@ -21,7 +21,7 @@ export default defineModule({
   slug: "billing",
   name: "Billing",
   version: "2.0.0",
-  kitCompat: ">=2.0.0 <3",
+  kitCompat: ">=2.6.0 <3",
   description:
     "Plans, purchases and entitlements, with pluggable payment providers.",
   nav: {

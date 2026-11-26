@@ -13,7 +13,7 @@ export const modulesLock = {
   "modules": {
     "billing": {
       "version": "2.0.0",
-      "kitCompat": ">=2.0.0 <3",
+      "kitCompat": ">=2.6.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
@@ -28,7 +28,7 @@ export const modulesLock = {
     },
     "billing-adapter-stripe": {
       "version": "1.0.0",
-      "kitCompat": ">=2.0.0 <3",
+      "kitCompat": ">=2.6.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [],

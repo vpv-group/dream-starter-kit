@@ -16,7 +16,7 @@ import { signUpAndConfirm } from "./helpers/mailpit";
  *   - favoriting as a logged-out visitor mints a real anonymous account
  *     (public.content_favorites is the one table anon users may write);
  *   - a premium post is gated (blurred body + on-page paywall dock);
- *   - the billing express-intent route (the embedded paywall's backend) creates
+ *   - the Stripe adapter's express-intent route (the embedded paywall's backend) creates
  *     a real Stripe subscription intent — a "paid signup" against Stripe test
  *     mode (requires a sk_test key; skipped otherwise);
  *   - a free user "upgrading to paid" (an active subscription appears) unlocks
@@ -231,7 +231,7 @@ test("the billing express-intent route creates a Stripe subscription intent (pai
   // / anonymous buyers additionally get supabase_user_id stamped (covered by the
   // unit + RLS suites); here we assert the route returns a usable client secret.
   const ctx = await request.newContext({ baseURL: BASE_URL });
-  const res = await ctx.post("/api/mod/billing/express-intent", {
+  const res = await ctx.post("/api/mod/billing-adapter-stripe/express-intent", {
     data: { planId },
   });
   expect(res.ok()).toBeTruthy();

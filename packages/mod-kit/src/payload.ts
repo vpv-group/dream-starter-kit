@@ -198,6 +198,7 @@ async function readSettingsGroup(
   payload: Payload,
   slug: string,
   groupName: string,
+  req?: unknown,
 ): Promise<Record<string, unknown> | null> {
   const find = payload.find.bind(payload) as (args: {
     collection: string;
@@ -205,6 +206,7 @@ async function readSettingsGroup(
     limit: number;
     depth: number;
     overrideAccess: boolean;
+    req?: unknown;
   }) => Promise<{ docs: Record<string, unknown>[] }>;
   const { docs } = await find({
     collection: "kit-modules",
@@ -212,6 +214,9 @@ async function readSettingsGroup(
     limit: 1,
     depth: 0,
     overrideAccess: true,
+    // Inside a hook, pass the operation's req: a req-less read runs outside
+    // its transaction and takes a second pool connection (can deadlock saves).
+    ...(req ? { req } : {}),
   });
   const group = docs[0]?.[groupName];
   return group && typeof group === "object"
@@ -234,16 +239,21 @@ function mergeDefaults(
  * Read a module's settings server-side (Local API) from its page in /admin
  * (the `kit-modules` row), with field defaults applied — so a module works
  * before the admin ever opens the screen, and degrades to defaults if the
- * CMS is unreachable.
+ * CMS is unreachable. From inside a Payload hook, pass `{ req }`.
  */
 export async function getModuleSettings<
   T extends Record<string, unknown> = Record<string, unknown>,
->(payload: Payload, settings: ModuleSettings): Promise<T> {
+>(
+  payload: Payload,
+  settings: ModuleSettings,
+  opts: { req?: unknown } = {},
+): Promise<T> {
   try {
     const group = await readSettingsGroup(
       payload,
       settings.slug,
       settings.groupName,
+      opts.req,
     );
     return mergeDefaults(settings.defaults, group) as T;
   } catch {
@@ -435,12 +445,17 @@ export function composeSettingsTabs(
  */
 export async function getAdapterSettings<
   T extends Record<string, unknown> = Record<string, unknown>,
->(payload: Payload, adapter: AdapterSettings): Promise<T> {
+>(
+  payload: Payload,
+  adapter: AdapterSettings,
+  opts: { req?: unknown } = {},
+): Promise<T> {
   try {
     const group = await readSettingsGroup(
       payload,
       adapter.target,
       settingsGroupName(adapter.target),
+      opts.req,
     );
     const own = (group?.[adapter.groupName] ?? null) as Record<
       string,

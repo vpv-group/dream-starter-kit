@@ -12,7 +12,9 @@ another company's service, such as Slack or Stripe.
 
 In this kit, `chat-adapter-slack` is the Slack connector and
 `chat-adapter-sendblue` is the Sendblue connector: both let the AI Chat module
-answer outside the app.
+answer outside the app. `billing-adapter-stripe` is the Stripe connector: the
+Billing module's web payment provider. Connectors are built as
+[adapters](#how-the-host-consumes-modules) of the module they extend.
 
 Modules used to be called "extensions" (`ext` for short). Projects created
 before the rename upgrade automatically, apart from a few settings outside the
@@ -207,9 +209,9 @@ the shared rate limit and the enablement gate, then matches `"METHOD /path"` in
 the module's `routes` table — golden rule #6 holds for every module
 endpoint with zero per-module auth code. `publicRoutes` (manifest
 `server.publicRoutes`) skips the session requirement for genuinely anonymous
-flows (billing's guest checkout) but stays rate-limited; signature-verified
-endpoints (Stripe webhooks) belong in edge functions or Payload plugin
-endpoints instead.
+flows (billing's guest checkout) and for callers that prove themselves —
+signature-verified webhooks (Stripe, Slack), cron routes (`isCronRequest`) —
+but stays rate-limited and enablement-gated.
 
 **Menus are CMS-driven** (`kit-modules` + `nav-items` collections,
 **Modules** admin group): manifest nav entries are _defaults_, seeded by the
@@ -282,6 +284,61 @@ import the provider's exported APIs directly — e.g.
 `@acme/mod-billing`. `database.dml` whitelists DML on a dependency's tables
 (or the tiny core whitelist: `tags`, `user_tags`) for edge functions that
 follow the SQL contract.
+
+**Host services** (kit ≥ 2.6): host code may not import modules, so a module
+that the app itself must call sets `server.services: true` and exports
+`services` (plain async functions) from `./server`. The generated
+`modServices[slug]` exposes them; the host wraps them in a typed helper that
+degrades when the module is absent. Billing's are the example
+(`apps/nextjs/src/lib/mod/billing.ts`: entitlement, account deletion, anon
+merge, new-user tags).
+
+**Adapters** (kit ≥ 2.6): a module that plugs into another module's extension
+point — a chat channel, a billing payment provider. Name it
+`<target>-adapter-<x>`, `requires` the target, and:
+
+- `adapter: { for: "<target>", server?: true, web?: "<export>", native?: "<export>" }`
+  — contributions the TARGET calls out to. `./server` exports `adapter`
+  (the target's server contract); the generated registries register a lazy
+  loader per adapter, so the target reads them with
+  `getModAdapters<T>(target)` from `@acme/mod-kit/server` (loaded on first use —
+  the Payload CLI never evaluates adapter server code). `adapter.web` /
+  `adapter.native` name an export of `./web` / `./native`, read with
+  `useModAdapters<T>(target)` from `@acme/mod-kit/react` (the host mounts
+  `ModAdaptersProvider`, minus runtime-disabled modules). The target defines the
+  contract types; it never imports its adapters.
+- Adapters that only call INTO the target need no `adapter` field: chat's
+  channel adapters call `handleChannelMessage()` from their webhook
+  (`modules/chat/CHANNELS.md`). Billing's providers do both — billing calls out
+  for checkout/portal/catalog sync, and they write through billing's core
+  services (docs/BILLING.md).
+- **Settings tab:** `cms.settingsTabFor: "<target>"` and export `settings =
+defineAdapterSettings({ slug, target, name, fields, key? })` — a tab on the
+  target's settings (Modules → target), stored under `adapter_<key>`. Adapter
+  tabs are **staff-only** even when the target's settings are `publicRead`
+  (`publicRead: true` opts in). Give a long slug a short `key`: Payload builds
+  column/enum names from target + group + field and Postgres cuts identifiers
+  at 63 characters. The target's settings must have a top-level `tabs` field
+  (the compose throws otherwise).
+- **Collection tabs:** `cms.hasCollectionTabs: true` and export
+  `collectionTabs` built with `defineAdapterCollectionTab({ slug, target,
+collection, label, fields })` — an unnamed tab on one of the target's
+  collections (Stripe's ids on billing's Plans/Coupons). Unnamed, so adding or
+  removing the adapter never moves columns; the collection needs a top-level
+  `tabs` field.
+- **Admin panel:** `admin.settingsComponent: true` on an adapter renders its
+  `./admin` `AdminSettings` on the TARGET's page (e.g. the Stripe connector panel
+  on Modules → Billing).
+
+**Connections ("Connect with …")** (kit ≥ 2.6): the host registers a connector
+broker with `@acme/mod-kit/server`; a module calls `getConnectorBroker()` →
+`startConnect(target, returnTo)`, `token(target)`, `disconnect(target)` to use
+an OAuth connection that meetdream.com brokers for this site (the Meet Dream AI
+apps; GitHub for updates, Stripe for billing). The site license key never
+reaches the module, and no provider secret is stored in the app. `null` when
+no broker is registered (tests, CLIs) — degrade to "not connected" and keep
+env keys as the override. Protocol: `apps/nextjs/src/lib/mod/connectors-core.ts`,
+docs/STRIPE.md §8.
 
 **Notifications are produced, not delivered, by your module.** Register your
 categories in a migration (`mod_notifications_register_category`), emit with

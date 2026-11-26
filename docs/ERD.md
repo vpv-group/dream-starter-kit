@@ -42,7 +42,7 @@ erDiagram
     profiles ||--o{ memberships : "member of"
     organizations ||--o{ memberships : "has"
     organizations ||--o{ invitations : "has"
-    profiles ||--o| customers : "billing"
+    profiles ||--o{ customer_links : "billing (per provider)"
     profiles ||--o{ subscriptions : "subscribes"
     products ||--o{ prices : "has"
     prices ||--o{ subscriptions : "billed at"
@@ -121,27 +121,35 @@ erDiagram
         timestamptz accepted_at
         uuid accepted_by FK
     }
-    customers {
-        uuid id PK
-        uuid user_id FK
-        text stripe_customer_id UK
+    customer_links {
+        uuid user_id PK
+        text provider PK "stripe | revenuecat | …"
+        text provider_customer_id UK
+        text billing_email
     }
     products {
-        text id PK "Stripe product id"
+        text id PK "provider product id"
+        text provider
         text name
         boolean active
     }
     prices {
-        text id PK "Stripe price id"
+        text id PK "provider price id"
+        text provider
         text product_id FK
         integer unit_amount
         text currency
         text interval "month | year"
     }
     subscriptions {
-        text id PK "Stripe subscription id"
+        text id PK "provider purchase id (sub_…, cs_…, rc:…)"
         uuid user_id FK
+        text provider
+        text kind "subscription | one_time"
         text price_id FK
+        text plan_id "Payload plan"
+        text entitlement "members | premium"
+        text store "web | app_store | play_store | promotional"
         text status "trialing | active | past_due | canceled | …"
         boolean cancel_at_period_end
         timestamptz current_period_end
@@ -233,11 +241,12 @@ erDiagram
 
 **Avatars** — the public-read `avatars` storage bucket (2 MB, png/jpeg/webp/gif) holds profile photos so teammates can see them; writes are confined to the owner's `<user_id>/` prefix and blocked for anonymous sessions.
 
-**Billing** _(core for any paid app — written by the Stripe webhook)_
+**Billing** _(core for any paid app — the billing module; written by its payment providers' webhooks, docs/BILLING.md)_
 
-- `customers` — maps a user to their `stripe_customer_id` (zero-or-one per user).
-- `products`, `prices` — mirrors of your Stripe catalog.
-- `subscriptions` — the canonical Stripe subscription state (`status`, `current_period_end`) used to gate premium features on web **and** mobile.
+- `customer_links` — one customer id per (user, provider) (`mod_billing_customer_links`). Billing 1.x's Stripe-only `mod_billing_customers` is still written for Stripe until a contract release.
+- `products`, `prices` — each provider's catalog, as the provider reports it (`provider` on every row).
+- `subscriptions` — every purchase from every provider: subscriptions and one-time (lifetime) purchases (`kind`), with `provider`, `store`, `plan_id` and `entitlement`. The `mod_billing_entitlements` view (security_invoker, read-own) lists the active rows; it gates premium on web **and** mobile.
+- `webhook_events` — claimed provider events (idempotency), per provider; `managed_tags` — which `tags` billing keeps in sync (server-only).
 
 **App domain** _(this is your idea — add it)_
 
@@ -252,7 +261,7 @@ erDiagram
 **Tags** _(user segmentation)_
 
 - `tags` — reusable tag definitions (`name`, `color`, `is_system`). Readable by any authenticated user; written by the server only.
-- `user_tags` — links a user to a tag (read-own via RLS). Assigned automatically by the Stripe webhook (a plan-name tag when a subscription is active; a "Free" tag at signup) and manually by staff from the admin. No client write policy — the service role is the only writer.
+- `user_tags` — links a user to a tag (read-own via RLS). Billing keeps billing tags in step with each user's purchases (plan, status, billing cycle, store — only the tags listed in `mod_billing_managed_tags`), and staff assign tags manually from the admin. No client write policy — the service role is the only writer.
 
 **Files** _(keep if the app stores uploads)_
 
@@ -307,7 +316,7 @@ create policy "reminders owned by user"
 --     or org_id = any (array(select private.user_org_ids()))
 --   );
 
--- Stripe-synced tables: users may READ their own; only the webhook writes (service role bypasses RLS)
+-- Billing ledger: users may READ their own; only payment-provider webhooks write (service role bypasses RLS)
 alter table subscriptions enable row level security;
 create policy "read own subscriptions"
   on subscriptions for select
@@ -318,7 +327,7 @@ create policy "read own subscriptions"
 Notes:
 
 - Storage buckets get their own RLS policies on `storage.objects` (path-prefixed by user/org), mirroring the `files` table.
-- The Stripe webhook (a Supabase edge function) uses the **service role key** to write `customers` / `subscriptions` — clients never write billing rows.
+- Payment-provider webhooks (e.g. the Stripe adapter's, a Next.js route) use the **service role key** to write billing rows through billing's core services — clients never write billing rows.
 - Wrapping `auth.uid()` as `(select auth.uid())` lets Postgres cache it per statement (a standard Supabase performance tip). The same goes for any helper that doesn't depend on the row: `(select private.some_helper())`.
 - **Security-definer helpers used by policies live in the `private` schema**, which the Data API doesn't expose (Supabase: never put them in an exposed schema). It holds `user_org_ids()` and `user_admin_org_ids()`. Module SQL can't GRANT, so a module's service-only functions in `public` check their caller instead (`auth.role()` not `authenticated`/`anon`).
 - **Index what policies and queries filter on, in their order.** Composite indexes match list queries, e.g. `(user_id, created_at desc)` for a newest-first feed or `(thread_id, created_at)` for messages; partial indexes cover hot subsets, e.g. unread notifications or pending reminders. Every foreign key that an `ON DELETE` action follows gets an index. `supabase db advisors --type performance` flags missing FK indexes, `auth.uid()` that isn't wrapped, duplicate indexes and overlapping permissive policies — run it before committing a migration.
@@ -361,8 +370,10 @@ for. These parts of the plan are deferred on purpose, not dropped:
   manifests, generic push text for sensitive notification categories, audit
   events from the Stripe webhook, user sync, role changes and MCP tools, and
   anonymizing authored content on erasure.
-- **Billing:** a nightly reconcile from Stripe and a "Connect Stripe" screen
-  (the hourly auto-connect covers setup and disables the old endpoints).
+- **Billing:** a nightly reconcile from Stripe (the "Connect Stripe" screen
+  shipped in 2.6 — docs/STRIPE.md §2); an in-app purchase provider
+  (docs/BILLING.md §7); the contract release that drops
+  `mod_billing_customers` / `stripe_event_at` and billing 1.x's forwarded paths.
 - **Reads and retention:** keyset paging for chat messages and older
   notification pages; purges for read notifications and chat bookkeeping.
 - **Payload:** skip the module reconcile when the registry is unchanged,

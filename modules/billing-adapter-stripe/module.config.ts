@@ -22,7 +22,7 @@ export default defineModule({
   slug: "billing-adapter-stripe",
   name: "Stripe",
   version: "1.0.0",
-  kitCompat: ">=2.0.0 <3",
+  kitCompat: ">=2.6.0 <3",
   description: "Stripe payments for billing: checkout, portal, webhook.",
   requires: ["billing"],
   platforms: { web: true, native: false },

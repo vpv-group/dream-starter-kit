@@ -113,10 +113,12 @@ export async function getStripe(): Promise<Stripe> {
 
 /**
  * The Stripe tab's settings (Modules → Billing → Stripe), defaults when the
- * CMS is unreachable. Pass `payload` from a hook/route when you have it.
+ * CMS is unreachable. Pass `payload` from a hook/route when you have it — and
+ * `req` from inside a Payload hook (same transaction, no extra connection).
  */
 export async function stripeSettings(
   payload?: BasePayload,
+  req?: unknown,
 ): Promise<StripeAdapterSettings> {
   try {
     const p =
@@ -128,7 +130,9 @@ export async function stripeSettings(
         ]);
         return getPayload({ config });
       })());
-    return await getAdapterSettings<StripeAdapterSettings>(p, adapterSettings);
+    return await getAdapterSettings<StripeAdapterSettings>(p, adapterSettings, {
+      req,
+    });
   } catch {
     return adapterSettings.defaults as StripeAdapterSettings;
   }

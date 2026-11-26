@@ -22,8 +22,12 @@ import { syncCouponToStripe, syncPlanToStripe } from "../stripe/sync";
 const SKIP = { skipProviderSync: true, skipStripeSync: true };
 
 async function stripeForSync(args: CatalogSyncArgs) {
-  const settings = await stripeSettings(args.req.payload);
+  const settings = await stripeSettings(args.req.payload, args.req);
   if (!settings.enabled) return null;
+  // While the CMS is being seeded, only your own env keys sync (as before):
+  // a "Connect with Stripe" lookup would hold up the seed's transactions,
+  // and a fresh site isn't connected yet anyway.
+  if (args.context.seeding && !process.env.STRIPE_SECRET_KEY) return null;
   return await getStripeOrNull();
 }
 
