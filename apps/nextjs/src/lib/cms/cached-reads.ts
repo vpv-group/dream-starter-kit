@@ -2,6 +2,8 @@ import "server-only";
 
 import { unstable_cache } from "next/cache";
 
+import { env } from "../../env";
+
 /**
  * Cross-request cache for the CMS reads every page render needs (theme,
  * auth settings, site settings, menus). Payload's website-template pattern:
@@ -13,6 +15,11 @@ import { unstable_cache } from "next/cache";
  * Only GLOBAL, non-user data goes through here. Per-user filtering (staff-only
  * items, module access checks) happens after the cached read, never inside it.
  * The hourly `revalidate` is a safety net in case an invalidation was missed.
+ *
+ * Production only. Next keeps this cache on disk (`.next/cache`), so under
+ * `next dev` it would outlive a `pnpm db:reset` and serve the previous
+ * database's settings (the E2E suite resets the DB before every run). Dev
+ * and tests read fresh.
  */
 export const cacheTags = {
   global: (slug: string) => `global_${slug}`,
@@ -20,6 +27,27 @@ export const cacheTags = {
 } as const;
 
 const SAFETY_REVALIDATE_SECONDS = 3600;
+
+const useSharedCache = env.NODE_ENV === "production";
+
+/**
+ * Vercel keeps the data cache across deployments, while a deploy can change
+ * menus and settings through the boot-time reconcile, which runs outside a
+ * request where revalidateTag can't. Keying by deployment starts each one
+ * fresh.
+ */
+const deployment = env.VERCEL_DEPLOYMENT_ID ?? "local";
+
+/** `unstable_cache` in production; a plain call everywhere else. */
+function cached<T>(
+  fn: () => Promise<T>,
+  key: string[],
+  tags: string[],
+): () => Promise<T> {
+  return useSharedCache
+    ? unstable_cache(fn, key, { tags, revalidate: SAFETY_REVALIDATE_SECONDS })
+    : fn;
+}
 
 async function payloadClient() {
   const { getPayloadClient } = await import("./payload-client");
@@ -35,7 +63,7 @@ export function readCachedGlobal<T>(
     | "native-navigation",
   depth: number,
 ): Promise<T> {
-  return unstable_cache(
+  return cached(
     async () => {
       const payload = await payloadClient();
       return (await payload.findGlobal({
@@ -45,11 +73,8 @@ export function readCachedGlobal<T>(
         overrideAccess: true,
       })) as T;
     },
-    ["cms-global", slug, String(depth)],
-    {
-      tags: [cacheTags.global(slug)],
-      revalidate: SAFETY_REVALIDATE_SECONDS,
-    },
+    ["cms-global", deployment, slug, String(depth)],
+    [cacheTags.global(slug)],
   )();
 }
 
@@ -58,7 +83,7 @@ export function readCachedGlobal<T>(
  * module — shared by the web sidebar, the phone/tablet tab bar and
  * GET /api/nav/native. One cached read instead of two queries per render.
  */
-export const readNavSource = unstable_cache(
+export const readNavSource = cached(
   async () => {
     const payload = await payloadClient();
     const [navRes, modRes] = await Promise.all([
@@ -78,12 +103,6 @@ export const readNavSource = unstable_cache(
     ]);
     return { navItems: navRes.docs, modules: modRes.docs };
   },
-  ["cms-nav-source"],
-  {
-    tags: [
-      cacheTags.collection("nav-items"),
-      cacheTags.collection("kit-modules"),
-    ],
-    revalidate: SAFETY_REVALIDATE_SECONDS,
-  },
+  ["cms-nav-source", deployment],
+  [cacheTags.collection("nav-items"), cacheTags.collection("kit-modules")],
 );

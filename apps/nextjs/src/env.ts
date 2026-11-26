@@ -103,6 +103,10 @@ export const env = createEnv({
     // DB_BOOTSTRAP=on (lib/db/preview-guard.ts): a preview of an unmerged
     // branch must never migrate the production database it shares env with.
     VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
+    // Auto-injected by Vercel: part of the CMS cache key
+    // (lib/cms/cached-reads.ts), so a new deployment never serves menus or
+    // settings cached by the previous one.
+    VERCEL_DEPLOYMENT_ID: z.string().min(1).optional(),
     // Dream module registry (docs/MODULES.md → Paid modules). Installs and
     // updates authenticate with this site's own license key (the dream-site
     // global) and the Dream Updates GitHub App: no tokens in env.
