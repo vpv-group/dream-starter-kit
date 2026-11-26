@@ -218,7 +218,12 @@ async function main(): Promise<void> {
             ? { approvePr: approve }
             : {}),
           report: reporter(registry, process.env, fetch, log),
-          watchDeploy: (sha) => watchDeployment(gh, sha),
+          watchDeploy: (sha) =>
+            watchDeployment(gh, sha, {
+              healthUrl: session.site.url
+                ? `${session.site.url.replace(/\/+$/, "")}/api/health/db`
+                : null,
+            }),
           log,
         });
         process.stdout.write(`${JSON.stringify(outcomes)}\n`);

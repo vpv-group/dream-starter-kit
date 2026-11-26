@@ -9,7 +9,11 @@ import type {
 import type { PrMeta } from "./pr-meta";
 import type { ReportEvent } from "./report";
 import type { OpsSession } from "./session";
-import { findContractStatements } from "../migration-safety";
+import {
+  findContractStatements,
+  PAYLOAD_MIGRATION_FILE,
+  payloadUpSection,
+} from "../migration-safety";
 import { APPROVED_LABEL, decideMerge } from "./decide-merge";
 import { isEligible } from "./eligibility";
 import {
@@ -90,16 +94,25 @@ export function summarizeChecks(
 const MIGRATION_FILE =
   /^(supabase\/migrations\/|modules\/[^/]+\/supabase\/migrations\/|apps\/nextjs\/src\/payload\/migrations\/).+\.sql$/;
 
-/** Does the PR add SQL that contracts the schema (drop, rename, …)? */
+/**
+ * Does the PR add SQL that contracts the schema (drop, rename, …)? Payload's
+ * `.ts` migrations count too; only their `up()` body is read, because
+ * `down()` always drops what `up()` added.
+ */
 export function addsContractMigration(files: PrFile[]): boolean {
   return files.some((f) => {
-    if (!MIGRATION_FILE.test(f.filename) || !f.patch) return false;
+    const isSql = MIGRATION_FILE.test(f.filename);
+    const isPayload = PAYLOAD_MIGRATION_FILE.test(f.filename);
+    if ((!isSql && !isPayload) || !f.patch) return false;
     const added = f.patch
       .split("\n")
       .filter((l) => l.startsWith("+") && !l.startsWith("+++"))
       .map((l) => l.slice(1))
       .join("\n");
-    return findContractStatements(added).length > 0;
+    return (
+      findContractStatements(isPayload ? payloadUpSection(added) : added)
+        .length > 0
+    );
   });
 }
 
@@ -212,9 +225,24 @@ export async function runMerge(deps: MergeDeps): Promise<PrOutcome[]> {
         `This update needs a review before it goes live: ${REVIEW_REASONS[decision.reason] ?? decision.reason}. Merge it yourself when you're happy, or close it to skip.`,
       );
       if (decision.reason === "checks-failed") {
-        await deps.report("checks_failed", meta, pr.number);
+        // Already failing on the base branch? Then the update isn't to blame,
+        // and Meet Dream mustn't count it against the release.
+        const baseRed = await baseBranchFailing(gh, pr.baseSha);
+        await deps.report(
+          baseRed ? "checks_failed_base_red" : "checks_failed",
+          meta,
+          pr.number,
+        );
       } else if (decision.reason === "conflicts") {
         await deps.report("conflicts", meta, pr.number);
+      } else if (
+        checks.total > 0 &&
+        checks.pending === 0 &&
+        checks.failed === 0
+      ) {
+        // Green but waiting for a person (a workflow change, auto-merge
+        // off, …): a success for the release's failure rate.
+        await deps.report("ready", meta, pr.number);
       }
     }
     if (decision.action !== "merge") continue;
@@ -240,10 +268,33 @@ export async function runMerge(deps: MergeDeps): Promise<PrOutcome[]> {
   return outcomes;
 }
 
+/** Were the base commit's own checks already failing? */
+async function baseBranchFailing(
+  gh: GitHubClient,
+  baseSha: string | null,
+): Promise<boolean> {
+  if (!baseSha) return false;
+  try {
+    const [runs, statuses] = await Promise.all([
+      gh.listCheckRuns(baseSha),
+      gh.listStatuses(baseSha),
+    ]);
+    return summarizeChecks(runs, statuses).failed > 0;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Wait for the production deployment GitHub records for `sha` (Vercel and
  * most hosts post one). "unknown" when none appears in time — then nothing
  * is paused or reported.
+ *
+ * A deploy that builds can still fail at boot (the runtime bootstrap applies
+ * migrations then). With `healthUrl` (the site's `/api/health/db`), a
+ * successful deployment is confirmed there: a 503 or `status: "error"`
+ * counts as failed. If the health check can't be reached, GitHub's verdict
+ * stands.
  */
 export async function watchDeployment(
   gh: GitHubClient,
@@ -252,6 +303,9 @@ export async function watchDeployment(
     timeoutMs?: number;
     intervalMs?: number;
     sleep?: (ms: number) => Promise<void>;
+    healthUrl?: string | null;
+    fetchImpl?: typeof fetch;
+    healthAttempts?: number;
   } = {},
 ): Promise<"ok" | "failed" | "unknown"> {
   const timeoutMs = opts.timeoutMs ?? 15 * 60_000;
@@ -261,8 +315,44 @@ export async function watchDeployment(
   for (let waited = 0; waited <= timeoutMs; waited += intervalMs) {
     const states = await gh.deploymentStates(sha).catch(() => []);
     if (states.some((s) => s === "failure" || s === "error")) return "failed";
-    if (states.length > 0 && states.every((s) => s === "success")) return "ok";
+    if (states.length > 0 && states.every((s) => s === "success")) {
+      if (!opts.healthUrl) return "ok";
+      return await checkBootHealth(opts.healthUrl, {
+        sleep,
+        intervalMs,
+        attempts: opts.healthAttempts ?? 4,
+        fetchImpl: opts.fetchImpl ?? fetch,
+      });
+    }
     await sleep(intervalMs);
   }
   return "unknown";
+}
+
+async function checkBootHealth(
+  url: string,
+  opts: {
+    sleep: (ms: number) => Promise<void>;
+    intervalMs: number;
+    attempts: number;
+    fetchImpl: typeof fetch;
+  },
+): Promise<"ok" | "failed"> {
+  for (let i = 0; i < opts.attempts; i++) {
+    if (i > 0) await opts.sleep(opts.intervalMs);
+    try {
+      const res = await opts.fetchImpl(url, {
+        headers: { accept: "application/json" },
+      });
+      const body = (await res.json().catch(() => null)) as {
+        status?: unknown;
+      } | null;
+      if (res.status === 503 || body?.status === "error") return "failed";
+      // "not-run": this instance hasn't booted yet; ask again.
+      if (res.ok && body?.status !== "not-run") return "ok";
+    } catch {
+      // Unreachable for now; try again.
+    }
+  }
+  return "ok";
 }
