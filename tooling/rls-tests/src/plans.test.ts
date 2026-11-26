@@ -15,6 +15,11 @@
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { installed } from "./installed";
+
+const hasNotifications = installed("notifications");
+const hasChat = installed("chat");
+
 const DB_URL =
   process.env.SUPABASE_DB_URL ??
   "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
@@ -120,26 +125,29 @@ beforeAll(async () => {
     [userId],
   );
   // Notifications: 30 per user, a third unread.
-  await client.query(`
+  if (hasNotifications)
+    await client.query(`
     insert into public.mod_notifications (user_id, type, title, created_at, read_at)
     select p.id, 'plans', 't', now() - (g || ' minutes')::interval,
            case when g % 3 = 0 then null else now() end
     from public.profiles p cross join generate_series(1, 30) g
     where p.email like 'plans%@test.invalid'`);
   // Chat: one thread per user with 20 messages.
-  await client.query(`
-    insert into public.mod_chat_threads (user_id, title)
-    select p.id, 'plans' from public.profiles p where p.email like 'plans%@test.invalid'`);
-  await client.query(`
-    insert into public.mod_chat_messages (thread_id, role, content, created_at)
-    select t.id, 'user', 'hi', now() - (g || ' seconds')::interval
-    from public.mod_chat_threads t cross join generate_series(1, 20) g
-    where t.title = 'plans'`);
-  const thread = await client.query<{ id: string }>(
-    `select id from public.mod_chat_threads where user_id = $1 limit 1`,
-    [userId],
-  );
-  threadId = thread.rows[0]?.id ?? "";
+  if (hasChat) {
+    await client.query(`
+      insert into public.mod_chat_threads (user_id, title)
+      select p.id, 'plans' from public.profiles p where p.email like 'plans%@test.invalid'`);
+    await client.query(`
+      insert into public.mod_chat_messages (thread_id, role, content, created_at)
+      select t.id, 'user', 'hi', now() - (g || ' seconds')::interval
+      from public.mod_chat_threads t cross join generate_series(1, 20) g
+      where t.title = 'plans'`);
+    const thread = await client.query<{ id: string }>(
+      `select id from public.mod_chat_threads where user_id = $1 limit 1`,
+      [userId],
+    );
+    threadId = thread.rows[0]?.id ?? "";
+  }
   await client.query("analyze");
   await client.query(`select set_config('request.jwt.claims', $1, true)`, [
     JSON.stringify({ role: "authenticated", sub: userId }),
@@ -181,7 +189,7 @@ describe("org-scoped RLS resolves membership once per query", () => {
 });
 
 describe("hot queries use their indexes", () => {
-  it("notification feed page", async () => {
+  it.skipIf(!hasNotifications)("notification feed page", async () => {
     const nodes = await explain(
       `select * from public.mod_notifications where user_id = '${userId}'
        order by created_at desc limit 50`,
@@ -189,7 +197,7 @@ describe("hot queries use their indexes", () => {
     expect(usesIndex(nodes, "mod_notifications_user_created_idx")).toBe(true);
   });
 
-  it("unread count", async () => {
+  it.skipIf(!hasNotifications)("unread count", async () => {
     const nodes = await explain(
       `select count(*) from public.mod_notifications
        where user_id = '${userId}' and read_at is null`,
@@ -197,7 +205,7 @@ describe("hot queries use their indexes", () => {
     expect(usesIndex(nodes, "mod_notifications_unread_idx")).toBe(true);
   });
 
-  it("thread messages in order", async () => {
+  it.skipIf(!hasChat)("thread messages in order", async () => {
     const nodes = await explain(
       `select * from public.mod_chat_messages where thread_id = '${threadId}'
        order by created_at`,

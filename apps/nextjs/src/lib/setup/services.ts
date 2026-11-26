@@ -8,7 +8,7 @@ import { createAdminClient } from "~/lib/supabase/admin";
 import { serviceChecks } from "./services-core";
 
 /** Supabase Cron's state (public.kit_scheduler_status, service role). */
-async function getSchedulerState(): Promise<SchedulerState> {
+export async function getSchedulerState(): Promise<SchedulerState> {
   try {
     const { data, error } = await createAdminClient().rpc(
       "kit_scheduler_status",

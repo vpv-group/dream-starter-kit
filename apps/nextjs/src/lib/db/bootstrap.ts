@@ -32,6 +32,7 @@
  * loudly and lets the boot continue, degrading to the manual provisioning flow
  * documented in the README.
  */
+import type { SchedulerSecrets } from "./bootstrap-core";
 import type { SqlMigration } from "./migrations";
 import { env } from "../../env";
 import { resolveCmsCredentials } from "../cms/derived-credentials";
@@ -49,8 +50,9 @@ import {
   pgConnectionOptions,
   PROFILE_BACKFILL_SQL,
   resolveAdminDbUrl,
+  SCHEDULER_BYPASS_FN,
   SCHEDULER_SECRETS_FN,
-  schedulerAppUrl,
+  schedulerSecretsFor,
   summarizeDbError,
 } from "./bootstrap-core";
 import { recordBootstrapResult } from "./bootstrap-status";
@@ -105,7 +107,7 @@ export interface BootstrapDeps {
    * cron secret (explicit CRON_SECRET, else derived from the service-role
    * key). `null` skips the sync.
    */
-  schedulerSecrets?: { appUrl?: string; cronSecret?: string } | null;
+  schedulerSecrets?: SchedulerSecrets | null;
 }
 
 export interface BootstrapResult {
@@ -332,17 +334,6 @@ async function runBootstrap(deps: BootstrapDeps): Promise<BootstrapResult> {
     NEXT_PHASE: process.env.NEXT_PHASE,
   };
   const migrations = deps.migrations ?? supabaseMigrations;
-  const schedulerSecrets =
-    deps.schedulerSecrets === undefined
-      ? {
-          appUrl: schedulerAppUrl(getSiteUrl()),
-          cronSecret: resolveCronSecret({
-            CRON_SECRET: env.CRON_SECRET,
-            SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
-            SUPABASE_SECRET_KEY: env.SUPABASE_SECRET_KEY,
-          }),
-        }
-      : deps.schedulerSecrets;
   const none: BootstrapResult = {
     skipped: false,
     appliedVersions: [],
@@ -372,6 +363,25 @@ async function runBootstrap(deps: BootstrapDeps): Promise<BootstrapResult> {
       "[db-bootstrap] no SUPABASE_DB_URL / POSTGRES_URL_NON_POOLING — skipping runtime provisioning (manual `supabase db push` flow)",
     );
     return { ...none, skipped: "no-url" };
+  }
+
+  const schedulerSecrets =
+    deps.schedulerSecrets === undefined
+      ? schedulerSecretsFor({
+          siteUrl: getSiteUrl(),
+          dbUrl: adminUrl,
+          cronSecret: resolveCronSecret({
+            CRON_SECRET: env.CRON_SECRET,
+            SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
+            SUPABASE_SECRET_KEY: env.SUPABASE_SECRET_KEY,
+          }),
+          bypassSecret: env.VERCEL_AUTOMATION_BYPASS_SECRET,
+        })
+      : deps.schedulerSecrets;
+  if (schedulerSecrets === null) {
+    log.warn(
+      "[db-bootstrap] local app URL with a remote database — leaving the scheduler's Vault secrets alone",
+    );
   }
 
   let client: BootstrapClient | undefined;
@@ -532,20 +542,26 @@ async function runBootstrap(deps: BootstrapDeps): Promise<BootstrapResult> {
  */
 async function syncSchedulerSecrets(
   client: BootstrapClient,
-  secrets: { appUrl?: string; cronSecret?: string } | null,
+  secrets: SchedulerSecrets | null,
   log: Pick<Console, "info" | "warn" | "error">,
 ): Promise<void> {
   if (!secrets) return;
   try {
     const { rows } = await client.query(
-      `select to_regprocedure($1) is not null as present`,
-      [SCHEDULER_SECRETS_FN],
+      `select to_regprocedure($1) is not null as present,
+              to_regprocedure($2) is not null as bypass`,
+      [SCHEDULER_SECRETS_FN, SCHEDULER_BYPASS_FN],
     );
     if (rows[0]?.present !== true) return;
     await client.query(`select private.sync_scheduler_secrets($1, $2)`, [
       secrets.appUrl ?? null,
       secrets.cronSecret ?? null,
     ]);
+    if (rows[0]?.bypass === true) {
+      await client.query(`select private.sync_scheduler_bypass($1)`, [
+        secrets.bypassSecret ?? null,
+      ]);
+    }
   } catch (error) {
     log.warn(
       "[db-bootstrap] couldn't store the scheduler secrets in Vault — Supabase Cron won't call the app until the next boot",

@@ -100,10 +100,6 @@ function fakeGitHub(prs: FakePr[]) {
       Promise.resolve(
         prs.find((x) => `sha${x.number}` === sha)?.statuses ?? [],
       ),
-    listStatuses: (sha) =>
-      Promise.resolve(
-        prs.find((x) => `sha${x.number}` === sha)?.statuses ?? [],
-      ),
     merge: (n, method) => {
       merged.push({ number: n, method });
       return Promise.resolve({ merged: true, sha: `m${n}`, message: "ok" });

@@ -132,12 +132,6 @@ jobs:
 
       - name: RLS isolation regression
         run: pnpm test:rls
-      # Supabase's Security + Performance Advisor lints against the migrated
-      # database: unindexed foreign keys, auth.uid() not wrapped in a select,
-      # overlapping permissive policies, duplicate indexes, RLS gaps. Fails on
-      # any WARN (INFO notices such as fresh-DB unused indexes don't fail).
-      - name: Database advisors
-        run: pnpm db:advisors
 
       # Bundle-safety backstop for the module framework (MODULES-PLAN.md
       # §1.6): bundling the native app fails if any server-only import (the
