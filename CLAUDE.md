@@ -9,6 +9,7 @@ reference; `docs/MCP.md` is the remote MCP server reference;
 `docs/WORKSPACES.md` is the account model / B2B workspaces reference;
 `docs/BILLING.md` is the billing core + payment providers reference (Stripe
 setup is `docs/STRIPE.md`);
+`docs/NATIVE.md` is how modules bring native packages and config plugins;
 `docs/DESIGN-SYSTEM.md` is how app and module screens are built — follow it
 for any signed-in UI, and write components from it rather than copying
 third-party template code.)
@@ -383,6 +384,10 @@ Rules that keep modules modular:
   from it); server-only code lives behind `import "server-only"` /
   `./payload` / `./web-server`. ESLint + the CI `expo export` smoke check
   enforce this.
+- **Native packages travel with the module:** list `expo-*` packages in the
+  module's own `dependencies` (app's SDK version) and ship an `app.plugin.js`
+  (`native: { plugin: true }`) for permissions; installing one needs a new
+  native build (docs/NATIVE.md).
 - **Migrations:** local sequence numbers (`001_initial.sql`) inside the
   module; `mod sync` pins versions and materializes copies — never edit a
   synced migration, add a new one. Ship a `drop.sql` for clean removal.

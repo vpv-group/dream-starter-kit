@@ -83,6 +83,15 @@ modules/<slug>/
 The CI `expo export` smoke check is the backstop: a server import leaking into
 the native graph fails the PR.
 
+**Native packages travel with the module.** A module lists the `expo-*` /
+`react-native-*` packages it needs in its own package.json `dependencies`
+(at the app's Expo SDK version); Expo's autolinking follows dependencies, so
+they're compiled into the app. Permissions and other native config come from
+the module's own config plugin (`app.plugin.js`, manifest
+`native: { plugin: true }`). Installing, updating or removing such a module
+needs a **new native build** — sync says so. Full guide:
+[NATIVE.md](./NATIVE.md).
+
 ## Namespacing (collisions hard-fail `mod sync`)
 
 | Thing           | Rule                                                                            | Example                     |
@@ -194,7 +203,9 @@ its own `process.env.MOD_<SLUG>_*` keys without tripping
 - **registries** in `apps/nextjs/src/mod/*.generated.ts` +
   `apps/expo/src/mod/*.generated.ts`: nav defaults, widgets, icon map, server
   route tables, Payload collections/globals/plugins/migrations/seeds/settings,
-  merged env shapes, the bundled lock;
+  merged env shapes, the bundled lock, and the Expo app's module config
+  plugins + native fingerprint (`plugins.generated.json`,
+  `native.generated.json`);
 - **route stubs**: two-line `page.tsx`/screen files under `/a/<slug>` (or the
   mount override), plus a per-module `layout.tsx` that 404s when disabled;
 - **migrations**: module SQL is version-pinned (`modules/.mod-lock.json`)
