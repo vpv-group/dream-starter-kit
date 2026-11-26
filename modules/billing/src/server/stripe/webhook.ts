@@ -11,6 +11,7 @@ import {
   mapProduct,
   mapSubscription,
   resolveCheckoutCustomer,
+  splitBuyerEmails,
   subscriptionCustomerId,
   subscriptionUserIdFromMetadata,
 } from "./mapping";
@@ -20,11 +21,13 @@ type SupabaseClient = BaseSupabaseClient<Database>;
 // Stripe webhook → syncs products / prices / customers / subscriptions into the
 // DB using the SERVICE ROLE (clients never write billing rows). The ONE place
 // Stripe state enters the app (public.mod_billing_* is the source of truth that
-// web, mobile and the CMS read). Signature is verified; every event id is
-// recorded so a redelivery is acknowledged without being applied twice, and
-// subscription writes go through mod_billing_apply_subscription(), which
-// ignores an event older than the one already applied (Stripe doesn't
-// guarantee delivery order).
+// web, mobile and the CMS read). Signature is verified; every event is
+// CLAIMED before its side effects run (mod_billing_claim_webhook_event), so a
+// redelivery — even one arriving while the first is still running — is never
+// applied twice. customer.subscription.* events apply the subscription as
+// re-fetched from Stripe (delivery order stops mattering), and writes go
+// through mod_billing_apply_subscription(), which also ignores an event older
+// than the one already applied.
 //
 // It also drives the "checkout-first" signup flow: when an anonymous visitor
 // pays, this matches the checkout email to an existing user (and attaches the
@@ -35,7 +38,6 @@ type SupabaseClient = BaseSupabaseClient<Database>;
 // has no Supabase session). Local: `stripe listen --forward-to
 // localhost:3000/api/mod/billing/stripe/webhook`.
 
-const stripeSecret = process.env.STRIPE_SECRET_KEY;
 // Where guest invitees set their password. Must be an allowed Supabase redirect.
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -182,8 +184,31 @@ interface BuyerContact {
   address?: Stripe.Address | null;
 }
 
-/** Persist the buyer's captured identity to their profile + Stripe customer. */
-async function persistBuyerDetails(
+/** The account (login) email, or null when it can't be read. */
+async function accountEmailOf(
+  admin: SupabaseClient,
+  userId: string,
+): Promise<string | null> {
+  try {
+    const { data, error } = await admin.auth.admin.getUserById(userId);
+    if (error) return null;
+    return data.user.email ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persist the buyer's captured identity to their profile + Stripe customer.
+ *
+ * The account email is the buyer's identity and is never replaced by a
+ * different wallet email (splitBuyerEmails): the Stripe customer's email is
+ * pinned to the account email, and a differing wallet / checkout email is
+ * stored as mod_billing_customers.billing_email (and in the customer's
+ * metadata.billing_email) instead. Call it after the customer mapping is
+ * written, so the billing email has a row to land on.
+ */
+export async function persistBuyerDetails(
   admin: SupabaseClient,
   stripe: Stripe,
   userId: string,
@@ -197,6 +222,21 @@ async function persistBuyerDetails(
   if (Object.keys(patch).length) {
     await admin.from("profiles").update(patch).eq("id", userId);
   }
+
+  const emails = splitBuyerEmails(
+    await accountEmailOf(admin, userId),
+    details.email,
+  );
+  if (emails.billingEmail !== undefined) {
+    const { error } = await admin
+      .from("mod_billing_customers")
+      .update({ billing_email: emails.billingEmail })
+      .eq("user_id", userId);
+    if (error) {
+      console.warn("[billing] could not store billing email:", error.message);
+    }
+  }
+
   // Stamp the captured identity into auth user_metadata — the carrier the
   // cms.users mirror reads (the billing zip has no profiles column). Mirrors
   // what the /guest-account route writes, so the webhook-only path still syncs
@@ -209,6 +249,7 @@ async function persistBuyerDetails(
     meta.billing_postal_code = details.address.postal_code;
   }
   if (details.address) meta.billing_address = details.address;
+  if (emails.billingEmail) meta.billing_email = emails.billingEmail;
   if (Object.keys(meta).length) {
     await admin.auth.admin
       .updateUserById(userId, { user_metadata: meta })
@@ -218,7 +259,8 @@ async function persistBuyerDetails(
     await stripe.customers
       .update(customerId, {
         name: details.name ?? undefined,
-        email: details.email ?? undefined,
+        // Pinned to the account email; never the wallet email.
+        ...(emails.customerEmail ? { email: emails.customerEmail } : {}),
         phone: details.phone ?? undefined,
         // Stripe's AddressParam doesn't accept nulls; drop empty fields.
         address: details.address
@@ -226,6 +268,10 @@ async function persistBuyerDetails(
               Object.entries(details.address).filter(([, v]) => v != null),
             ) as Stripe.AddressParam)
           : undefined,
+        // Stripe merges metadata keys; "" removes the key.
+        ...(emails.billingEmail !== undefined
+          ? { metadata: { billing_email: emails.billingEmail ?? "" } }
+          : {}),
       })
       .catch(() => undefined);
   }
@@ -247,9 +293,62 @@ async function persistFromLatestCharge(
   if (bd) await persistBuyerDetails(admin, stripe, userId, customerId, bd);
 }
 
+/**
+ * The subscription's CURRENT state, re-fetched from Stripe, so the order
+ * events arrive in stops mattering: whichever delivery runs last writes what
+ * Stripe holds now, not what its (possibly stale) payload said. Falls back to
+ * the event payload when there's no Stripe key (self-signed test events) or
+ * the retrieve fails; the ordering guard in mod_billing_apply_subscription()
+ * still covers that path.
+ */
+export async function currentSubscription(
+  stripe: Pick<Stripe, "subscriptions"> | null,
+  fromEvent: Stripe.Subscription,
+): Promise<{ sub: Stripe.Subscription; fresh: boolean }> {
+  if (!stripe) return { sub: fromEvent, fresh: false };
+  try {
+    const sub = await stripe.subscriptions.retrieve(fromEvent.id);
+    return { sub, fresh: true };
+  } catch (err) {
+    console.warn(
+      "[billing] subscription re-fetch failed; applying the event payload",
+      err instanceof Error ? err.message : err,
+    );
+    return { sub: fromEvent, fresh: false };
+  }
+}
+
+export type ClaimResult = "claimed" | "duplicate" | "busy";
+
+/**
+ * Claim the event BEFORE running any side effect (mod_billing_claim_webhook_
+ * event, atomic): two concurrent deliveries of one event can't both send the
+ * guest invite or write the tags. A claim abandoned for over five minutes is
+ * taken over.
+ */
+async function claimEvent(
+  admin: SupabaseClient,
+  event: Stripe.Event,
+): Promise<ClaimResult> {
+  const { data, error } = await admin.rpc("mod_billing_claim_webhook_event", {
+    _id: event.id,
+    _type: event.type,
+  });
+  if (error) throw new Error(error.message);
+  if (data === "claimed" || data === "duplicate" || data === "busy") {
+    return data;
+  }
+  throw new Error(`unexpected claim result: ${String(data)}`);
+}
+
 export interface StripeWebhookDeps {
   /** Mirror an applied subscription event into the CMS (admin read model). */
   projectSubscription?: (event: Stripe.Event, stripe: Stripe) => Promise<void>;
+  /** Tests: the service-role client (default: createAdminClient()). */
+  admin?: SupabaseClient;
+  /** Tests: the Stripe client (default: one built from STRIPE_SECRET_KEY).
+   *  Passing one counts as "Stripe is reachable" (subscriptions re-fetched). */
+  stripe?: Stripe;
 }
 
 export async function handleStripeWebhook(
@@ -261,7 +360,7 @@ export async function handleStripeWebhook(
   let admin: SupabaseClient;
   try {
     // The module's service-role client (accepts SUPABASE_SECRET_KEY too).
-    admin = createAdminClient();
+    admin = deps.admin ?? createAdminClient();
   } catch {
     return new Response("Server misconfigured", { status: 500 });
   }
@@ -269,7 +368,11 @@ export async function handleStripeWebhook(
   // Signature verification needs only the endpoint secret; a placeholder key
   // keeps the handler working for self-signed test events without an account
   // (Stripe API calls with it fail loudly and are caught per event).
-  const stripe = new Stripe(stripeSecret ?? "sk_test_unconfigured_placeholder");
+  const stripeSecret = process.env.STRIPE_SECRET_KEY;
+  const stripe =
+    deps.stripe ??
+    new Stripe(stripeSecret ?? "sk_test_unconfigured_placeholder");
+  const liveStripe = deps.stripe !== undefined || Boolean(stripeSecret);
   const secrets = await resolveWebhookSecrets(admin);
   if (secrets.length === 0) {
     return new Response("Webhook not connected", { status: 500 });
@@ -301,228 +404,281 @@ export async function handleStripeWebhook(
     });
   }
 
-  // Already handled (Stripe redelivers on timeouts and retries): acknowledge.
-  const { data: seen } = await admin
-    .from("mod_billing_webhook_events")
-    .select("id")
-    .eq("id", event.id)
-    .maybeSingle();
-  if (seen) {
+  // Claim first (Stripe redelivers on timeouts and retries, sometimes while
+  // the first delivery is still running).
+  let claim: ClaimResult;
+  try {
+    claim = await claimEvent(admin, event);
+  } catch (err) {
+    console.error("[billing] could not claim stripe event", err);
+    return new Response("Could not claim event", { status: 500 });
+  }
+  if (claim === "duplicate") {
     return Response.json({ received: true, duplicate: true });
+  }
+  if (claim === "busy") {
+    // Another delivery is applying it right now: a non-2xx makes Stripe retry
+    // later, by when it's done (→ duplicate) or abandoned (→ taken over).
+    return new Response("Event is being processed", { status: 409 });
   }
 
   try {
-    switch (event.type) {
-      case "product.created":
-      case "product.updated": {
-        await admin
-          .from("mod_billing_products")
-          .upsert(mapProduct(event.data.object));
-        break;
-      }
-      case "price.created":
-      case "price.updated": {
-        await admin
-          .from("mod_billing_prices")
-          .upsert(mapPrice(event.data.object));
-        break;
-      }
-      case "checkout.session.completed": {
-        const session = event.data.object;
-        const { userId: refUserId, customerId } =
-          resolveCheckoutCustomer(session);
-
-        // Guest checkout: no app user referenced → match by email or create one.
-        let userId = refUserId;
-        const email = session.customer_details?.email ?? null;
-        if (!userId && email) {
-          userId = await resolveOrInviteGuest(
-            admin,
-            email,
-            session.customer_details?.name ?? null,
-          );
-        }
-
-        // Anonymous buyer (anon account from a favorite) → convert/merge here.
-        if (userId && email) {
-          userId = await convertOrMergeAnon(admin, userId, email);
-        }
-        // Persist captured identity (name/phone/address) to profile + customer.
-        if (userId) {
-          await persistBuyerDetails(
-            admin,
-            stripe,
-            userId,
-            customerId ?? undefined,
-            session.customer_details,
-          );
-        }
-
-        if (userId && customerId) {
-          await admin
-            .from("mod_billing_customers")
-            .upsert(
-              { user_id: userId, stripe_customer_id: customerId },
-              { onConflict: "user_id" },
-            );
-        }
-
-        // One-time (lifetime) purchases create no subscription, so record an
-        // active row keyed by the session id to unlock premium, and tag the user.
-        if (userId && session.mode === "payment") {
-          const items = await stripe.checkout.sessions.listLineItems(
-            session.id,
-            { limit: 1 },
-          );
-          const priceId = items.data[0]?.price?.id ?? null;
-          if (priceId) {
-            await admin.from("mod_billing_subscriptions").upsert({
-              id: session.id,
-              user_id: userId,
-              price_id: priceId,
-              status: "active",
-              quantity: 1,
-              cancel_at_period_end: false,
-              current_period_end: null,
-            });
-            await ensurePlanTag(admin, userId, priceId);
-          }
-        }
-
-        // Subscription mode: persist the subscription here too (not just from the
-        // customer.subscription.* event), so guest checkouts link correctly
-        // regardless of Stripe's event ordering.
-        if (userId && session.mode === "subscription" && session.subscription) {
-          const subId =
-            typeof session.subscription === "string"
-              ? session.subscription
-              : session.subscription.id;
-          const sub = await stripe.subscriptions.retrieve(subId);
-          // The CMS copy follows from the customer.subscription.* event that
-          // Stripe sends for the same subscription.
-          await applySubscription(
-            admin,
-            mapSubscription(sub, userId),
-            event.created,
-          );
-          if (sub.status === "active" || sub.status === "trialing") {
-            await ensurePlanTag(
-              admin,
-              userId,
-              sub.items.data[0]?.price.id ?? null,
-            );
-          }
-        }
-        break;
-      }
-      case "customer.subscription.created":
-      case "customer.subscription.updated":
-      case "customer.subscription.deleted": {
-        const sub = event.data.object;
-        const customerId = subscriptionCustomerId(sub);
-        let userId = subscriptionUserIdFromMetadata(sub);
-        if (!userId) {
-          const { data } = await admin
-            .from("mod_billing_customers")
-            .select("user_id")
-            .eq("stripe_customer_id", customerId)
-            .maybeSingle();
-          userId = data?.user_id ?? null;
-        }
-        // Guest who paid via the EMBEDDED wallet flow without an anonymous
-        // session: no metadata user, no mapping yet. Match the customer's email
-        // to an account (or create one + email an invite), same as guest
-        // Checkout. Not for the deleted event (don't resurrect accounts). The
-        // host's /api/mod/billing/guest-account route is the primary, synchronous
-        // path (it runs at "Continue"/"Maybe later"); this is the idempotent
-        // backstop for when that call didn't run or didn't land.
-        //
-        // SECURITY: gate this email-match linking on a PAID status. /express-intent
-        // creates the Stripe customer with an arbitrary, unverified client email
-        // and an unpaid `default_incomplete` subscription; without the paid gate,
-        // that unpaid event would match a victim's account by email and overwrite
-        // their mod_billing_customers mapping to the attacker's Stripe customer
-        // (cross-account invoice/PII leak) — all with no payment.
-        const paidSub = sub.status === "active" || sub.status === "trialing";
-        if (
-          !userId &&
-          paidSub &&
-          event.type !== "customer.subscription.deleted"
-        ) {
-          const customer = await stripe.customers.retrieve(customerId);
-          if (!customer.deleted && customer.email) {
-            userId = await resolveOrInviteGuest(
-              admin,
-              customer.email,
-              customer.name ?? null,
-            );
-          }
-        }
-        if (userId) {
-          // Persist the customer mapping so later portal/upgrade calls resolve
-          // it (checkout.session.completed isn't fired by the embedded flow).
-          await admin
-            .from("mod_billing_customers")
-            .upsert(
-              { user_id: userId, stripe_customer_id: customerId },
-              { onConflict: "user_id" },
-            );
-          const applied = await applySubscription(
-            admin,
-            mapSubscription(sub, userId),
-            event.created,
-          );
-          // Keep the read-only CMS copy (admin Users / Plans pages) in step —
-          // only when this event is the newest, so it can't roll back either.
-          if (applied && deps.projectSubscription) {
-            try {
-              await deps.projectSubscription(event, stripe);
-            } catch (err) {
-              console.error(
-                "[billing] CMS subscription projection failed",
-                err,
-              );
-            }
-          }
-          if (sub.status === "active" || sub.status === "trialing") {
-            await ensurePlanTag(
-              admin,
-              userId,
-              sub.items.data[0]?.price.id ?? null,
-            );
-          }
-          // Embedded checkout has no checkout.session — capture the buyer's
-          // identity from the first charge on creation.
-          if (event.type === "customer.subscription.created") {
-            // Best-effort enrichment: the subscription is already applied, so
-            // a Stripe API hiccup here mustn't fail (and re-deliver) the event.
-            await persistFromLatestCharge(
-              admin,
-              stripe,
-              userId,
-              customerId,
-            ).catch((err: unknown) => {
-              console.warn("[billing] buyer details capture failed", err);
-            });
-          }
-        }
-        break;
-      }
-      default:
-        break;
-    }
+    await applyEvent(admin, stripe, event, {
+      liveStripe,
+      projectSubscription: deps.projectSubscription,
+    });
   } catch (err) {
     console.error("[billing] stripe webhook handler error", err);
-    // Not recorded: Stripe retries, and the next attempt re-applies it.
+    // Release the claim so Stripe's retry can apply it.
+    const { error } = await admin
+      .from("mod_billing_webhook_events")
+      .delete()
+      .eq("id", event.id)
+      .eq("status", "processing");
+    if (error) {
+      console.error("[billing] could not release event claim", error.message);
+    }
     return new Response("Handler error", { status: 500 });
   }
 
-  // Recorded only after a successful apply, so a failed attempt is retried.
-  await admin
+  const { error: doneError } = await admin
     .from("mod_billing_webhook_events")
-    .upsert({ id: event.id, type: event.type }, { onConflict: "id" });
-
+    .update({ status: "done" })
+    .eq("id", event.id);
+  if (doneError) {
+    // Applied, so still acknowledge; the claim is taken over (and the
+    // idempotent writes re-run) only if Stripe redelivers after 5 minutes.
+    console.error("[billing] could not mark event done", doneError.message);
+  }
   return Response.json({ received: true });
+}
+
+/** Apply one verified, claimed event. Throws to have Stripe retry it. */
+async function applyEvent(
+  admin: SupabaseClient,
+  stripe: Stripe,
+  event: Stripe.Event,
+  opts: {
+    liveStripe: boolean;
+    projectSubscription?: StripeWebhookDeps["projectSubscription"];
+  },
+): Promise<void> {
+  switch (event.type) {
+    case "product.created":
+    case "product.updated": {
+      await admin
+        .from("mod_billing_products")
+        .upsert(mapProduct(event.data.object));
+      break;
+    }
+    case "price.created":
+    case "price.updated": {
+      await admin
+        .from("mod_billing_prices")
+        .upsert(mapPrice(event.data.object));
+      break;
+    }
+    case "checkout.session.completed": {
+      const session = event.data.object;
+      const { userId: refUserId, customerId } =
+        resolveCheckoutCustomer(session);
+
+      // Guest checkout: no app user referenced → match by email or create one.
+      let userId = refUserId;
+      const email = session.customer_details?.email ?? null;
+      if (!userId && email) {
+        userId = await resolveOrInviteGuest(
+          admin,
+          email,
+          session.customer_details?.name ?? null,
+        );
+      }
+
+      // Anonymous buyer (anon account from a favorite) → convert/merge here.
+      if (userId && email) {
+        userId = await convertOrMergeAnon(admin, userId, email);
+      }
+
+      if (userId && customerId) {
+        await admin
+          .from("mod_billing_customers")
+          .upsert(
+            { user_id: userId, stripe_customer_id: customerId },
+            { onConflict: "user_id" },
+          );
+      }
+      // Persist captured identity (name/phone/address, a differing billing
+      // email) to profile + customer — after the mapping above, which holds
+      // the billing email.
+      if (userId) {
+        await persistBuyerDetails(
+          admin,
+          stripe,
+          userId,
+          customerId ?? undefined,
+          session.customer_details,
+        );
+      }
+
+      // One-time (lifetime) purchases create no subscription, so record an
+      // active row keyed by the session id to unlock premium, and tag the user.
+      if (userId && session.mode === "payment") {
+        const items = await stripe.checkout.sessions.listLineItems(session.id, {
+          limit: 1,
+        });
+        const priceId = items.data[0]?.price?.id ?? null;
+        if (priceId) {
+          await admin.from("mod_billing_subscriptions").upsert({
+            id: session.id,
+            user_id: userId,
+            price_id: priceId,
+            status: "active",
+            quantity: 1,
+            cancel_at_period_end: false,
+            current_period_end: null,
+          });
+          await ensurePlanTag(admin, userId, priceId);
+        }
+      }
+
+      // Subscription mode: persist the subscription here too (not just from the
+      // customer.subscription.* event), so guest checkouts link correctly
+      // regardless of Stripe's event ordering.
+      if (userId && session.mode === "subscription" && session.subscription) {
+        const subId =
+          typeof session.subscription === "string"
+            ? session.subscription
+            : session.subscription.id;
+        const sub = await stripe.subscriptions.retrieve(subId);
+        // The CMS copy follows from the customer.subscription.* event that
+        // Stripe sends for the same subscription.
+        await applySubscription(
+          admin,
+          mapSubscription(sub, userId),
+          event.created,
+        );
+        if (sub.status === "active" || sub.status === "trialing") {
+          await ensurePlanTag(
+            admin,
+            userId,
+            sub.items.data[0]?.price.id ?? null,
+          );
+        }
+      }
+      break;
+    }
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+    case "customer.subscription.deleted": {
+      // Apply what Stripe holds NOW, not the payload: deliveries arrive in any
+      // order, and a re-fetched state is right whichever one runs last.
+      //
+      // It is still stamped with event.created, not now(): the ordering guard
+      // in mod_billing_apply_subscription() then compares Stripe's clock with
+      // Stripe's clock only, so it stays right when this falls back to the
+      // payload (no key, retrieve failed) and under clock skew between our
+      // instances. Nothing is lost by it: an older event that runs late is
+      // skipped even though its fetched state is current, but every change
+      // after the newer event emits its own, later event, which applies it.
+      // Events in the same second pass the guard (>=), and the one processed
+      // last fetched the newest state.
+      const { sub } = await currentSubscription(
+        opts.liveStripe ? stripe : null,
+        event.data.object,
+      );
+      const customerId = subscriptionCustomerId(sub);
+      let userId = subscriptionUserIdFromMetadata(sub);
+      if (!userId) {
+        const { data } = await admin
+          .from("mod_billing_customers")
+          .select("user_id")
+          .eq("stripe_customer_id", customerId)
+          .maybeSingle();
+        userId = data?.user_id ?? null;
+      }
+      // Guest who paid via the EMBEDDED wallet flow without an anonymous
+      // session: no metadata user, no mapping yet. Match the customer's email
+      // to an account (or create one + email an invite), same as guest
+      // Checkout. Not for the deleted event (don't resurrect accounts). The
+      // host's /api/mod/billing/guest-account route is the primary, synchronous
+      // path (it runs at "Continue"/"Maybe later"); this is the idempotent
+      // backstop for when that call didn't run or didn't land.
+      //
+      // SECURITY: gate this email-match linking on a PAID status. /express-intent
+      // creates the Stripe customer with an arbitrary, unverified client email
+      // and an unpaid `default_incomplete` subscription; without the paid gate,
+      // that unpaid event would match a victim's account by email and overwrite
+      // their mod_billing_customers mapping to the attacker's Stripe customer
+      // (cross-account invoice/PII leak) — all with no payment.
+      const paidSub = sub.status === "active" || sub.status === "trialing";
+      if (
+        !userId &&
+        paidSub &&
+        event.type !== "customer.subscription.deleted"
+      ) {
+        const customer = await stripe.customers.retrieve(customerId);
+        if (!customer.deleted && customer.email) {
+          userId = await resolveOrInviteGuest(
+            admin,
+            customer.email,
+            customer.name ?? null,
+          );
+        }
+      }
+      if (userId) {
+        // Persist the customer mapping so later portal/upgrade calls resolve
+        // it (checkout.session.completed isn't fired by the embedded flow).
+        await admin
+          .from("mod_billing_customers")
+          .upsert(
+            { user_id: userId, stripe_customer_id: customerId },
+            { onConflict: "user_id" },
+          );
+        const applied = await applySubscription(
+          admin,
+          mapSubscription(sub, userId),
+          event.created,
+        );
+        // Keep the read-only CMS copy (admin Users / Plans pages) in step —
+        // only when this event is the newest, so it can't roll back either.
+        // It gets the same (re-fetched) state the row was written from.
+        if (applied && opts.projectSubscription) {
+          try {
+            await opts.projectSubscription(
+              { ...event, data: { ...event.data, object: sub } },
+              stripe,
+            );
+          } catch (err) {
+            console.error("[billing] CMS subscription projection failed", err);
+          }
+        }
+        if (sub.status === "active" || sub.status === "trialing") {
+          await ensurePlanTag(
+            admin,
+            userId,
+            sub.items.data[0]?.price.id ?? null,
+          );
+        }
+        // Embedded checkout has no checkout.session — capture the buyer's
+        // identity from the first charge on creation.
+        if (event.type === "customer.subscription.created") {
+          // Best-effort enrichment: the subscription is already applied, so
+          // a Stripe API hiccup here mustn't fail (and re-deliver) the event.
+          await persistFromLatestCharge(
+            admin,
+            stripe,
+            userId,
+            customerId,
+          ).catch((err: unknown) => {
+            console.warn("[billing] buyer details capture failed", err);
+          });
+        }
+      }
+      break;
+    }
+    default:
+      break;
+  }
 }
 
 /**

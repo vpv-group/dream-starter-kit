@@ -522,14 +522,19 @@ example plans (Monthly/Annual/Lifetime) + a welcome coupon are seeded by `seedCm
   It writes `public.mod_billing_*`, the **source of truth** web and mobile read under
   RLS, then projects `customer.subscription.*` into the read-only CMS `subscriptions`
   collection for /admin (`modules/billing/src/payload/webhooks.ts`). Every Stripe event
-  id is recorded (`mod_billing_webhook_events`), so a redelivery isn't applied twice.
-  Subscription writes go through `mod_billing_apply_subscription()`, which ignores an
-  event older than the one already applied: Stripe doesn't guarantee delivery order.
+  is **claimed before its side effects run** (`mod_billing_claim_webhook_event()`:
+  done → `200 duplicate`, in progress → `409`, failure releases the claim), so even
+  concurrent redeliveries apply once. `customer.subscription.*` apply the subscription
+  **re-fetched from Stripe** (payload fallback without a key), and writes go through
+  `mod_billing_apply_subscription()`, which also ignores an event older than the one
+  already applied. A differing wallet/checkout email is kept as
+  `mod_billing_customers.billing_email`; the Stripe customer's email stays the account's.
   **No dashboard step:** an hourly scheduled check (`GET /api/mod/billing/cron/connect`)
-  registers the endpoint through the Stripe API once `STRIPE_SECRET_KEY` is set and the
-  site has a public https URL. It keeps the signing secret in Supabase Vault;
-  `STRIPE_WEBHOOK_SECRET` overrides it, e.g. for `stripe listen` locally. The old edge
-  function and `@payloadcms/plugin-stripe` endpoint are gone, and
+  registers the endpoint through the Stripe API (pinned to the SDK's `api_version`) once
+  `STRIPE_SECRET_KEY` is set and the site has a public https URL, then disables this
+  install's pre-2.5 endpoints (never deletes; audited). It keeps the signing secret in
+  Supabase Vault; `STRIPE_WEBHOOK_SECRET` overrides it, e.g. for `stripe listen`
+  locally. The old edge function and `@payloadcms/plugin-stripe` endpoint are gone, and
   `STRIPE_WEBHOOKS_ENDPOINT_SECRET` is deprecated.
 - **Intro offers** ("$1 first month, then $19") = a coupon auto-applied at checkout
   (`once` for one intro period, `repeating` for several; years × 12 → Stripe

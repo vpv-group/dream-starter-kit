@@ -555,6 +555,23 @@ describe("RLS: customers are read-own (service-role written)", () => {
   });
 });
 
+describe("billing webhook functions refuse API callers", () => {
+  // SECURITY DEFINER functions reachable over PostgREST: each checks its
+  // caller (module SQL can't REVOKE EXECUTE).
+  it("anon and signed-in users can't purge the event ledger or claim events", async () => {
+    const anon = createClient<Database>(SUPABASE_URL, ANON_KEY, noPersist);
+    for (const client of [anon, clientA]) {
+      const purge = await client.rpc("mod_billing_purge");
+      expect(purge.error?.code).toBe("42501");
+      const claim = await client.rpc("mod_billing_claim_webhook_event", {
+        _id: `evt_rls_${stamp}`,
+        _type: "product.updated",
+      });
+      expect(claim.error?.code).toBe("42501");
+    }
+  });
+});
+
 describe("RLS: user_tags are private to their owner", () => {
   it("A can read A's own tags", async () => {
     const { data, error } = await clientA
