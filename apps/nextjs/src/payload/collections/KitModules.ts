@@ -36,11 +36,13 @@ const settingsFields: Field[] = Object.values(modSettings).map((s) => ({
   fields: s.global.fields,
 }));
 
+// An adapter's panel (e.g. the Stripe connector) renders on its target
+// module's page (`page`, e.g. Modules → Billing), after the module's own.
 const adminSettingsFields: Field[] = modAdminSettings.map((a) => ({
   name: `admin_${a.slug.replace(/-/g, "_")}`,
   type: "ui" as const,
   admin: {
-    condition: onlyFor(a.slug),
+    condition: onlyFor(a.page ?? a.slug),
     components: {
       Field: {
         path: "~/payload/components/ModuleAdminSettings#ModuleAdminSettings",
@@ -84,7 +86,7 @@ const runModuleSettingsHooks: CollectionAfterChangeHook<{
 /** Modules with no settings of their own get a placeholder on their page. */
 const slugsWithSettings = new Set([
   ...Object.values(modSettings).map((s) => s.slug),
-  ...modAdminSettings.map((a) => a.slug),
+  ...modAdminSettings.map((a) => a.page ?? a.slug),
 ]);
 
 const COMPONENTS = "~/payload/components/modules";

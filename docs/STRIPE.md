@@ -1,300 +1,299 @@
-# STRIPE.md — making Stripe billing work in the Dream Starter Kit
+# STRIPE.md — taking payments with Stripe
 
-Everything you need to turn on payments. It's written so a **non‑technical founder**
-can follow it top to bottom, with a precise reference (exact key permissions, exact
-env vars) for engineers further down.
+Stripe is billing's **web payment provider**, shipped as the preinstalled
+`billing-adapter-stripe` module. This guide turns it on. It's written so a
+**non‑technical founder** can follow it top to bottom, with a precise reference
+(exact key permissions, exact env vars) for engineers further down.
 
-If anything here conflicts with `docs/ARCHITECTURE.md`/`docs/ERD.md`, those win.
-Related reading: `CLAUDE.md` → _Payments (Payload ⇄ Stripe)_, `README.md` env table.
+How billing itself works — plans, the purchase ledger, entitlements, billing tags,
+payment providers and the App Store / Google Play rules — is in
+[`docs/BILLING.md`](BILLING.md). If anything here conflicts with
+`docs/ARCHITECTURE.md`/`docs/ERD.md`, those win.
 
 ---
 
-## 1. How billing works here (read this first — it saves you steps)
+## 1. What Stripe does here
 
 The kit is **plan‑driven from the CMS**, not from the Stripe dashboard:
 
-- You **author plans and coupons in Payload** (`/admin` → **Commerce → Plans /
-  Coupons**). Saving a plan automatically creates/updates the matching **Product +
-  Price** in Stripe. **You never create products or prices in the Stripe dashboard
-  by hand.** (Prices are immutable in Stripe, so when you change an amount the kit
-  creates a new price and archives the old one for you.)
-- A customer pays through a **Stripe Checkout** page (hosted by Stripe — the kit
-  redirects to it). Self‑serve changes/cancellations happen in the **Stripe Customer
-  Portal**, also hosted by Stripe.
-- Stripe tells your app what happened through **two webhooks** (see §4). One mirrors
-  products/prices/subscriptions into the database for the apps to read; the other
-  mirrors subscriptions into the CMS.
+- You **author plans and coupons in Payload** (`/admin` → **Commerce → Billing
+  Plans / Coupons**). Saving one pushes it to Stripe: a **Product + Price** for a
+  plan, a **Coupon** (+ promotion code) for a coupon. **You never create products
+  or prices in the Stripe dashboard by hand.** Stripe prices are immutable, so
+  changing an amount creates a new price and archives the old one. Each plan's
+  **Stripe** tab shows the ids.
+- Buyers pay **on your site** — the paywall on premium content and the two‑step
+  `/checkout` page, with card, Link, Apple Pay and Google Pay (Stripe Elements) — or,
+  if you prefer, on **Stripe's hosted Checkout page** (a setting, §4). Guests can pay
+  first; their account is created from the payment email.
+- Self‑serve changes and cancellations happen in the **Stripe Customer Portal**
+  (linked from `/billing`), and past invoices list on `/billing`.
+- Stripe reports purchases, renewals and cancellations through **one webhook** that
+  the app registers itself (§5). It writes billing's ledger — the source of truth the
+  web and mobile apps read — and keeps each member's billing tags in step.
 
-So the whole job is really just three things:
+The whole job is:
 
-1. Put your **Stripe secret key** into the env (§3).
-2. Set up the **two webhooks** and put their signing secrets into the env (§4).
-3. **Seed the CMS and save a plan** so it pushes to Stripe (§5).
+1. **Connect Stripe** (§2) — one click, or paste your own keys.
+2. **Seed the CMS and save a plan** so it pushes to Stripe (§6).
 
-Everything is **test mode** first (no real money). You flip to live mode at the end.
-
-### App Store and Google Play payment rules
-
-The kit sells on the **web** with Stripe, and the iPhone and Android apps unlock paid
-content by reading what was bought there. They never take a payment themselves (no
-In-App Purchase, no Play Billing). That keeps one billing system, but it can affect
-store review:
-
-- Apple's App Review Guidelines (section 3.1) generally require **In-App Purchase**
-  for digital content or features unlocked inside an iOS app. The rules for linking
-  out to a web checkout differ by country and change over time.
-- Google Play has a similar payments policy for digital goods.
-
-If your mobile app unlocks paid content, read the current Apple and Google guidelines
-for the countries you publish in before you submit. An In-App Purchase module is not
-part of the kit yet.
-
-### What each environment variable is for
-
-| Variable                                       | Secrecy        | What it is                                                                                                                                              | Where it's used                        |
-| ---------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| `STRIPE_SECRET_KEY`                            | 🔒 server‑only | Your Stripe API key (`sk_test_…` / `rk_test_…` / `sk_live_…`). Lets the kit create products, prices, checkout sessions, etc.                            | Next.js server routes + the webhook    |
-| `STRIPE_WEBHOOK_SECRET`                        | 🔒 server‑only | **Optional.** Signing secret of the one webhook endpoint. Leave unset in production (the app registers the endpoint and keeps the secret in Vault); set it locally from `stripe listen`. | billing webhook route                  |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`           | public         | Client‑safe key (`pk_test_…`). **Required for the embedded paywall + two‑step `/checkout`** (Stripe Elements / Express Checkout — Apple/Google Pay + card). Only the hosted redirect‑to‑Checkout flow works without it.                     | client                      |
-| `SITE_URL`                                     | server‑only    | Your site origin, used to build the guest‑checkout invite redirect. Defaults to `NEXT_PUBLIC_APP_URL`/localhost.                                        | billing webhook route                  |
-| `STRIPE_PRICE_MONTHLY` / `STRIPE_PRICE_YEARLY` | 🔒             | **Legacy / unused** by the plan‑driven flow. Leave blank.                                                                                               | —                                      |
-
-> The kit fails loudly if a required var is missing. Optional vars must be **absent
-> or blank** — never set to `""` in a way the schema rejects (the cloud session hook
-> comments them out for you).
+Work in **test mode** first (no real money). Go live at the end.
 
 ---
 
-## 2. Before you start — what you need
+## 2. Connect Stripe
 
-- A **Stripe account** (free): <https://dashboard.stripe.com/register>. You can do
-  the entire test‑mode setup before you've finished business verification.
-- Make sure you are in **Test mode** while setting up: the toggle is the **"Test
-  mode"** switch at the top‑right of the Stripe dashboard. Test keys start with
-  `sk_test_` / `pk_test_`; live keys start with `sk_live_` / `pk_live_`.
-- Know **where your env lives**:
-  - **Local dev:** the `.env` file at the repo root (copy from `.env.example`).
-  - **Production (Vercel):** Project → **Settings → Environment Variables**.
-    That's the only place: billing runs in the Next.js app (no edge functions).
+Open `/admin` → **Modules → Billing**. Below the settings tabs is the **Stripe**
+panel: connection, webhook and catalog. There are two ways to connect; your own keys
+win if both are present.
+
+### 2.1 Connect with Stripe (recommended — no keys to copy)
+
+Click **Connect with Stripe** (or **Connect in test mode** while you set up). You sign
+in to Stripe, pick or create the account, approve, and come back to the panel showing
+**Connected**, the account name and test/live mode.
+
+How it works: the OAuth app ("Meet Dream AI") belongs to Meet Dream, which keeps the
+OAuth secret and refresh token. Your site never stores a Stripe secret — when it needs
+Stripe, it asks meetdream.com (signed with the site's free license key) for a
+short‑lived credential for **your** account, and caches it until shortly before it
+expires. The publishable key for on‑site checkout comes the same way, so connecting
+needs no redeploy.
+
+Needs: the site's free Meet Dream license, which it registers after the first setup on
+a public domain (`/cms-setup`). With `DREAM_TELEMETRY=off` there's no license, so use
+your own keys (§2.2). **Disconnect** in the panel revokes the connection.
+
+### 2.2 Your own API keys (self‑hosting, CI, `stripe listen`)
+
+Set these in the env. They take priority over a Meet Dream connection.
+
+| Variable                             | Secrecy        | What it is                                                                                                                                                                                                          |
+| ------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `STRIPE_SECRET_KEY`                  | 🔒 server‑only | Your API key (`sk_test_…` / `rk_test_…` / `sk_live_…`). Lets the kit create products, prices, payments, portal sessions.                                                                                            |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | public         | Client‑safe key (`pk_test_…`). Needed for **on‑site** checkout (Elements, Apple/Google Pay). Without it only the hosted Checkout page works.                                                                        |
+| `STRIPE_WEBHOOK_SECRET`              | 🔒 server‑only | **Optional.** Signing secret of a webhook endpoint you manage yourself. Leave unset in production (the app registers its endpoint and keeps the secret in Vault, §5.1). Set it locally from `stripe listen` (§5.2). |
+
+> The kit fails loudly if a required var is missing. Optional vars must be **absent**,
+> never `""` (`pnpm dev:setup` comments unset ones out).
+
+**Where env lives:** locally, `.env` at the repo root (restart `pnpm dev:next` after
+editing). In production (Vercel): Project → **Settings → Environment Variables**, then
+redeploy. Billing runs entirely in the Next.js app (no edge functions).
+
+#### Which key permissions?
+
+**Option A — standard secret key** (`sk_…`, full access): simplest; fine to start.
+
+**Option B — restricted key** (`rk_…`, recommended for production). Set everything
+not listed to **None**:
+
+| Stripe resource       | Permission | Why the kit needs it                                                                  |
+| --------------------- | ---------- | ------------------------------------------------------------------------------------- |
+| **Products**          | **Write**  | Create/update a product when you save a plan                                          |
+| **Prices**            | **Write**  | Create new prices / archive old ones (prices are immutable)                           |
+| **Coupons**           | **Write**  | Intro‑offer and marketing coupons                                                     |
+| **Promotion codes**   | **Write**  | Customer‑facing promo codes (e.g. `LAUNCH20`)                                         |
+| **Customers**         | **Write**  | Find or create the Stripe customer at checkout                                        |
+| **Checkout Sessions** | **Write**  | Hosted Checkout; read a session's line items                                          |
+| **Customer portal**   | **Write**  | Open the self‑serve portal from `/billing`                                            |
+| **Subscriptions**     | **Write**  | On‑site checkout (`/express-intent`), 1‑click annual switch, cancel on account delete |
+| **PaymentIntents**    | **Write**  | On‑site card + wallet payments                                                        |
+| **SetupIntents**      | **Write**  | Collect a payment method for trial / $0‑today subscriptions                           |
+| **Charges**           | **Read**   | Capture the buyer's wallet identity from the first charge (webhook)                   |
+| **Invoices**          | **Read**   | List past invoices on `/billing`                                                      |
+| **Webhook Endpoints** | **Write**  | Register the webhook endpoint (§5.1) and disable old ones (§5.3)                      |
+
+Verifying incoming webhooks needs no key permission — only the signing secret.
+
+To create a key: Stripe Dashboard (Test mode on) → **Developers → API keys** → reveal
+the standard secret key, or **Create restricted key** with the table above. Treat it
+like a password: server‑only (golden rule #2), never in client code or `NEXT_PUBLIC_*`.
+
+**Rotating:** create the new key (or **Roll** the old one), update every env it's in,
+redeploy, verify, then revoke the old key.
 
 ---
 
-## 3. The Stripe **secret key** — exact permissions + step by step
+## 3. The Stripe panel (Modules → Billing)
 
-### 3.1 Which permissions do you need?
+- **Connection** — Not connected / **Connected** (via Meet Dream) / **Own API keys**,
+  the account and test/live mode; **Connect with Stripe**, **Test connection**,
+  **Disconnect**.
+- **Webhook** — the endpoint URL, whether it's registered, where its signing secret is
+  (Vault or `STRIPE_WEBHOOK_SECRET`), the last event received; **Register now**
+  instead of waiting for the hourly check.
+- **Catalog** — how many plans/coupons are synced, failed or not yet synced;
+  **Sync everything now** (useful right after connecting).
 
-You have two options.
+All of it goes through admin‑only routes (`/api/mod/billing-adapter-stripe/admin/*`);
+no secret reaches the browser.
 
-**Option A — Standard secret key (simplest).**
-Stripe's default secret key (`sk_test_…` / `sk_live_…`) has **full access**. It works
-out of the box and is the recommended starting point for most founders. Skip to §3.2.
+---
 
-**Option B — Restricted key (most secure, recommended for production).**
-A restricted key (`rk_live_…`) grants only the permissions you choose. The kit uses a
-specific, small set of Stripe resources, so you can lock the key down to exactly
-these. Set **everything not listed below to _None_**:
+## 4. Stripe settings (Modules → Billing → Stripe tab)
 
-| Stripe resource (in the "Create restricted key" screen) | Permission | Why the kit needs it                                        |
-| ------------------------------------------------------- | ---------- | ----------------------------------------------------------- |
-| **Products**                                            | **Write**  | Create/update a product when you save a plan                |
-| **Prices**                                              | **Write**  | Create new prices / archive old ones (prices are immutable) |
-| **Coupons**                                             | **Write**  | Create/update/delete intro‑offer & marketing coupons        |
-| **Promotion codes**                                     | **Write**  | Create customer‑facing promo codes (e.g. `LAUNCH20`)        |
-| **Customers**                                           | **Write**  | Find or create the Stripe customer at checkout              |
-| **Checkout Sessions**                                   | **Write**  | Create the hosted checkout page; read its line items        |
-| **Customer portal**                                     | **Write**  | Open the self‑serve billing portal (`/billing`)             |
-| **Subscriptions**                                       | **Write**  | Create subscriptions (embedded `/express-intent`) + switch plan (1‑click annual `/upgrade-annual`); read in webhooks |
-| **PaymentIntents**                                      | **Write**  | Embedded paywall / two‑step checkout card + wallet payments (`/express-intent`) |
-| **SetupIntents**                                        | **Write**  | Collect a payment method for trial / $0‑now subscriptions (`/express-intent`) |
-| **Charges**                                             | **Read**   | Capture the buyer's wallet identity from the first charge (edge‑function webhook) |
-| **Invoices**                                            | **Read**   | List a customer's past invoices on `/billing`               |
-| **Webhook Endpoints**                                   | **Write**  | Register the one webhook endpoint (§4.1) and disable the pre‑2.5 ones (§4.3) |
-| _Everything else_                                       | **None**   | Not used                                                    |
+| Setting                             | Default | What it does                                                                                               |
+| ----------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------- |
+| Take payments with Stripe           | on      | Off: new checkouts and catalog sync stop. The webhook keeps recording changes to existing subscriptions.   |
+| Send buyers to Stripe's hosted page | off     | Off: buyers pay on the site (paywall + `/checkout`). On: they're redirected to Stripe Checkout.            |
+| Offer Apple Pay / Google Pay        | on      | On‑site checkout. Apple Pay also needs your domain verified in Stripe (Settings → Payment method domains). |
+| Promotion code box                  | on      | Hosted Checkout. Hidden when a plan's intro offer applies (Stripe allows one discount).                    |
+| Stripe Tax                          | off     | Hosted Checkout: calculate tax automatically (set up Stripe Tax first).                                    |
+| Always ask for a billing address    | off     | Hosted Checkout (otherwise only when needed).                                                              |
+| Ask for a phone number              | off     | Hosted Checkout.                                                                                           |
 
-> Signature‑verifying incoming webhooks does **not** require any key permission — it
-> only uses the webhook **signing secret** (§4), not the API key.
+The tab is staff‑only, even though billing's "Pricing page" tab is public.
 
-### 3.2 Generate the secret key (step by step)
+---
 
-1. Go to the Stripe Dashboard and confirm **Test mode** is **on** (top‑right toggle).
-2. Open **Developers → API keys** (direct link:
-   <https://dashboard.stripe.com/test/apikeys>).
-3. **Option A (standard key):** under **Standard keys**, find **Secret key** and
-   click **Reveal test key**. Copy the value — it begins with `sk_test_`.
-   **Option B (restricted key):** click **Create restricted key**, give it a name
-   (e.g. `dream-kit-server`), set the permissions from the table in §3.1 (all others
-   **None**), click **Create key**, then **Reveal** and copy it — it begins with
-   `rk_test_`.
-4. Treat this value like a password. **Never** paste it into client code, commit it,
-   or share it. It is server‑only (golden rule #2).
+## 5. The webhook — set up automatically
 
-### 3.3 Put it in the env
+Stripe reaches the app at **one** endpoint, `POST /api/mod/billing-adapter-stripe/webhook`.
+It handles `product.*`, `price.*`, `checkout.session.completed` and
+`customer.subscription.*`, and writes billing's ledger only through billing's core
+services (the adapter owns no tables). It is safe under retries, concurrency and
+reordering:
 
-**Local dev** — edit `.env` at the repo root:
+- **Every event is claimed before anything runs** (`mod_billing_claim_event`). A
+  redelivery of a handled event gets `200 {"duplicate": true}`; one arriving while the
+  first is still running gets `409`, so Stripe retries later. Guest invites and tags
+  therefore happen once. A failure releases the claim and answers `500`, so Stripe's
+  retry applies it. A claim older than five minutes (its instance died) is taken over.
+- **Subscriptions are re‑fetched.** For `customer.subscription.*` the handler applies
+  what `stripe.subscriptions.retrieve()` returns now, not the payload, so delivery
+  order doesn't matter. Without a credential (self‑signed test events) or if the
+  retrieve fails, it falls back to the payload.
+- **Older events are ignored.** Writes are stamped with the event's `created` time; an
+  update older than the one already applied is skipped.
+- **The account email stays the customer's email.** A different Checkout/wallet email
+  is kept as the billing email on the customer link (and `billing_email` in the
+  customer's metadata) instead of overwriting it.
+
+### 5.1 Production — nothing to do
+
+Once Stripe is connected (§2) and the site has a public `https://` URL, an hourly check
+(Supabase Cron → `GET /api/mod/billing-adapter-stripe/cron/connect`, or **Register
+now** in the panel) **registers the endpoint through the Stripe API** on the connected
+account and keeps its signing secret in Supabase Vault. Look for an endpoint described
+"Dream Starter Kit — billing (created automatically)" under **Developers → Webhooks**.
+
+The endpoint's `api_version` is pinned to the installed Stripe SDK's
+(`Stripe.API_VERSION`), so changing your account's default API version can't change
+the payloads the code parses. After an SDK upgrade, delete the endpoint; the next
+hourly check recreates it on the new version.
+
+To manage the endpoint yourself, create it at that URL with the events above and set
+`STRIPE_WEBHOOK_SECRET` to its `whsec_…`; the app then leaves it alone. Either secret's
+signature is accepted.
+
+### 5.2 Local development (Stripe CLI)
 
 ```bash
-STRIPE_SECRET_KEY="sk_test_...."   # or rk_test_....
+stripe listen --forward-to localhost:3000/api/mod/billing-adapter-stripe/webhook
 ```
 
-Restart `pnpm dev:next` so it picks up the change.
+Put the printed `whsec_…` in `.env` as `STRIPE_WEBHOOK_SECRET` and restart
+`pnpm dev:next`. (`pnpm dev:setup` writes a throwaway secret the e2e suite uses with
+self‑signed events.)
 
-**Production (Vercel)** — Project → **Settings → Environment Variables** → add
-`STRIPE_SECRET_KEY` (use your **live** key, `sk_live_…`/`rk_live_…`, when you go
-live), scope **Production** (and Preview if you want billing in previews), **Save**,
-then **redeploy**.
+### 5.3 Upgrading from billing 1.x (and older)
 
+Billing 1.x served the webhook at `/api/mod/billing/stripe/webhook`. In 2.0 it belongs
+to the Stripe adapter:
 
-### 3.4 Rotating / updating the key later
-
-1. Create the new key (or **Roll** the existing one) in **Developers → API keys**.
-2. Update the value in **every** place from §3.3 (local `.env`, Vercel, Supabase
-   secrets) and redeploy / restart.
-3. Once everything is updated and verified, **revoke** the old key in the dashboard.
+1. Deploy. Billing keeps forwarding its old path to the adapter for one release, so
+   nothing is missed. The adapter's hourly check registers the new endpoint (same Vault
+   secret name — nothing to copy).
+2. Once the new endpoint is enabled, the same check **disables** (never deletes) this
+   install's older endpoints: billing 1.x's path, and the pre‑2.5
+   `…/functions/v1/billing-stripe-webhook` and `…/cms-api/stripe/webhooks`. It only
+   touches enabled endpoints on this site's or this project's Supabase host; other
+   apps on the same Stripe account are left alone. Each is logged and audited as
+   `billing.legacy_webhook_disabled`.
+3. After the new endpoint shows a successful delivery, delete the disabled ones in
+   Stripe. `STRIPE_WEBHOOKS_ENDPOINT_SECRET` is deprecated and ignored.
 
 ---
 
-## 4. The webhook — set up automatically
+## 6. Make it work — the checklist
 
-Stripe reaches the app through **one** webhook endpoint, the billing module's
-`POST /api/mod/billing/stripe/webhook`. It writes `public.mod_billing_*`, the source
-of truth the web and mobile apps read, and projects subscriptions into the read-only
-CMS **Commerce → Subscriptions** list. It handles `product.*`, `price.*`,
-`checkout.session.completed` and `customer.subscription.*`.
-
-It is safe under retries, concurrency and reordering:
-
-- **Every event is claimed before anything runs.** The handler records the event id as
-  `processing` (`mod_billing_claim_webhook_event()`), applies it, then marks it `done`.
-  A redelivery of a `done` event gets `200 {"duplicate": true}`; one that arrives while
-  the first is still running gets `409`, so Stripe retries it later. Side effects such
-  as guest invites and plan tags therefore run once. If processing fails, the claim is
-  released and the response is `500`, so Stripe's retry applies the event. A claim
-  older than five minutes (its instance died) is taken over by the next delivery.
-- **Subscriptions are re-fetched.** For `customer.subscription.*` the handler applies
-  the subscription as `stripe.subscriptions.retrieve()` returns it now, not the event
-  payload, so the order events arrive in no longer matters. Without `STRIPE_SECRET_KEY`
-  (self-signed test events) or if the retrieve fails, it falls back to the payload.
-- **Older events are ignored.** The write is still stamped with the event's `created`
-  time, and an update older than the one already applied is skipped. This is a second
-  line of defense, and it covers the payload fallback.
-- **The account email stays the customer's email.** When the email from Checkout or a
-  wallet (Apple Pay, Google Pay) differs from the buyer's account email, the Stripe
-  customer keeps the account email. The other address is stored as
-  `mod_billing_customers.billing_email` (and `billing_email` in the customer's
-  metadata) instead of overwriting it.
-
-### 4.1 Production / hosted — nothing to do
-
-Once `STRIPE_SECRET_KEY` is set and the site has a public `https://` URL, an hourly
-scheduled check (Supabase Cron → `GET /api/mod/billing/cron/connect`) **registers the
-endpoint through the Stripe API**. It stores the endpoint's signing secret in Supabase
-Vault, so there is no Stripe dashboard step and no second secret to copy. It runs
-within the hour of your first deploy; check **Developers → Webhooks** in Stripe for an
-endpoint described "Dream Starter Kit — billing (created automatically)".
-
-The endpoint is created with its `api_version` pinned to the version of the installed
-Stripe SDK (`Stripe.API_VERSION`), so changing your account's default API version in
-the dashboard doesn't change the event payloads the code parses. Stripe sets an
-endpoint's version only at creation; after an SDK upgrade, delete the endpoint and the
-next hourly check recreates it on the new version.
-
-Want to manage the endpoint yourself instead? Create it at that exact URL in the
-dashboard with the events above and set `STRIPE_WEBHOOK_SECRET` to its `whsec_…`; the
-app then leaves it alone. The webhook accepts a signature from either secret (yours or
-the Vault one).
-
-### 4.2 Local development (Stripe CLI — no public URL needed)
-
-```bash
-stripe listen --forward-to localhost:3000/api/mod/billing/stripe/webhook
-```
-
-The CLI prints a `whsec_…`; put it in `.env` as `STRIPE_WEBHOOK_SECRET="whsec_…"` and
-restart `pnpm dev:next`. (`pnpm dev:setup` already writes a throwaway secret, which
-the e2e suite uses with self-signed events.)
-
-### 4.3 Upgrading from the two-webhook setup
-
-Kits before this change used two endpoints:
-
-- `…/functions/v1/billing-stripe-webhook`, a Supabase edge function using
-  `STRIPE_WEBHOOK_SECRET`;
-- `…/cms-api/stripe/webhooks`, a Payload plugin endpoint using
-  `STRIPE_WEBHOOKS_ENDPOINT_SECRET`.
-
-To upgrade:
-
-1. Deploy. The scheduled check registers the new endpoint within the hour, even though
-   `STRIPE_WEBHOOK_SECRET` is still set from the old edge function (the webhook accepts
-   either secret).
-2. Once the new endpoint is enabled, the same check **disables the old endpoints
-   automatically**, so an install whose old edge function is still deployed doesn't
-   process every event twice. It only touches enabled endpoints whose URL ends in one
-   of the two old paths and whose host is this site's or this project's Supabase host
-   (from `NEXT_PUBLIC_SUPABASE_URL`). Endpoints of other apps on the same Stripe
-   account are left alone. It disables them and never deletes them; each one is
-   logged and written to the audit log as `billing.legacy_webhook_disabled`.
-3. Confirm a delivery succeeds on the new endpoint in **Developers → Webhooks**, then
-   delete the two old (disabled) endpoints in Stripe, and remove
-   `STRIPE_WEBHOOKS_ENDPOINT_SECRET` from your env. It's deprecated and ignored.
-4. Optional: `supabase functions delete billing-stripe-webhook delete-account
-   reminders-process`. The kit no longer ships edge functions.
-
----
-
-## 5. Make it functional — the full checklist
-
-Do these in order. Test mode throughout.
-
-1. **Set `STRIPE_SECRET_KEY`** everywhere it's needed (§3.3).
-2. **The webhook** sets itself up in production (§4.1); locally run the
-   `stripe listen` forwarder (§4.2).
-3. **Run the app**, sign up (the **first** signup becomes the founder/admin), and let
-   it route you through `/cms-setup`, which **seeds the CMS** (creates the default
-   **Example Monthly / Annual / Lifetime** plans + a welcome coupon).
-4. **Push the plans to Stripe:** open `/admin` → **Commerce → Plans**, open a plan and
-   click **Save**. The `afterChange` hook creates the Stripe product + price. (Seeded
-   plans stay `unsynced` until first saved — this is the step that syncs them.) Check
-   the plan's **Sync status** field shows success; if it errored, the message is in
-   **Sync error**.
-5. **Confirm the mirror:** saving + the webhooks should populate the products/prices
-   in the DB. The public **`/pricing`** page should now show your plans.
-6. **Do a test purchase:** go to `/pricing`, start checkout, and pay with Stripe's
-   **test card `4242 4242 4242 4242`**, any future expiry, any CVC, any ZIP. After
-   payment you should land back in the app with premium unlocked, and a **subscription**
-   row should appear in `/admin → Commerce → Subscriptions`.
-7. **Test self‑serve billing:** visit **`/billing`** — you should see the current plan,
-   a link to the Stripe **Customer Portal** (change/cancel), and past invoices.
+1. **Connect Stripe** (§2), in test mode.
+2. **The webhook** registers itself in production (§5.1, or **Register now**); locally
+   run `stripe listen` (§5.2).
+3. **Run the app** and sign up — the **first** signup becomes the founder/admin and goes
+   through `/cms-setup`, which **seeds the CMS** (Example Monthly / Annual / Lifetime
+   plans + a welcome coupon).
+4. **Push the plans to Stripe:** **Sync everything now** in the Stripe panel, or open
+   each plan in **Commerce → Billing Plans** and **Save**. Its sidebar **Sync status**
+   should say synced (an error shows in **Sync error**); the **Stripe** tab shows the
+   product/price ids. (Seeded plans stay `unsynced` until Stripe is connected.)
+5. **Check `/pricing`** shows your plans.
+6. **Test purchase:** `/pricing` → checkout → test card **`4242 4242 4242 4242`**, any
+   future expiry, any CVC/ZIP. You should land back with premium unlocked, a row in
+   **Commerce → Billing Plans → (plan) → Subscribers**, and the buyer tagged
+   e.g. `Active`, the plan name, `Billing cycle: Monthly`, `Store: Web`.
+7. **Self‑serve:** `/billing` shows the plan, a link to the Customer Portal, invoices.
 
 ### Going live
 
-1. Finish Stripe **business/account verification** so live mode is enabled.
-2. Switch the dashboard to **Live mode** and repeat §3 (live `sk_live_…`/`rk_live_…`).
-   The live webhook endpoint registers itself within the hour (§4.1).
-3. Update the Vercel env with the **live** key and redeploy.
-4. Re‑save each plan in `/admin` so it syncs to your **live** Stripe account.
+1. Finish Stripe **account verification** so live mode is enabled.
+2. Connect in live mode (**Connect with Stripe**), or put your live
+   `sk_live_…`/`rk_live_…` + `pk_live_…` in the production env and redeploy.
+3. **Sync everything now** so the plans exist in your live account. The live webhook
+   registers itself within the hour.
 
 ---
 
-## 6. Troubleshooting
+## 7. Troubleshooting
 
-- **`Billing not configured` (503) at checkout** → `STRIPE_SECRET_KEY` is missing in
-  that environment. Re‑check §3.3 and redeploy/restart.
-- **Plan saves but Sync status shows an error** → the secret key lacks a needed write
-  permission (see the §3.1 table) or you're in the wrong mode (test vs live). The
-  message is in the plan's **Sync error** field.
-- **Paid in test mode but nothing unlocked / no subscription row** → the webhook isn't
-  reaching you or the signing secret is wrong. Check the endpoint's **delivery
-  attempts** in the Stripe Dashboard (or the CLI terminal). A `400 Signature
-verification failed` means `STRIPE_WEBHOOK_SECRET` doesn't match that endpoint — unset
-  it to let the app manage the endpoint, or copy the right `whsec_…` and redeploy. If no
-  endpoint exists yet, check the site has a public https URL and wait for the hourly
-  check (or look at `select * from net._http_response order by created desc` in SQL).
-- **CMS subscription row has empty "current period" dates** → the webhook endpoint was
-  created on an **old API version**. The CMS mirror reads the period from the
-  subscription item (API 2025+). Edit the endpoint's **API version** to your account's
-  current version (§4.0) and re‑send / re‑trigger the event.
-- **Guest‑checkout invite emails point at the wrong site** → set `SITE_URL` in the
-  Supabase function secrets to your production origin.
-- **Never** put the secret key or a signing secret in `NEXT_PUBLIC_*` / `EXPO_PUBLIC_*`
-  vars or client code — those compile into the browser/app bundle (golden rules #2/#3).
+- **`Billing not configured` (503) at checkout** → Stripe isn't connected in that
+  environment, or **Take payments with Stripe** is off. The Stripe panel says which.
+- **Plan saves but Sync status shows an error** → the key lacks a write permission
+  (§2.2 table) or you're in the other mode (test vs live). The message is in **Sync
+  error**.
+- **Paid in test mode but nothing unlocked** → the webhook isn't reaching you. Check
+  the panel's **Webhook** card (registered? last event?) and the endpoint's delivery
+  attempts in Stripe. `400 Signature verification failed` means
+  `STRIPE_WEBHOOK_SECRET` doesn't match that endpoint — unset it to let the app manage
+  its endpoint. No endpoint yet → the site needs a public https URL; **Register now**
+  says why it skipped.
+- **On‑site checkout says payments aren't set up** → no publishable key: connect with
+  Stripe, or set `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` with your own keys.
+- **Empty "current period" dates on a CMS subscription** → the endpoint was created on
+  an old API version (§5.1): delete it and **Register now**.
+- **Guest invites point at the wrong site** → set `NEXT_PUBLIC_SITE_URL` to your
+  production origin.
+- **Never** put a secret key or signing secret in `NEXT_PUBLIC_*` / `EXPO_PUBLIC_*`
+  vars or client code (golden rules #2/#3).
+
+---
+
+## 8. Reference — the Meet Dream connector contract
+
+"Connect with Stripe" is brokered by meetdream.com, like **Connect GitHub** in
+/admin → Updates. The kit side is `apps/nextjs/src/lib/mod/connectors-core.ts` (pure,
+tested) + `connector-broker.ts`, exposed to modules as `getConnectorBroker()` in
+`@acme/mod-kit/server` — modules never see the site license key. Every call is signed
+with the `X-Dream-License-Key` header:
+
+| Call                                              | Answer                                                                                                                                                                                 |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /connect/stripe/start` `{ returnTo, mode }` | `{ url }` — the provider's consent screen. Meet Dream's registered redirect URI finishes the exchange, then returns the browser to `returnTo?stripe=connected` (or `?stripe_error=…`). |
+| `POST /sites/connectors/stripe/token`             | `{ accessToken, expiresAt, accountId, accountName?, livemode?, publishableKey?, onBehalfOf? }`; `404 {code: "not_connected"}` when never connected.                                    |
+| `POST /sites/connectors/stripe/disconnect`        | `200` once revoked.                                                                                                                                                                    |
+
+The adapter uses `accessToken` as its Stripe API key (with `Stripe-Account:
+onBehalfOf` when the broker returns platform credentials), and `publishableKey` for
+Elements. Stripe only redirects to pre‑registered URIs, which is why the redirect
+belongs to meetdream.com rather than each site.
+
+**Recommendation for the broker:** a **Stripe Apps OAuth install** (1‑hour access
+tokens, refresh tokens held by Meet Dream, scoped permissions — the list in §2.2)
+rather than classic Connect OAuth. Classic Connect's `access_token` and
+`stripe_publishable_key` are deprecated in favour of the platform key plus a
+`Stripe-Account` header; that would route every API call through Meet Dream or rely on
+a deprecated non‑expiring token. It would also make Meet Dream the platform of record,
+and accounts already controlled by another platform are asked to open a new Standard
+account. The kit contract above is the same either way (`onBehalfOf` covers the
+platform‑key model).

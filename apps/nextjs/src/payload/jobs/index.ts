@@ -118,7 +118,7 @@ export const coreTasks: TaskConfig[] = [
     // public.profiles fills (supabase/migrations/*_cms_user_sync_queue.sql).
     schedule: [{ cron: "* * * * *", queue: "default" }],
     handler: async () => {
-      const [{ createAdminClient }, { ensureCmsUser, ensureFreeTag }] =
+      const [{ createAdminClient }, { ensureCmsUser, ensureBillingTags }] =
         await Promise.all([
           import("../../lib/supabase/admin"),
           import("../../lib/cms/mirror-user"),
@@ -168,7 +168,7 @@ export const coreTasks: TaskConfig[] = [
             : undefined,
         });
         if (ok) {
-          await ensureFreeTag(userId);
+          await ensureBillingTags(userId);
           acked.push(...msgIds);
         } else {
           // Left unacknowledged: pgmq redelivers it after the timeout.

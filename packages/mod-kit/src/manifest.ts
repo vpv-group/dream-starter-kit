@@ -111,6 +111,13 @@ export const moduleManifestSchema = z.object({
       publicRoutes: z.boolean().default(false),
       /** Edge function directory names — must be prefixed `<slug>-`. */
       edgeFunctions: z.array(z.string().min(1)).default([]),
+      /**
+       * `./server` also exports `services` — a plain object of functions the
+       * HOST calls through the generated `modServices[slug]` (e.g. billing's
+       * `getViewerEntitlement`, `onAccountDelete`, `onUserMerge`). The host
+       * never imports a module directly; this is its typed seam. Needs kit ≥ 2.6.
+       */
+      services: z.boolean().default(false),
     })
     .prefault({}),
   database: z
@@ -149,8 +156,34 @@ export const moduleManifestSchema = z.object({
        * exclusive with `hasSettings`. The target must be a `requires` dep.
        */
       settingsTabFor: z.string().min(1).optional(),
+      /**
+       * `./payload` exports `collectionTabs` (`defineAdapterCollectionTab`):
+       * unnamed tabs merged into collections of the module named by
+       * `settingsTabFor` (e.g. Stripe ids on billing's Plans). Unnamed tabs
+       * keep their fields at the document root, so DB columns don't move.
+       */
+      hasCollectionTabs: z.boolean().default(false),
     })
     .prefault({}),
+  /**
+   * Provider adapter: this module plugs into another module's extension
+   * point (e.g. `billing-adapter-stripe` → `billing`). The target calls OUT
+   * to its adapters through `getModAdapters(target)` (server) and
+   * `useModAdapters(target)` (client), which the generated registries fill —
+   * the target never imports its adapters. `for` must be in `requires`.
+   * Needs kit ≥ 2.6.
+   */
+  adapter: z
+    .object({
+      for: z.string().regex(SLUG_RE),
+      /** `./server` exports `adapter` (the target's server contract). */
+      server: z.boolean().default(false),
+      /** Named export from `./web` implementing the target's web contract. */
+      web: z.string().min(1).optional(),
+      /** Named export from `./native` implementing the target's native contract. */
+      native: z.string().min(1).optional(),
+    })
+    .optional(),
   /**
    * Runtime access gate. `check` names a `mod_<slug>_*` SQL function (no
    * args, returns boolean, callable by `authenticated`) that says whether the

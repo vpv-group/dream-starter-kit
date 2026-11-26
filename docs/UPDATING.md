@@ -60,6 +60,36 @@ squash**.
 - Turn the daily check off with **Automatic updates** in /admin → Updates.
 - Run it now with **Check now** there.
 
+**New in 2.6 — billing core + payment providers.** Billing 2.0 is
+provider-neutral; Stripe moved into its own preinstalled module,
+`billing-adapter-stripe` (docs/BILLING.md, docs/STRIPE.md). The update keeps
+working without anything from you:
+
+| What changed                                                                                                                                                                                                                                               | What to do                                                                                                                                       |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The Stripe webhook moves to `/api/mod/billing-adapter-stripe/webhook`. Billing forwards the old `/api/mod/billing/stripe/webhook` for one release; the adapter's hourly check registers the new endpoint (same Vault secret) and **disables** the old one. | After the new endpoint shows a successful delivery in Stripe, delete the old (disabled) one. With `stripe listen`, use the new path.             |
+| The billing ledger gains a `provider` everywhere, per-provider customer links and the `mod_billing_entitlements` view (expand-only; `mod_billing_customers` stays one more release).                                                                       | Nothing. Custom code that read `mod_billing_subscriptions` for gating should read `mod_billing_entitlements` (or `usePremium`).                  |
+| Billing keeps **billing tags** in step (plan, status, billing cycle, store), adopting your existing "Free" and plan-name tags. Users who churned lose their plan tag.                                                                                      | Check notification audiences that target plan tags; tag names are configurable in Modules → Billing → **Tags**.                                  |
+| Stripe can be connected with **Connect with Stripe** (Modules → Billing) instead of env keys. Your `STRIPE_SECRET_KEY` keeps working and wins.                                                                                                             | Nothing. `SITE_URL` is gone (unused); `STRIPE_PRICE_*` are legacy and go in a later release.                                                     |
+| The paywall and `/checkout` render the installed payment provider's form; the host no longer depends on `@stripe/*`.                                                                                                                                       | If you customized `components/paywall/*` or `components/checkout/*`, re-apply your changes on the new files (the Stripe form is in the adapter). |
+
+If your app removed billing's Stripe module or doesn't receive it with the
+update, add it with `pnpm mod add billing-adapter-stripe` — until then checkout
+answers "Billing not configured". If your app removed **billing** itself, the
+merge still brings `modules/billing-adapter-stripe/` (a new folder), which
+`requires` billing: delete that folder too (like the modify/delete conflicts
+below), then `pnpm mod sync`.
+
+**Also in 2.6 — billing 2.1: workspace plans and staff support.** Expand-only
+migration (`006_workspaces_and_grants`): `org_id`, `granted_by` and `note` on
+purchases, `mod_billing_org_customer_links`, and the entitlements view now
+includes your workspaces' purchases and drops expired staff grants. Nothing to
+do. If custom code reads `mod_billing_entitlements` for **personal** state only,
+filter `org_id is null` (members now also see their workspaces' rows). Custom
+payment providers: `createPortalSession` / `listInvoices` now take
+`{ subject }` (`{ userId }` or `{ orgId }`) instead of `{ userId }`
+(docs/BILLING.md §5.1, §10).
+
 **Removed in 2.4.** Automatic updates no longer use a personal access token
 or repository settings. Once GitHub is connected, delete these if you set
 them; nothing reads them any more:

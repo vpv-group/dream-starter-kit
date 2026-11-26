@@ -70,6 +70,9 @@ import {
 } from "./payload/hooks/revalidate-cache";
 import { coreTasks } from "./payload/jobs";
 import { migrations } from "./payload/migrations";
+// Side effect: module Payload hooks (e.g. billing's plan sync) may use a
+// "Connect with …" (Meet Dream) connection. Lazy inside — CLI-safe.
+import "./lib/mod/connector-broker";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 

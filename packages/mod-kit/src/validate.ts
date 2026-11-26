@@ -57,7 +57,6 @@ export const RESERVED_MOUNTS = [
   "/welcome",
   "/cms-setup",
   "/profile",
-  "/checkout",
   "/onboarding",
   "/workspace",
   "/invite",
@@ -113,6 +112,33 @@ export function validateManifest(m: ModuleManifest): string[] {
         `[${m.slug}] cms.settingsTabFor "${m.cms.settingsTabFor}" must be listed in requires (the target's settings global hosts the tab)`,
       );
     }
+  }
+  if (m.adapter) {
+    if (!m.requires.includes(m.adapter.for)) {
+      errors.push(
+        `[${m.slug}] adapter.for "${m.adapter.for}" must be listed in requires (the target hosts the extension point)`,
+      );
+    }
+    if (!m.adapter.server && !m.adapter.web && !m.adapter.native) {
+      errors.push(
+        `[${m.slug}] adapter declares no contribution — set adapter.server, adapter.web or adapter.native`,
+      );
+    }
+    if (m.adapter.web && !m.platforms.web) {
+      errors.push(
+        `[${m.slug}] declares a web adapter but platforms.web is false`,
+      );
+    }
+    if (m.adapter.native && !m.platforms.native) {
+      errors.push(
+        `[${m.slug}] declares a native adapter but platforms.native is false`,
+      );
+    }
+  }
+  if (m.cms.hasCollectionTabs && !m.cms.settingsTabFor) {
+    errors.push(
+      `[${m.slug}] cms.hasCollectionTabs needs cms.settingsTabFor (collection tabs go to the same target module)`,
+    );
   }
   for (const fn of m.server.edgeFunctions) {
     if (!fn.startsWith(`${m.slug}-`)) {

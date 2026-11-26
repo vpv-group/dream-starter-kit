@@ -76,13 +76,14 @@ export interface SiteToken {
   repo: string;
 }
 
-interface CallOpts {
+export interface CallOpts {
   registry: string;
   siteKey: string;
   fetchImpl?: typeof fetch;
 }
 
-async function call(
+/** One signed request to meetdream.com (shared with connectors-core.ts). */
+export async function call(
   opts: CallOpts,
   path: string,
   init: { method?: string; body?: unknown } = {},

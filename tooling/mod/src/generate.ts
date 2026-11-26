@@ -184,6 +184,21 @@ export function buildNextClientRegistry(mods: LoadedModule[]): string {
       `import { ${e.manifest.widgets.web} as widget_${ident(e.manifest.slug)} } from "${e.packageName}/web";`,
     );
   }
+  const adapterMods = webMods.filter((e) => e.manifest.adapter?.web);
+  for (const e of adapterMods) {
+    imports.push(
+      `import { ${e.manifest.adapter?.web} as adapter_${ident(e.manifest.slug)} } from "${e.packageName}/web";`,
+    );
+  }
+  const clientAdapters =
+    adapterMods.length === 0
+      ? "[]"
+      : `[\n${adapterMods
+          .map(
+            (e) =>
+              `  { slug: ${quote(e.manifest.slug)}, target: ${quote(e.manifest.adapter?.for ?? "")}, adapter: adapter_${ident(e.manifest.slug)} },`,
+          )
+          .join("\n")}\n]`;
 
   const widgets =
     widgetMods.length === 0
@@ -211,13 +226,49 @@ export const modWidgets: { slug: string; Widget: React.ComponentType }[] = ${wid
 
 /** Icon names referenced by module nav defaults → components. */
 export const modIcons: Record<string, React.ComponentType<{ className?: string }>> = ${icons};
+
+/**
+ * Client adapters (manifest adapter.web) — handed to ModAdaptersProvider
+ * (enabled modules only); the target reads them with useModAdapters().
+ */
+export const modClientAdapters: { slug: string; target: string; adapter: unknown }[] = ${clientAdapters};
 `;
 }
 
 /** apps/nextjs/src/mod/registry.server.generated.ts */
+/**
+ * `registerModAdapters({...})` — lazy loaders for every server adapter,
+ * grouped by target. Shared by the server and payload registries.
+ */
+function adapterLoaders(mods: LoadedModule[]): string | null {
+  const byTarget = new Map<string, LoadedModule[]>();
+  for (const e of mods) {
+    const a = e.manifest.adapter;
+    if (!a?.server) continue;
+    byTarget.set(a.for, [...(byTarget.get(a.for) ?? []), e]);
+  }
+  if (byTarget.size === 0) return null;
+  const targets = [...byTarget.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(
+      ([target, rows]) =>
+        `  ${propKey(target)}: [\n${rows
+          .map(
+            (e) =>
+              `    { slug: ${quote(e.manifest.slug)}, load: () => import(${quote(`${e.packageName}/server`)}) },`,
+          )
+          .join("\n")}\n  ],`,
+    );
+  return `// Adapters (manifest adapter.for), loaded lazily on first use so the
+// Payload CLI never evaluates server-only adapter code.
+registerModAdapters({\n${targets.join("\n")}\n});`;
+}
+
 export function buildNextServerRegistry(mods: LoadedModule[]): string {
   const serverMods = mods.filter((e) => e.manifest.server.routes);
   const publicMods = mods.filter((e) => e.manifest.server.publicRoutes);
+  const serviceMods = mods.filter((e) => e.manifest.server.services);
+  const loaders = adapterLoaders(mods);
   const imports: string[] = [];
   for (const e of mods) {
     const names = [
@@ -226,6 +277,9 @@ export function buildNextServerRegistry(mods: LoadedModule[]): string {
         : []),
       ...(e.manifest.server.publicRoutes
         ? [`publicRoutes as publicRoutes_${ident(e.manifest.slug)}`]
+        : []),
+      ...(e.manifest.server.services
+        ? [`services as services_${ident(e.manifest.slug)}`]
         : []),
     ];
     if (names.length > 0) {
@@ -244,16 +298,26 @@ export function buildNextServerRegistry(mods: LoadedModule[]): string {
           )
           .join("\n")}\n}`;
 
+  const kitImport = loaders
+    ? `import { type ModPublicRouteTable, type ModRouteTable, type ModServices, registerModAdapters } from "@acme/mod-kit/server";`
+    : `import type { ModPublicRouteTable, ModRouteTable, ModServices } from "@acme/mod-kit/server";`;
+
   return `${ESLINT_OFF}${HEADER}import "server-only";
 
-import type { ModPublicRouteTable, ModRouteTable } from "@acme/mod-kit/server";
+${kitImport}
 ${imports.length > 0 ? `\n${imports.join("\n")}\n` : ""}
 /** slug → authed route table, dispatched by /api/mod/[mod]/[[...route]]. */
 export const modServerRoutes: Record<string, ModRouteTable> = ${table(serverMods, "routes")};
 
 /** slug → PUBLIC route table (no session required; still rate-limited). */
 export const modPublicRoutes: Record<string, ModPublicRouteTable> = ${table(publicMods, "publicRoutes")};
-`;
+
+/**
+ * slug → the module's host-facing services (manifest server.services). Host
+ * code calls \`modServices.<slug>?.fn(...)\` instead of importing modules.
+ */
+export const modServices: Record<string, ModServices> = ${table(serviceMods, "services")};
+${loaders ? `\n${loaders}\n` : ""}`;
 }
 
 /** apps/nextjs/src/mod/registry.payload.generated.ts */
@@ -266,9 +330,12 @@ export function buildNextPayloadRegistry(mods: LoadedModule[]): string {
       c.hasPlugins ||
       c.hasMigrations ||
       c.hasSeed ||
-      c.hasSettings
+      c.hasSettings ||
+      c.settingsTabFor !== undefined ||
+      c.hasCollectionTabs
     );
   });
+  const loaders = adapterLoaders(mods);
 
   const imports = cmsMods.map(
     (e) =>
@@ -282,6 +349,12 @@ export function buildNextPayloadRegistry(mods: LoadedModule[]): string {
     spread(
       e.manifest.cms.collections.length > 0,
       `  ...payload_${ident(e.manifest.slug)}.collections,`,
+    ),
+  );
+  const collectionTabs = cmsMods.flatMap((e) =>
+    spread(
+      e.manifest.cms.hasCollectionTabs,
+      `  ...payload_${ident(e.manifest.slug)}.collectionTabs,`,
     ),
   );
   // Adapters that contribute a settings TAB to another module's settings
@@ -347,22 +420,33 @@ export function buildNextPayloadRegistry(mods: LoadedModule[]): string {
   const obj = (rows: string[]): string =>
     rows.length === 0 ? "{}" : `{\n${rows.join("\n")}\n}`;
 
+  const composeNames = [
+    ...(collectionTabs.length > 0 ? ["composeCollectionTabs"] : []),
+    ...(settingsConsts.length > 0 ? ["composeSettingsTabs"] : []),
+  ];
   const composeImport =
-    settingsConsts.length > 0
-      ? `import { composeSettingsTabs } from "@acme/mod-kit/payload";\n`
+    composeNames.length > 0
+      ? `import { ${composeNames.join(", ")} } from "@acme/mod-kit/payload";\n`
       : "";
+  const loaderImport = loaders
+    ? `import { registerModAdapters } from "@acme/mod-kit/server";\n`
+    : "";
+  const collectionsExpr =
+    collectionTabs.length > 0
+      ? `composeCollectionTabs(${arr(collections)}, ${arr(collectionTabs)})`
+      : arr(collections);
 
   return `${ESLINT_OFF}${HEADER}import type { CollectionConfig, Config, GlobalConfig } from "payload";
 
 import type { ModuleSettings, ModSeedStep } from "@acme/mod-kit/payload";
-${composeImport}${imports.length > 0 ? `\n${imports.join("\n")}\n` : ""}
+${composeImport}${loaderImport}${imports.length > 0 ? `\n${imports.join("\n")}\n` : ""}
 export interface ModPayloadMigration {
   name: string;
   up: (args: any) => Promise<void>;
   down: (args: any) => Promise<void>;
 }
 ${settingsConsts.length > 0 ? `\n${settingsConsts.join("\n")}\n` : ""}
-export const modCollections: CollectionConfig[] = ${arr(collections)};
+export const modCollections: CollectionConfig[] = ${collectionsExpr};
 
 export const modGlobals: GlobalConfig[] = ${arr(globals)};
 
@@ -380,15 +464,20 @@ export const modSettings: Record<string, ModuleSettings> = ${obj(settings)};
 
 /**
  * Modules with their own admin settings component (manifest
- * admin.settingsComponent) — rendered on the module's page in /admin through
- * the kit's ModuleAdminSettings wrapper (registry.admin.generated.tsx).
+ * admin.settingsComponent) — rendered on the module's page in /admin (or, for
+ * an adapter, on \`page\`: its target module's page) through the kit's
+ * ModuleAdminSettings wrapper (registry.admin.generated.tsx).
  */
-export const modAdminSettings: { slug: string }[] = ${arr(
+export const modAdminSettings: { slug: string; page?: string }[] = ${arr(
     mods
       .filter((e) => e.manifest.admin.settingsComponent)
-      .map((e) => `  { slug: ${quote(e.manifest.slug)} },`),
+      .map((e) => {
+        // An adapter's panel renders on its target module's page.
+        const page = e.manifest.adapter?.for ?? e.manifest.cms.settingsTabFor;
+        return `  { slug: ${quote(e.manifest.slug)}${page ? `, page: ${quote(page)}` : ""} },`;
+      }),
   )};
-`;
+${loaders ? `\n${loaders}\n` : ""}`;
 }
 
 /**
@@ -509,6 +598,23 @@ export function buildExpoRegistry(mods: LoadedModule[]): string {
   }
   if (needsGate)
     imports.push('import { withModuleAccess } from "./access-gate";');
+  const nativeAdapterMods = nativeMods.filter(
+    (e) => e.manifest.adapter?.native,
+  );
+  for (const e of nativeAdapterMods) {
+    imports.push(
+      `import { ${e.manifest.adapter?.native} as adapter_${ident(e.manifest.slug)} } from "${e.packageName}/native";`,
+    );
+  }
+  const nativeAdapters =
+    nativeAdapterMods.length === 0
+      ? "[]"
+      : `[\n${nativeAdapterMods
+          .map(
+            (e) =>
+              `  { slug: ${quote(e.manifest.slug)}, target: ${quote(e.manifest.adapter?.for ?? "")}, adapter: adapter_${ident(e.manifest.slug)} },`,
+          )
+          .join("\n")}\n]`;
   const screens =
     screenRows.length === 0 ? "{}" : `{\n${screenRows.join("\n")}\n}`;
 
@@ -540,6 +646,9 @@ export const modNativeScreens: Record<string, React.ComponentType> = ${screens};
 
 /** Home-screen widgets declared by installed modules (native components). */
 export const modWidgets: { slug: string; Widget: React.ComponentType }[] = ${widgets};
+
+/** Native adapters (manifest adapter.native) — for ModAdaptersProvider. */
+export const modClientAdapters: { slug: string; target: string; adapter: unknown }[] = ${nativeAdapters};
 
 export function hasModule(slug: string): boolean {
   return modInstalled.some((e) => e.slug === slug);

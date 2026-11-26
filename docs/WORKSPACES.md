@@ -212,6 +212,9 @@ to one workspace, or to all of them.
 - **It is not access control.** Modules use it to filter their staff screens
   (e.g. a client portal's inbox, a projects module's company boards); RLS
   and each module's staff policies still decide what staff can read.
+- **Billing follows it:** with the header scoped to a workspace, `/billing`
+  opens that workspace's staff support view, and opening a workspace there
+  scopes the header (docs/BILLING.md §10).
 - Files: `components/workspaces/workspace-view-switcher.tsx`,
   `components/site-header.tsx`, `supabase/migrations/20261126120000_staff_workspaces.sql`,
   `tooling/rls-tests/src/staff-workspaces.test.ts`.
@@ -255,8 +258,13 @@ module, following the org-scoped pattern already in
 
 ## What's next
 
-- **PR 3 — Workspace billing and module hooks:** workspace-owned Stripe
-  customers and per-seat quantity, `plans.billingUnit`, and the module
-  `scope` / `onboarding` / `onWorkspaceCreated` hooks.
+- **Workspace billing — shipped (billing 2.1):** a workspace can own a plan
+  every member gets, bought by its owners/admins through a workspace-owned
+  Stripe customer; `/billing` has a **Billing account for** switcher, and staff
+  get a read-only support view with no-charge plan grants
+  (docs/BILLING.md §10).
+- **PR 3 — the rest:** per-seat quantity, `plans.billingUnit`, the onboarding
+  `plan` step, and the module `scope` / `onboarding` / `onWorkspaceCreated`
+  hooks.
 - A transactional mailer for invites to existing accounts, and universal
   links for mobile.

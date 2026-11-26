@@ -202,36 +202,21 @@ export async function ensureCmsUser(user: {
 }
 
 /**
- * Ensure a "Free" plan tag is assigned to a user who has no plan tag yet.
- * Paid plan tags are added (and "Free" removed) by the Stripe webhook. Uses the
- * service-role client because tag tables are not user-writable by design.
+ * Give a user their billing tags (a new account gets "Free"). Billing owns
+ * them — it keeps plan/status/billing-cycle/store tags in step with purchases
+ * from every payment provider — so this just asks billing's `onUserCreated`
+ * service. Idempotent; a no-op when billing isn't installed.
  */
-export async function ensureFreeTag(userId: string): Promise<void> {
+export async function ensureBillingTags(userId: string): Promise<void> {
   try {
-    const admin = createAdminClient();
-    const { data: existing } = await admin
-      .from("user_tags")
-      .select("id")
-      .eq("user_id", userId)
-      .limit(1);
-    if (existing && existing.length > 0) return; // already tagged (free or plan)
-
-    const { data: tag } = await admin
-      .from("tags")
-      .upsert({ name: "Free", is_system: true }, { onConflict: "name" })
-      .select("id")
-      .maybeSingle();
-    if (!tag?.id) return;
-    await admin
-      .from("user_tags")
-      .upsert(
-        { user_id: userId, tag_id: tag.id },
-        { onConflict: "user_id,tag_id" },
-      );
+    const { billingServices, billingServiceContext } =
+      await import("~/lib/mod/billing");
+    const billing = await billingServices();
+    await billing?.onUserCreated(billingServiceContext, { userId });
   } catch (e) {
     // Non-fatal — log so a systemic failure is visible in the server logs.
     console.warn(
-      `[mirror-user] ensureFreeTag failed for ${userId}`,
+      `[mirror-user] billing tags failed for ${userId}`,
       e instanceof Error ? e.message : e,
     );
   }

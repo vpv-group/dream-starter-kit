@@ -1,7 +1,7 @@
 /**
  * Unit tests for the Stripe-webhook mapping helpers. These pure functions turn
  * Stripe event objects into the rows the billing webhook upserts; the route
- * (`modules/billing/src/server/stripe/webhook.ts`) imports the same module,
+ * (`modules/billing-adapter-stripe/src/server/webhook.ts`) imports the same module,
  * so this is real coverage of the sync logic without a live Stripe. (The
  * webhook used to be an edge function; the package name is historical.)
  *
@@ -19,7 +19,7 @@ import {
   splitBuyerEmails,
   subscriptionCustomerId,
   subscriptionUserIdFromMetadata,
-} from "../../../modules/billing/src/server/stripe/mapping";
+} from "../../../modules/billing-adapter-stripe/src/server/mapping";
 
 describe("isoOrNull", () => {
   it("converts Unix seconds to an ISO timestamp", () => {

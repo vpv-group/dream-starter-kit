@@ -7,15 +7,16 @@ import { settings } from "./settings";
  * Demo billing catalog — runs through the host's idempotent CMS seed flow
  * (the whole seed bails if content exists, so steps don't re-check).
  *
- * Plans/coupons sync to Stripe at seed time **only when `STRIPE_SECRET_KEY` is
- * set** — so a configured deploy gets immediately-purchasable seeded plans
- * (the `/pricing` checkout needs a `stripePriceId`). Without a key (local dev,
- * CI, cloud sessions) the sync hook is skipped, so the seed stays offline-safe
- * and scalar-only; those plans show as `unsynced` and become purchasable the
- * first time an admin saves them in `/admin`. The hook already fails soft
- * (records `syncError`, never blocks the save), so enabling it here is safe.
+ * Plans/coupons are pushed to the installed payment providers at seed time
+ * like any save (../hooks/sync-with-providers.ts), marked
+ * `context.seeding` so a provider syncs only with credentials it has at hand
+ * (Stripe: your own STRIPE_SECRET_KEY) — a configured deploy gets
+ * immediately-purchasable seeded plans, and the seed stays offline-safe and
+ * scalar-only otherwise (local dev, CI, cloud sessions). Those plans show as
+ * `unsynced` until saved in `/admin` or "Sync everything now" (Modules →
+ * Billing). Syncs fail soft (record `syncError`, never block the save).
  */
-const skipStripeSync = !process.env.STRIPE_SECRET_KEY;
+const context = { seeding: true };
 
 export const seed: ModSeedStep[] = [
   {
@@ -23,7 +24,7 @@ export const seed: ModSeedStep[] = [
     run: async (payload) => {
       const monthly = await payload.create({
         collection: "mod-billing-plans",
-        context: { skipStripeSync },
+        context,
         data: {
           name: "Example Monthly Plan",
           slug: "dream-monthly",
@@ -42,7 +43,7 @@ export const seed: ModSeedStep[] = [
       });
       const annual = await payload.create({
         collection: "mod-billing-plans",
-        context: { skipStripeSync },
+        context,
         data: {
           name: "Example Annual Plan",
           slug: "dream-annual",
@@ -65,7 +66,7 @@ export const seed: ModSeedStep[] = [
       });
       const lifetime = await payload.create({
         collection: "mod-billing-plans",
-        context: { skipStripeSync },
+        context,
         data: {
           name: "Example Lifetime Plan",
           slug: "dream-lifetime",
@@ -85,7 +86,7 @@ export const seed: ModSeedStep[] = [
       // so the capability is visible out of the box without affecting pricing.
       await payload.create({
         collection: "mod-billing-plans",
-        context: { skipStripeSync },
+        context,
         data: {
           name: "Example intro offer",
           slug: "dream-pro-intro-demo",
@@ -105,7 +106,7 @@ export const seed: ModSeedStep[] = [
       // code for this coupon per new free account.
       await payload.create({
         collection: "mod-billing-coupons",
-        context: { skipStripeSync },
+        context,
         data: {
           name: "Welcome offer",
           discountType: "percent_off",

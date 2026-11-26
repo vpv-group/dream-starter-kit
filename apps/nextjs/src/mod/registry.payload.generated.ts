@@ -5,9 +5,11 @@
 import type { CollectionConfig, Config, GlobalConfig } from "payload";
 
 import type { ModuleSettings, ModSeedStep } from "@acme/mod-kit/payload";
-import { composeSettingsTabs } from "@acme/mod-kit/payload";
+import { composeCollectionTabs, composeSettingsTabs } from "@acme/mod-kit/payload";
+import { registerModAdapters } from "@acme/mod-kit/server";
 
 import * as payload_billing from "@acme/mod-billing/payload";
+import * as payload_billing_adapter_stripe from "@acme/mod-billing-adapter-stripe/payload";
 import * as payload_chat from "@acme/mod-chat/payload";
 import * as payload_chat_adapter_sendblue from "@acme/mod-chat-adapter-sendblue/payload";
 import * as payload_chat_adapter_slack from "@acme/mod-chat-adapter-slack/payload";
@@ -19,19 +21,24 @@ export interface ModPayloadMigration {
   down: (args: any) => Promise<void>;
 }
 
+const billingSettings = composeSettingsTabs(payload_billing.settings, [
+  payload_billing_adapter_stripe.settings,
+]);
 const chatSettings = composeSettingsTabs(payload_chat.settings, [
   payload_chat_adapter_sendblue.settings,
   payload_chat_adapter_slack.settings,
 ]);
 
-export const modCollections: CollectionConfig[] = [
+export const modCollections: CollectionConfig[] = composeCollectionTabs([
   ...payload_billing.collections,
   ...payload_chat.collections,
   ...payload_docs.collections,
-];
+], [
+  ...payload_billing_adapter_stripe.collectionTabs,
+]);
 
 export const modGlobals: GlobalConfig[] = [
-  payload_billing.settings.global,
+  billingSettings.global,
   chatSettings.global,
   payload_docs.settings.global,
 ];
@@ -59,14 +66,25 @@ export const modSeedSteps: ModSeedStep[] = [
  * /admin (kit-modules) — see payload/collections/KitModules.ts.
  */
 export const modSettings: Record<string, ModuleSettings> = {
-  "billing": payload_billing.settings,
+  "billing": billingSettings,
   "chat": chatSettings,
   "docs": payload_docs.settings,
 };
 
 /**
  * Modules with their own admin settings component (manifest
- * admin.settingsComponent) — rendered on the module's page in /admin through
- * the kit's ModuleAdminSettings wrapper (registry.admin.generated.tsx).
+ * admin.settingsComponent) — rendered on the module's page in /admin (or, for
+ * an adapter, on `page`: its target module's page) through the kit's
+ * ModuleAdminSettings wrapper (registry.admin.generated.tsx).
  */
-export const modAdminSettings: { slug: string }[] = [];
+export const modAdminSettings: { slug: string; page?: string }[] = [
+  { slug: "billing-adapter-stripe", page: "billing" },
+];
+
+// Adapters (manifest adapter.for), loaded lazily on first use so the
+// Payload CLI never evaluates server-only adapter code.
+registerModAdapters({
+  billing: [
+    { slug: "billing-adapter-stripe", load: () => import("@acme/mod-billing-adapter-stripe/server") },
+  ],
+});

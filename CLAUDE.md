@@ -7,6 +7,8 @@ Read this first, then `docs/ARCHITECTURE.md` and `docs/ERD.md` — those two are
 touch Payload collections; `docs/MODULES.md` is the module framework
 reference; `docs/MCP.md` is the remote MCP server reference;
 `docs/WORKSPACES.md` is the account model / B2B workspaces reference;
+`docs/BILLING.md` is the billing core + payment providers reference (Stripe
+setup is `docs/STRIPE.md`);
 `docs/NATIVE.md` is how modules bring native packages and config plugins;
 `docs/DESIGN-SYSTEM.md` is how app and module screens are built — follow it
 for any signed-in UI, and write components from it rather than copying
@@ -22,20 +24,20 @@ clarity beat cleverness.
 
 ## Stack (and where each lives)
 
-| Concern                               | Choice                                                                            | Location                                  |
-| ------------------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------- |
-| Monorepo                              | Turborepo + pnpm (forked from create-t3-turbo)                                    | root                                      |
-| Web                                   | Next.js (App Router), shadcn/ui, Tailwind                                         | `apps/nextjs`                             |
-| Mobile                                | Expo + Expo Router, react-native-reusables, NativeWind                            | `apps/expo`                               |
-| Backend                               | Supabase: Postgres + Auth + Storage + Edge Functions                              | `supabase/`                               |
-| Content / CMS                         | Payload CMS v3 (web/server only) — own `cms` schema, `/admin`, REST at `/cms-api` | `apps/nextjs/src/payload`, `packages/cms` |
-| Data layer (client + generated types) | `@supabase/supabase-js` typed client, session provider                            | `packages/api`                            |
-| Shared features                       | cross-platform validators, react-query hooks, logic                               | `packages/app`                            |
-| Shared UI tokens / primitives         |                                                                                   | `packages/ui`                             |
-| Env + constants                       | zod env schema, `DEFAULT_AI_MODEL`, etc.                                          | `packages/config`                         |
-| Payments                              | Stripe (web only) + one self-registering webhook (billing module route)           | `apps/nextjs`, `modules/billing`          |
-| AI                                    | Vercel AI SDK v7 via the AI Gateway (Claude default)                              | server routes / edge fn                   |
-| Build/ship                            | EAS (mobile), Vercel (web), Expo Push                                             | `eas.json`, Vercel                        |
+| Concern                               | Choice                                                                                | Location                                            |
+| ------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| Monorepo                              | Turborepo + pnpm (forked from create-t3-turbo)                                        | root                                                |
+| Web                                   | Next.js (App Router), shadcn/ui, Tailwind                                             | `apps/nextjs`                                       |
+| Mobile                                | Expo + Expo Router, react-native-reusables, NativeWind                                | `apps/expo`                                         |
+| Backend                               | Supabase: Postgres + Auth + Storage + Edge Functions                                  | `supabase/`                                         |
+| Content / CMS                         | Payload CMS v3 (web/server only) — own `cms` schema, `/admin`, REST at `/cms-api`     | `apps/nextjs/src/payload`, `packages/cms`           |
+| Data layer (client + generated types) | `@supabase/supabase-js` typed client, session provider                                | `packages/api`                                      |
+| Shared features                       | cross-platform validators, react-query hooks, logic                                   | `packages/app`                                      |
+| Shared UI tokens / primitives         |                                                                                       | `packages/ui`                                       |
+| Env + constants                       | zod env schema, `DEFAULT_AI_MODEL`, etc.                                              | `packages/config`                                   |
+| Payments                              | Billing core + payment-provider adapters: Stripe (web only), self-registering webhook | `modules/billing`, `modules/billing-adapter-stripe` |
+| AI                                    | Vercel AI SDK v7 via the AI Gateway (Claude default)                                  | server routes / edge fn                             |
+| Build/ship                            | EAS (mobile), Vercel (web), Expo Push                                                 | `eas.json`, Vercel                                  |
 
 > Package scope is `@acme/*` (inherited from the template). It's renameable —
 > see the README. Don't rename mid-build.
@@ -180,7 +182,7 @@ Write components from the docs — never copy third-party template code.
    CMS API bridge is **staff-only today** — members reach
    their CMS-side data through your own server routes until the member-auth
    follow-up ships. Security-critical per-user state that RLS clients consume
-   directly (auth, chat, reminders, billing entitlements in `public.subscriptions`)
+   directly (auth, chat, reminders, billing entitlements in `public.mod_billing_*`)
    stays in `public` under RLS. **Favorites are RLS, not CMS:** saves across all
    content collections live in `public.content_favorites` (`(user_id, collection,
 item_id)`, own-row RLS) so they work for **anonymous** users — it is the ONE
@@ -201,10 +203,12 @@ item_id)`, own-row RLS) so they work for **anonymous** users — it is the ONE
    - everything else = server-only.
      The app must fail loudly if a required var is missing.
 4. **Stripe is web-only.** No StoreKit / Play Billing / IAP. Mobile unlocks
-   premium by reading the `subscriptions` table (RLS read-own). This can matter
+   premium by reading billing's entitlements (`mod_billing_entitlements`, RLS
+   read-own; `usePremium`). This can matter
    for App Store and Google Play review; see `docs/STRIPE.md` → App Store and
    Google Play payment rules. An In-App Purchase module is a team decision, not
-   something to add on your own.
+   something to add on your own — billing is ready for one as a payment-provider
+   adapter (docs/BILLING.md §7, RevenueCat).
 5. **AI model id is centralized & swappable.** Use `DEFAULT_AI_MODEL` from
    `packages/config`; don't hardcode slugs elsewhere. Resolve available models
    at runtime where practical.
@@ -358,7 +362,9 @@ required), validators + hooks (client barrel, shared web + native), screens
 served authed + rate-limited at `/api/mod/<slug>/…`), Payload
 collections/settings (`./payload`), edge functions, and tests. The in-repo
 reference is **`modules/reminders`**; the five first-party modules
-(dashboard, notifications, reminders, chat, billing) are all built this way.
+(dashboard, notifications, reminders, chat, billing) are all built this way,
+plus their adapters (`chat-adapter-*`, `billing-adapter-stripe` — modules that
+plug into another module's extension point, docs/MODULES.md → Adapters).
 
 ```bash
 pnpm mod create <slug>   # working scaffold: table+RLS, hooks, both screens,
@@ -510,58 +516,87 @@ in `@acme/app` (`auth-settings.ts`); the web login-05 UI is `AuthFlow`
 mobile via `GET /api/auth/config` (`useAuthConfig`). Full guide:
 [docs/AUTH.md](https://github.com/vpv-group/dream-starter-kit/blob/main/docs/AUTH.md).
 
-## Payments (Payload → Stripe catalog, one Stripe webhook → public)
+## Payments (billing core + payment providers; Stripe today)
 
-The billing catalog is **authored in Payload**, not the Stripe dashboard. `Plans`,
-`Coupons` and the read-only `Subscriptions` mirror live under the **Commerce** admin nav
-group (`apps/nextjs/src/payload/collections/`), and `PricingSettings` (a global) curates
-the public `/pricing` page (which ≤3 plans to feature + a Free tier). The default three
-example plans (Monthly/Annual/Lifetime) + a welcome coupon are seeded by `seedCmsContent()`.
+Billing is a **provider-neutral core module** (`modules/billing`) with **payment
+providers as adapter modules** (`adapter.for: "billing"`); `billing-adapter-stripe`
+ships preinstalled. Full reference: **docs/BILLING.md**; Stripe setup: docs/STRIPE.md.
 
-- **Payload → Stripe is automatic**: saving a plan/coupon runs an `afterChange` hook
-  (`payload/hooks/sync-plan-to-stripe.ts` / `sync-coupon-to-stripe.ts` →
-  `lib/stripe/sync.ts`). It creates/updates the Stripe product and **creates a new price +
-  archives the old one** whenever the amount/interval changes (Stripe prices are
-  **immutable** — never mutate, always recreate). Coupons follow the same
-  recreate-on-change rule. A per-doc `skipSync` checkbox opts out; failures land on
-  `syncStatus`/`syncError` instead of failing the save; the seed skips the hook
-  (`context.skipStripeSync`), so seeded plans stay `unsynced` until first saved.
-- **Stripe → app is ONE webhook** — the billing module's public route
-  `POST /api/mod/billing/stripe/webhook` (`modules/billing/src/server/stripe/webhook.ts`).
-  It writes `public.mod_billing_*`, the **source of truth** web and mobile read under
-  RLS, then projects `customer.subscription.*` into the read-only CMS `subscriptions`
-  collection for /admin (`modules/billing/src/payload/webhooks.ts`). Every Stripe event
-  is **claimed before its side effects run** (`mod_billing_claim_webhook_event()`:
-  done → `200 duplicate`, in progress → `409`, failure releases the claim), so even
-  concurrent redeliveries apply once. `customer.subscription.*` apply the subscription
-  **re-fetched from Stripe** (payload fallback without a key), and writes go through
-  `mod_billing_apply_subscription()`, which also ignores an event older than the one
-  already applied. A differing wallet/checkout email is kept as
-  `mod_billing_customers.billing_email`; the Stripe customer's email stays the account's.
-  **No dashboard step:** an hourly scheduled check (`GET /api/mod/billing/cron/connect`)
-  registers the endpoint through the Stripe API (pinned to the SDK's `api_version`) once
-  `STRIPE_SECRET_KEY` is set and the site has a public https URL, then disables this
-  install's pre-2.5 endpoints (never deletes; audited). It keeps the signing secret in
-  Supabase Vault; `STRIPE_WEBHOOK_SECRET` overrides it, e.g. for `stripe listen`
-  locally. The old edge function and `@payloadcms/plugin-stripe` endpoint are gone, and
-  `STRIPE_WEBHOOKS_ENDPOINT_SECRET` is deprecated.
+- **Catalog in Payload.** `Plans`, `Coupons` and the read-only `Subscriptions` list
+  live under **Commerce**; billing's settings (Modules → Billing) curate `/pricing`
+  (≤3 featured plans + Free/Enterprise tiers). Seeded: Monthly/Annual/Lifetime + a
+  welcome coupon. Saving a plan/coupon runs billing's catalog hook
+  (`payload/hooks/sync-with-providers.ts`) → each provider's `syncPlan`/`syncCoupon`.
+  Stripe's (`modules/billing-adapter-stripe/src/server/catalog.ts` →
+  `stripe/sync.ts`) creates/updates the product and **creates a new price + archives
+  the old one** whenever the amount/interval changes (Stripe prices are
+  **immutable** — never mutate, always recreate); coupons follow the same rule. The
+  ids show on the plan's **Stripe** tab (an adapter collection tab). `skipSync`
+  opts out; failures land on `syncStatus`/`syncError`; a provider that isn't
+  configured skips the sync, so seeded plans stay `unsynced` until Stripe is
+  connected.
+- **The ledger is provider-neutral**: `public.mod_billing_*` rows carry `provider`
+  (+ `store`, `kind`, `plan_id`, `entitlement`); entitlements are read from the
+  `mod_billing_entitlements` view (security_invoker, read-own) by `usePremium` (web +
+  native) and billing's `getViewerEntitlement` service (server, via
+  `lib/billing-entitlement.ts`). Providers write **only through billing's core
+  services** (`@acme/mod-billing/server`: `claimWebhookEvent` →
+  `recordSubscription` → `finishWebhookEvent`, `linkCustomer`, …). Host code reaches
+  billing only through generated registries: `modServices.billing`
+  (`lib/mod/billing.ts` — entitlement, account delete, anon merge, new-user tags) and
+  the web payment provider via `useModAdapters("billing")`
+  (`components/paywall/payment-provider.ts`). No Stripe SDK in host code.
+- **Stripe → app is ONE webhook**, the adapter's
+  `POST /api/mod/billing-adapter-stripe/webhook` (`server/webhook.ts`). Every event
+  is **claimed before its side effects run** (done → `200 duplicate`, in progress →
+  `409`, failure releases the claim), `customer.subscription.*` apply the
+  subscription **re-fetched from Stripe**, and the ledger ignores an event older than
+  the one already applied. A differing wallet/checkout email is kept as the link's
+  billing email. **No dashboard step:** an hourly check
+  (`GET /api/mod/billing-adapter-stripe/cron/connect`) registers the endpoint through
+  the Stripe API (pinned to the SDK's `api_version`), keeps the signing secret in
+  Supabase Vault, and disables this install's older endpoints (billing 1.x's
+  `/api/mod/billing/stripe/webhook`, pre-2.5 ones — never deletes; audited). Billing
+  still forwards its 1.x paths for one release. `STRIPE_WEBHOOK_SECRET` overrides the
+  Vault secret (e.g. `stripe listen`).
+- **Connecting Stripe:** "Connect with Stripe" on Modules → Billing (OAuth through
+  the Meet Dream AI app, brokered by meetdream.com via the host's connector broker —
+  `getConnectorBroker()`; the site never stores a Stripe secret), or your own
+  `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, which win. The
+  publishable key is served at runtime (`GET …/config`). The connector panel shows
+  connection, webhook and catalog state with test/register/resync actions; checkout
+  options are the adapter's **Stripe** settings tab (staff-only).
 - **Intro offers** ("$1 first month, then $19") = a coupon auto-applied at checkout
   (`once` for one intro period, `repeating` for several; years × 12 → Stripe
-  `duration_in_months`). **Repeating** coupons take N months _or_ N years the same way.
-- **Checkout is plan-driven** (`/api/stripe/checkout` takes a Payload `planId`) and supports
-  **guest checkout**: an anonymous buyer pays first, then the webhook matches their email to an
-  existing account or creates one + emails a Supabase invite (`/accept-invite` → `/a`).
-  Stripe stays **web-only** (golden rule #4); mobile shows a read-only `/pricing` and links out.
-- Self-serve billing lives at `/billing` (current plan, change/cancel via the Stripe portal, past
-  invoices). Free→paid upgrade CTA is on `/a` (the app home).
-- E2E: `tooling/web-e2e/src/subscription.spec.ts` covers the webhook mirror with
-  self-signed events and (when a test-mode `STRIPE_SECRET_KEY` is set) real Checkout
-  subscription creation — authenticated + guest — with Stripe's 4242 test card.
+  `duration_in_months`).
+- **Checkout is plan-driven**: billing's `POST /api/mod/billing/checkout` (`planId`,
+  hosted Checkout via the web provider), or on-site — the paywall and `/checkout`
+  render the provider's `PaymentForm` (Stripe Elements, lazy-loaded) and its
+  express-intent / guest-account / upgrade-annual routes. **Guest checkout**: a buyer
+  pays first; the webhook (or guest-account) matches their email to an account or
+  creates one + emails a Supabase invite (`/accept-invite` → `/a`). Stripe stays
+  **web-only** (golden rule #4); mobile shows a read-only `/pricing` and links out.
+- Self-serve billing lives at `/billing` (plan, change/cancel via the provider's
+  portal, invoices from every provider). Free→paid upgrade CTA is on `/a`.
+- **Workspaces can own a plan** (`mod_billing_subscriptions.org_id`; every member
+  is entitled under RLS). `/billing`'s **Billing account for** switcher lists
+  Personal + the workspaces you administer; owners/admins buy for a workspace via
+  `/pricing?workspace=<id>`. **Staff** get "Find an account…" there: a read-only
+  support view of any person/workspace (`?account=user:|org:<id>`) that can only
+  grant/extend/revoke **no-charge** plans (`provider = 'manual'`) — paid
+  subscriptions are changed in the provider's dashboard. Staff routes are
+  `/api/mod/billing/admin/*`, audited (docs/BILLING.md §10).
+- E2E: `tooling/web-e2e/src/subscription.spec.ts` covers the webhook with
+  self-signed events (new path + the forwarded 1.x path, billing tags) and (with a
+  test-mode `STRIPE_SECRET_KEY`) real Checkout — authenticated + guest — with 4242.
 
-**User tags** (`public.tags` / `public.user_tags`, RLS read-own) tag each user by plan name (the
-webhook auto-tags on active subscription; "Free" at signup) and are staff-manageable from the
-Payload **Users** page — which now mirrors **all** Supabase users (see `lib/cms/mirror-user.ts`;
-`profiles.is_staff` still gates admin login). Tags show on the app `/profile` (web + native).
+**User tags** (`public.tags` / `public.user_tags`, RLS read-own) are staff-manageable from the
+Payload **Users** page, and **billing keeps billing tags in step** with each user's purchases
+(plan, status Free/Trialing/Active/Canceling/Past due/Churned, billing cycle, store —
+configurable on Modules → Billing → Tags; only tags billing manages
+(`mod_billing_managed_tags`) are ever changed; docs/BILLING.md §4). The Users page
+mirrors **all** Supabase users (see `lib/cms/mirror-user.ts`; `profiles.is_staff`
+still gates admin login). Tags show on the app `/profile` (web + native).
 
 ## Remote MCP server (`@acme/mcp`)
 
@@ -762,8 +797,8 @@ with the kit, so the cardinal rule is: keep the merge commits, never squash them
 The kit is **feature-complete and ready to clone** — and is now a **module
 host** (docs/MODULES.md): auth, the CMS registry, theming, the app shell, and
 the **remote MCP server** (`@acme/mcp`, docs/MCP.md) are core; dashboard,
-notifications, reminders, chat and billing ship as
-pre-installed modules under `modules/` with the full lifecycle
+notifications, reminders, chat and billing (with its Stripe payment adapter)
+ship as pre-installed modules under `modules/` with the full lifecycle
 (create/add/update/remove, CMS-driven menus, per-module settings screens,
 the /admin Modules screen + module-ops workflow). The test/CI suite is
 green end to end. Known follow-ups: opening the CMS API bridge to member

@@ -1,0 +1,55 @@
+{
+  "name": "@acme/mod-billing-adapter-stripe",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./admin": "./src/admin/index.tsx",
+    "./payload": "./src/payload/index.ts",
+    "./server": "./src/server/index.ts",
+    "./web": "./src/web/index.ts"
+  },
+  "license": "Apache-2.0",
+  "scripts": {
+    "clean": "git clean -xdf .cache .turbo node_modules",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "lint": "eslint --flag unstable_native_nodejs_ts_config",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@acme/api": "workspace:*",
+    "@acme/cms": "workspace:*",
+    "@acme/mod-billing": "workspace:*",
+    "@acme/mod-kit": "workspace:*",
+    "@acme/ui": "workspace:*",
+    "@stripe/react-stripe-js": "^7.0.1",
+    "@stripe/stripe-js": "^10.2.1",
+    "@supabase/supabase-js": "catalog:",
+    "@tanstack/react-query": "catalog:",
+    "next": "^16.4.5",
+    "payload": "catalog:",
+    "server-only": "^0.0.1",
+    "stripe": "catalog:",
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "*"
+  },
+  "devDependencies": {
+    "@acme/eslint-config": "workspace:*",
+    "@acme/prettier-config": "workspace:*",
+    "@acme/tsconfig": "workspace:*",
+    "@payloadcms/db-postgres": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:react19",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "react": "catalog:react19",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "prettier": "@acme/prettier-config"
+}

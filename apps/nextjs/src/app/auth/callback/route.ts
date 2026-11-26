@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-import { ensureCmsUser, ensureFreeTag } from "~/lib/cms/mirror-user";
+import { ensureBillingTags, ensureCmsUser } from "~/lib/cms/mirror-user";
 import { getSiteUrl } from "~/lib/site-url";
 import { createClient } from "~/lib/supabase/server";
 
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
             (user.user_metadata.name as string | undefined),
           metadata: user.user_metadata,
         });
-        await ensureFreeTag(user.id);
+        await ensureBillingTags(user.id);
       }
       return NextResponse.redirect(`${siteUrl}${next}`);
     }

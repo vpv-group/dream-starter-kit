@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { slidingWindow } from "@acme/config";
 
-import { ensureCmsUser, ensureFreeTag } from "~/lib/cms/mirror-user";
+import { ensureBillingTags, ensureCmsUser } from "~/lib/cms/mirror-user";
 import { getRequestClient } from "~/lib/supabase/request-client";
 
 // Per-user budget: each call runs a Payload find + up to three service-role tag
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
     metadata: user.user_metadata,
     syncProfile,
   });
-  await ensureFreeTag(user.id);
+  await ensureBillingTags(user.id);
 
   return NextResponse.json({ ok: true });
 }

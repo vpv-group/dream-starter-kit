@@ -25,6 +25,7 @@ const has = {
   chat: installed("chat"),
   reminders: installed("reminders"),
   billing: installed("billing"),
+  stripe: installed("billing-adapter-stripe"),
   notifications: installed("notifications"),
 };
 
@@ -192,6 +193,11 @@ beforeAll(async () => {
     await admin
       .from("mod_billing_customers")
       .insert({ user_id: aId, stripe_customer_id: `cus_rls_${stamp}` });
+    await admin.from("mod_billing_customer_links").insert({
+      user_id: aId,
+      provider: "stripe",
+      provider_customer_id: `cus_rls_${stamp}`,
+    });
   }
   if (has.notifications) {
     const notif = await admin
@@ -219,6 +225,7 @@ afterAll(async () => {
     await admin.from("mod_billing_subscriptions").delete().eq("user_id", aId);
     await admin.from("mod_billing_subscriptions").delete().eq("user_id", bId);
     await admin.from("mod_billing_customers").delete().eq("user_id", aId);
+    await admin.from("mod_billing_customer_links").delete().eq("user_id", aId);
   }
   if (orgAId) await admin.from("organizations").delete().eq("id", orgAId); // cascades memberships + invitations
   if (has.notifications) {
@@ -606,21 +613,107 @@ describe("RLS: customers are read-own (service-role written)", () => {
   });
 });
 
+describe("RLS: provider customer links are read-own", () => {
+  it.skipIf(!has.billing)("A can read A's own link", async () => {
+    const { data } = await clientA
+      .from("mod_billing_customer_links")
+      .select("*")
+      .eq("user_id", aId);
+    expect(data?.length ?? 0).toBeGreaterThanOrEqual(1);
+  });
+
+  it.skipIf(!has.billing)("B can't read A's link or write one", async () => {
+    const { data } = await clientB
+      .from("mod_billing_customer_links")
+      .select("*")
+      .eq("user_id", aId);
+    expect(data).toHaveLength(0);
+    const { error } = await clientB.from("mod_billing_customer_links").insert({
+      user_id: bId,
+      provider: "stripe",
+      provider_customer_id: `cus_evil_${stamp}`,
+    });
+    expect(error).not.toBeNull();
+  });
+});
+
+describe("RLS: billing-managed tags are server-only (deny-all)", () => {
+  it.skipIf(!has.billing)(
+    "clients read nothing and can't register a tag",
+    async () => {
+      const anon = createClient<Database>(SUPABASE_URL, ANON_KEY, noPersist);
+      for (const client of [anon, clientA]) {
+        const { data } = await client
+          .from("mod_billing_managed_tags")
+          .select("*");
+        expect(data ?? []).toHaveLength(0);
+      }
+      const { error } = await clientA
+        .from("mod_billing_managed_tags")
+        .insert({ tag_id: tagId, tag_group: "status", value: "active" });
+      expect(error).not.toBeNull();
+    },
+  );
+});
+
 describe("billing webhook functions refuse API callers", () => {
   // SECURITY DEFINER functions reachable over PostgREST: each checks its
   // caller (module SQL can't REVOKE EXECUTE).
-  it("anon and signed-in users can't purge the event ledger or claim events", async () => {
-    const anon = createClient<Database>(SUPABASE_URL, ANON_KEY, noPersist);
-    for (const client of [anon, clientA]) {
-      const purge = await client.rpc("mod_billing_purge");
-      expect(purge.error?.code).toBe("42501");
-      const claim = await client.rpc("mod_billing_claim_webhook_event", {
-        _id: `evt_rls_${stamp}`,
-        _type: "product.updated",
-      });
-      expect(claim.error?.code).toBe("42501");
-    }
-  });
+  it.skipIf(!has.billing)(
+    "anon and signed-in users can't purge the event ledger, claim events or apply purchases",
+    async () => {
+      const anon = createClient<Database>(SUPABASE_URL, ANON_KEY, noPersist);
+      for (const client of [anon, clientA]) {
+        const purge = await client.rpc("mod_billing_purge");
+        expect(purge.error?.code).toBe("42501");
+        const claim = await client.rpc("mod_billing_claim_webhook_event", {
+          _id: `evt_rls_${stamp}`,
+          _type: "product.updated",
+        });
+        expect(claim.error?.code).toBe("42501");
+        const claim2 = await client.rpc("mod_billing_claim_event", {
+          _provider: "stripe",
+          _id: `evt_rls_${stamp}`,
+          _type: "product.updated",
+        });
+        expect(claim2.error?.code).toBe("42501");
+        const finish = await client.rpc("mod_billing_finish_event", {
+          _provider: "stripe",
+          _id: `evt_rls_${stamp}`,
+          _ok: true,
+        });
+        expect(finish.error?.code).toBe("42501");
+        // Granting yourself premium is the prize — it must be refused.
+        const apply = await client.rpc("mod_billing_apply_subscription", {
+          _row: {
+            id: `sub_evil_${stamp}`,
+            user_id: bId,
+            status: "active",
+          },
+          _event_at: new Date().toISOString(),
+        });
+        expect(apply.error?.code).toBe("42501");
+      }
+    },
+  );
+
+  it.skipIf(!has.stripe)(
+    "anon and signed-in users can't read or set the Stripe webhook secret",
+    async () => {
+      const anon = createClient<Database>(SUPABASE_URL, ANON_KEY, noPersist);
+      for (const client of [anon, clientA]) {
+        const read = await client.rpc(
+          "mod_billing_adapter_stripe_webhook_secret",
+        );
+        expect(read.error?.code).toBe("42501");
+        const write = await client.rpc(
+          "mod_billing_adapter_stripe_set_webhook_secret",
+          { _secret: "whsec_evil" },
+        );
+        expect(write.error?.code).toBe("42501");
+      }
+    },
+  );
 });
 
 describe("RLS: user_tags are private to their owner", () => {
@@ -659,19 +752,19 @@ describe("RLS: user_tags are private to their owner", () => {
 });
 
 describe("premium gating: only active/trialing subscriptions unlock premium", () => {
-  // Mirrors the exact query in packages/app/src/hooks/use-premium.ts
-  // (usePremium): read-own subscriptions, filtered to active/trialing, newest
-  // period first. This pins the premium gate (golden rule #4) — RLS read-own
-  // AND the status filter together — against B, who starts with no subscription.
-  const ACTIVE_STATUSES = ["active", "trialing"];
+  // Mirrors billing's usePremium (modules/billing/src/hooks/use-premium.ts)
+  // and its server getViewerEntitlement: the mod_billing_entitlements view
+  // (security_invoker → RLS read-own on the ledger), premium entitlement,
+  // newest expiry first. This pins the premium gate — RLS read-own AND the
+  // view's status filter together — against B, who starts with nothing.
   const day = 86_400_000;
 
   async function premiumRow(client: SupabaseClient<Database>) {
     const { data, error } = await client
-      .from("mod_billing_subscriptions")
-      .select("status, price_id, current_period_end")
-      .in("status", ACTIVE_STATUSES)
-      .order("current_period_end", { ascending: false })
+      .from("mod_billing_entitlements")
+      .select("status, price_id, provider, store, expires_at")
+      .eq("entitlement", "premium")
+      .order("expires_at", { ascending: false, nullsFirst: true })
       .limit(1)
       .maybeSingle();
     expect(error).toBeNull();
@@ -724,6 +817,29 @@ describe("premium gating: only active/trialing subscriptions unlock premium", ()
       // trialing has the latest current_period_end among active/trialing, so it
       // wins — and canceled/past_due are excluded by the status filter.
       expect(row?.status).toBe("trialing");
+      // A sees none of B's entitlements through the view.
+      const { data: leak } = await clientA
+        .from("mod_billing_entitlements")
+        .select("subscription_id")
+        .eq("user_id", bId);
+      expect(leak).toHaveLength(0);
+    },
+  );
+
+  it.skipIf(!has.billing)(
+    "a members-only entitlement doesn't unlock premium",
+    async () => {
+      await admin.from("mod_billing_subscriptions").delete().eq("user_id", aId);
+      await admin.from("mod_billing_subscriptions").insert({
+        id: `sub_a_members_${stamp}`,
+        user_id: aId,
+        price_id: "price_rls",
+        status: "active",
+        entitlement: "members",
+        provider: "revenuecat",
+        store: "app_store",
+      });
+      expect(await premiumRow(clientA)).toBeNull();
     },
   );
 });

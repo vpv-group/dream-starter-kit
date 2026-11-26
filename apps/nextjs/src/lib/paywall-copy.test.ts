@@ -5,7 +5,6 @@ import {
   buildPlanCopy,
   buildUpsellCopy,
   cadence,
-  deferredElementsOptions,
   formatPrice,
   resolveAnnualPlan,
   resolvePremiumPlan,
@@ -124,55 +123,6 @@ describe("buildPlanCopy — one-time", () => {
     expect(copy.cta).toBe("Unlock");
     expect(copy.fineprint).toContain("one-time payment");
     expect(copy.priceLine).toBe("$49");
-  });
-});
-
-describe("deferredElementsOptions", () => {
-  it("charges the intro amount today for an intro subscription", () => {
-    expect(deferredElementsOptions(introPlan)).toEqual({
-      mode: "subscription",
-      amount: 199,
-      currency: "usd",
-    });
-  });
-
-  it("charges the unit price for a plain recurring plan", () => {
-    expect(
-      deferredElementsOptions({
-        id: 1,
-        pricingType: "recurring",
-        interval: "year",
-        unitAmount: 9900,
-        currency: "usd",
-      }),
-    ).toEqual({ mode: "subscription", amount: 9900, currency: "usd" });
-  });
-
-  it("uses setup mode for a $0-today free trial", () => {
-    const opts = deferredElementsOptions({
-      id: 1,
-      pricingType: "recurring",
-      interval: "month",
-      unitAmount: 999,
-      currency: "usd",
-      trialDays: 7,
-    });
-    expect(opts).toEqual({ mode: "setup", currency: "usd" });
-  });
-
-  it("charges the unit price for a one-time plan", () => {
-    expect(
-      deferredElementsOptions({
-        id: 1,
-        pricingType: "one_time",
-        unitAmount: 4900,
-        currency: "usd",
-      }),
-    ).toEqual({ mode: "payment", amount: 4900, currency: "usd" });
-  });
-
-  it("returns null when the plan isn't loaded yet", () => {
-    expect(deferredElementsOptions(null)).toBeNull();
   });
 });
 

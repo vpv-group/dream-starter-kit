@@ -10,6 +10,7 @@ import { isViewerPremium } from "~/lib/billing-entitlement";
 import { getPayloadClient } from "~/lib/cms/payload-client";
 import { getAuthSettings, getBranding } from "~/lib/payload";
 import { resolveAnnualPlan } from "~/lib/paywall-copy";
+import { getWorkspaceContext } from "~/lib/workspaces/server";
 import { modSettings } from "~/mod/registry.payload.generated";
 
 export const dynamic = "force-dynamic";
@@ -49,14 +50,16 @@ function toTestimonial(review: Review): CheckoutTestimonialData | null {
  * The Bloomberg-style two-step checkout (Account → Payment). Server-loads the
  * selected plan + the curated checkout testimonial + auth settings, then hands
  * off to the client `CheckoutFlow`. Plans are authored in Payload; the buyer
- * arrives here from the /pricing "Continue" CTA with `?plan=<id>`.
+ * arrives here from the /pricing "Continue" CTA with `?plan=<id>`, plus
+ * `&workspace=<orgId>` when buying for a workspace (company billing) from its
+ * /billing page — honored only for the workspace's owners/admins.
  */
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ plan?: string; step?: string }>;
+  searchParams: Promise<{ plan?: string; step?: string; workspace?: string }>;
 }) {
-  const { plan: planParam } = await searchParams;
+  const { plan: planParam, workspace: workspaceParam } = await searchParams;
   if (!planParam) redirect("/pricing");
 
   let plan: ModBillingPlan | null = null;
@@ -119,10 +122,23 @@ export default async function CheckoutPage({
   // signal that a surrounding catch would otherwise swallow.
   if (!plan || plan.active === false) redirect("/pricing");
 
+  // Buying for a workspace: only its owners/admins (the server checks again).
+  let workspace: { id: string; name: string } | null = null;
+  if (workspaceParam) {
+    const ctx = await getWorkspaceContext();
+    const ws = ctx?.workspaces.find(
+      (w) =>
+        w.id === workspaceParam && (w.role === "owner" || w.role === "admin"),
+    );
+    if (!ws) redirect("/billing");
+    workspace = { id: ws.id, name: ws.name };
+  }
+
   // Don't let an already-subscribed user open a SECOND concurrent subscription
   // (express-intent unconditionally creates one → double billing). Send them to
-  // self-serve billing to change/cancel instead. Guests/anon fall through.
-  if (await isViewerPremium()) redirect("/billing");
+  // self-serve billing to change/cancel instead. Guests/anon fall through. (A
+  // personal plan doesn't stop someone buying for their workspace.)
+  if (!workspace && (await isViewerPremium())) redirect("/billing");
 
   const [authSettings, branding] = await Promise.all([
     getAuthSettings(),
@@ -137,6 +153,7 @@ export default async function CheckoutPage({
       authSettings={authSettings}
       appName={branding.appName}
       testimonial={testimonial}
+      workspace={workspace}
     />
   );
 }

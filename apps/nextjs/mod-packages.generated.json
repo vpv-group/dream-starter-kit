@@ -1,5 +1,6 @@
 [
   "@acme/mod-billing",
+  "@acme/mod-billing-adapter-stripe",
   "@acme/mod-chat",
   "@acme/mod-chat-adapter-sendblue",
   "@acme/mod-chat-adapter-slack",
