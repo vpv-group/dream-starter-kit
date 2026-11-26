@@ -13,6 +13,7 @@ import {
 } from "./lifecycle";
 import { readLock } from "./lock";
 import { ModValidationError } from "./manifests";
+import { applyBaseline, baselineOutput, planBaseline } from "./ops/baseline";
 import { describeModuleOp, describeOutput } from "./ops/describe";
 import { githubClient } from "./ops/github";
 import { planKitUpdate, toGithubOutput } from "./ops/kit-update";
@@ -71,6 +72,10 @@ Commands:
                              update settings (appended to <path>).
   ops describe --op <add|update|remove> --before <lock.json> [--slug <slug>]
                              The PR marker for a module op (key=value lines).
+  ops baseline [--upstream <url>] [--apply]
+                             A repo with no history shared with the kit: record
+                             the kit release matching package.json as an
+                             ancestor (merge -s ours, no file changes).
   ops resolve-generated      During a conflicted kit merge: take the release's
                              side of generated files (regenerated afterwards);
                              prints remaining=<files> for a person.
@@ -146,6 +151,19 @@ async function main(): Promise<void> {
         const { log, output } = sessionOutputs(result);
         process.stdout.write(log);
         appendFileSync(out, output);
+        return;
+      }
+      if (args[0] === "baseline") {
+        const plan = planBaseline({
+          repoRoot: root,
+          upstreamUrl:
+            flagValue("--upstream") ??
+            "https://github.com/vpv-group/dream-starter-kit.git",
+        });
+        if (plan.action === "merge" && flags.has("--apply")) {
+          applyBaseline(root, plan);
+        }
+        process.stdout.write(baselineOutput(plan));
         return;
       }
       if (args[0] === "resolve-generated") {

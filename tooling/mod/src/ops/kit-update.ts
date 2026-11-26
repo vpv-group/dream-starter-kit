@@ -49,7 +49,11 @@ export function tagsAt(repoRoot: string, upstreamUrl: string): string[] {
     .filter(Boolean);
 }
 
-function hasCommonHistory(repoRoot: string, a: string, b: string): boolean {
+export function hasCommonHistory(
+  repoRoot: string,
+  a: string,
+  b: string,
+): boolean {
   try {
     git(repoRoot, ["merge-base", a, b]);
     return true;

@@ -334,6 +334,13 @@ jobs:
           git config user.name "dream-updates[bot]"
           git config user.email "dream-updates[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          # A Vercel clone or "Use this template" repo shares no history with
+          # the kit: record the release it started from as an ancestor (no
+          # file changes), once, so updates are normal three-way merges.
+          pnpm --silent mod ops baseline --upstream "$UPSTREAM_URL" --apply | tee /tmp/baseline.txt
+          if grep -q '^action=merge' /tmp/baseline.txt; then
+            git push origin HEAD || echo "::notice title=Kit history recorded in the update PR::Branch protection kept the history-only commit off the default branch; it lands with the kit update PR instead."
+          fi
           pnpm --silent mod ops kit-plan --upstream "$UPSTREAM_URL" --github-output | tee -a "$GITHUB_OUTPUT"
 
       - name: Nothing to do
