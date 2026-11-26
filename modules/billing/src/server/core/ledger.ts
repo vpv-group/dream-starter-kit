@@ -2,6 +2,7 @@ import type { Json } from "@acme/api";
 
 import type {
   AdminClient,
+  BillingSubject,
   CatalogPrice,
   CatalogProduct,
   ClaimResult,
@@ -153,6 +154,74 @@ export async function findUserCustomer(
   return legacy?.stripe_customer_id ?? null;
 }
 
+/* --------------------------- workspace customers -------------------------- */
+
+/** Link a workspace to its customer id at a provider (one per provider). */
+export async function linkOrgCustomer(
+  admin: AdminClient,
+  link: { orgId: string; provider: string; customerId: string },
+): Promise<void> {
+  await admin
+    .from("mod_billing_org_customer_links")
+    .delete()
+    .eq("provider", link.provider)
+    .eq("provider_customer_id", link.customerId)
+    .neq("org_id", link.orgId);
+  const { error } = await admin.from("mod_billing_org_customer_links").upsert(
+    {
+      org_id: link.orgId,
+      provider: link.provider,
+      provider_customer_id: link.customerId,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "org_id,provider" },
+  );
+  if (error) throw new Error(error.message);
+}
+
+/** A workspace's customer id at a provider, if any. */
+export async function findOrgCustomer(
+  admin: AdminClient,
+  orgId: string,
+  provider: string,
+): Promise<string | null> {
+  const { data } = await admin
+    .from("mod_billing_org_customer_links")
+    .select("provider_customer_id")
+    .eq("org_id", orgId)
+    .eq("provider", provider)
+    .maybeSingle();
+  return data?.provider_customer_id ?? null;
+}
+
+/** Whose customer this is: a workspace's, a person's, or nobody's yet. */
+export async function findCustomerSubject(
+  admin: AdminClient,
+  provider: string,
+  customerId: string,
+): Promise<BillingSubject | null> {
+  const { data } = await admin
+    .from("mod_billing_org_customer_links")
+    .select("org_id")
+    .eq("provider", provider)
+    .eq("provider_customer_id", customerId)
+    .maybeSingle();
+  if (data?.org_id) return { orgId: data.org_id };
+  const userId = await findCustomerUser(admin, provider, customerId);
+  return userId ? { userId } : null;
+}
+
+/** The subject's customer id at a provider (person or workspace). */
+export async function findSubjectCustomer(
+  admin: AdminClient,
+  subject: BillingSubject,
+  provider: string,
+): Promise<string | null> {
+  return subject.orgId !== undefined
+    ? findOrgCustomer(admin, subject.orgId, provider)
+    : findUserCustomer(admin, subject.userId, provider);
+}
+
 /** Keep (or clear, with null) a billing email that differs from the login. */
 export async function setBillingEmail(
   admin: AdminClient,
@@ -194,6 +263,9 @@ export function subscriptionRow(sub: NormalizedSubscription) {
     entitlement: sub.entitlement ?? "premium",
     store: sub.store ?? "web",
     environment: sub.environment ?? null,
+    org_id: sub.orgId ?? null,
+    granted_by: sub.grantedBy ?? null,
+    note: sub.note ?? null,
   };
 }
 

@@ -19,11 +19,14 @@ export type { PaidResult };
 
 export function CheckoutPayment({
   planId,
+  orgId,
   plan,
   copy,
   onPaid,
 }: {
   planId: string | number;
+  /** Buying for this workspace (company billing). */
+  orgId?: string | null;
   plan: PlanLite;
   copy: PaywallCopy;
   onPaid: (result: PaidResult) => void;
@@ -56,6 +59,7 @@ export function CheckoutPayment({
     <provider.PaymentForm
       variant="checkout"
       planId={planId}
+      orgId={orgId}
       plan={plan}
       cta="Purchase Subscription"
       fineprint={copy.fineprint}

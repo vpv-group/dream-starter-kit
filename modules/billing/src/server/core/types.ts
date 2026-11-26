@@ -59,7 +59,22 @@ export interface NormalizedSubscription {
   entitlement?: "members" | "premium";
   store?: BillingStore;
   environment?: BillingEnvironment | null;
+  /**
+   * The workspace that owns it (a company purchase): every member gets the
+   * entitlement. `userId` is then the person who bought it.
+   */
+  orgId?: string | null;
+  /** Staff grants only: who granted it, and why. */
+  grantedBy?: string | null;
+  note?: string | null;
 }
+
+/**
+ * Whose billing: a person's own account, or a workspace (company). Exactly
+ * one of the two is set.
+ */
+export type BillingSubject =
+  { userId: string; orgId?: undefined } | { orgId: string; userId?: undefined };
 
 /** A catalog product, provider-scoped (its id is the provider's). */
 export interface CatalogProduct {
@@ -109,6 +124,11 @@ export interface CheckoutInput {
   plan: ModBillingPlan;
   /** The signed-in buyer, or null for a guest checkout. */
   user: User | null;
+  /**
+   * Buying for a workspace (the buyer is one of its owners/admins — billing
+   * checked): the purchase and its customer belong to the workspace.
+   */
+  orgId?: string | null;
   /** The site's public origin, for return URLs. */
   origin: string;
 }
@@ -138,13 +158,20 @@ export interface BillingProvider {
   isConfigured(): Promise<boolean>;
   /** Hosted checkout for a plan (redirect URL). */
   createCheckout?(input: CheckoutInput): Promise<{ url: string }>;
-  /** Self-serve management (change/cancel, payment method). */
+  /** Self-serve management (change/cancel, payment method) for a subject. */
   createPortalSession?(input: {
-    userId: string;
+    subject: BillingSubject;
     origin: string;
   }): Promise<{ url: string } | null>;
   /** Past invoices for `/billing`. */
-  listInvoices?(input: { userId: string }): Promise<BillingInvoice[]>;
+  listInvoices?(input: { subject: BillingSubject }): Promise<BillingInvoice[]>;
+  /**
+   * The subject's customer id at this provider and a link to it in the
+   * provider's dashboard — for the staff support view.
+   */
+  customerLink?(input: {
+    subject: BillingSubject;
+  }): Promise<{ customerId: string; dashboardUrl: string | null } | null>;
   /** Push a saved plan to the provider's catalog (Payload afterChange). */
   /** Returns the doc as re-saved with the provider ids, if it re-saved it. */
   syncPlan?(args: CatalogSyncArgs): Promise<unknown>;

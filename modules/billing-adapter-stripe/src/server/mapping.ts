@@ -33,6 +33,7 @@ export interface NormalizedSubscription {
   planId?: string | null;
   store?: "web" | "app_store" | "play_store" | "promotional";
   environment?: "live" | "test" | "sandbox" | null;
+  orgId?: string | null;
 }
 
 export interface CatalogProduct {
@@ -184,6 +185,13 @@ export function subscriptionCustomerId(sub: SubscriptionInput): string {
   return idOf(sub.customer);
 }
 
+/** The workspace a subscription was bought for, if any (metadata). */
+export function subscriptionOrgIdFromMetadata(
+  sub: SubscriptionInput,
+): string | null {
+  return sub.metadata?.org_id ?? null;
+}
+
 /** A subscription's user id from its metadata, if Stripe carried it through. */
 export function subscriptionUserIdFromMetadata(
   sub: SubscriptionInput,
@@ -282,6 +290,8 @@ export function normalizeSubscription(
     planId: sub.metadata?.plan_id ?? item?.price.metadata?.payloadId ?? null,
     store: "web",
     environment: opts.livemode == null ? null : opts.livemode ? "live" : "test",
+    // A workspace purchase (checkout stamped the workspace).
+    orgId: sub.metadata?.org_id ?? null,
   };
 }
 

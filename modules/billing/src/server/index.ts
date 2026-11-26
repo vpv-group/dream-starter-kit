@@ -10,28 +10,32 @@ import type {
   ModPublicRouteTable,
   ModRouteTable,
 } from "@acme/mod-kit/server";
-import { getModuleSettings } from "@acme/mod-kit/payload";
 
-import type { BillingSettings } from "../payload/settings";
-import type { BillingTagSettings } from "./core/tags";
 import type {
   AdminClient,
-  BillingInvoice,
   BillingServiceContext,
+  BillingSubject,
   NormalizedSubscription,
 } from "./core/types";
-import { settings as billingSettings } from "../payload/settings";
 import { createAdminClient } from "./admin-client";
 import { entitlementFor } from "./core/entitlement";
+import { expireGrants } from "./core/grants";
 import { applySubscription } from "./core/ledger";
 import {
   getBillingProvider,
   getBillingProviders,
+  invoicesFor,
   resolveWebProvider,
 } from "./core/providers";
+import { billingTagSettings } from "./core/settings";
 import { siteUrl } from "./core/site";
-import { syncAllBillingTags, syncBillingTags } from "./core/tags";
+import {
+  syncAllBillingTags,
+  syncBillingTags,
+  syncSubjectTags,
+} from "./core/tags";
 import { hasBillingRecord, moveBillingRows } from "./core/users";
+import { staffRoutes } from "./staff";
 
 /* -------------------------------------------------------------------------- */
 /* The core API for payment-provider adapters (`adapter.for: "billing"`).     */
@@ -42,10 +46,14 @@ export * from "./core/types";
 export {
   applySubscription,
   claimWebhookEvent,
+  findCustomerSubject,
   findCustomerUser,
+  findOrgCustomer,
+  findSubjectCustomer,
   findUserCustomer,
   finishWebhookEvent,
   linkCustomer,
+  linkOrgCustomer,
   setBillingEmail,
   subscriptionRow,
   upsertPrice,
@@ -63,16 +71,26 @@ export {
   desiredBillingTags,
   syncAllBillingTags,
   syncBillingTags,
+  syncSubjectTags,
   TAG_DEFAULTS,
 } from "./core/tags";
+export {
+  expireGrants,
+  grantPlan,
+  GRANT_PROVIDER,
+  revokeGrant,
+  workspaceOwnerId,
+} from "./core/grants";
 export type { BillingTagSettings, DesiredTag, TagInput } from "./core/tags";
 export { entitlementFor } from "./core/entitlement";
 export type { ViewerEntitlement } from "./core/entitlement";
 export {
   getBillingProvider,
   getBillingProviders,
+  invoicesFor,
   resolveWebProvider,
 } from "./core/providers";
+export { billingTagSettings } from "./core/settings";
 export { siteUrl } from "./core/site";
 export { createAdminClient } from "./admin-client";
 export { projectSubscriptionToCms } from "../payload/project";
@@ -86,21 +104,6 @@ export class BillingError extends Error {
   ) {
     super(message);
     this.name = "BillingError";
-  }
-}
-
-/** Billing settings → Tags tab (defaults when the CMS is unreachable). */
-export async function billingTagSettings(
-  getPayload: () => Promise<BasePayload>,
-): Promise<BillingTagSettings | null> {
-  try {
-    const s = await getModuleSettings<BillingSettings>(
-      await getPayload(),
-      billingSettings,
-    );
-    return s.tags ?? null;
-  } catch {
-    return null;
   }
 }
 
@@ -119,11 +122,14 @@ export async function recordSubscription(
     const tagSettings = opts.getPayload
       ? await billingTagSettings(opts.getPayload)
       : null;
-    await syncBillingTags(admin, sub.userId, tagSettings).catch(
-      (err: unknown) => {
-        console.warn("[billing] tag sync failed", err);
-      },
-    );
+    // A workspace purchase tags every member; a personal one, the buyer.
+    await syncSubjectTags(
+      admin,
+      sub.orgId ? { orgId: sub.orgId } : { userId: sub.userId },
+      tagSettings,
+    ).catch((err: unknown) => {
+      console.warn("[billing] tag sync failed", err);
+    });
   }
   return applied;
 }
@@ -146,7 +152,31 @@ const checkoutSchema = z.object({
   planId: z.union([z.string(), z.number()]),
   /** A specific provider; default: the first configured web provider. */
   provider: z.string().min(1).optional(),
+  /** Buy for this workspace (the caller must be one of its owners/admins). */
+  orgId: z.uuid().optional(),
 });
+
+/**
+ * Whether the caller administers the workspace (owner/admin) — billing for a
+ * workspace is theirs to buy and manage. Asked as the caller (RLS/RPC).
+ */
+export async function isWorkspaceAdmin(
+  supabase: SupabaseClient<Database>,
+  orgId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc("is_org_admin", { _org: orgId });
+  return !error && data === true;
+}
+
+/** The subject a signed-in request is about: the caller, or a workspace they administer. */
+async function requestSubject(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  orgId: string | null | undefined,
+): Promise<BillingSubject | null> {
+  if (!orgId) return { userId };
+  return (await isWorkspaceAdmin(supabase, orgId)) ? { orgId } : null;
+}
 
 /**
  * Routes billing 1.x served for Stripe (its webhook endpoint and hourly
@@ -172,6 +202,17 @@ export const publicRoutes: ModPublicRouteTable = {
   "POST /checkout": async (req, ctx) => {
     const parsed = checkoutSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) return json(400, { error: "Invalid plan" });
+    const orgId = parsed.data.orgId ?? null;
+    if (orgId) {
+      if (!ctx.user) {
+        return json(401, { error: "Sign in to buy for a workspace" });
+      }
+      if (!(await isWorkspaceAdmin(ctx.supabase, orgId))) {
+        return json(403, {
+          error: "Only workspace owners and admins can buy for it",
+        });
+      }
+    }
     const provider = await resolveWebProvider(parsed.data.provider);
     if (!provider?.createCheckout) {
       return json(503, { error: "Billing not configured" });
@@ -193,6 +234,7 @@ export const publicRoutes: ModPublicRouteTable = {
       const { url } = await provider.createCheckout({
         plan,
         user: ctx.user,
+        orgId,
         origin: siteUrl(),
       });
       return Response.json({ url, provider: provider.id });
@@ -208,11 +250,16 @@ export const publicRoutes: ModPublicRouteTable = {
   "GET /cron/tags": async (req, ctx) => {
     const { isCronRequest } = await import("@acme/mod-kit/cron");
     if (!isCronRequest(req)) return json(401, { error: "Unauthorized" });
-    const synced = await syncAllBillingTags(
-      createAdminClient(),
-      await billingTagSettings(ctx.getPayload),
-    );
-    return Response.json({ synced });
+    const admin = createAdminClient();
+    const settings = await billingTagSettings(ctx.getPayload);
+    // Staff grants whose end date passed stop counting (the view already
+    // ignores them); mark them canceled, then re-derive every tag.
+    const expired = await expireGrants(admin).catch((err: unknown) => {
+      console.warn("[billing] expiring grants failed", err);
+      return [];
+    });
+    const synced = await syncAllBillingTags(admin, settings);
+    return Response.json({ synced, expiredGrants: expired.length });
   },
 
   // Billing 1.x paths (Stripe), forwarded to the Stripe adapter.
@@ -222,15 +269,27 @@ export const publicRoutes: ModPublicRouteTable = {
 
 /** Authed: self-serve management and receipts, across providers. */
 export const routes: ModRouteTable = {
-  /** The customer portal of the provider the user pays through. */
-  "POST /portal": async (_req, ctx) => {
+  /**
+   * The customer portal of the provider the subject pays through. Body
+   * `{ orgId? }`: a workspace's portal (owners/admins only).
+   */
+  "POST /portal": async (req, ctx) => {
+    const body = (await req.json().catch(() => ({}))) as { orgId?: string };
+    const subject = await requestSubject(ctx.supabase, ctx.user.id, body.orgId);
+    if (!subject) return json(403, { error: "Not a workspace admin" });
     const admin = createAdminClient();
-    const { data: links } = await admin
-      .from("mod_billing_customer_links")
-      .select("provider")
-      .eq("user_id", ctx.user.id);
+    const { data: links } =
+      subject.orgId !== undefined
+        ? await admin
+            .from("mod_billing_org_customer_links")
+            .select("provider")
+            .eq("org_id", subject.orgId)
+        : await admin
+            .from("mod_billing_customer_links")
+            .select("provider")
+            .eq("user_id", subject.userId);
     const providers = await getBillingProviders();
-    // The user's own providers first, then any web provider (legacy rows).
+    // The subject's own providers first, then any web provider (legacy rows).
     const mine = new Set((links ?? []).map((l) => l.provider));
     const ordered = [
       ...providers.filter((p) => mine.has(p.id)),
@@ -240,7 +299,7 @@ export const routes: ModRouteTable = {
       if (!p.createPortalSession) continue;
       try {
         const session = await p.createPortalSession({
-          userId: ctx.user.id,
+          subject,
           origin: siteUrl(),
         });
         if (session) return Response.json({ url: session.url, provider: p.id });
@@ -251,25 +310,15 @@ export const routes: ModRouteTable = {
     return json(404, { error: "No billing account" });
   },
 
-  /** Past invoices from every provider, newest first. */
-  "GET /invoices": async (_req, ctx) => {
-    const providers = await getBillingProviders();
-    const lists = await Promise.all(
-      providers.map(async (p) => {
-        if (!p.listInvoices) return [];
-        try {
-          return await p.listInvoices({ userId: ctx.user.id });
-        } catch (err) {
-          console.warn(`[billing] ${p.id} invoices failed`, err);
-          return [];
-        }
-      }),
-    );
-    const invoices: BillingInvoice[] = lists
-      .flat()
-      .sort((a, b) => b.created - a.created);
-    return Response.json({ invoices });
+  /** Past invoices from every provider, newest first (`?org=` for a workspace). */
+  "GET /invoices": async (req, ctx) => {
+    const org = new URL(req.url).searchParams.get("org");
+    const subject = await requestSubject(ctx.supabase, ctx.user.id, org);
+    if (!subject) return json(403, { error: "Not a workspace admin" });
+    return Response.json({ invoices: await invoicesFor(subject) });
   },
+
+  ...staffRoutes,
 };
 
 /* -------------------------------------------------------------------------- */

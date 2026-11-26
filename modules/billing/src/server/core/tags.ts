@@ -185,11 +185,41 @@ async function loadTagInputs(
   admin: AdminClient,
   userId: string,
 ): Promise<TagInput[]> {
-  const { data: subs, error } = await admin
+  // Personal purchases, plus those of every workspace the user belongs to
+  // (a company plan tags all its members). A workspace purchase is counted
+  // through membership only, so a buyer who left the workspace loses it.
+  const cols =
+    "id, status, cancel_at_period_end, kind, store, price_id, provider, current_period_end, org_id";
+  const { data: own, error } = await admin
     .from("mod_billing_subscriptions")
-    .select("status, cancel_at_period_end, kind, store, price_id")
+    .select(cols)
     .eq("user_id", userId);
   if (error) throw new Error(error.message);
+  const { data: memberships } = await admin
+    .from("memberships")
+    .select("org_id")
+    .eq("user_id", userId);
+  const orgIds = (memberships ?? []).map((m) => m.org_id);
+  const { data: orgRows } =
+    orgIds.length > 0
+      ? await admin
+          .from("mod_billing_subscriptions")
+          .select(cols)
+          .in("org_id", orgIds)
+      : { data: [] as typeof own };
+  const now = Date.now();
+  const byId = new Map<string, (typeof own)[number]>();
+  for (const r of [...own.filter((r) => !r.org_id), ...(orgRows ?? [])]) {
+    byId.set(r.id, r);
+  }
+  // A staff grant past its end date no longer counts (the view agrees).
+  const subs = [...byId.values()].map((r) =>
+    r.provider === "manual" &&
+    r.current_period_end &&
+    Date.parse(r.current_period_end) <= now
+      ? { ...r, status: "canceled" }
+      : r,
+  );
   const priceIds = [
     ...new Set(subs.flatMap((s) => (s.price_id ? [s.price_id] : []))),
   ];
@@ -371,24 +401,66 @@ export async function syncAllBillingTags(
 ): Promise<number> {
   const pageSize = opts.pageSize ?? 500;
   const seen = new Set<string>();
+  const orgs = new Set<string>();
+  const sync = async (userId: string) => {
+    if (seen.has(userId)) return;
+    seen.add(userId);
+    try {
+      await syncBillingTags(admin, userId, settings);
+    } catch (err) {
+      console.warn(`[billing] tag sync failed for ${userId}`, err);
+    }
+  };
   for (let from = 0; ; from += pageSize) {
     const { data, error } = await admin
       .from("mod_billing_subscriptions")
-      .select("user_id")
+      .select("user_id, org_id")
       .order("user_id")
       .range(from, from + pageSize - 1);
     if (error) throw new Error(error.message);
-    for (const { user_id } of data) {
-      if (seen.has(user_id)) continue;
-      seen.add(user_id);
-      try {
-        await syncBillingTags(admin, user_id, settings);
-      } catch (err) {
-        console.warn(`[billing] tag sync failed for ${user_id}`, err);
-      }
+    for (const { user_id, org_id } of data) {
+      if (org_id) orgs.add(org_id);
+      await sync(user_id);
       if (opts.maxUsers && seen.size >= opts.maxUsers) return seen.size;
     }
     if (data.length < pageSize) break;
   }
+  // Members of workspaces with a purchase (a company plan tags them all).
+  for (const orgId of orgs) {
+    const { data } = await admin
+      .from("memberships")
+      .select("user_id")
+      .eq("org_id", orgId);
+    for (const { user_id } of data ?? []) {
+      await sync(user_id);
+      if (opts.maxUsers && seen.size >= opts.maxUsers) return seen.size;
+    }
+  }
   return seen.size;
+}
+
+/**
+ * Re-sync the tags of everyone a purchase belongs to: the person, or every
+ * member of the workspace.
+ */
+export async function syncSubjectTags(
+  admin: AdminClient,
+  subject: { userId?: string | null; orgId?: string | null },
+  settings?: BillingTagSettings | null,
+): Promise<void> {
+  let users: string[] = subject.userId ? [subject.userId] : [];
+  if (subject.orgId) {
+    const { data } = await admin
+      .from("memberships")
+      .select("user_id")
+      .eq("org_id", subject.orgId);
+    users = (data ?? []).map((m) => m.user_id);
+  }
+  for (const u of users) {
+    try {
+      await syncBillingTags(admin, u, settings);
+    } catch (err) {
+      console.warn(`[billing] tag sync failed for ${u}`, err);
+    }
+  }
 }

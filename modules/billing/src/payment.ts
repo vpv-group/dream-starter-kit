@@ -56,6 +56,11 @@ export interface PaymentFormProps {
   planId: string | number;
   plan: PaymentPlan;
   /**
+   * Buy for this workspace (company billing) — the buyer is one of its
+   * owners/admins (the server checks again). Omitted: a personal purchase.
+   */
+  orgId?: string | null;
+  /**
    * "paywall": the dark, wallet-first consent + pay screen inside the
    * paywall modal; "checkout": the inline form on /checkout.
    */

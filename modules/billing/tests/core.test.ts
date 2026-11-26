@@ -44,6 +44,9 @@ describe("ledger", () => {
       entitlement: "premium",
       store: "app_store",
       environment: null,
+      org_id: null,
+      granted_by: null,
+      note: null,
     });
   });
 

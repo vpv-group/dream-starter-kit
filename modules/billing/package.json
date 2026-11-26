@@ -1,6 +1,6 @@
 {
   "name": "@acme/mod-billing",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -22,11 +22,13 @@
   },
   "dependencies": {
     "@acme/api": "workspace:*",
+    "@acme/app": "workspace:*",
     "@acme/cms": "workspace:*",
     "@acme/mod-kit": "workspace:*",
     "@acme/ui": "workspace:*",
     "@acme/ui-native": "workspace:*",
     "@supabase/supabase-js": "catalog:",
+    "@tabler/icons-react": "^3.50.0",
     "@tanstack/react-query": "catalog:",
     "expo-router": "~58.0.30",
     "next": "^16.4.5",

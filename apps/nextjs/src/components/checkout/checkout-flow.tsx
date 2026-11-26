@@ -53,6 +53,7 @@ export function CheckoutFlow({
   authSettings,
   appName,
   testimonial,
+  workspace,
 }: {
   planId: string | number;
   plan: ModBillingPlan;
@@ -60,6 +61,8 @@ export function CheckoutFlow({
   authSettings: AuthSettings;
   appName: string;
   testimonial?: CheckoutTestimonialData | null;
+  /** Buying for this workspace (company billing) rather than personally. */
+  workspace?: { id: string; name: string } | null;
 }) {
   const router = useRouter();
   const supabase = useSupabase();
@@ -86,8 +89,12 @@ export function CheckoutFlow({
     annualPlan && canUpsell ? buildUpsellCopy(annualPlan, plan) : null;
 
   const finishToApp = useCallback(() => {
-    router.push("/a?checkout=success");
-  }, [router]);
+    router.push(
+      workspace
+        ? `/billing?account=org:${workspace.id}&checkout=success`
+        : "/a?checkout=success",
+    );
+  }, [router, workspace]);
 
   const onPaid = useCallback((result: PaidResult) => {
     purchaseRef.current = {
@@ -134,6 +141,12 @@ export function CheckoutFlow({
         Subscribe and Save
       </div>
       <h1 className="mb-8 text-center text-3xl font-bold">Checkout</h1>
+      {workspace && (
+        <p className="text-muted-foreground -mt-6 mb-8 text-center text-sm">
+          Billed to the <strong>{workspace.name}</strong> workspace — every
+          member gets the plan.
+        </p>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         {/* LEFT: the two-step accordion (stacks first on mobile). */}
@@ -254,6 +267,7 @@ export function CheckoutFlow({
                 ) : (
                   <CheckoutPayment
                     planId={planId}
+                    orgId={workspace?.id ?? null}
                     plan={plan}
                     copy={copy}
                     onPaid={onPaid}

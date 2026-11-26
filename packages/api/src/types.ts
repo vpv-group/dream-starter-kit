@@ -475,6 +475,41 @@ export type Database = {
           },
         ];
       };
+      mod_billing_org_customer_links: {
+        Row: {
+          billing_email: string | null;
+          created_at: string;
+          org_id: string;
+          provider: string;
+          provider_customer_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          billing_email?: string | null;
+          created_at?: string;
+          org_id: string;
+          provider: string;
+          provider_customer_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          billing_email?: string | null;
+          created_at?: string;
+          org_id?: string;
+          provider?: string;
+          provider_customer_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mod_billing_org_customer_links_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       mod_billing_prices: {
         Row: {
           active: boolean;
@@ -565,8 +600,11 @@ export type Database = {
           current_period_end: string | null;
           entitlement: string;
           environment: string | null;
+          granted_by: string | null;
           id: string;
           kind: string;
+          note: string | null;
+          org_id: string | null;
           plan_id: string | null;
           price_id: string | null;
           provider: string;
@@ -584,8 +622,11 @@ export type Database = {
           current_period_end?: string | null;
           entitlement?: string;
           environment?: string | null;
+          granted_by?: string | null;
           id: string;
           kind?: string;
+          note?: string | null;
+          org_id?: string | null;
           plan_id?: string | null;
           price_id?: string | null;
           provider?: string;
@@ -603,8 +644,11 @@ export type Database = {
           current_period_end?: string | null;
           entitlement?: string;
           environment?: string | null;
+          granted_by?: string | null;
           id?: string;
           kind?: string;
+          note?: string | null;
+          org_id?: string | null;
           plan_id?: string | null;
           price_id?: string | null;
           provider?: string;
@@ -617,6 +661,20 @@ export type Database = {
           user_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "mod_billing_subscriptions_granted_by_fkey";
+            columns: ["granted_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "mod_billing_subscriptions_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "mod_billing_subscriptions_price_id_fkey";
             columns: ["price_id"];
@@ -1311,6 +1369,7 @@ export type Database = {
           entitlement: string | null;
           expires_at: string | null;
           kind: string | null;
+          org_id: string | null;
           plan_id: string | null;
           price_id: string | null;
           provider: string | null;
@@ -1324,6 +1383,7 @@ export type Database = {
           entitlement?: string | null;
           expires_at?: string | null;
           kind?: string | null;
+          org_id?: string | null;
           plan_id?: string | null;
           price_id?: string | null;
           provider?: string | null;
@@ -1337,6 +1397,7 @@ export type Database = {
           entitlement?: string | null;
           expires_at?: string | null;
           kind?: string | null;
+          org_id?: string | null;
           plan_id?: string | null;
           price_id?: string | null;
           provider?: string | null;
@@ -1346,6 +1407,13 @@ export type Database = {
           user_id?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "mod_billing_subscriptions_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "mod_billing_subscriptions_price_id_fkey";
             columns: ["price_id"];

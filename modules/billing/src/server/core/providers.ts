@@ -1,6 +1,6 @@
 import { getModAdapters } from "@acme/mod-kit/server";
 
-import type { BillingProvider } from "./types";
+import type { BillingInvoice, BillingProvider, BillingSubject } from "./types";
 
 /**
  * The installed payment providers (adapter modules with
@@ -39,4 +39,23 @@ export async function resolveWebProvider(
     }
   }
   return null;
+}
+
+/** Every provider's invoices for a subject, newest first. */
+export async function invoicesFor(
+  subject: BillingSubject,
+): Promise<BillingInvoice[]> {
+  const providers = await getBillingProviders();
+  const lists = await Promise.all(
+    providers.map(async (p) => {
+      if (!p.listInvoices) return [];
+      try {
+        return await p.listInvoices({ subject });
+      } catch (err) {
+        console.warn(`[billing] ${p.id} invoices failed`, err);
+        return [];
+      }
+    }),
+  );
+  return lists.flat().sort((a, b) => b.created - a.created);
 }

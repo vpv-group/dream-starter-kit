@@ -2,7 +2,7 @@
   "lockVersion": 1,
   "modules": {
     "billing": {
-      "version": "2.0.0",
+      "version": "2.1.0",
       "kitCompat": ">=2.6.0 <3",
       "source": "local",
       "installedVia": "preinstalled",

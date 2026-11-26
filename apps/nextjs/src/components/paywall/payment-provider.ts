@@ -47,6 +47,7 @@ export interface PaymentPlan {
 export interface PaymentFormProps {
   planId: string | number;
   plan: PaymentPlan;
+  orgId?: string | null;
   variant: "paywall" | "checkout";
   cta: string;
   fineprint: ReactNode;

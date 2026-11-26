@@ -53,13 +53,14 @@ type Confirm = (details?: BuyerDetails) => Promise<void>;
  */
 function useConfirm({
   planId,
+  orgId,
   beforeCreate,
   createPurchase: createOverride,
   onPaid,
   cardEmail,
 }: Pick<
   PaymentFormProps,
-  "planId" | "beforeCreate" | "createPurchase" | "onPaid"
+  "planId" | "orgId" | "beforeCreate" | "createPurchase" | "onPaid"
 > & {
   cardEmail?: string;
 }) {
@@ -87,9 +88,9 @@ function useConfirm({
     let purchase: CreatedPurchase;
     try {
       if (beforeCreate) await beforeCreate().catch(() => undefined);
-      purchase = await (createOverride ?? ((d) => createPurchase(planId, d)))(
-        buyer,
-      );
+      purchase = await (
+        createOverride ?? ((d) => createPurchase(planId, d, orgId))
+      )(buyer);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not start checkout.");
       setBusy(false);
@@ -376,7 +377,13 @@ function CheckoutPayment(props: PaymentFormProps & { wallets: boolean }) {
 /* ------------------------------ hosted checkout ---------------------------- */
 
 /** Staff chose the Stripe-hosted page: one button that redirects there. */
-function HostedCheckout({ planId, cta, variant, fineprint }: PaymentFormProps) {
+function HostedCheckout({
+  planId,
+  orgId,
+  cta,
+  variant,
+  fineprint,
+}: PaymentFormProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function go() {
@@ -386,7 +393,11 @@ function HostedCheckout({ planId, cta, variant, fineprint }: PaymentFormProps) {
       const res = await fetch("/api/mod/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, provider: "stripe" }),
+        body: JSON.stringify({
+          planId,
+          provider: "stripe",
+          ...(orgId ? { orgId } : {}),
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         url?: string;

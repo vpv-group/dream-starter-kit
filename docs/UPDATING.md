@@ -80,6 +80,16 @@ merge still brings `modules/billing-adapter-stripe/` (a new folder), which
 `requires` billing: delete that folder too (like the modify/delete conflicts
 below), then `pnpm mod sync`.
 
+**Also in 2.6 — billing 2.1: workspace plans and staff support.** Expand-only
+migration (`006_workspaces_and_grants`): `org_id`, `granted_by` and `note` on
+purchases, `mod_billing_org_customer_links`, and the entitlements view now
+includes your workspaces' purchases and drops expired staff grants. Nothing to
+do. If custom code reads `mod_billing_entitlements` for **personal** state only,
+filter `org_id is null` (members now also see their workspaces' rows). Custom
+payment providers: `createPortalSession` / `listInvoices` now take
+`{ subject }` (`{ userId }` or `{ orgId }`) instead of `{ userId }`
+(docs/BILLING.md §5.1, §10).
+
 **Removed in 2.4.** Automatic updates no longer use a personal access token
 or repository settings. Once GitHub is connected, delete these if you set
 them; nothing reads them any more:

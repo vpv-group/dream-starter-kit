@@ -229,8 +229,13 @@ module, following the org-scoped pattern already in
 
 ## What's next
 
-- **PR 3 — Workspace billing and module hooks:** workspace-owned Stripe
-  customers and per-seat quantity, `plans.billingUnit`, and the module
-  `scope` / `onboarding` / `onWorkspaceCreated` hooks.
+- **Workspace billing — shipped (billing 2.1):** a workspace can own a plan
+  every member gets, bought by its owners/admins through a workspace-owned
+  Stripe customer; `/billing` has a **Billing account for** switcher, and staff
+  get a read-only support view with no-charge plan grants
+  (docs/BILLING.md §10).
+- **PR 3 — the rest:** per-seat quantity, `plans.billingUnit`, the onboarding
+  `plan` step, and the module `scope` / `onboarding` / `onWorkspaceCreated`
+  hooks.
 - A transactional mailer for invites to existing accounts, and universal
   links for mobile.

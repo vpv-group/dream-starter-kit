@@ -16,6 +16,7 @@ drop function if exists public.mod_billing_set_webhook_secret(text);
 drop table if exists public.mod_billing_managed_tags cascade;
 drop table if exists public.mod_billing_webhook_events cascade;
 drop table if exists public.mod_billing_customer_links cascade;
+drop table if exists public.mod_billing_org_customer_links cascade;
 drop table if exists public.mod_billing_subscriptions cascade;
 drop table if exists public.mod_billing_prices cascade;
 drop table if exists public.mod_billing_products cascade;

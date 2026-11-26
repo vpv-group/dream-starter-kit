@@ -11,13 +11,18 @@ import {
   createAdminClient,
   findUserCustomer,
   findUserIdByEmail,
+  isWorkspaceAdmin,
   linkCustomer,
   recordSubscription,
   siteUrl,
 } from "@acme/mod-billing/server";
 
 import { getStripeOrNull, stripeSettings } from "../stripe/client";
-import { applyCustomerIdentity, resolveCustomer } from "./customers";
+import {
+  applyCustomerIdentity,
+  resolveCustomer,
+  resolveOrgCustomer,
+} from "./customers";
 import { normalizeSubscription } from "./mapping";
 
 /**
@@ -47,6 +52,8 @@ const expressIntentSchema = z.object({
   // charge, which only the payment method carried).
   email: z.string().email().optional(),
   name: z.string().min(1).optional(),
+  /** Buy for this workspace (owners/admins only; signed in). */
+  orgId: z.uuid().optional(),
 });
 
 const upgradeAnnualSchema = z.object({
@@ -95,12 +102,24 @@ export const purchaseRoutes: ModPublicRouteTable = {
     if (!parsed.success) return json(400, { error: "Invalid plan" });
 
     const user = ctx.user;
+    const orgId = parsed.data.orgId ?? null;
+    if (orgId && (!user || !(await isWorkspaceAdmin(ctx.supabase, orgId)))) {
+      return json(403, {
+        error: "Only workspace owners and admins can buy for it",
+      });
+    }
 
     try {
-      const customerId = await resolveCustomer(stripe, ctx.user);
-      const baseMeta: Record<string, string> = user
-        ? { supabase_user_id: user.id }
-        : {};
+      // A workspace pays on its own customer; a person on theirs (or a
+      // guest's fresh one).
+      const customerId =
+        orgId && user
+          ? await resolveOrgCustomer(stripe, orgId, user)
+          : await resolveCustomer(stripe, ctx.user);
+      const baseMeta: Record<string, string> = {
+        ...(user ? { supabase_user_id: user.id } : {}),
+        ...(orgId ? { org_id: orgId } : {}),
+      };
 
       const payload = await ctx.getPayload();
       const plan = await payload

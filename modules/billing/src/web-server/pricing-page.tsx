@@ -174,7 +174,18 @@ function PricingCard({
  * if Payload can't initialize yet, render defaults + an empty plan list instead
  * of failing the request.
  */
-export async function PricingPage() {
+export async function PricingPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ workspace?: string }>;
+} = {}) {
+  // From a workspace's /billing "Upgrade": checkout bills that workspace
+  // (/checkout checks the buyer administers it).
+  const workspace = (await searchParams)?.workspace;
+  const forWorkspace =
+    workspace && /^[0-9a-f-]{36}$/i.test(workspace)
+      ? `&workspace=${encodeURIComponent(workspace)}`
+      : "";
   let pricing: PricingSettingsData = settings.defaults as PricingSettingsData;
   let plans: Plan[] = [];
   try {
@@ -265,7 +276,7 @@ export async function PricingPage() {
               highlighted={Boolean(plan.highlighted)}
               cta={
                 <Link
-                  href={`/checkout?plan=${encodeURIComponent(String(plan.id))}`}
+                  href={`/checkout?plan=${encodeURIComponent(String(plan.id))}${forWorkspace}`}
                   className={buttonVariants({
                     variant: plan.highlighted ? "default" : "outline",
                   })}

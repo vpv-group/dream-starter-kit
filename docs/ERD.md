@@ -245,7 +245,8 @@ erDiagram
 
 - `customer_links` — one customer id per (user, provider) (`mod_billing_customer_links`). Billing 1.x's Stripe-only `mod_billing_customers` is still written for Stripe until a contract release.
 - `products`, `prices` — each provider's catalog, as the provider reports it (`provider` on every row).
-- `subscriptions` — every purchase from every provider: subscriptions and one-time (lifetime) purchases (`kind`), with `provider`, `store`, `plan_id` and `entitlement`. The `mod_billing_entitlements` view (security_invoker, read-own) lists the active rows; it gates premium on web **and** mobile.
+- `subscriptions` — every purchase from every provider: subscriptions and one-time (lifetime) purchases (`kind`), with `provider`, `store`, `plan_id` and `entitlement`. `org_id` (→ `organizations`) makes it a **workspace** purchase every member can read; staff grants are `provider = 'manual'` rows with `granted_by` (→ `profiles`) and `note`. The `mod_billing_entitlements` view (security_invoker: read-own + your workspaces') lists the active rows, minus grants past their end date; it gates premium on web **and** mobile.
+- `org_customer_links` — one customer id per (workspace, provider) (`mod_billing_org_customer_links`); read by the workspace's owners/admins only.
 - `webhook_events` — claimed provider events (idempotency), per provider; `managed_tags` — which `tags` billing keeps in sync (server-only).
 
 **App domain** _(this is your idea — add it)_

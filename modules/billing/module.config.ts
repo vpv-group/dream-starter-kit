@@ -20,7 +20,7 @@ import { defineModule } from "@acme/mod-kit";
 export default defineModule({
   slug: "billing",
   name: "Billing",
-  version: "2.0.0",
+  version: "2.1.0",
   kitCompat: ">=2.6.0 <3",
   description:
     "Plans, purchases and entitlements, with pluggable payment providers.",
@@ -60,6 +60,7 @@ export default defineModule({
     tables: [
       "mod_billing_customers",
       "mod_billing_customer_links",
+      "mod_billing_org_customer_links",
       "mod_billing_webhook_events",
       "mod_billing_products",
       "mod_billing_prices",

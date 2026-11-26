@@ -6,7 +6,8 @@ premium?":
 
 - **`billing`** (`modules/billing`, the core) — provider‑neutral. It owns the plan
   catalog, the purchase ledger, entitlements, billing tags, the CMS subscriptions
-  list, `/pricing` and `/billing`.
+  list, `/pricing` and `/billing` — including **workspace (company) plans** and the
+  **staff support view** (§10).
 - **Payment providers** — adapter modules that plug into billing
   (`adapter: { for: "billing" }`). **`billing-adapter-stripe`** ships preinstalled
   (web checkout; setup in [`docs/STRIPE.md`](STRIPE.md)). An in‑app purchase
@@ -40,15 +41,16 @@ available.
 
 ## 2. The data model (public schema, RLS)
 
-| Table / view                  | What it holds                                                                                                                                                  | Who reads it            |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| `mod_billing_subscriptions`   | Every purchase: subscriptions **and** one‑time (lifetime) purchases. `provider`, `kind`, `plan_id`, `entitlement`, `store`, `environment`, status, period end. | Read‑own                |
-| `mod_billing_entitlements`    | View: the active (`active`/`trialing`) rows, `security_invoker` so the caller's RLS applies.                                                                   | Read‑own (`usePremium`) |
-| `mod_billing_customer_links`  | One customer id per (user, provider), plus a billing email that differs from the login.                                                                        | Read‑own                |
-| `mod_billing_products/prices` | The provider catalog as the provider reports it (`provider` on each row).                                                                                      | Everyone (pricing)      |
-| `mod_billing_webhook_events`  | Claimed provider events (idempotency), per provider; purged after 30 days.                                                                                     | Server only             |
-| `mod_billing_managed_tags`    | Which `public.tags` billing keeps in sync (§4).                                                                                                                | Server only             |
-| `mod_billing_customers`       | Billing 1.x's Stripe‑only customer map. Still written for Stripe; dropped in a later contract release.                                                         | Read‑own                |
+| Table / view                     | What it holds                                                                                                                                                                                                                                 | Who reads it                               |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `mod_billing_subscriptions`      | Every purchase: subscriptions **and** one‑time (lifetime) purchases. `provider`, `kind`, `plan_id`, `entitlement`, `store`, `environment`, status, period end; `org_id` when a workspace owns it, `granted_by`/`note` for staff grants (§10). | Read‑own + your workspaces'                |
+| `mod_billing_entitlements`       | View: the active (`active`/`trialing`) rows, `security_invoker` so the caller's RLS applies. Staff grants past their end date drop out.                                                                                                       | Read‑own + your workspaces' (`usePremium`) |
+| `mod_billing_org_customer_links` | One customer id per (workspace, provider), so a company is billed as itself.                                                                                                                                                                  | Workspace owners/admins                    |
+| `mod_billing_customer_links`     | One customer id per (user, provider), plus a billing email that differs from the login.                                                                                                                                                       | Read‑own                                   |
+| `mod_billing_products/prices`    | The provider catalog as the provider reports it (`provider` on each row).                                                                                                                                                                     | Everyone (pricing)                         |
+| `mod_billing_webhook_events`     | Claimed provider events (idempotency), per provider; purged after 30 days.                                                                                                                                                                    | Server only                                |
+| `mod_billing_managed_tags`       | Which `public.tags` billing keeps in sync (§4).                                                                                                                                                                                               | Server only                                |
+| `mod_billing_customers`          | Billing 1.x's Stripe‑only customer map. Still written for Stripe; dropped in a later contract release.                                                                                                                                        | Read‑own                                   |
 
 Only the service role writes, through billing's core services (the SQL functions
 refuse signed‑in and anonymous callers). Ids are the provider's own and must be unique
@@ -125,9 +127,11 @@ interface BillingProvider {
   label: string;
   platforms: ("web" | "ios" | "android")[];
   isConfigured(): Promise<boolean>;
-  createCheckout?(i: { plan; user; origin }): Promise<{ url: string }>; // hosted checkout
-  createPortalSession?(i: { userId; origin }): Promise<{ url } | null>;
-  listInvoices?(i: { userId }): Promise<BillingInvoice[]>;
+  createCheckout?(i: { plan; user; orgId?; origin }): Promise<{ url: string }>; // hosted checkout
+  // subject = { userId } (personal) or { orgId } (a workspace, §10)
+  createPortalSession?(i: { subject; origin }): Promise<{ url } | null>;
+  listInvoices?(i: { subject }): Promise<BillingInvoice[]>;
+  customerLink?(i: { subject }): Promise<{ customerId; dashboardUrl } | null>; // staff view
   syncPlan?(args): Promise<unknown>; // Payload afterChange args
   syncCoupon?(args): Promise<unknown>;
   onAccountDelete?(i: { userId }): Promise<void>; // cancel before deletion
@@ -149,6 +153,8 @@ own path (`/api/mod/<adapter-slug>/…`).
 | `claimWebhookEvent` / `finishWebhookEvent`                        | Idempotency: claim before side effects, then done or released              |
 | `recordSubscription` (`applySubscription` + tags)                 | Write a purchase (`NormalizedSubscription`) with the provider's event time |
 | `linkCustomer`, `findCustomerUser`, `findUserCustomer`            | The (user, provider) → customer id link                                    |
+| `linkOrgCustomer`, `findCustomerSubject`, `findSubjectCustomer`   | The same for workspaces; resolve a customer id to a user **or** workspace  |
+| `isWorkspaceAdmin`, `workspaceOwnerId`                            | May this session buy for a workspace; who the purchase is attributed to    |
 | `setBillingEmail`                                                 | Keep a differing checkout email                                            |
 | `upsertProduct`, `upsertPrice`                                    | Mirror the provider's catalog                                              |
 | `resolveOrInviteGuest`, `convertOrMergeAnon`                      | Guest buyers and anonymous accounts                                        |
@@ -285,3 +291,49 @@ Billing 2.0 needs kit ≥ 2.6. Everything moves over by itself:
 - If a kit update brings billing 2.0 without the Stripe adapter (e.g. you removed it
   before), checkout answers "Billing not configured" until you
   `pnpm mod add billing-adapter-stripe`.
+
+---
+
+## 10. Workspace billing and staff support
+
+**A workspace (company) can own a plan.** A purchase row with `org_id` set belongs
+to that workspace: RLS lets every member read it, so `usePremium` and premium gating
+work for the whole team, not just the buyer. Someone who leaves the workspace loses
+it. Billing tags are computed from a person's own purchases **and** those of every
+workspace they're in.
+
+- **Buying for a workspace.** Owners and admins pick the workspace in the
+  **Billing account for** switcher on `/billing`; its **Upgrade** goes to
+  `/pricing?workspace=<id>` → `/checkout?plan=…&workspace=<id>`. The checkout page
+  checks the role (`getWorkspaceContext`), `POST /checkout` and the Stripe
+  `express-intent` route check it again (`is_org_admin`). Stripe bills a customer
+  created for the workspace (its name, `metadata.org_id`), linked in
+  `mod_billing_org_customer_links`; subscriptions carry `metadata.org_id`, so the
+  webhook writes `org_id` and attributes the row to the buyer (or the workspace
+  owner).
+- **Managing it.** `POST /portal {orgId}` and `GET /invoices?org=<id>` work for the
+  workspace's owners/admins. Plain members see the plan but not the billing.
+- Per‑seat quantity and `plans.billingUnit` aren't built yet (docs/WORKSPACES.md →
+  What's next).
+
+**Staff support view.** Staff (`profiles.is_staff`) get **Find an account… (staff)**
+in the same switcher: search any person (email, name) or workspace (name, slug) and
+open its billing at `/billing?account=user:<id>` / `org:<id>`. It never changes the
+staff member's own active workspace, and it's **read‑only** for money:
+
+| Staff can                                                                   | Staff can't (do it in the provider's dashboard — linked from the view) |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| See the current plan, every purchase and grant, invoices, provider customer | Change, cancel or refund a paid subscription                           |
+| **Grant** a plan at no charge, optionally until a date, with a note         | Charge the customer                                                    |
+| **Extend** or **revoke** a grant                                            |                                                                        |
+
+A grant is an ordinary ledger row (`provider = 'manual'`, `store = 'promotional'`,
+id `manual:<uuid>`, `granted_by`, `note`), so entitlements, tags and the CMS list
+treat it like any purchase; the member sees it as **Complimentary until …**. It
+stops counting at its end date (the entitlements view checks it), and the daily
+`/cron/tags` sweep marks it canceled and updates tags.
+
+The staff routes (`/api/mod/billing/admin/search|account|grant|revoke`) check
+`is_staff` on every call, read through the service role (staff aren't members of
+the accounts they support) and write every view and change to the audit log
+(`billing.support_view`, `billing.grant_added|grant_changed|grant_revoked`).

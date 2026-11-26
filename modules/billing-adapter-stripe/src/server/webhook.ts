@@ -13,15 +13,17 @@ import {
   claimWebhookEvent,
   convertOrMergeAnon,
   createAdminClient,
-  findCustomerUser,
+  findCustomerSubject,
   finishWebhookEvent,
   linkCustomer,
+  linkOrgCustomer,
   recordSubscription,
   resolveOrInviteGuest,
   setBillingEmail,
   siteUrl,
   upsertPrice,
   upsertProduct,
+  workspaceOwnerId,
 } from "@acme/mod-billing/server";
 
 import { getStripeOrNull } from "../stripe/client";
@@ -33,6 +35,7 @@ import {
   resolveCheckoutCustomer,
   splitBuyerEmails,
   subscriptionCustomerId,
+  subscriptionOrgIdFromMetadata,
   subscriptionUserIdFromMetadata,
 } from "./mapping";
 
@@ -323,7 +326,16 @@ async function applyEvent(
         userId = await convertOrMergeAnon(admin, userId, email);
       }
 
-      if (userId && customerId) {
+      // Bought for a workspace (our checkout stamped it after checking the
+      // buyer is an owner/admin): the customer is the workspace's.
+      const orgId = session.metadata?.org_id ?? null;
+      if (customerId && orgId) {
+        await linkOrgCustomer(admin, {
+          orgId,
+          provider: PROVIDER,
+          customerId,
+        });
+      } else if (userId && customerId) {
         await linkCustomer(admin, {
           userId,
           provider: PROVIDER,
@@ -332,8 +344,8 @@ async function applyEvent(
       }
       // Persist captured identity (name/phone/address, a differing billing
       // email) to profile + customer — after the link above, which holds the
-      // billing email.
-      if (userId) {
+      // billing email. Not for a workspace customer (it isn't the buyer's).
+      if (userId && !orgId) {
         await persistBuyerDetails(
           admin,
           stripe,
@@ -367,6 +379,7 @@ async function applyEvent(
                 session.metadata?.plan_id ?? price.metadata.payloadId ?? null,
               store: "web",
               environment: event.livemode ? "live" : "test",
+              orgId,
             },
             null,
             record,
@@ -413,9 +426,14 @@ async function applyEvent(
         event.data.object,
       );
       const customerId = subscriptionCustomerId(sub);
+      // Whose purchase: the metadata our checkout stamped, else the customer
+      // link (a person's or a workspace's).
+      const linked = await findCustomerSubject(admin, PROVIDER, customerId);
+      const orgId = subscriptionOrgIdFromMetadata(sub) ?? linked?.orgId ?? null;
       let userId =
         subscriptionUserIdFromMetadata(sub) ??
-        (await findCustomerUser(admin, PROVIDER, customerId));
+        linked?.userId ??
+        (orgId ? await workspaceOwnerId(admin, orgId) : null);
       // Guest who paid via the EMBEDDED wallet flow without an anonymous
       // session: no metadata user, no link yet. Match the customer's email to
       // an account (or create one + email an invite), same as guest Checkout.
@@ -452,14 +470,23 @@ async function applyEvent(
       if (userId) {
         // Link the customer so later portal/upgrade calls resolve it
         // (checkout.session.completed isn't fired by the embedded flow).
-        await linkCustomer(admin, {
-          userId,
-          provider: PROVIDER,
-          customerId,
-        });
-        const normalized = normalizeSubscription(sub, userId, {
-          livemode: event.livemode,
-        });
+        if (orgId) {
+          await linkOrgCustomer(admin, {
+            orgId,
+            provider: PROVIDER,
+            customerId,
+          });
+        } else {
+          await linkCustomer(admin, {
+            userId,
+            provider: PROVIDER,
+            customerId,
+          });
+        }
+        const normalized = {
+          ...normalizeSubscription(sub, userId, { livemode: event.livemode }),
+          orgId,
+        };
         const applied = await recordSubscription(
           admin,
           normalized,
@@ -488,7 +515,7 @@ async function applyEvent(
         }
         // Embedded checkout has no checkout.session — capture the buyer's
         // identity from the first charge on creation.
-        if (event.type === "customer.subscription.created") {
+        if (event.type === "customer.subscription.created" && !orgId) {
           // Best-effort enrichment: the subscription is already applied, so
           // a Stripe API hiccup here mustn't fail (and re-deliver) the event.
           await persistFromLatestCharge(

@@ -573,6 +573,14 @@ ships preinstalled. Full reference: **docs/BILLING.md**; Stripe setup: docs/STRI
   **web-only** (golden rule #4); mobile shows a read-only `/pricing` and links out.
 - Self-serve billing lives at `/billing` (plan, change/cancel via the provider's
   portal, invoices from every provider). Free→paid upgrade CTA is on `/a`.
+- **Workspaces can own a plan** (`mod_billing_subscriptions.org_id`; every member
+  is entitled under RLS). `/billing`'s **Billing account for** switcher lists
+  Personal + the workspaces you administer; owners/admins buy for a workspace via
+  `/pricing?workspace=<id>`. **Staff** get "Find an account…" there: a read-only
+  support view of any person/workspace (`?account=user:|org:<id>`) that can only
+  grant/extend/revoke **no-charge** plans (`provider = 'manual'`) — paid
+  subscriptions are changed in the provider's dashboard. Staff routes are
+  `/api/mod/billing/admin/*`, audited (docs/BILLING.md §10).
 - E2E: `tooling/web-e2e/src/subscription.spec.ts` covers the webhook with
   self-signed events (new path + the forwarded 1.x path, billing tags) and (with a
   test-mode `STRIPE_SECRET_KEY`) real Checkout — authenticated + guest — with 4242.

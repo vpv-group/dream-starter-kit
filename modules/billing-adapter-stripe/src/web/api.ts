@@ -31,11 +31,13 @@ async function post<T>(
 export async function createPurchase(
   planId: string | number,
   details?: BuyerDetails,
+  orgId?: string | null,
 ): Promise<CreatedPurchase> {
   const data = await post<Partial<CreatedPurchase>>("/express-intent", {
     planId,
     email: details?.email ?? undefined,
     name: details?.name ?? undefined,
+    ...(orgId ? { orgId } : {}),
   }).catch((err: unknown) => {
     throw err instanceof Error ? err : new Error("Could not start checkout.");
   });

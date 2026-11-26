@@ -10,6 +10,7 @@ import type {
 import {
   BillingError,
   createAdminClient,
+  findSubjectCustomer,
   findUserCustomer,
 } from "@acme/mod-billing/server";
 
@@ -19,7 +20,7 @@ import {
   stripeSettings,
 } from "../stripe/client";
 import { syncCoupon, syncPlan } from "./catalog";
-import { resolveCustomer } from "./customers";
+import { resolveCustomer, resolveOrgCustomer } from "./customers";
 import { legacyRoutes } from "./legacy";
 
 /**
@@ -45,7 +46,7 @@ export const adapter: BillingProvider = {
   },
 
   /** Hosted Stripe Checkout for a plan (guest buyers welcome). */
-  async createCheckout({ plan, user, origin }) {
+  async createCheckout({ plan, user, orgId, origin }) {
     const stripe = await enabledStripe();
     if (!stripe) throw new BillingError(503, "Billing not configured");
     if (!plan.stripePriceId) {
@@ -60,7 +61,12 @@ export const adapter: BillingProvider = {
     // Reuse the signed-in user's Stripe customer (validated + healed if the
     // saved id is stale); guests pass no customer so Checkout collects the
     // email and the webhook creates the account from it.
-    const customerId = await resolveCustomer(stripe, user);
+    // A workspace buys on the workspace's customer (billing checked the buyer
+    // is one of its owners/admins).
+    const customerId =
+      orgId && user
+        ? await resolveOrgCustomer(stripe, orgId, user)
+        : await resolveCustomer(stripe, user);
 
     // An intro offer is auto-applied via its duration:once coupon. Otherwise
     // allow promotion codes when enabled (Stripe forbids combining the two).
@@ -68,6 +74,7 @@ export const adapter: BillingProvider = {
     const metadata: Record<string, string> = {
       plan_id: String(plan.id),
       ...(user ? { supabase_user_id: user.id } : {}),
+      ...(orgId ? { org_id: orgId } : {}),
     };
 
     const params: Stripe.Checkout.SessionCreateParams = {
@@ -112,10 +119,10 @@ export const adapter: BillingProvider = {
   },
 
   /** The Stripe customer portal (change plan, cancel, payment method). */
-  async createPortalSession({ userId, origin }) {
-    const customerId = await findUserCustomer(
+  async createPortalSession({ subject, origin }) {
+    const customerId = await findSubjectCustomer(
       createAdminClient(),
-      userId,
+      subject,
       "stripe",
     );
     if (!customerId) return null;
@@ -128,10 +135,10 @@ export const adapter: BillingProvider = {
     return { url: session.url };
   },
 
-  async listInvoices({ userId }): Promise<BillingInvoice[]> {
-    const customerId = await findUserCustomer(
+  async listInvoices({ subject }): Promise<BillingInvoice[]> {
+    const customerId = await findSubjectCustomer(
       createAdminClient(),
-      userId,
+      subject,
       "stripe",
     );
     if (!customerId) return [];
@@ -152,6 +159,25 @@ export const adapter: BillingProvider = {
       hostedInvoiceUrl: inv.hosted_invoice_url ?? null,
       invoicePdf: inv.invoice_pdf ?? null,
     }));
+  },
+
+  /** For the staff support view: the customer + its Stripe dashboard page. */
+  async customerLink({ subject }) {
+    const customerId = await findSubjectCustomer(
+      createAdminClient(),
+      subject,
+      "stripe",
+    );
+    if (!customerId) return null;
+    const creds = await stripeCredentials();
+    const test =
+      creds.status === "ok" && creds.credentials.livemode === false
+        ? "/test"
+        : "";
+    return {
+      customerId,
+      dashboardUrl: `https://dashboard.stripe.com${test}/customers/${customerId}`,
+    };
   },
 
   syncPlan,

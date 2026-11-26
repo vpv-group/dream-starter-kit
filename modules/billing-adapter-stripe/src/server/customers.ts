@@ -5,9 +5,12 @@ import type Stripe from "stripe";
 
 import {
   createAdminClient,
+  findCustomerSubject,
   findCustomerUser,
+  findOrgCustomer,
   findUserCustomer,
   linkCustomer,
+  linkOrgCustomer,
 } from "@acme/mod-billing/server";
 
 /**
@@ -116,3 +119,36 @@ export async function resolveCustomer(
   }
   return resolved;
 }
+
+/**
+ * The workspace's Stripe customer (company billing), created on first
+ * purchase with the workspace's name and the buyer's email, and linked to the
+ * workspace — never to the buyer personally. A stale stored id is replaced.
+ */
+export async function resolveOrgCustomer(
+  stripe: Stripe,
+  orgId: string,
+  buyer: User,
+): Promise<string> {
+  const admin = createAdminClient();
+  const stored = await findOrgCustomer(admin, orgId, "stripe");
+  if (stored && (await customerExists(stripe, stored))) return stored;
+  const { data: org } = await admin
+    .from("organizations")
+    .select("name")
+    .eq("id", orgId)
+    .maybeSingle();
+  const created = await stripe.customers.create({
+    name: org?.name ?? undefined,
+    email: buyer.email ?? undefined,
+    metadata: { org_id: orgId, supabase_user_id: buyer.id },
+  });
+  await linkOrgCustomer(admin, {
+    orgId,
+    provider: "stripe",
+    customerId: created.id,
+  });
+  return created.id;
+}
+
+export { findCustomerSubject };

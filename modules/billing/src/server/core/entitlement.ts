@@ -29,10 +29,11 @@ export async function entitlementFor(
     const viewer =
       user === undefined ? (await supabase.auth.getUser()).data.user : user;
     if (!viewer || viewer.is_anonymous) return NONE;
+    // RLS (security_invoker view) returns the viewer's own entitlements and
+    // those of every workspace they belong to — a company plan counts.
     const { data, error } = await supabase
       .from("mod_billing_entitlements")
       .select("entitlement")
-      .eq("user_id", viewer.id)
       .eq("entitlement", "premium")
       .limit(1);
     return {
