@@ -958,6 +958,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      mod_notifications_push_tickets: {
+        Row: {
+          created_at: string;
+          id: string;
+          token: string;
+        };
+        Insert: {
+          created_at?: string;
+          id: string;
+          token: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          token?: string;
+        };
+        Relationships: [];
+      };
       mod_notifications_push_tokens: {
         Row: {
           created_at: string;
@@ -1492,6 +1510,10 @@ export type Database = {
       mod_notifications_unread_count: { Args: never; Returns: number };
       mod_notifications_unregister_module: {
         Args: { _module: string };
+        Returns: undefined;
+      };
+      mod_notifications_unregister_push_token: {
+        Args: { _token: string };
         Returns: undefined;
       };
       mod_reminders_claim: {
