@@ -17,6 +17,12 @@ export {
 
 export { useSession, type SessionState } from "./hooks";
 
+export {
+  onBeforeSignOut,
+  runBeforeSignOutHooks,
+  type BeforeSignOutHook,
+} from "./sign-out";
+
 export type {
   Database,
   Json,

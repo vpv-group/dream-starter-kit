@@ -204,7 +204,10 @@ double-send), resolves the audience —
 
 — then fans out **Expo push** (batched ≤100) to `public.mod_notifications_push_tokens`
 and inserts **in-app feed** rows into `public.mod_notifications`, and finally writes back
-`sentAt`/`sentCount`/`status` (`sent`, or `failed` on error).
+`sentAt`/`sentCount`/`status`. A failed send goes back to `scheduled` and is retried by the
+next run; after 5 attempts (`attempts`) it is marked `failed`. Rows stuck in `sending` by a
+crashed run are recovered after 10 minutes, and a separate `push-receipts` job prunes dead
+device tokens from Expo's push receipts (see [`CMS.md` → `notifications`](./CMS.md)).
 
 It runs **in-app** (not an edge function) because it's the one place with both the Payload
 Local API (cms schema) and the service-role client (public schema device tokens + feed).

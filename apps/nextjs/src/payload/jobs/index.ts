@@ -17,8 +17,11 @@ export const coreTasks: TaskConfig[] = [
     slug: "dispatch-notifications",
     label: "Send scheduled notifications",
     // Every minute. A run claims each due notification atomically, so a slow
-    // run overlapping the next one can't send anything twice.
+    // run overlapping the next one can't send anything twice. A failed send
+    // is retried per notification (`attempts`, see runDispatch); these task
+    // retries cover a run that fails as a whole (e.g. the find query).
     schedule: [{ cron: "* * * * *", queue: "default" }],
+    retries: { attempts: 3, backoff: { type: "exponential", delay: 30_000 } },
     handler: async ({ req }) => {
       const [
         { runDispatch },
@@ -34,6 +37,23 @@ export const coreTasks: TaskConfig[] = [
         admin: createAdminClient(),
         claim: (id) => claimScheduledNotification(req.payload, id),
       });
+      return { output: { ...result } };
+    },
+  },
+  {
+    slug: "push-receipts",
+    label: "Check push receipts, prune dead device tokens",
+    // Expo receipts are ready ~15 minutes after a send and kept for 24 hours.
+    // Reads the ticket ids the dispatcher stored, removes tokens whose device
+    // is no longer registered, then deletes the processed tickets.
+    schedule: [{ cron: "*/15 * * * *", queue: "default" }],
+    retries: { attempts: 3, backoff: { type: "exponential", delay: 60_000 } },
+    handler: async () => {
+      const [{ runPushReceipts }, { createAdminClient }] = await Promise.all([
+        import("@acme/mcp"),
+        import("../../lib/supabase/admin"),
+      ]);
+      const result = await runPushReceipts({ admin: createAdminClient() });
       return { output: { ...result } };
     },
   },

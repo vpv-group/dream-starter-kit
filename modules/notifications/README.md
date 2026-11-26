@@ -110,3 +110,23 @@ The client barrel exports `useNotifications`, `useUnreadCount`,
 Remote push needs a dev or standalone build on a physical device. Tapping a
 push opens its `url`: app paths go through the router, and `https` links open
 in the browser.
+
+A device's token is registered to the signed-in user
+(`mod_notifications_register_push_token`) and removed again on sign-out:
+`./native` registers a before-sign-out hook (`onBeforeSignOut` from
+`@acme/api`) that `signOut()` in `@acme/app` runs while the session still
+exists. It calls `mod_notifications_unregister_push_token(token)`, which
+deletes only the caller's own row. The hook is best effort and time-boxed, so
+it never blocks signing out.
+
+## Push delivery and dead tokens
+
+Scheduled staff notifications are sent by the kit's dispatch worker
+(`@acme/mcp`, see docs/CMS.md → `notifications`). After each Expo batch it
+stores the push ticket ids, with the token each went to, in
+`mod_notifications_push_tickets`. That table is server-only: RLS is on and it
+has no policies, so only the service role reaches it. The kit's
+`push-receipts` job reads Expo's receipts about 15 minutes later and deletes
+the tokens of devices that are no longer registered (`DeviceNotRegistered`).
+It then deletes the processed tickets, and tickets older than 24 hours are
+deleted unread. `notify()` doesn't record tickets yet.
