@@ -378,18 +378,21 @@ export type Database = {
       };
       mod_billing_customers: {
         Row: {
+          billing_email: string | null;
           created_at: string;
           id: string;
           stripe_customer_id: string;
           user_id: string;
         };
         Insert: {
+          billing_email?: string | null;
           created_at?: string;
           id?: string;
           stripe_customer_id: string;
           user_id: string;
         };
         Update: {
+          billing_email?: string | null;
           created_at?: string;
           id?: string;
           stripe_customer_id?: string;
@@ -538,18 +541,24 @@ export type Database = {
       };
       mod_billing_webhook_events: {
         Row: {
+          claimed_at: string | null;
           id: string;
           received_at: string;
+          status: string;
           type: string;
         };
         Insert: {
+          claimed_at?: string | null;
           id: string;
           received_at?: string;
+          status?: string;
           type: string;
         };
         Update: {
+          claimed_at?: string | null;
           id?: string;
           received_at?: string;
+          status?: string;
           type?: string;
         };
         Relationships: [];
@@ -1392,6 +1401,10 @@ export type Database = {
       mod_billing_apply_subscription: {
         Args: { _event_at: string; _row: Json };
         Returns: boolean;
+      };
+      mod_billing_claim_webhook_event: {
+        Args: { _id: string; _type: string };
+        Returns: string;
       };
       mod_billing_purge: { Args: never; Returns: number };
       mod_billing_set_webhook_secret: {

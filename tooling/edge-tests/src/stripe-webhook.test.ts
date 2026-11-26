@@ -16,6 +16,7 @@ import {
   mapProduct,
   mapSubscription,
   resolveCheckoutCustomer,
+  splitBuyerEmails,
   subscriptionCustomerId,
   subscriptionUserIdFromMetadata,
 } from "../../../modules/billing/src/server/stripe/mapping";
@@ -200,5 +201,32 @@ describe("subscription helpers", () => {
     expect(row.price_id).toBeNull();
     expect(row.quantity).toBeNull();
     expect(row.current_period_end).toBeNull();
+  });
+});
+
+describe("splitBuyerEmails", () => {
+  it("pins the customer to the account email and keeps a differing wallet email as the billing email", () => {
+    expect(splitBuyerEmails("me@example.com", "wallet@icloud.com")).toEqual({
+      customerEmail: "me@example.com",
+      billingEmail: "wallet@icloud.com",
+    });
+  });
+
+  it("clears the billing email when the wallet email matches (case-insensitive)", () => {
+    expect(splitBuyerEmails("Me@Example.com", " me@example.COM ")).toEqual({
+      customerEmail: "Me@Example.com",
+      billingEmail: null,
+    });
+  });
+
+  it("re-pins the customer email but leaves the billing email when no wallet email was captured", () => {
+    expect(splitBuyerEmails("me@example.com", null)).toEqual({
+      customerEmail: "me@example.com",
+    });
+  });
+
+  it("changes nothing when the account email is unknown", () => {
+    expect(splitBuyerEmails(null, "wallet@icloud.com")).toEqual({});
+    expect(splitBuyerEmails("  ", "wallet@icloud.com")).toEqual({});
   });
 });

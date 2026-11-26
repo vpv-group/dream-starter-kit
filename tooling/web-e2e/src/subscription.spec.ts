@@ -14,7 +14,8 @@ import { FOUNDER_STORAGE_STATE } from "./helpers/founder";
  *    STRIPE_WEBHOOK_SECRET (the same HMAC scheme `stripe listen` uses), so it
  *    runs with NO Stripe account — CI sets a throwaway secret. Also pins the
  *    security posture: bad signatures are rejected, a replayed event is not
- *    applied twice, an OLDER event can't roll a subscription back, the REST
+ *    applied twice (nor are two concurrent deliveries of it), an OLDER event
+ *    can't roll a subscription back, the REST
  *    proxy is off, and the collection's access control holds.
  *
  * 2. "stripe checkout (test mode)" — real Stripe Checkout subscription
@@ -167,6 +168,41 @@ test.describe("subscriptions webhook", () => {
     const again = await postEvent(event);
     expect(again.status).toBe(200);
     expect(JSON.parse(again.body)).toMatchObject({ duplicate: true });
+  });
+
+  test("concurrent deliveries of one event are applied once", async () => {
+    const subId = `sub_e2e_concurrent_${Date.now()}`;
+    const userId = await founderUserId();
+    const event = subscriptionEvent(subId, {
+      userId,
+      eventId: `evt_e2e_concurrent_${Date.now()}`,
+    });
+    const isDuplicate = (r: { status: number; body: string }) => {
+      if (r.status !== 200) return false;
+      try {
+        return (
+          (JSON.parse(r.body) as { duplicate?: boolean }).duplicate === true
+        );
+      } catch {
+        return false;
+      }
+    };
+    // Stripe redelivers while the first attempt is still running: the event
+    // is claimed before any side effect, so only one delivery applies it.
+    const results = await Promise.all([postEvent(event), postEvent(event)]);
+    const applied = results.filter((r) => r.status === 200 && !isDuplicate(r));
+    expect(applied).toHaveLength(1);
+    // The other one saw the claim (409 → Stripe retries later) or, if it
+    // arrived after the first finished, the handled event.
+    const other = results.find((r) => r !== applied[0]);
+    expect(other && (other.status === 409 || isDuplicate(other))).toBe(true);
+    // Stripe's retry afterwards is acknowledged as a duplicate.
+    expect(isDuplicate(await postEvent(event))).toBe(true);
+    await expect
+      .poll(async () => (await cmsSubscription(subId)).totalDocs, {
+        timeout: 20_000,
+      })
+      .toBe(1);
   });
 
   test("an older event arriving late doesn't roll the subscription back", async () => {
