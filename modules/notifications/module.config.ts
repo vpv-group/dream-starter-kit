@@ -16,7 +16,7 @@ import { defineModule } from "@acme/mod-kit";
 export default defineModule({
   slug: "notifications",
   name: "Notifications",
-  version: "1.3.1",
+  version: "1.4.0",
   kitCompat: ">=2.3.0 <3",
   description:
     "In-app notification feed and Expo push delivery — the shared service other modules build on.",
@@ -50,6 +50,7 @@ export default defineModule({
     tables: [
       "mod_notifications",
       "mod_notifications_push_tokens",
+      "mod_notifications_push_tickets",
       "mod_notifications_categories",
     ],
   },

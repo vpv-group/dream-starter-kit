@@ -416,10 +416,11 @@ here.)
 `channel[]`_ (`push`/`email`/`sms`/`in_app`), `smsBody` (≤160), `audience`\*
 (`all`/`segment`/`users`) → `segment`/`targetUsers`, `scheduledAt`, read-only
 `sentAt`/`sentCount`/`openCount`, `status`
-(`draft`/`scheduled`/`sending`/`sent`/`failed`). **Access:** all `isStaff`.
-Trash. **Delivery:** a `scheduled` notification whose `scheduledAt` has passed is
-sent by the `dispatch-notifications` Payload job (`payload/jobs`, scheduled every
-minute; Supabase Cron runs the Jobs Queue). `POST /api/cms/notifications/dispatch`
+(`draft`/`scheduled`/`sending`/`sent`/`failed`), read-only `attempts`.
+**Access:** all `isStaff`. Trash. **Delivery:** a `scheduled` notification whose
+`scheduledAt` has passed is sent by the `dispatch-notifications` Payload job
+(`payload/jobs`, scheduled every minute with 3 task retries, exponential backoff;
+Supabase Cron runs the Jobs Queue). `POST /api/cms/notifications/dispatch`
 (cron-secret-guarded) runs the same worker on demand. Each due notification is
 claimed atomically, so overlapping runs never send twice; in-app rows go in with
 one set-based, idempotent RPC (`mod_notifications_broadcast`) and push tokens are
@@ -431,6 +432,29 @@ in-app feed rows (`public.mod_notifications`), then writes back
 (`dispatch/run-dispatch.ts`); staff can author/schedule these from the MCP too
 (`notify_schedule`). Edge-function delivery is not used (the worker needs both
 the Payload Local API and the service-role `public` client).
+
+**Retries and recovery.** A failed send increments `attempts` and puts the
+notification back to `scheduled`, so the next run (a minute later) tries again;
+after 5 attempts it is marked `failed`. Setting a `failed` notification back to
+`scheduled` in /admin resets `attempts` to 0. A notification left in `sending`
+by a run that crashed mid-send is taken over once its `updatedAt` is 10 minutes
+old (the claim — `lib/cms/claim-notification.ts` — accepts those rows too), and
+the crashed run counts as an attempt. In-app rows never duplicate on a retry;
+push is at-least-once, so a retry can re-push devices the failed attempt
+already reached.
+
+**Push receipts.** After each Expo batch the worker stores the returned push
+ticket ids (with the token each went to; no message content) in the
+server-only `public.mod_notifications_push_tickets` (RLS on, no policies), and
+removes tokens Expo already reports as `DeviceNotRegistered`. The
+`push-receipts` Payload job (every 15 minutes, `dispatch/push-receipts.ts` in
+`@acme/mcp`) fetches the receipts of tickets older than 15 minutes
+(`/push/getReceipts`, ≤1000 ids per request), deletes the tokens whose receipt
+is `DeviceNotRegistered` (unless the device registered again since), then
+deletes the processed tickets. Tickets older than 24 hours are deleted unread,
+since Expo keeps receipts for 24 hours. On sign-out the mobile app unregisters
+its token (`mod_notifications_unregister_push_token`), so a shared device stops
+receiving the previous account's pushes.
 
 ### `forms` + `form-submissions` (plugin)
 

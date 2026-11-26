@@ -692,6 +692,34 @@ describe("RLS: MCP OAuth tables are server-only (deny-all)", () => {
   });
 });
 
+describe("RLS: push tickets are server-only (deny-all)", () => {
+  // mod_notifications_push_tickets (notifications 007) has RLS enabled with
+  // NO policies: only the service role (the dispatcher and the push-receipts
+  // job) reads or writes it. Untyped clients: the table may predate the
+  // regenerated Database type.
+  const TABLE = "mod_notifications_push_tickets";
+
+  it("anonymous and authenticated users read nothing and cannot insert", async () => {
+    const anon = createClient(SUPABASE_URL, ANON_KEY, noPersist);
+    const { data: anonRows } = await anon.from(TABLE).select("*");
+    expect(anonRows ?? []).toHaveLength(0);
+
+    const authed = clientA as unknown as SupabaseClient;
+    const { data: rows } = await authed.from(TABLE).select("*");
+    expect(rows ?? []).toHaveLength(0);
+    const { error } = await authed
+      .from(TABLE)
+      .insert({ id: `evil_${stamp}`, token: "ExponentPushToken[evil]" });
+    expect(error).not.toBeNull();
+  });
+
+  it("the service role reaches it", async () => {
+    const svc = admin as unknown as SupabaseClient;
+    const { error } = await svc.from(TABLE).select("id").limit(1);
+    expect(error).toBeNull();
+  });
+});
+
 describe("RLS: content_favorites are owner-scoped (across collections)", () => {
   it("A can read A's own favorite", async () => {
     const { data, error } = await clientA

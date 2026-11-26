@@ -1,6 +1,7 @@
 import type { Provider, Session, User } from "@supabase/supabase-js";
 
 import type { AppSupabaseClient } from "@acme/api";
+import { runBeforeSignOutHooks } from "@acme/api";
 
 import type { SignInInput, SignUpInput } from "./validators/auth";
 
@@ -315,6 +316,9 @@ export function accountErrorMessage(error: unknown, fallback: string): string {
 }
 
 export async function signOut(client: AppSupabaseClient): Promise<void> {
+  // Session-scoped cleanup registered by modules (e.g. unregistering this
+  // device's push token) — best effort and time-boxed, never blocks sign-out.
+  await runBeforeSignOutHooks(client).catch(() => undefined);
   const { error } = await client.auth.signOut();
   if (!error) return;
   // A failed GLOBAL revoke (network blip / 5xx) leaves the LOCAL session fully

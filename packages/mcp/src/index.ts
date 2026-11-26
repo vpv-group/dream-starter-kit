@@ -54,3 +54,8 @@ export { MCP_COLLECTIONS } from "./tools/registry";
 // --- Notifications dispatch worker --------------------------------------------
 export { runDispatch } from "./dispatch/run-dispatch";
 export type { DispatchDeps, DispatchResult } from "./dispatch/run-dispatch";
+export { runPushReceipts } from "./dispatch/push-receipts";
+export type {
+  PushReceiptsDeps,
+  PushReceiptsResult,
+} from "./dispatch/push-receipts";
