@@ -97,6 +97,9 @@ pnpm lint               # eslint across the workspace <- run before commit
 pnpm format:fix         # prettier write
 
 # Local stack (one bootstrap for laptops, cloud sessions and CI — tooling/setup)
+npx create-dream-app my-app  # new app from the newest kit release, history
+                        #   kept + `upstream` remote, then dev:setup
+                        #   (tooling/create-dream-app, published to npm)
 pnpm dev:setup          # Supabase + .env + db reset (first run) + dev admin
                         #   (admin@dream.test, password in .dream/dev-admin.json)
                         #   (first /admin visit seeds the CMS). --reset,
