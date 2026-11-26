@@ -22,7 +22,7 @@ const opts = (fetchImpl: ReturnType<typeof fake>) => ({
   fetchImpl: fetchImpl as unknown as typeof fetch,
 });
 
-describe("Dream Updates client", () => {
+describe("Meet Dream AI client", () => {
   it("reads the connection and settings with the site key", async () => {
     const fetcher = fake(200, {
       connections: { source: { provider: "github", repo: "acme/app" } },
@@ -107,7 +107,7 @@ describe("Dream Updates client", () => {
       await connectUrl(
         opts(
           fake(200, {
-            url: "https://github.com/apps/dream-updates/installations/new?state=s",
+            url: "https://github.com/apps/meet-dream-ai/installations/new?state=s",
           }),
         ),
         "github",
@@ -115,7 +115,7 @@ describe("Dream Updates client", () => {
       ),
     ).toEqual({
       status: "ok",
-      url: "https://github.com/apps/dream-updates/installations/new?state=s",
+      url: "https://github.com/apps/meet-dream-ai/installations/new?state=s",
     });
   });
 });

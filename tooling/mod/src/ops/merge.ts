@@ -1,5 +1,11 @@
 import type { MergeDecision, PrFacts } from "./decide-merge";
-import type { CheckRun, GitHubClient, PrFile, PullRequest } from "./github";
+import type {
+  CheckRun,
+  CommitStatus,
+  GitHubClient,
+  PrFile,
+  PullRequest,
+} from "./github";
 import type { PrMeta } from "./pr-meta";
 import type { ReportEvent } from "./report";
 import type { OpsSession } from "./session";
@@ -59,15 +65,26 @@ const FAILED_CONCLUSIONS = new Set([
   "stale",
 ]);
 
-/** Check runs → the counts decideMerge needs (skipped/neutral count as passed). */
-export function summarizeChecks(runs: CheckRun[]) {
+/**
+ * Check runs and commit statuses → the counts decideMerge needs. Skipped and
+ * neutral runs count as passed; a status is pending, success, or failed
+ * (failure/error). Vercel reports as a commit status, so both are read.
+ */
+export function summarizeChecks(
+  runs: CheckRun[],
+  statuses: CommitStatus[] = [],
+) {
   let pending = 0;
   let failed = 0;
   for (const run of runs) {
     if (run.status !== "completed") pending++;
     else if (run.conclusion && FAILED_CONCLUSIONS.has(run.conclusion)) failed++;
   }
-  return { total: runs.length, pending, failed };
+  for (const status of statuses) {
+    if (status.state === "pending") pending++;
+    else if (status.state === "failure" || status.state === "error") failed++;
+  }
+  return { total: runs.length + statuses.length, pending, failed };
 }
 
 const MIGRATION_FILE =
@@ -148,16 +165,17 @@ export async function runMerge(deps: MergeDeps): Promise<PrOutcome[]> {
     if (!meta) continue;
     // The list endpoint doesn't compute mergeability; the single PR does.
     const pr = await gh.getPull(listed.number);
-    const [files, runs] = await Promise.all([
+    const [files, runs, statuses] = await Promise.all([
       gh.listFiles(pr.number),
       gh.listCheckRuns(pr.headSha),
+      gh.listStatuses(pr.headSha),
     ]);
     const facts = prFacts(pr, meta, files);
     if (meta.op === "remove" && !facts.labels.includes(REMOVE_LABEL)) {
       facts.labels.push(REMOVE_LABEL);
     }
     if (deps.approvePr === pr.number) facts.labels.push(APPROVED_LABEL);
-    const checks = summarizeChecks(runs);
+    const checks = summarizeChecks(runs, statuses);
     const decision = decideMerge(
       facts,
       checks,

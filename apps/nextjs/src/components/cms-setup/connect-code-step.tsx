@@ -27,7 +27,7 @@ const POINTS = [
   },
 ];
 
-/** Founder step: connect the app's GitHub repository (Dream Updates App). */
+/** Founder step: connect the app's GitHub repository (Meet Dream AI App). */
 export function ConnectCodeStep({
   branding,
   position,

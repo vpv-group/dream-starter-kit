@@ -569,7 +569,7 @@ with the kit, so the cardinal rule is: keep the merge commits, never squash them
   (`path/** merge=ours`) + `git config merge.ours.driver true` (per-clone, not
   committed). `merge=ours` doesn't cover modify/delete — re-delete those.
 - **Automatic kit-update PRs:** once GitHub is connected in /admin → Updates
-  (the Dream Updates GitHub App; the workflow signs in with its Actions OIDC
+  (the Meet Dream AI GitHub App; the workflow signs in with its Actions OIDC
   token, no stored secret), the `kit-update` job in `module-ops.yml` does
   this routine daily, merging the kit's newest published release tag
   (attestation verified), never `main`, into one `dream/kit-update-*` PR.

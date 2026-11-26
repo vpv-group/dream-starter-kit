@@ -8,7 +8,7 @@ import { forgetGithubToken, siteGithubToken } from "./updates";
  * Shared plumbing for the /api/modules/* admin routes (docs/
  * MODULES-PLAN.md §6): staff/admin gating via the caller's Supabase
  * session + profile, and the GitHub client for module-ops.yml, signed in
- * through Dream Updates (updates.ts) — no personal token anywhere.
+ * through Meet Dream AI (updates.ts) — no personal token anywhere.
  * The deployed app can't run git/pnpm, so every mutation dispatches the
  * workflow, which runs the real CLI and opens a PR.
  */
@@ -41,7 +41,7 @@ export async function requireAdmin(): Promise<
 }
 
 /**
- * Is GitHub connected (the Dream Updates App, /admin → Updates)? Without
+ * Is GitHub connected (the Meet Dream AI App, /admin → Updates)? Without
  * it nothing runs: no update PRs, no installs from /admin.
  */
 export async function githubConnected(): Promise<boolean> {
@@ -64,7 +64,7 @@ export const PAID_MODULES_DISABLED = {
 
 /**
  * The GitHub REST API for the connected repository, with the short-lived
- * Dream Updates token (it can start module-ops.yml and read PRs and runs,
+ * Meet Dream AI token (it can start module-ops.yml and read PRs and runs,
  * never push code). 503 with a reason when GitHub isn't connected.
  */
 export async function githubApi(

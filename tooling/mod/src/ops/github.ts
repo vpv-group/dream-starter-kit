@@ -1,6 +1,6 @@
 /**
  * The few GitHub REST calls the update ops make (module-ops.yml), with the
- * short-lived Dream Updates token from `ops/session`. Injected fetch, so the
+ * short-lived Meet Dream AI token from `ops/session`. Injected fetch, so the
  * merge logic is tested against a fake API (merge.test.ts).
  */
 
@@ -30,11 +30,22 @@ export interface CheckRun {
   conclusion: string | null;
 }
 
+/**
+ * A commit status (the older API). Vercel and many CI tools report here
+ * instead of as check runs, so "all checks passed" must read both.
+ */
+export interface CommitStatus {
+  context: string;
+  state: string;
+}
+
 export interface GitHubClient {
   listOpenPulls(): Promise<PullRequest[]>;
   getPull(number: number): Promise<PullRequest>;
   listFiles(number: number): Promise<PrFile[]>;
   listCheckRuns(sha: string): Promise<CheckRun[]>;
+  /** The latest status per context for `sha` (GET …/commits/{sha}/status). */
+  listStatuses(sha: string): Promise<CommitStatus[]>;
   merge(
     number: number,
     method: "merge" | "squash",
@@ -137,6 +148,12 @@ export function githubClient(opts: {
     },
     async listCheckRuns(sha) {
       return await paged<CheckRun>(`/commits/${sha}/check-runs`, "check_runs");
+    },
+    async listStatuses(sha) {
+      const res = await call<{ statuses?: CommitStatus[] }>(
+        `/commits/${sha}/status?per_page=100`,
+      );
+      return res.statuses ?? [];
     },
     async merge(number, method, sha) {
       try {
