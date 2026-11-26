@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { CheckRun, GitHubClient, PrFile, PullRequest } from "./github";
+import type {
+  CheckRun,
+  CommitStatus,
+  GitHubClient,
+  PrFile,
+  PullRequest,
+} from "./github";
 import type { PrMeta } from "./pr-meta";
 import type { OpsSession } from "./session";
 import {
@@ -44,6 +50,7 @@ interface FakePr {
   labels?: string[];
   mergeableState?: string;
   checks?: CheckRun[];
+  statuses?: CommitStatus[];
   files?: PrFile[];
   createdAt?: string;
 }
@@ -83,6 +90,10 @@ function fakeGitHub(prs: FakePr[]) {
     listCheckRuns: (sha) =>
       Promise.resolve(
         prs.find((x) => `sha${x.number}` === sha)?.checks ?? GREEN,
+      ),
+    listStatuses: (sha) =>
+      Promise.resolve(
+        prs.find((x) => `sha${x.number}` === sha)?.statuses ?? [],
       ),
     merge: (n, method) => {
       merged.push({ number: n, method });
@@ -280,6 +291,39 @@ describe("runMerge", () => {
       session({ site: { canary: true } }),
     );
     expect(canary.merged).toHaveLength(1);
+  });
+
+  it("reads commit statuses too (Vercel reports there)", async () => {
+    const pending = await run([
+      {
+        number: 1,
+        meta: moduleUpdate(),
+        statuses: [{ context: "Vercel", state: "pending" }],
+      },
+    ]);
+    expect(pending.outcomes[0]?.decision).toEqual({
+      action: "wait",
+      reason: "checks-pending",
+    });
+    const failed = await run([
+      {
+        number: 1,
+        meta: moduleUpdate(),
+        statuses: [{ context: "Vercel", state: "failure" }],
+      },
+    ]);
+    expect(failed.outcomes[0]?.decision).toEqual({
+      action: "review",
+      reason: "checks-failed",
+    });
+    const green = await run([
+      {
+        number: 1,
+        meta: moduleUpdate(),
+        statuses: [{ context: "Vercel", state: "success" }],
+      },
+    ]);
+    expect(green.merged).toHaveLength(1);
   });
 
   it("waits for a required review instead of bypassing branch protection", async () => {

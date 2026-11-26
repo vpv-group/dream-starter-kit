@@ -105,7 +105,7 @@ export const env = createEnv({
     VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
     // Dream module registry (docs/MODULES.md → Paid modules). Installs and
     // updates authenticate with this site's own license key (the dream-site
-    // global) and the Dream Updates GitHub App: no tokens in env.
+    // global) and the Meet Dream AI GitHub App: no tokens in env.
     DREAM_REGISTRY_URL: z.url().default(DREAM_REGISTRY_DEFAULT_URL),
     // GitHub REST base for /admin's update calls. Only E2E changes it (a
     // stub server, tooling/web-e2e/stub-services.mjs).

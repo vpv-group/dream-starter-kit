@@ -5,7 +5,7 @@
 # module-ops.yml and answers with a one-hour token for this repo only, plus
 # the owner's settings from /admin → Updates.
 name: Dream session
-description: Install the workspace and open a Dream Updates session.
+description: Install the workspace and open a Meet Dream AI session.
 outputs:
   connected:
     description: "true when GitHub is connected for this repo in /admin"

@@ -14,7 +14,7 @@ import {
 } from "./updates-core";
 
 /**
- * App wiring for Dream Updates (updates-core.ts has the protocol). The site
+ * App wiring for Meet Dream AI (updates-core.ts has the protocol). The site
  * key lives in the admin-only `dream-site` global and never reaches the
  * browser; /admin talks to staff-gated routes that call these.
  */

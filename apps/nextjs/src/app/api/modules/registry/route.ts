@@ -11,7 +11,7 @@ import { modInstalled } from "~/mod/registry.data.generated";
  * Install state for the Modules screen (/admin/collections/kit-modules): the BUNDLED lock (readable on
  * serverless; a deploy containing a new version is the honest "Active"
  * signal), the generated registry, the Dream catalog URL, and whether GitHub
- * is connected (installs open PRs through Dream Updates). Staff-gated.
+ * is connected (installs open PRs through Meet Dream AI). Staff-gated.
  */
 export async function GET() {
   const gate = await requireAdmin();

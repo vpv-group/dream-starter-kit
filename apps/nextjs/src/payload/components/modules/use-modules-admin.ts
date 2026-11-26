@@ -31,7 +31,7 @@ export interface RegistryResponse {
       { version: string; source: unknown; pinned?: boolean }
     >;
   };
-  /** GitHub connected through Dream Updates (/admin → Updates)? */
+  /** GitHub connected through Meet Dream AI (/admin → Updates)? */
   githubConnected: boolean;
   /** Paid modules install through a PR, so they need GitHub connected. */
   paidModulesEnabled: boolean;
