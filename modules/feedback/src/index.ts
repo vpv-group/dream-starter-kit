@@ -5,6 +5,7 @@
  */
 export * from "./shared/config";
 export * from "./shared/tones";
+export * from "./shared/score";
 export * from "./validators";
 export * from "./data";
 export * from "./hooks/use-feedback";

@@ -39,6 +39,13 @@ export default defineModule({
       { path: "", component: "FeedbackAdminPage" },
       {
         path: "",
+        component: "RoadmapPage",
+        area: "public",
+        mount: "/roadmap",
+        rsc: true,
+      },
+      {
+        path: "",
         component: "FeedbackIndexPage",
         area: "public",
         mount: "/feedback",
@@ -91,8 +98,15 @@ export default defineModule({
       "mod_feedback_status_changes",
       "mod_feedback_reactions",
       "mod_feedback_activity",
+      "mod_feedback_idea_stages",
+      "mod_feedback_ideas",
     ],
-    dml: ["mod_notifications", "mod_notifications_push_tokens"],
+    dml: [
+      "mod_notifications",
+      "mod_notifications_push_tokens",
+      "tags",
+      "user_tags",
+    ],
   },
   cms: {
     collections: ["mod-feedback-boards"],

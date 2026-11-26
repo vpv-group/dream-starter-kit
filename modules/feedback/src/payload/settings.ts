@@ -1,11 +1,17 @@
 import { defineModuleSettings } from "@acme/mod-kit/payload";
 
 import type { StatusType, Tone } from "../shared/config";
+import type { ScoreFactor } from "../shared/score";
 import {
   DEFAULT_STATUSES,
   STATUS_TYPES,
   VOTE_MILESTONES,
 } from "../shared/config";
+import {
+  DEFAULT_IDEA_STAGES,
+  DEFAULT_SCORE_FACTORS,
+  FACTOR_SCALES,
+} from "../shared/score";
 import { keyField, toneField, uniqueKeys } from "./fields";
 import { syncSettingsAfterChange } from "./hooks/sync-config";
 
@@ -205,6 +211,203 @@ export const settings = defineModuleSettings({
           ],
         },
         {
+          label: "Ideas & Roadmap",
+          description:
+            "Ideas are the team's internal roadmap (/a/feedback → Ideas). Each stage moves the posts linked to an idea to a portal status — Canny's status mapping.",
+          fields: [
+            {
+              name: "ideaStages",
+              label: "Idea stages",
+              type: "array",
+              minRows: 2,
+              labels: { singular: "Stage", plural: "Stages" },
+              defaultValue: DEFAULT_IDEA_STAGES.map((s) => ({ ...s })),
+              admin: {
+                description:
+                  "Drag to reorder. New ideas start in the first stage. Several stages may map to one status.",
+              },
+              validate: (rows: unknown, { data }: { data: unknown }) => {
+                const unique = uniqueKeys("stages")(rows);
+                if (unique !== true) return unique;
+                const statusKeys = new Set(
+                  ((data as { statuses?: StatusSetting[] }).statuses ?? []).map(
+                    (st) => st.key ?? "",
+                  ),
+                );
+                for (const row of (rows ?? []) as {
+                  name?: string;
+                  portalStatus?: string | null;
+                }[]) {
+                  if (row.portalStatus && !statusKeys.has(row.portalStatus)) {
+                    return `Stage "${row.name ?? "?"}" maps to an unknown status "${row.portalStatus}". Use a status key from the Statuses tab.`;
+                  }
+                }
+                return true;
+              },
+              fields: [
+                {
+                  type: "row",
+                  fields: [
+                    {
+                      name: "name",
+                      type: "text",
+                      required: true,
+                      admin: { width: "25%" },
+                    },
+                    keyField("name"),
+                    {
+                      name: "type",
+                      type: "select",
+                      required: true,
+                      defaultValue: "active",
+                      options: STATUS_TYPES.map((t) => ({
+                        label: t.charAt(0).toUpperCase() + t.slice(1),
+                        value: t,
+                      })),
+                      admin: { width: "25%" },
+                    },
+                    toneField("tone", "info"),
+                  ],
+                },
+                {
+                  type: "row",
+                  fields: [
+                    {
+                      name: "portalStatus",
+                      label: "Portal status",
+                      type: "text",
+                      admin: {
+                        width: "50%",
+                        description:
+                          "Status key linked posts move to (e.g. planned). Empty = leave posts alone.",
+                      },
+                    },
+                    {
+                      name: "notifyVoters",
+                      label: "Notify voters?",
+                      type: "checkbox",
+                      defaultValue: true,
+                      admin: { width: "50%" },
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              name: "scoreFactors",
+              label: "Score factors",
+              type: "array",
+              labels: { singular: "Factor", plural: "Factors" },
+              defaultValue: DEFAULT_SCORE_FACTORS.map((f) => ({ ...f })),
+              validate: uniqueKeys("factors"),
+              admin: {
+                description:
+                  "Score = Σ(weight × value) of impact factors ÷ Σ(weight × value) of effort factors. Weight 0 shows a factor without counting it.",
+              },
+              fields: [
+                {
+                  type: "row",
+                  fields: [
+                    {
+                      name: "name",
+                      type: "text",
+                      required: true,
+                      admin: { width: "25%" },
+                    },
+                    keyField("name"),
+                    {
+                      name: "kind",
+                      type: "select",
+                      required: true,
+                      defaultValue: "impact",
+                      options: [
+                        { label: "Impact", value: "impact" },
+                        { label: "Effort", value: "effort" },
+                      ],
+                      admin: { width: "25%" },
+                    },
+                    {
+                      name: "weight",
+                      type: "number",
+                      required: true,
+                      min: 0,
+                      defaultValue: 1,
+                      admin: { width: "25%" },
+                    },
+                  ],
+                },
+                {
+                  type: "row",
+                  fields: [
+                    {
+                      name: "source",
+                      type: "select",
+                      required: true,
+                      defaultValue: "manual",
+                      options: [
+                        { label: "Set by staff", value: "manual" },
+                        { label: "Number of voters", value: "votes" },
+                        {
+                          label:
+                            "Vote priority (must 3 · important 2 · nice 1)",
+                          value: "priority",
+                        },
+                        {
+                          label: "Voters with these user tags",
+                          value: "tagVoters",
+                        },
+                      ],
+                      admin: { width: "50%" },
+                    },
+                    {
+                      name: "scale",
+                      type: "select",
+                      required: true,
+                      defaultValue: "0-10",
+                      options: FACTOR_SCALES.map((sc) => ({
+                        label: sc,
+                        value: sc,
+                      })),
+                      admin: {
+                        width: "50%",
+                        condition: (_, sibling) => sibling.source === "manual",
+                      },
+                    },
+                  ],
+                },
+                {
+                  name: "tags",
+                  label: "User tags",
+                  type: "text",
+                  hasMany: true,
+                  admin: {
+                    condition: (_, sibling) => sibling.source === "tagVoters",
+                    description:
+                      "e.g. your paid plan names (billing tags voters by plan).",
+                  },
+                },
+              ],
+            },
+            {
+              type: "row",
+              fields: [
+                {
+                  name: "etaPublicByDefault",
+                  label: "Show ETAs publicly by default",
+                  type: "checkbox",
+                  defaultValue: false,
+                },
+                {
+                  name: "votePriorities",
+                  label: "Ask for a priority when voting on someone's behalf",
+                  type: "checkbox",
+                  defaultValue: true,
+                },
+              ],
+            },
+          ],
+        },
+        {
           label: "Tags",
           description:
             "Staff-only tags for sorting posts. Drag to reorder. Tags are shared by all boards.",
@@ -354,7 +557,20 @@ export interface TagSetting {
   tone?: Tone | null;
 }
 
+export interface IdeaStageSetting {
+  key?: string | null;
+  name: string;
+  type: StatusType;
+  tone?: Tone | null;
+  portalStatus?: string | null;
+  notifyVoters?: boolean | null;
+}
+
 export interface FeedbackSettings extends Record<string, unknown> {
+  ideaStages: IdeaStageSetting[];
+  scoreFactors: ScoreFactor[];
+  etaPublicByDefault?: boolean | null;
+  votePriorities?: boolean | null;
   portalTabs: PortalTabSetting[];
   portalTitle?: string | null;
   feedbackIntro?: string | null;

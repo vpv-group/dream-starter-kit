@@ -102,7 +102,10 @@ export const modulesLock = {
         "apps/nextjs/src/app/(frontend)/(public)/feedback/layout.tsx",
         "apps/nextjs/src/app/(frontend)/(public)/feedback/page.tsx",
         "apps/nextjs/src/app/(frontend)/(public)/feedback/search/page.tsx",
-        "apps/nextjs/src/payload/migrations/20261126_201522_mod_feedback_initial.ts"
+        "apps/nextjs/src/app/(frontend)/(public)/roadmap/layout.tsx",
+        "apps/nextjs/src/app/(frontend)/(public)/roadmap/page.tsx",
+        "apps/nextjs/src/payload/migrations/20261126_201522_mod_feedback_initial.ts",
+        "apps/nextjs/src/payload/migrations/20261126_203722_mod_feedback_ideas.ts"
       ],
       "edgeFunctions": []
     },

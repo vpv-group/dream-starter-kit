@@ -7,9 +7,11 @@ import { useSupabase } from "@acme/api";
 import { ensureAnonSession } from "@acme/app";
 
 import type { Sort } from "../shared/config";
+import type { ScoreFactor } from "../shared/score";
 import type {
   CommentInput,
   CreatePostInput,
+  IdeaUpdateInput,
   PostUpdateInput,
   StatusChangeInput,
 } from "../validators";
@@ -20,6 +22,7 @@ import {
   isStaffViewer,
   listBoards,
   listPosts,
+  listRoadmapPosts,
   listStatuses,
 } from "../data";
 
@@ -521,5 +524,152 @@ export function useResyncConfig(apiBaseUrl = "") {
         { body: {}, apiBaseUrl },
       ),
     onSuccess: () => invalidateAll(qc),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Ideas (staff)
+// ---------------------------------------------------------------------------
+
+export interface StaffIdea {
+  id: string;
+  title: string;
+  description: string;
+  stage_id: string | null;
+  owner_id: string | null;
+  eta: string | null;
+  eta_public: boolean;
+  factor_values: Record<string, number | boolean | null>;
+  vote_total: number;
+  sync_locked: boolean;
+  archived: boolean;
+  stage_changed_at: string;
+  created_at: string;
+  linked_posts: number;
+}
+
+export interface IdeaStage {
+  id: string;
+  name: string;
+  type: string;
+  tone: string;
+  portal_status_id: string | null;
+  notify_voters: boolean;
+  position: number;
+}
+
+export interface IdeasPayload {
+  ideas: StaffIdea[];
+  stages: IdeaStage[];
+  factors: ScoreFactor[];
+  stats: {
+    idea_id: string;
+    voters: number;
+    must: number;
+    important: number;
+    nice: number;
+    tags: Record<string, number>;
+  }[];
+}
+
+export function useStaffIdeas(apiBaseUrl = "") {
+  const supabase = useSupabase();
+  return useQuery({
+    queryKey: [...feedbackKeys.staff(), "ideas"],
+    queryFn: () =>
+      feedbackApi<IdeasPayload>(supabase, "/staff/ideas", { apiBaseUrl }),
+  });
+}
+
+export function useIdea(id: string | null, apiBaseUrl = "") {
+  const supabase = useSupabase();
+  return useQuery({
+    queryKey: [...feedbackKeys.staff(), "idea", id],
+    enabled: Boolean(id),
+    queryFn: () =>
+      feedbackApi<{
+        idea: StaffIdea;
+        posts: {
+          id: string;
+          title: string;
+          slug: string;
+          board_id: string;
+          status_id: string | null;
+          vote_count: number;
+          comment_count: number;
+        }[];
+      }>(supabase, `/staff/idea?id=${encodeURIComponent(id ?? "")}`, {
+        apiBaseUrl,
+      }),
+  });
+}
+
+export function useCreateIdea(apiBaseUrl = "") {
+  const supabase = useSupabase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: {
+      title: string;
+      description?: string;
+      stageId?: string | null;
+      fromPostId?: string | null;
+    }) =>
+      feedbackApi<{ idea: StaffIdea }>(supabase, "/staff/ideas", {
+        body: args,
+        apiBaseUrl,
+      }),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
+export function useUpdateIdea(apiBaseUrl = "") {
+  const supabase = useSupabase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: IdeaUpdateInput) =>
+      feedbackApi(supabase, "/staff/ideas/update", { body: args, apiBaseUrl }),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
+export function useSetIdeaStage(apiBaseUrl = "") {
+  const supabase = useSupabase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: {
+      ideaId: string;
+      stageId: string;
+      message?: string | null;
+      notify?: boolean;
+    }) =>
+      feedbackApi<{ moved: number; notified: number }>(
+        supabase,
+        "/staff/ideas/stage",
+        {
+          body: args,
+          apiBaseUrl,
+        },
+      ),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
+export function useLinkPost(apiBaseUrl = "") {
+  const supabase = useSupabase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { postId: string; ideaId: string | null }) =>
+      feedbackApi(supabase, "/staff/link", { body: args, apiBaseUrl }),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
+/** Posts in roadmap statuses (public roadmap; native + widgets). */
+export function useRoadmapPosts(statusIds: string[], boardIds?: string[]) {
+  const supabase = useSupabase();
+  return useQuery({
+    queryKey: ["feedback", "roadmap", statusIds, boardIds ?? null],
+    enabled: statusIds.length > 0,
+    queryFn: () => listRoadmapPosts(supabase, statusIds, boardIds),
   });
 }

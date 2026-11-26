@@ -103,3 +103,41 @@ export const listQuery = z.object({
   q: z.string().trim().max(200).optional(),
   page: z.coerce.number().int().min(0).max(1000).default(0),
 });
+
+export const ideaCreateInput = z.object({
+  title: z.string().trim().min(3).max(400),
+  description: z.string().trim().max(20000).default(""),
+  stageId: z.string().min(1).nullish(),
+  fromPostId: z.uuid().nullish(),
+});
+
+export const ideaUpdateInput = z.object({
+  ideaId: z.uuid(),
+  title: z.string().trim().min(3).max(400).optional(),
+  description: z.string().trim().max(20000).optional(),
+  ownerId: z.uuid().nullable().optional(),
+  eta: z
+    .string()
+    .regex(/^\d{4}-\d{2}(-\d{2})?$/)
+    .nullable()
+    .optional(),
+  etaPublic: z.boolean().optional(),
+  factorValues: z
+    .record(z.string(), z.union([z.number(), z.boolean(), z.null()]))
+    .optional(),
+  syncLocked: z.boolean().optional(),
+  archived: z.boolean().optional(),
+});
+export type IdeaUpdateInput = z.input<typeof ideaUpdateInput>;
+
+export const ideaStageInput = z.object({
+  ideaId: z.uuid(),
+  stageId: z.string().min(1),
+  message: z.string().trim().max(5000).nullish(),
+  notify: z.boolean().default(true),
+});
+
+export const linkPostInput = z.object({
+  postId: z.uuid(),
+  ideaId: z.uuid().nullable(),
+});

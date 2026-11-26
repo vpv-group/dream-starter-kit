@@ -4,8 +4,14 @@ import { getModuleSettings } from "@acme/mod-kit/payload";
 
 import type { FeedbackSettings } from "../payload/settings";
 import { settings } from "../payload/settings";
+import { DEFAULT_IDEA_STAGES } from "../shared/score";
 import { createAdminClient } from "./admin-client";
-import { writeAllBoards, writeStatuses, writeTags } from "./config-sync";
+import {
+  writeAllBoards,
+  writeIdeaStages,
+  writeStatuses,
+  writeTags,
+} from "./config-sync";
 
 /**
  * Re-copy ALL feedback config from Payload into Supabase (boards, categories,
@@ -29,6 +35,12 @@ export async function syncAllConfig(payload: BasePayload): Promise<{
     overrideAccess: true,
   });
   await writeStatuses(db, s.statuses);
+  // Installs whose settings were saved before stages existed get the defaults.
+  await writeIdeaStages(
+    db,
+    s.ideaStages.length ? s.ideaStages : DEFAULT_IDEA_STAGES,
+    s.statuses,
+  );
   await writeTags(db, s.tags);
   await writeAllBoards(db, boards.docs);
   return {
@@ -48,7 +60,10 @@ export async function ensureConfigSynced(
   const { count } = await db
     .from("mod_feedback_statuses")
     .select("id", { count: "exact", head: true });
-  if ((count ?? 0) > 0) return;
+  const { count: stages } = await db
+    .from("mod_feedback_idea_stages")
+    .select("id", { count: "exact", head: true });
+  if ((count ?? 0) > 0 && (stages ?? 0) > 0) return;
   ensuring ??= getPayload()
     .then(syncAllConfig)
     .finally(() => {

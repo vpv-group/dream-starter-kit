@@ -5,13 +5,19 @@ import type {
   PayloadRequest,
 } from "payload";
 
-import type { BoardDoc, StatusInput } from "../../server/config-sync";
+import type {
+  BoardDoc,
+  IdeaStageInput,
+  StatusInput,
+} from "../../server/config-sync";
 import { createAdminClient } from "../../server/admin-client";
 import {
   writeAllBoards,
+  writeIdeaStages,
   writeStatuses,
   writeTags,
 } from "../../server/config-sync";
+import { DEFAULT_IDEA_STAGES } from "../../shared/score";
 
 /**
  * Copy Payload config into Supabase after every save (see
@@ -66,11 +72,19 @@ export const syncSettingsAfterChange: GlobalAfterChangeHook = async ({
 }) => {
   const settings = doc as {
     statuses?: StatusInput[];
+    ideaStages?: IdeaStageInput[];
     tags?: { key?: string | null; name: string }[];
   };
   try {
     const db = createAdminClient();
-    if (settings.statuses?.length) await writeStatuses(db, settings.statuses);
+    if (settings.statuses?.length) {
+      await writeStatuses(db, settings.statuses);
+      await writeIdeaStages(
+        db,
+        settings.ideaStages?.length ? settings.ideaStages : DEFAULT_IDEA_STAGES,
+        settings.statuses,
+      );
+    }
     await writeTags(db, settings.tags ?? []);
   } catch (err) {
     req.payload.logger.error(

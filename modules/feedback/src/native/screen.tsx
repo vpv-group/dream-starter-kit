@@ -24,6 +24,7 @@ import {
   useFeedbackConfig,
   useMyVotes,
   usePostFeed,
+  useRoadmapPosts,
   useVote,
 } from "../hooks/use-feedback";
 import { TONE_PILL, toneOf } from "../shared/tones";
@@ -50,6 +51,7 @@ export function FeedbackScreen() {
   const [boardId, setBoardId] = useState<string | null>(null);
   const [sort, setSort] = useState<Sort>("trending");
   const [view, setView] = useState<View_>({ name: "list" });
+  const [section, setSection] = useState<"roadmap" | "feedback">("feedback");
   const boards = useMemo(
     () => (config.data?.boards ?? []).filter((b) => b.show_on_portal_home),
     [config.data],
@@ -93,9 +95,50 @@ export function FeedbackScreen() {
     );
   }
 
+  const segments = (
+    <View className="flex-row gap-1 px-4 pt-3">
+      {(["roadmap", "feedback"] as const).map((s) => (
+        <Pressable
+          key={s}
+          onPress={() => setSection(s)}
+          className={cn(
+            "flex-1 items-center rounded-md py-2",
+            section === s ? "bg-primary" : "bg-muted",
+          )}
+        >
+          <Text
+            className={cn(
+              "text-sm font-semibold",
+              section === s
+                ? "text-primary-foreground"
+                : "text-muted-foreground",
+            )}
+          >
+            {s === "roadmap" ? "Roadmap" : "Feedback"}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+
+  if (section === "roadmap") {
+    return (
+      <View className="bg-background flex-1">
+        <Stack.Screen options={{ title: config.data?.title ?? "Feedback" }} />
+        {segments}
+        <NativeRoadmap
+          statuses={config.data?.statuses ?? []}
+          boards={boards}
+          onOpen={(post) => setView({ name: "post", post })}
+        />
+      </View>
+    );
+  }
+
   return (
     <View className="bg-background flex-1">
       <Stack.Screen options={{ title: config.data?.title ?? "Feedback" }} />
+      {segments}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -162,6 +205,76 @@ export function FeedbackScreen() {
         onOpen={(post) => setView({ name: "post", post })}
       />
     </View>
+  );
+}
+
+/** Roadmap: one section per roadmap status, newest status change first. */
+function NativeRoadmap({
+  statuses,
+  boards,
+  onOpen,
+}: {
+  statuses: {
+    id: string;
+    name: string;
+    tone: string;
+    show_on_roadmap: boolean;
+  }[];
+  boards: { id: string; name: string }[];
+  onOpen: (p: Post) => void;
+}) {
+  const columns = statuses.filter((s) => s.show_on_roadmap);
+  const posts = useRoadmapPosts(
+    columns.map((c) => c.id),
+    boards.map((b) => b.id),
+  );
+  const boardName = new Map(boards.map((b) => [b.id, b.name]));
+  return (
+    <ScrollView contentContainerClassName="gap-4 p-4">
+      {columns.map((col) => {
+        const items = (posts.data ?? []).filter((p) => p.status_id === col.id);
+        return (
+          <View
+            key={col.id}
+            className="border-border gap-2 rounded-lg border p-3"
+          >
+            <Text
+              className={cn(
+                "self-start rounded-full px-2 py-0.5 text-xs font-semibold",
+                TONE_PILL[toneOf(col.tone)],
+              )}
+            >
+              {col.name}
+            </Text>
+            {items.length === 0 ? (
+              <Text className="text-muted-foreground text-sm">
+                Nothing here yet.
+              </Text>
+            ) : (
+              items.map((p) => (
+                <Pressable
+                  key={p.id}
+                  onPress={() => onOpen(p)}
+                  className="flex-row gap-3 py-1.5"
+                >
+                  <View className="border-border h-10 w-9 items-center justify-center rounded-md border">
+                    <Text className="text-xs font-semibold">
+                      {p.vote_count}
+                    </Text>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-sm font-medium">{p.title}</Text>
+                    <Text className="text-muted-foreground text-xs uppercase">
+                      {boardName.get(p.board_id) ?? ""}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))
+            )}
+          </View>
+        );
+      })}
+    </ScrollView>
   );
 }
 

@@ -1,5 +1,10 @@
 import "server-only";
 
+import { ideaRoutes } from "./idea-routes";
+import { staffRoutes } from "./staff-routes";
+
 export { publicRoutes } from "./public-routes";
-export { staffRoutes as routes } from "./staff-routes";
 export { syncAllConfig } from "./full-sync";
+
+/** Authed (non-anonymous) routes: staff triage + ideas. */
+export const routes = { ...staffRoutes, ...ideaRoutes };

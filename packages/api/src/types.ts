@@ -1075,6 +1075,123 @@ export type Database = {
           },
         ];
       };
+      mod_feedback_idea_stages: {
+        Row: {
+          archived: boolean;
+          id: string;
+          name: string;
+          notify_voters: boolean;
+          portal_status_id: string | null;
+          position: number;
+          tone: string;
+          type: string;
+        };
+        Insert: {
+          archived?: boolean;
+          id: string;
+          name: string;
+          notify_voters?: boolean;
+          portal_status_id?: string | null;
+          position?: number;
+          tone?: string;
+          type: string;
+        };
+        Update: {
+          archived?: boolean;
+          id?: string;
+          name?: string;
+          notify_voters?: boolean;
+          portal_status_id?: string | null;
+          position?: number;
+          tone?: string;
+          type?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mod_feedback_idea_stages_portal_status_id_fkey";
+            columns: ["portal_status_id"];
+            isOneToOne: false;
+            referencedRelation: "mod_feedback_statuses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      mod_feedback_ideas: {
+        Row: {
+          archived: boolean;
+          created_at: string;
+          created_by: string | null;
+          description: string;
+          eta: string | null;
+          eta_public: boolean;
+          factor_values: Json;
+          id: string;
+          owner_id: string | null;
+          stage_changed_at: string;
+          stage_id: string | null;
+          sync_locked: boolean;
+          title: string;
+          updated_at: string;
+          vote_total: number;
+        };
+        Insert: {
+          archived?: boolean;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string;
+          eta?: string | null;
+          eta_public?: boolean;
+          factor_values?: Json;
+          id?: string;
+          owner_id?: string | null;
+          stage_changed_at?: string;
+          stage_id?: string | null;
+          sync_locked?: boolean;
+          title: string;
+          updated_at?: string;
+          vote_total?: number;
+        };
+        Update: {
+          archived?: boolean;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string;
+          eta?: string | null;
+          eta_public?: boolean;
+          factor_values?: Json;
+          id?: string;
+          owner_id?: string | null;
+          stage_changed_at?: string;
+          stage_id?: string | null;
+          sync_locked?: boolean;
+          title?: string;
+          updated_at?: string;
+          vote_total?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mod_feedback_ideas_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "mod_feedback_ideas_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "mod_feedback_ideas_stage_id_fkey";
+            columns: ["stage_id"];
+            isOneToOne: false;
+            referencedRelation: "mod_feedback_idea_stages";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       mod_feedback_post_tags: {
         Row: {
           post_id: string;
@@ -1120,6 +1237,7 @@ export type Database = {
           eta: string | null;
           eta_public: boolean;
           id: string;
+          idea_id: string | null;
           merged_into_id: string | null;
           owner_id: string | null;
           pinned: boolean;
@@ -1149,6 +1267,7 @@ export type Database = {
           eta?: string | null;
           eta_public?: boolean;
           id?: string;
+          idea_id?: string | null;
           merged_into_id?: string | null;
           owner_id?: string | null;
           pinned?: boolean;
@@ -1178,6 +1297,7 @@ export type Database = {
           eta?: string | null;
           eta_public?: boolean;
           id?: string;
+          idea_id?: string | null;
           merged_into_id?: string | null;
           owner_id?: string | null;
           pinned?: boolean;
@@ -1213,6 +1333,13 @@ export type Database = {
             columns: ["category_id"];
             isOneToOne: false;
             referencedRelation: "mod_feedback_categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "mod_feedback_posts_idea_id_fkey";
+            columns: ["idea_id"];
+            isOneToOne: false;
+            referencedRelation: "mod_feedback_ideas";
             referencedColumns: ["id"];
           },
           {
@@ -2091,9 +2218,24 @@ export type Database = {
           post_count: number;
         }[];
       };
+      mod_feedback_idea_voter_stats: {
+        Args: { _ideas: string[] };
+        Returns: {
+          idea_id: string;
+          important: number;
+          must: number;
+          nice: number;
+          tags: Json;
+          voters: number;
+        }[];
+      };
       mod_feedback_is_anon: { Args: never; Returns: boolean };
       mod_feedback_is_service: { Args: never; Returns: boolean };
       mod_feedback_is_staff: { Args: never; Returns: boolean };
+      mod_feedback_link_post: {
+        Args: { _idea?: string; _post: string };
+        Returns: string;
+      };
       mod_feedback_list_posts: {
         Args: {
           _board?: string;
@@ -2117,6 +2259,7 @@ export type Database = {
           eta: string | null;
           eta_public: boolean;
           id: string;
+          idea_id: string | null;
           merged_into_id: string | null;
           owner_id: string | null;
           pinned: boolean;
@@ -2176,6 +2319,21 @@ export type Database = {
       };
       mod_feedback_readable_board_ids: { Args: never; Returns: string[] };
       mod_feedback_require_staff: { Args: never; Returns: undefined };
+      mod_feedback_set_idea_stage: {
+        Args: {
+          _actor?: string;
+          _idea: string;
+          _message?: string;
+          _notify?: boolean;
+          _origin?: string;
+          _stage: string;
+        };
+        Returns: {
+          change_id: string;
+          notified: boolean;
+          post_id: string;
+        }[];
+      };
       mod_feedback_set_status: {
         Args: {
           _actor?: string;

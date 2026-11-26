@@ -3052,6 +3052,60 @@ export interface KitModule {
      * Posts in an Active status longer than this show as stale in the staff Inbox.
      */
     staleAfterWeeks?: number | null;
+    /**
+     * Drag to reorder. New ideas start in the first stage. Several stages may map to one status.
+     */
+    ideaStages?:
+      | {
+          name: string;
+          /**
+           * Set automatically from the name; never changes.
+           */
+          key?: string | null;
+          type: "open" | "active" | "complete" | "closed";
+          tone?:
+            ("neutral" | "info" | "warning" | "success" | "destructive") | null;
+          /**
+           * Status key linked posts move to (e.g. planned). Empty = leave posts alone.
+           */
+          portalStatus?: string | null;
+          notifyVoters?: boolean | null;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Score = Σ(weight × value) of impact factors ÷ Σ(weight × value) of effort factors. Weight 0 shows a factor without counting it.
+     */
+    scoreFactors?:
+      | {
+          name: string;
+          /**
+           * Set automatically from the name; never changes.
+           */
+          key?: string | null;
+          kind: "impact" | "effort";
+          weight: number;
+          source: "manual" | "votes" | "priority" | "tagVoters";
+          scale?:
+            | (
+                | "0-10"
+                | "0-100"
+                | "fibonacci"
+                | "stars"
+                | "checkbox"
+                | "percentage"
+                | "number"
+              )
+            | null;
+          /**
+           * e.g. your paid plan names (billing tags voters by plan).
+           */
+          tags?: string[] | null;
+          id?: string | null;
+        }[]
+      | null;
+    etaPublicByDefault?: boolean | null;
+    votePriorities?: boolean | null;
     tags?:
       | {
           name: string;
@@ -4952,6 +5006,31 @@ export interface KitModulesSelect<T extends boolean = true> {
               id?: T;
             };
         staleAfterWeeks?: T;
+        ideaStages?:
+          | T
+          | {
+              name?: T;
+              key?: T;
+              type?: T;
+              tone?: T;
+              portalStatus?: T;
+              notifyVoters?: T;
+              id?: T;
+            };
+        scoreFactors?:
+          | T
+          | {
+              name?: T;
+              key?: T;
+              kind?: T;
+              weight?: T;
+              source?: T;
+              scale?: T;
+              tags?: T;
+              id?: T;
+            };
+        etaPublicByDefault?: T;
+        votePriorities?: T;
         tags?:
           | T
           | {
@@ -6367,6 +6446,60 @@ export interface ModFeedbackSetting {
    * Posts in an Active status longer than this show as stale in the staff Inbox.
    */
   staleAfterWeeks?: number | null;
+  /**
+   * Drag to reorder. New ideas start in the first stage. Several stages may map to one status.
+   */
+  ideaStages?:
+    | {
+        name: string;
+        /**
+         * Set automatically from the name; never changes.
+         */
+        key?: string | null;
+        type: "open" | "active" | "complete" | "closed";
+        tone?:
+          ("neutral" | "info" | "warning" | "success" | "destructive") | null;
+        /**
+         * Status key linked posts move to (e.g. planned). Empty = leave posts alone.
+         */
+        portalStatus?: string | null;
+        notifyVoters?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Score = Σ(weight × value) of impact factors ÷ Σ(weight × value) of effort factors. Weight 0 shows a factor without counting it.
+   */
+  scoreFactors?:
+    | {
+        name: string;
+        /**
+         * Set automatically from the name; never changes.
+         */
+        key?: string | null;
+        kind: "impact" | "effort";
+        weight: number;
+        source: "manual" | "votes" | "priority" | "tagVoters";
+        scale?:
+          | (
+              | "0-10"
+              | "0-100"
+              | "fibonacci"
+              | "stars"
+              | "checkbox"
+              | "percentage"
+              | "number"
+            )
+          | null;
+        /**
+         * e.g. your paid plan names (billing tags voters by plan).
+         */
+        tags?: string[] | null;
+        id?: string | null;
+      }[]
+    | null;
+  etaPublicByDefault?: boolean | null;
+  votePriorities?: boolean | null;
   tags?:
     | {
         name: string;
@@ -6880,6 +7013,31 @@ export interface ModFeedbackSettingsSelect<T extends boolean = true> {
         id?: T;
       };
   staleAfterWeeks?: T;
+  ideaStages?:
+    | T
+    | {
+        name?: T;
+        key?: T;
+        type?: T;
+        tone?: T;
+        portalStatus?: T;
+        notifyVoters?: T;
+        id?: T;
+      };
+  scoreFactors?:
+    | T
+    | {
+        name?: T;
+        key?: T;
+        kind?: T;
+        weight?: T;
+        source?: T;
+        scale?: T;
+        tags?: T;
+        id?: T;
+      };
+  etaPublicByDefault?: T;
+  votePriorities?: T;
   tags?:
     | T
     | {

@@ -104,6 +104,16 @@ export async function FeedbackPostPage({
         : Promise.resolve({ data: [] as { tag_id: string }[] }),
     ]);
 
+  const idea =
+    staff && post.idea_id
+      ? (
+          await db
+            .from("mod_feedback_ideas")
+            .select("id, title")
+            .eq("id", post.idea_id)
+            .maybeSingle()
+        ).data
+      : null;
   const status = post.status_id
     ? portal.statuses.find((s) => s.id === post.status_id)
     : undefined;
@@ -158,6 +168,8 @@ export async function FeedbackPostPage({
     approvalState: post.approval_state,
     tagIds: (postTags.data ?? []).map((t) => t.tag_id),
     voteCount: post.vote_count,
+    ideaId: post.idea_id,
+    ideaTitle: idea?.title ?? null,
   };
   const category = categories.find((c) => c.id === post.category_id);
 

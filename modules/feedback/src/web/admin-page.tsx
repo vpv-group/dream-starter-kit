@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CheckIcon,
   ExternalLinkIcon,
@@ -49,12 +50,14 @@ import {
   useIsFeedbackStaff,
   useResyncConfig,
   useSetStatus,
+  useStaffIdeas,
   useStaffInbox,
   useStaffPosts,
   useStatuses,
   useUpdatePost,
 } from "../hooks/use-feedback";
 import { toneOf } from "../shared/tones";
+import { IdeaSheet, IdeasTab, RoadmapBoard } from "./ideas";
 
 const dateFmt = new Intl.DateTimeFormat(undefined, {
   month: "short",
@@ -69,6 +72,18 @@ const dateFmt = new Intl.DateTimeFormat(undefined, {
 export function FeedbackAdminPage() {
   const staff = useIsFeedbackStaff();
   const resync = useResyncConfig();
+  const ideas = useStaffIdeas();
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const openIdea = params.get("idea");
+  const tab = params.get("tab") ?? (openIdea ? "ideas" : "inbox");
+  const setParam = (key: string, value: string | null) => {
+    const next = new URLSearchParams(params.toString());
+    if (value) next.set(key, value);
+    else next.delete(key);
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+  };
 
   if (staff.isLoading) {
     return (
@@ -135,11 +150,26 @@ export function FeedbackAdminPage() {
           </Button>
         </div>
       </header>
-      <Tabs defaultValue="inbox">
+      <Tabs value={tab} onValueChange={(v) => setParam("tab", v)}>
         <TabsList variant="line">
           <TabsTrigger value="inbox">Inbox</TabsTrigger>
+          <TabsTrigger value="ideas">Ideas</TabsTrigger>
+          <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
           <TabsTrigger value="posts">Posts</TabsTrigger>
         </TabsList>
+        <TabsContent value="ideas" className="pt-4">
+          <IdeasTab
+            data={ideas.data}
+            loading={ideas.isLoading}
+            onOpen={(id) => setParam("idea", id)}
+          />
+        </TabsContent>
+        <TabsContent value="roadmap" className="pt-4">
+          <RoadmapBoard
+            data={ideas.data}
+            onOpen={(id) => setParam("idea", id)}
+          />
+        </TabsContent>
         <TabsContent value="inbox" className="pt-4">
           <InboxTab />
         </TabsContent>
@@ -147,6 +177,11 @@ export function FeedbackAdminPage() {
           <PostsTab />
         </TabsContent>
       </Tabs>
+      <IdeaSheet
+        id={openIdea}
+        data={ideas.data}
+        onClose={() => setParam("idea", null)}
+      />
     </div>
   );
 }
@@ -473,7 +508,7 @@ function PostsTab() {
                             <SelectValue placeholder="—" />
                           )}
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent position="popper">
                           {(statuses.data ?? []).map((s) => (
                             <SelectItem key={s.id} value={s.id}>
                               {s.name}

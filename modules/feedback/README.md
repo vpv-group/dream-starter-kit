@@ -12,7 +12,8 @@ configuration lives in `/admin` under **Feedback**.
 | `/feedback/<board>/create`   | Full-page create form (phones)                                                                                  |
 | `/feedback/<board>/p/<post>` | Post: voters, status, activity feed (comments + status changes), staff controls                                 |
 | `/feedback/search?search=`   | Search across every board the visitor can see                                                                   |
-| `/a/feedback`                | Staff workspace: Inbox (approval, stale, newest) and Posts table                                                |
+| `/roadmap`                   | Public roadmap: board cards, Filters, one column per roadmap status (posts, as in Canny)                        |
+| `/a/feedback`                | Staff workspace: Inbox, Ideas (score table + record sheet), Roadmap (ideas kanban), Posts                       |
 
 ## Where the data lives
 
@@ -24,6 +25,23 @@ configuration lives in `/admin` under **Feedback**.
 Ids in the copy are stable keys: a board's Payload id, `<board>:<key>` for
 categories, and the read-only `key` field for statuses and tags, so
 renaming never orphans posts.
+
+## Ideas and the roadmap
+
+Ideas (`mod_feedback_ideas`, staff only) are the team's internal roadmap,
+Canny's "Ideas". Many posts link to one idea, from a post's sidebar (pick an
+idea, or **Create idea from this post**). Each idea **stage** (Settings →
+Ideas & Roadmap) maps to a portal status with its own **Notify voters?**
+flag. Moving an idea (Ideas table, record sheet or kanban drag) runs
+`mod_feedback_set_idea_stage`, which moves every linked post's status and
+records the history in **one transaction**, then voters are notified. A
+linked post's status follows its idea; changing it directly is refused.
+The public `/roadmap` shows posts in the statuses marked **Roadmap column**.
+
+Score = Σ(weight × value) of impact factors ÷ Σ(weight × value) of effort
+factors (Settings → Ideas & Roadmap → Score factors). Factors can be set by
+staff, or come from votes, vote priority, or voters carrying given user tags
+(e.g. paid plans).
 
 ## Anonymous visitors
 

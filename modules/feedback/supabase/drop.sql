@@ -4,6 +4,8 @@ select public.kit_unregister_anon_data('feedback');
 select public.mod_notifications_unregister_module('feedback');
 
 drop table if exists public.mod_feedback_activity cascade;
+drop table if exists public.mod_feedback_ideas cascade;
+drop table if exists public.mod_feedback_idea_stages cascade;
 drop table if exists public.mod_feedback_reactions cascade;
 drop table if exists public.mod_feedback_status_changes cascade;
 drop table if exists public.mod_feedback_subscriptions cascade;
@@ -16,6 +18,11 @@ drop table if exists public.mod_feedback_statuses cascade;
 drop table if exists public.mod_feedback_categories cascade;
 drop table if exists public.mod_feedback_boards cascade;
 
+drop function if exists public.mod_feedback_idea_voter_stats(uuid[]);
+drop function if exists public.mod_feedback_link_post(uuid, uuid);
+drop function if exists public.mod_feedback_set_idea_stage(uuid, text, text, boolean, text, uuid);
+drop function if exists public.mod_feedback_posts_idea_votes();
+drop function if exists public.mod_feedback_ideas_before_write();
 drop function if exists public.mod_feedback_merge_anon(uuid, uuid);
 drop function if exists public.mod_feedback_anon_has_data(uuid);
 drop function if exists public.mod_feedback_unmerge_post(uuid);

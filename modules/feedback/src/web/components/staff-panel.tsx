@@ -8,6 +8,7 @@ import {
   MergeIcon,
   MoreHorizontalIcon,
   PinIcon,
+  PlusIcon,
   Trash2Icon,
   UserPlusIcon,
   XIcon,
@@ -66,9 +67,12 @@ import { Textarea } from "@acme/ui/textarea";
 
 import type { VotePriority } from "../../shared/config";
 import {
+  useCreateIdea,
+  useLinkPost,
   useMergePost,
   useSetStatus,
   useSimilarPosts,
+  useStaffIdeas,
   useStaffPeople,
   useUpdatePost,
   useVoteOnBehalf,
@@ -98,6 +102,8 @@ export interface StaffPostState {
   approvalState: string;
   tagIds: string[];
   voteCount: number;
+  ideaId: string | null;
+  ideaTitle: string | null;
 }
 
 /**
@@ -128,10 +134,24 @@ export function StaffSidebar({
 
   return (
     <div className="flex flex-col gap-4 text-sm">
+      <Row label="Idea">
+        <IdeaPicker post={post} />
+      </Row>
       <Row label="Status">
+        {post.ideaId ? (
+          <p className="text-muted-foreground text-xs">
+            {statuses.find((st) => st.id === post.statusId)?.name ?? "—"} ·
+            follows its idea — change the idea&apos;s stage in{" "}
+            <a href={`/a/feedback?idea=${post.ideaId}`} className="underline">
+              Feedback admin
+            </a>
+            .
+          </p>
+        ) : null}
         <Select
           value={post.statusId ?? ""}
           onValueChange={(v) => setPendingStatus(v)}
+          disabled={Boolean(post.ideaId)}
         >
           <SelectTrigger size="sm" className="w-full">
             <SelectValue placeholder="No status" />
@@ -321,6 +341,93 @@ function StatusChangeDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Link the post to an idea (Canny's "Ideas"), or create one from it. */
+function IdeaPicker({ post }: { post: StaffPostState }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const ideas = useStaffIdeas();
+  const link = useLinkPost();
+  const create = useCreateIdea();
+  const done = (msg: string) => () => {
+    toast.success(msg);
+    setOpen(false);
+    router.refresh();
+  };
+  const fail = (e: Error) => toast.error(e.message);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full justify-start font-normal"
+        >
+          {post.ideaTitle ?? (
+            <span className="text-muted-foreground">Not linked</span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search ideas…" />
+          <CommandList>
+            <CommandEmpty>No ideas.</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                onSelect={() =>
+                  create.mutate(
+                    { title: post.title, fromPostId: post.id },
+                    {
+                      onSuccess: done("Idea created and linked"),
+                      onError: fail,
+                    },
+                  )
+                }
+              >
+                <PlusIcon />
+                Create idea from this post
+              </CommandItem>
+              {post.ideaId ? (
+                <CommandItem
+                  onSelect={() =>
+                    link.mutate(
+                      { postId: post.id, ideaId: null },
+                      { onSuccess: done("Unlinked"), onError: fail },
+                    )
+                  }
+                >
+                  <XIcon />
+                  Unlink
+                </CommandItem>
+              ) : null}
+            </CommandGroup>
+            <CommandGroup heading="Ideas">
+              {(ideas.data?.ideas ?? []).map((idea) => (
+                <CommandItem
+                  key={idea.id}
+                  value={idea.title}
+                  onSelect={() =>
+                    link.mutate(
+                      { postId: post.id, ideaId: idea.id },
+                      { onSuccess: done("Linked to idea"), onError: fail },
+                    )
+                  }
+                >
+                  <span className="truncate">{idea.title}</span>
+                  {idea.id === post.ideaId ? (
+                    <CheckIcon className="ml-auto" />
+                  ) : null}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 

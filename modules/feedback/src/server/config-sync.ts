@@ -201,6 +201,35 @@ export function statusRows(
   }));
 }
 
+export interface IdeaStageInput {
+  key?: string | null;
+  name: string;
+  type: StatusType;
+  tone?: Tone | null;
+  portalStatus?: string | null;
+  notifyVoters?: boolean | null;
+}
+
+/** Stages keep a portal status only when that status exists (else null). */
+export function ideaStageRows(
+  stages: IdeaStageInput[],
+  statusIds: Set<string>,
+): TablesInsert<"mod_feedback_idea_stages">[] {
+  return stages.map((st, i) => ({
+    id: textOr(st.key, slugify(st.name)),
+    name: st.name,
+    type: st.type,
+    tone: st.tone ?? "neutral",
+    portal_status_id:
+      st.portalStatus && statusIds.has(st.portalStatus)
+        ? st.portalStatus
+        : null,
+    notify_voters: st.notifyVoters ?? true,
+    position: i,
+    archived: false,
+  }));
+}
+
 export function tagRows(
   tags: { key?: string | null; name: string; tone?: Tone | null }[],
 ): TablesInsert<"mod_feedback_tags">[] {
@@ -294,6 +323,29 @@ export async function writeStatuses(
       .update({ archived: true, is_default: false, show_on_roadmap: false })
       .not("id", "in", notIn(rows.map((r) => r.id))),
     "archive statuses",
+  );
+}
+
+export async function writeIdeaStages(
+  db: Db,
+  stages: IdeaStageInput[],
+  statuses: StatusInput[],
+): Promise<void> {
+  const rows = ideaStageRows(
+    stages,
+    new Set(statusRows(statuses).map((r) => r.id)),
+  );
+  if (!rows.length) return;
+  await check(
+    db.from("mod_feedback_idea_stages").upsert(rows),
+    "upsert idea stages",
+  );
+  await check(
+    db
+      .from("mod_feedback_idea_stages")
+      .update({ archived: true })
+      .not("id", "in", notIn(rows.map((r) => r.id))),
+    "archive idea stages",
   );
 }
 
