@@ -151,6 +151,13 @@ export default buildConfig({
         path: "~/payload/components/ModuleAdminSettings#ModuleAdminSettings",
         type: "component",
       },
+      // Generic array row label (label · key · archived), referenced by
+      // modules as ROW_LABEL_COMPONENT from @acme/mod-kit/payload. Pinned
+      // here because modules can't add import-map entries.
+      labelRowLabel: {
+        path: "~/payload/components/LabelRowLabel#LabelRowLabel",
+        type: "component",
+      },
     },
     components: {
       // Dream brand marks in the admin chrome: the icon in the breadcrumb
