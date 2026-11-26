@@ -51,16 +51,23 @@ export const loadNativeNav = cache(async (): Promise<LoadedNativeNav> => {
     const modRes = { docs: source.modules };
     if (navRes.docs.length === 0) return defaultLoadedNativeNav();
 
-    const navItems: NavItemRow[] = navRes.docs.map((d) => ({
-      key: d.key,
-      label: d.label,
-      href: d.href,
-      icon: d.icon,
-      platforms: d.platforms,
-      audience: d.audience,
-      enabled: d.enabled,
-      module: typeof d.module === "object" ? d.module?.slug : null,
-    }));
+    // Staff-made groups have no link (and are web-only): not native rows.
+    const navItems: NavItemRow[] = navRes.docs.flatMap((d) =>
+      d.href
+        ? [
+            {
+              key: d.key,
+              label: d.label,
+              href: d.href,
+              icon: d.icon,
+              platforms: d.platforms,
+              audience: d.audience,
+              enabled: d.enabled,
+              module: typeof d.module === "object" ? d.module?.slug : null,
+            },
+          ]
+        : [],
+    );
     const rows: NativeNavRow[] = (global.items ?? []).flatMap((r) =>
       typeof r.item === "object"
         ? [

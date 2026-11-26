@@ -3017,22 +3017,27 @@ export interface KitModule {
 export interface NavItem {
   id: number;
   _order?: string | null;
+  kind?: ("link" | "group") | null;
   key: string;
   /**
    * Empty for core entries.
    */
   module?: (number | null) | KitModule;
   label: string;
-  href: string;
+  href?: string | null;
+  /**
+   * Web sidebar only: list this item in that group's collapsible submenu. Leave empty for a top-level item. Make a new group with Create New.
+   */
+  parent?: (number | null) | NavItem;
   /**
    * Icon name from the kit's icon map (e.g. IconMessageCircle). Unknown names fall back to a default icon.
    */
   icon?: string | null;
   platforms?: ("web" | "native")[] | null;
   /**
-   * Staff only = shown only to users with staff access (profiles.is_staff), on web and native. A module can also hide its entries for users it doesn't allow (its own access setting).
+   * Staff only = shown only to users with staff access (profiles.is_staff). Non-staff only = hidden from staff (e.g. a client portal's own pages). Applies on web and native. A module can also hide its entries for users it doesn't allow (its own access setting).
    */
-  audience?: ("everyone" | "staff") | null;
+  audience?: ("everyone" | "staff" | "members") | null;
   enabled?: boolean | null;
   updatedAt: string;
   createdAt: string;
@@ -4757,10 +4762,12 @@ export interface KitModulesSelect<T extends boolean = true> {
  */
 export interface NavItemsSelect<T extends boolean = true> {
   _order?: T;
+  kind?: T;
   key?: T;
   module?: T;
   label?: T;
   href?: T;
+  parent?: T;
   icon?: T;
   platforms?: T;
   audience?: T;

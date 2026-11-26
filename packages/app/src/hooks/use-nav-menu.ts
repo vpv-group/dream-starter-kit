@@ -70,12 +70,19 @@ export function useNavMenu(platform: "web" | "native" = "native") {
           module: typeof d.module === "object" ? d.module?.slug : undefined,
         }))
         .filter((d) => !d.module || !disabled.has(d.module));
-      return filterNavForUser(rows, user).map((d) => ({
-        key: d.key,
-        label: d.label,
-        href: d.href,
-        icon: d.icon ?? undefined,
-      }));
+      // A flat list: staff-made groups (no link) are left out.
+      return filterNavForUser(rows, user).flatMap((d) =>
+        d.href
+          ? [
+              {
+                key: d.key,
+                label: d.label,
+                href: d.href,
+                icon: d.icon ?? undefined,
+              },
+            ]
+          : [],
+      );
     },
   });
 }

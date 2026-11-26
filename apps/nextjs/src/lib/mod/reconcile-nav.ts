@@ -32,7 +32,12 @@ interface DesiredNavItem {
   /** Module slug — undefined for core entries. */
   module?: string;
   /** Default audience (manifest nav `audience`); staff own it afterwards. */
-  audience: "everyone" | "staff";
+  audience: "everyone" | "staff" | "members";
+  /**
+   * Web submenu entry: the key of the row it's listed under (manifest nav
+   * `children`). Set once on create, like every other staff-owned field.
+   */
+  parentKey?: string;
 }
 
 /** Merge a module's web + native nav defaults into per-href menu rows. */
@@ -64,6 +69,7 @@ export function desiredNavItems(): DesiredNavItem[] {
         platforms: [platform],
         module: entry.module,
         audience: entry.audience ?? "everyone",
+        ...(entry.parent ? { parentKey: entry.parent } : {}),
       };
       byKey.set(key, item);
       items.push(item);
@@ -176,6 +182,8 @@ export async function reconcileModules(payload: Payload): Promise<void> {
   const navByKey = new Map(existingNav.docs.map((d) => [d.key, d]));
 
   for (const row of existingNav.docs) {
+    // Staff-made groups aren't in the generated defaults; keep them.
+    if (row.kind === "group") continue;
     if (!desiredByKey.has(row.key)) {
       await payload.delete({
         collection: "nav-items",
@@ -186,17 +194,39 @@ export async function reconcileModules(payload: Payload): Promise<void> {
   }
 
   // Create missing rows in menu order so Payload's drag-order (_order) starts
-  // out matching the intended default order.
+  // out matching the intended default order. A submenu row's parent sorts
+  // before it, so the parent's id is known by the time the child is created
+  // (an existing parent row, e.g. a module update that adds children, too).
+  const idByKey = new Map(existingNav.docs.map((d) => [d.key, d.id]));
+  // A row that ships a submenu is a group (framework-owned, like the key):
+  // it shows in the admin's Group picker, and an existing row is upgraded
+  // when a module update adds a submenu.
+  const groupKeys = new Set(
+    desired.flatMap((d) => (d.parentKey ? [d.parentKey] : [])),
+  );
+  for (const row of existingNav.docs) {
+    if (groupKeys.has(row.key) && row.kind !== "group") {
+      await payload.update({
+        collection: "nav-items",
+        id: row.id,
+        data: { kind: "group" },
+        overrideAccess: true,
+        context: { navReconcile: true },
+      });
+    }
+  }
   for (const item of desired) {
     if (navByKey.has(item.key)) continue;
     const modRowId = item.module
       ? modRowBySlug.get(item.module)?.id
       : undefined;
+    const parentId = item.parentKey ? idByKey.get(item.parentKey) : undefined;
     try {
-      await payload.create({
+      const created = await payload.create({
         collection: "nav-items",
         data: {
           key: item.key,
+          kind: groupKeys.has(item.key) ? "group" : "link",
           label: item.label,
           href: item.href,
           icon: item.icon,
@@ -204,9 +234,13 @@ export async function reconcileModules(payload: Payload): Promise<void> {
           audience: item.audience,
           enabled: true,
           ...(modRowId !== undefined ? { module: modRowId } : {}),
+          ...(parentId !== undefined ? { parent: parentId } : {}),
         },
         overrideAccess: true,
+        // Tells the collection hook this is a framework row, not a staff group.
+        context: { navReconcile: true },
       });
+      idByKey.set(item.key, created.id);
     } catch (err) {
       // Unique-key violation = a concurrent cold start created it first. Fine.
       payload.logger.debug(

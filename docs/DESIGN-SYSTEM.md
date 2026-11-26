@@ -153,7 +153,9 @@ primary action. On narrow screens, secondary actions collapse into a `…` menu.
 A module with several sections (the CRM's object tabs) shows a horizontal tab row
 under the page header. It uses `Tabs` styling with `variant="line"`: underline on
 the active tab, `text-sm font-medium`. It scrolls horizontally on small screens and
-never wraps. The global sidebar keeps a single entry for the module.
+never wraps. The global sidebar keeps a single entry for the module: a link, or
+a collapsible group listing the same sections (manifest nav `children`, e.g. the
+CRM's Leads, Accounts, Contacts, …).
 
 ### Responsive grid recipes
 

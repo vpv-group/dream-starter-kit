@@ -516,12 +516,23 @@ banner and an **Install module** drawer; each module's page adds a sidebar
 
 Shown in `/admin` as **Navigation** (the slug stays `nav-items`). One row per
 menu entry. Manifest `nav` defaults are seeded once; staff own `label`,
-`icon`, `platforms`, `enabled`, order and **`audience`** afterwards.
+`icon`, `platforms`, `enabled`, order, **`audience`** and **`parent`**
+afterwards.
 
 The screen has two sections:
 
 - **Web App** — the list table, filtered to rows with the `web` platform:
   the `/a` sidebar. Drag rows to reorder (`_order`), open one to edit it.
+  **Groups:** a row with **Group** (`parent`) set is listed in
+  that row's collapsible submenu (shadcn sidebar-07 style, one level deep),
+  ordered by `_order`. The group row only opens and closes the submenu; it
+  starts open when one of its pages is current. A module can ship a group
+  (manifest nav `children`, e.g. the CRM's Leads … Tasks), and staff can make
+  their own: **Create New** adds a `kind: "group"` row (a label and icon, no
+  link) that other web rows can be moved under. Only those rows can be
+  deleted; deleting one moves its items back to the top level. A group with
+  no visible items, or whose own row is off or hidden for the user, isn't
+  shown, nor are its items. Native ignores `parent` (`lib/mod/nav-tree.ts`).
 - **iOS and Android App** — the native tab bar editor
   (`payload/components/navigation/NativeNavigationEditor.tsx`), saved to
   the `native-navigation` global (below). Staff drag the native rows into
@@ -554,9 +565,14 @@ The screen has two sections:
 
 Per-user rules, on both platforms:
 
-- **`audience`:** "Everyone signed in" (default) or "Staff only". Staff-only
-  entries are dropped for users without `profiles.is_staff`: server-side on
-  the web sidebar, and in `useNavMenu()` / `useNativeNav()` on native.
+- **`audience`:** "Everyone signed in" (default), "Staff only", or "Non-staff
+  only" (`members`, e.g. a client portal's own pages). Staff-only entries are
+  dropped for users without `profiles.is_staff`, non-staff-only entries for
+  staff: server-side on the web sidebar, and in `useNavMenu()` /
+  `useNativeNav()` on native (`navAudienceAllows` in `@acme/app`). The native
+  config sends `members` rows as `audience: "everyone"` plus
+  `hideForStaff: true`, because installed app builds parse `audience` as a
+  two-value enum.
 - Entries of a module with an access check (manifest `access.check`) are also
   dropped for users the check denies.
 

@@ -14,6 +14,7 @@ import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
 import { HomeGettingStarted } from "~/components/workspaces/home-getting-started";
 import { disabledModuleSlugs } from "~/lib/mod/enabled";
 import { getWebNavItems } from "~/lib/mod/nav";
+import { flattenNav } from "~/lib/mod/nav-tree";
 import { getWebTabMenu } from "~/lib/mod/web-tab-menu";
 import { getAuthSettings, getBranding } from "~/lib/payload";
 import { createClient } from "~/lib/supabase/server";
@@ -54,6 +55,9 @@ export default async function AppLayout({
       supabase.from("profiles").select("is_staff").eq("id", user.id).single(),
     ]);
   const isStaff = profile.data?.is_staff ?? false;
+  // The header title and the tab bar's active state match the current path
+  // against every link, submenu entries included.
+  const flatNav = flattenNav(navItems);
 
   // Teams/Both (docs/WORKSPACES.md): workspace switcher, getting-started
   // checklist on /a, and — in Teams mode — no app without a workspace.
@@ -121,7 +125,7 @@ export default async function AppLayout({
             (62px bar + its bottom offset + a 12px gap); 0 on desktop.
             Full-height screens (chat) subtract it. */}
         <SidebarInset className="[--app-bottom-inset:calc(62px_+_max(20px,env(safe-area-inset-bottom))_+_12px)] lg:[--app-bottom-inset:0px]">
-          <SiteHeader isStaff={isStaff} navItems={navItems} />
+          <SiteHeader isStaff={isStaff} navItems={flatNav} />
           <AppModWidgetsProvider disabledSlugs={disabledSlugs}>
             {gettingStarted ? (
               <HomeGettingStarted data={gettingStarted} />
@@ -130,7 +134,7 @@ export default async function AppLayout({
           </AppModWidgetsProvider>
           <div aria-hidden className="h-(--app-bottom-inset) shrink-0" />
         </SidebarInset>
-        <GlassTabBar tabs={tabMenu.tabs} all={tabMenu.all} routes={navItems} />
+        <GlassTabBar tabs={tabMenu.tabs} all={tabMenu.all} routes={flatNav} />
       </SidebarProvider>
     </BrandingProvider>
   );

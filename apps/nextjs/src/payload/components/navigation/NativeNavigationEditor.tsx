@@ -397,7 +397,8 @@ function toRow(
     id: doc.id,
     key: doc.key,
     label: doc.label,
-    href: doc.href,
+    // Native rows always link; only web-only groups have no href.
+    href: doc.href ?? "",
     icon: doc.icon,
     enabled: doc.enabled !== false && !moduleOff,
     hidden: r?.hidden === true,

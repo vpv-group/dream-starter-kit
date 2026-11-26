@@ -147,6 +147,17 @@ export function validateManifest(m: ModuleManifest): string[] {
     );
   }
 
+  // Web nav: every entry (submenu children included) is its own menu row,
+  // keyed by href, so an href may appear only once.
+  const webHrefs = m.nav.web.flatMap((n) => [
+    n.href,
+    ...n.children.map((c) => c.href),
+  ]);
+  for (const href of new Set(webHrefs)) {
+    if (webHrefs.filter((h) => h === href).length > 1)
+      errors.push(`[${m.slug}] nav.web lists "${href}" more than once`);
+  }
+
   // Platform consistency: declaring native surface requires the native platform.
   if (!m.platforms.native) {
     if (m.nav.native.length > 0 || m.routes.native.length > 0)

@@ -2,19 +2,23 @@ import "server-only";
 
 import { cache } from "react";
 
+import { navAudienceAllows } from "@acme/app";
+
 import type { NavMenuItem } from "./nav-types";
 import { modInstalled } from "~/mod/registry.data.generated";
 import { hasModuleAccess, isCurrentUserStaff } from "./access";
+import { buildNavTree } from "./nav-tree";
 import { desiredNavItems } from "./reconcile-nav";
 
 export type { NavMenuItem } from "./nav-types";
 
 /**
  * The web app menu, resolved server-side from the CMS-driven `nav-items`
- * collection (staff-edited: rename/reorder/re-icon/toggle — live without a
- * redeploy), filtered to enabled items of enabled modules and sorted by
- * Payload's drag order. Per user: "Staff only" items are dropped for
- * non-staff, and a module's items are dropped when its access check
+ * collection (staff-edited: rename/reorder/re-icon/toggle/group — live
+ * without a redeploy), filtered to enabled items of enabled modules and
+ * sorted by Payload's drag order, with submenu rows nested under their group
+ * (lib/mod/nav-tree.ts). Per user: "Staff only" items are dropped for
+ * non-staff, "Non-staff only" items for staff, and a module's items are dropped when its access check
  * (manifest `access.check`) denies the current user — filtered here on the
  * server, so they never reach the browser. Falls back to the generated defaults when the CMS is
  * unreachable (fresh deploy before bootstrap, local Postgres down) so the app
@@ -41,20 +45,16 @@ export const getWebNavItems = cache(async (): Promise<NavMenuItem[]> => {
       mods.map((d) => ({ slug: d.slug, accessCheck: d.accessCheck })),
     );
     const isStaff = await isCurrentUserStaff();
-    const items = navRes.docs
-      .filter((d) => d.enabled !== false)
-      .filter((d) => (d.platforms ?? []).includes("web"))
-      .filter((d) => isStaff || d.audience !== "staff")
-      .filter((d) => {
-        const mod = typeof d.module === "object" ? d.module?.slug : undefined;
-        return !mod || (!disabled.has(mod) && allowed(mod));
-      })
-      .map((d) => ({
-        key: d.key,
-        label: d.label,
-        href: d.href,
-        icon: d.icon ?? undefined,
-      }));
+    const items = buildNavTree(
+      navRes.docs
+        .filter((d) => d.enabled !== false)
+        .filter((d) => (d.platforms ?? []).includes("web"))
+        .filter((d) => navAudienceAllows(d, isStaff))
+        .filter((d) => {
+          const mod = typeof d.module === "object" ? d.module?.slug : undefined;
+          return !mod || (!disabled.has(mod) && allowed(mod));
+        }),
+    );
     // An empty collection means the boot reconcile hasn't run yet (fresh DB
     // mid-request) — fall back to defaults rather than rendering no menu.
     return items.length > 0 ? items : await defaultWebNavItems();
@@ -86,9 +86,12 @@ export async function defaultWebNavItems(): Promise<NavMenuItem[]> {
     isCurrentUserStaff(),
     allowedModules(modInstalled),
   ]);
-  return desiredNavItems()
-    .filter((d) => d.platforms.includes("web"))
-    .filter((d) => isStaff || d.audience !== "staff")
-    .filter((d) => !d.module || allowed(d.module))
-    .map((d) => ({ key: d.key, label: d.label, href: d.href, icon: d.icon }));
+  return buildNavTree(
+    desiredNavItems()
+      .filter((d) => d.platforms.includes("web"))
+      .filter((d) => navAudienceAllows(d, isStaff))
+      .filter((d) => !d.module || allowed(d.module))
+      // The defaults have no ids yet: the key stands in for one.
+      .map((d) => ({ ...d, id: d.key, parent: d.parentKey ?? null })),
+  );
 }
