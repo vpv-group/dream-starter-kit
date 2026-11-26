@@ -29,9 +29,17 @@ const sessionSchema = z.object({
   releaseHolds: z
     .array(z.object({ target: z.string(), version: z.string() }))
     .default([]),
-  site: z.object({ canary: z.boolean().default(false) }).default({
-    canary: false,
-  }),
+  site: z
+    .object({
+      canary: z.boolean().default(false),
+      /**
+       * The site's public origin (registry ≥ 2026-11-26). After a merge the
+       * deploy watch checks `<url>/api/health/db`, so a deploy that builds
+       * but fails at boot still counts as failed.
+       */
+      url: z.string().url().nullable().default(null),
+    })
+    .default({ canary: false, url: null }),
 });
 
 export type OpsSession = z.infer<typeof sessionSchema>;

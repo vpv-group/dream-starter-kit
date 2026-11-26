@@ -6,6 +6,8 @@ import {
   findContractStatements,
   isMarkedContract,
   lintMigrationSafety,
+  lintPayloadMigrationSafety,
+  payloadUpSection,
 } from "./migration-safety";
 import { findRepoRoot } from "./paths";
 
@@ -89,6 +91,55 @@ const GRANDFATHERED = new Set([
   "modules/reminders/supabase/migrations/002_rename_to_mod_prefix.sql",
 ]);
 
+describe("Payload migrations", () => {
+  const migration = `
+    import { type MigrateUpArgs, sql } from "@payloadcms/db-postgres";
+    export async function up({ db }: MigrateUpArgs): Promise<void> {
+      await db.execute(sql\`ALTER TABLE "cms"."posts" ADD COLUMN "x" varchar;\`);
+    }
+    export async function down({ db }: MigrateDownArgs): Promise<void> {
+      await db.execute(sql\`ALTER TABLE "cms"."posts" DROP COLUMN "x";\`);
+    }`;
+
+  it("reads only up(): down() always drops what up() added", () => {
+    expect(payloadUpSection(migration)).not.toMatch(/DROP COLUMN/);
+    expect(lintPayloadMigrationSafety("m.ts", migration)).toEqual([]);
+  });
+
+  it("flags a contract step in up()", () => {
+    const contract = migration.replace(
+      'ADD COLUMN "x" varchar',
+      'DROP COLUMN "y"',
+    );
+    expect(lintPayloadMigrationSafety("m.ts", contract)[0]).toMatch(
+      /^m\.ts: drops a column/,
+    );
+  });
+});
+
+/**
+ * An app's own migrations shipped before it took the expand/contract rule
+ * (e.g. a clone that dropped a table of its own before syncing the kit) are
+ * listed in `supabase/migration-safety.allow.json`, a JSON array of
+ * repo-relative paths. The kit ships no such file, so kit updates never
+ * conflict with it.
+ */
+function appAllowList(root: string): string[] {
+  try {
+    const parsed: unknown = JSON.parse(
+      readFileSync(
+        path.join(root, "supabase/migration-safety.allow.json"),
+        "utf8",
+      ),
+    );
+    return Array.isArray(parsed)
+      ? parsed.filter((f): f is string => typeof f === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 describe("repository migrations follow expand/contract", () => {
   const root = findRepoRoot();
   const dirs = [
@@ -106,21 +157,54 @@ describe("repository migrations follow expand/contract", () => {
       return [];
     }
   });
+  const payloadDirs = [
+    "apps/nextjs/src/payload/migrations",
+    ...readdirSync(path.join(root, "modules"), { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => `modules/${d.name}/src/payload/migrations`),
+  ];
+  const payloadFiles = payloadDirs.flatMap((dir) => {
+    try {
+      return readdirSync(path.join(root, dir))
+        .filter((f) => f.endsWith(".ts") && f !== "index.ts")
+        .map((f) => `${dir}/${f}`);
+    } catch {
+      return [];
+    }
+  });
+  const allowed = new Set([...GRANDFATHERED, ...appAllowList(root)]);
+  // Payload migrations are named <YYYYMMDD_HHMMSS>_<name>.ts. The rule
+  // covers them from kit 2.5 on; older ones (kit and app) are grandfathered.
+  const PAYLOAD_RULE_SINCE = "20261125";
+  const payloadChecked = payloadFiles.filter(
+    (f) => path.basename(f).slice(0, 8) >= PAYLOAD_RULE_SINCE,
+  );
 
   it("finds the migrations", () => {
     expect(files.length).toBeGreaterThan(0);
   });
 
   it("has no unmarked contract step outside the grandfathered list", () => {
-    const errors = files
-      .filter((f) => !GRANDFATHERED.has(f))
-      .flatMap((f) =>
-        lintMigrationSafety(f, readFileSync(path.join(root, f), "utf8")),
-      );
+    const errors = [
+      ...files
+        .filter((f) => !allowed.has(f))
+        .flatMap((f) =>
+          lintMigrationSafety(f, readFileSync(path.join(root, f), "utf8")),
+        ),
+      ...payloadChecked
+        .filter((f) => !allowed.has(f))
+        .flatMap((f) =>
+          lintPayloadMigrationSafety(
+            f,
+            readFileSync(path.join(root, f), "utf8"),
+          ),
+        ),
+    ];
     expect(errors).toEqual([]);
   });
 
   it("keeps the grandfathered list honest (every entry still exists)", () => {
-    expect([...GRANDFATHERED].filter((f) => !files.includes(f))).toEqual([]);
+    const all = [...files, ...payloadFiles];
+    expect([...allowed].filter((f) => !all.includes(f))).toEqual([]);
   });
 });

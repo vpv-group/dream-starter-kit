@@ -449,9 +449,15 @@ a comment saying why:
 It also waits for a kit release's **72-hour soak** (Meet Dream's own canary
 sites get it first) and for a review your branch protection requires: the app
 is never given a bypass. After a merge it watches the production deployment
-GitHub records for the merge commit. **A failed deploy pauses automatic
-merging** for the site (Updates shows why, with **Resume**) and is reported
-to Meet Dream, along with every merge, failure and conflict.
+GitHub records for the merge commit, then asks the site's own
+`/api/health/db` (the URL comes from Meet Dream): a deploy that builds but
+fails at boot, say on a migration, counts as failed too. **A failed deploy
+pauses automatic merging** for the site (Updates shows why, with **Resume**)
+and is reported to Meet Dream, along with every merge, failure and conflict.
+A green update that waits for your review is reported as `ready`, and failing
+checks that were already failing on your default branch as
+`checks_failed_base_red`, so Meet Dream's per-release hold only counts
+failures the update caused.
 
 Every op runs the same CLI a developer would and enforces **path
 confinement**: an op may only write `modules/<slug>/**` plus known sync
