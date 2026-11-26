@@ -5,6 +5,7 @@
   "@acme/mod-chat-adapter-slack",
   "@acme/mod-dashboard",
   "@acme/mod-docs",
+  "@acme/mod-feedback",
   "@acme/mod-notifications",
   "@acme/mod-reminders"
 ]

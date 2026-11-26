@@ -9,6 +9,8 @@ export * from "./validators/tag";
 export * from "./validators/workspace";
 export * from "./auth";
 export * from "./captcha";
+export { CaptchaContext, useCaptcha } from "./captcha-context";
+export type { CaptchaContextValue } from "./captcha-context";
 export * from "./auth-settings";
 export * from "./workspaces";
 export * from "./post-auth";

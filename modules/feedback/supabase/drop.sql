@@ -1,0 +1,41 @@
+-- Teardown for `pnpm mod remove feedback` (skipped with --keep-data).
+select public.kit_unregister_app_schedule('mod-feedback-config-sync');
+select public.kit_unregister_anon_data('feedback');
+select public.mod_notifications_unregister_module('feedback');
+
+drop table if exists public.mod_feedback_activity cascade;
+drop table if exists public.mod_feedback_reactions cascade;
+drop table if exists public.mod_feedback_status_changes cascade;
+drop table if exists public.mod_feedback_subscriptions cascade;
+drop table if exists public.mod_feedback_comments cascade;
+drop table if exists public.mod_feedback_votes cascade;
+drop table if exists public.mod_feedback_post_tags cascade;
+drop table if exists public.mod_feedback_posts cascade;
+drop table if exists public.mod_feedback_tags cascade;
+drop table if exists public.mod_feedback_statuses cascade;
+drop table if exists public.mod_feedback_categories cascade;
+drop table if exists public.mod_feedback_boards cascade;
+
+drop function if exists public.mod_feedback_merge_anon(uuid, uuid);
+drop function if exists public.mod_feedback_anon_has_data(uuid);
+drop function if exists public.mod_feedback_unmerge_post(uuid);
+drop function if exists public.mod_feedback_merge_posts(uuid, uuid);
+drop function if exists public.mod_feedback_set_status(uuid, text, text, boolean, text, uuid);
+drop function if exists public.mod_feedback_require_staff();
+drop function if exists public.mod_feedback_reaction_counts(uuid[]);
+drop function if exists public.mod_feedback_post_voters(uuid, integer);
+drop function if exists public.mod_feedback_people(uuid[]);
+drop function if exists public.mod_feedback_similar_posts(text, text, integer);
+drop function if exists public.mod_feedback_board_counts();
+drop function if exists public.mod_feedback_posts_after_insert();
+drop function if exists public.mod_feedback_comments_after_change();
+drop function if exists public.mod_feedback_comments_before_write();
+drop function if exists public.mod_feedback_votes_after_change();
+drop function if exists public.mod_feedback_votes_before_insert();
+drop function if exists public.mod_feedback_posts_before_update();
+drop function if exists public.mod_feedback_posts_before_insert();
+drop function if exists public.mod_feedback_readable_board_ids();
+drop function if exists public.mod_feedback_slugify(text);
+drop function if exists public.mod_feedback_is_service();
+drop function if exists public.mod_feedback_is_anon();
+drop function if exists public.mod_feedback_is_staff();

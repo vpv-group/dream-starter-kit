@@ -60,6 +60,11 @@
       "sha256": "3d92502cfbf0b105901f6b6beb517f30f6ace3c7f2d3a304d923a0bd2e2bed7e",
       "target": "20260612100001_ext_demo_001_initial.sql"
     },
+    "feedback/001_initial.sql": {
+      "version": "20261126202816",
+      "sha256": "0fb4895080c9f0b551336c6bb6ccc244a2a3ff63fd8325a5a121242041ec5c43",
+      "target": "20261126202816_mod_feedback_001_initial.sql"
+    },
     "notifications/001_initial.sql": {
       "version": "20260612011540",
       "sha256": "99010f69124c6d4b6ec8a303848d41501a74e5a3866d06bac399c30774ddebc0",

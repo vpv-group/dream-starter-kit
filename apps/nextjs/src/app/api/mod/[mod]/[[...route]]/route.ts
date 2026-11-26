@@ -49,31 +49,28 @@ const json = (status: number, body: Record<string, unknown>) =>
  * otherwise reach every module's authed routes, AI included (golden rule
  * #6). Flows that must serve them belong in a module's `publicRoutes`.
  */
-async function authenticate(req: NextRequest) {
+async function authenticate(
+  req: NextRequest,
+  opts: { allowAnonymous?: boolean } = {},
+) {
   const authHeader = req.headers.get("Authorization");
-  if (authHeader) {
-    const supabase = createBearerClient<Database>(
-      env.NEXT_PUBLIC_SUPABASE_URL,
-      supabaseAnonKey(),
-      {
-        global: { headers: { Authorization: authHeader } },
-        auth: { persistSession: false, autoRefreshToken: false },
-      },
-    );
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
-    if (error || !user || user.is_anonymous) return null;
-    return { user, supabase };
-  }
-
-  const supabase = await createCookieClient();
+  const supabase = authHeader
+    ? createBearerClient<Database>(
+        env.NEXT_PUBLIC_SUPABASE_URL,
+        supabaseAnonKey(),
+        {
+          global: { headers: { Authorization: authHeader } },
+          auth: { persistSession: false, autoRefreshToken: false },
+        },
+      )
+    : await createCookieClient();
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
-  if (error || !user || user.is_anonymous) return null;
+  if (error || !user) return { user: null, supabase };
+  if (user.is_anonymous && !opts.allowAnonymous)
+    return { user: null, supabase };
   return { user, supabase };
 }
 
@@ -116,10 +113,10 @@ async function dispatch(
   // no session required; rate-limited per user when present, per IP otherwise.
   const publicHandler = publicTable?.[key];
   if (publicHandler) {
-    const supabase = await createCookieClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    // Either session style; anonymous visitors are allowed here.
+    const { user, supabase } = await authenticate(req, {
+      allowAnonymous: true,
+    });
     const limiterKey =
       user?.id ??
       `ip:${req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"}`;
@@ -138,7 +135,7 @@ async function dispatch(
   if (!table) return json(404, { error: "Not found" });
 
   const auth = await authenticate(req);
-  if (!auth) return json(401, { error: "Unauthorized" });
+  if (!auth.user) return json(401, { error: "Unauthorized" });
 
   if (!rateLimit(auth.user.id)) {
     return json(429, { error: "Rate limit exceeded. Try again shortly." });

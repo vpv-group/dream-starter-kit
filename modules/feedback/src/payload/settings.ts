@@ -1,0 +1,373 @@
+import { defineModuleSettings } from "@acme/mod-kit/payload";
+
+import type { StatusType, Tone } from "../shared/config";
+import {
+  DEFAULT_STATUSES,
+  STATUS_TYPES,
+  VOTE_MILESTONES,
+} from "../shared/config";
+import { keyField, toneField, uniqueKeys } from "./fields";
+import { syncSettingsAfterChange } from "./hooks/sync-config";
+
+/**
+ * Feedback settings (/admin → Modules → Feedback, also under the "Feedback"
+ * admin group) — the Payload-side configuration from Canny's admin screens.
+ * Statuses and tags are copied into Supabase on save (sync-config.ts) so
+ * RLS and joins can use them. The portal reads the public subset through
+ * GET /api/mod/feedback/config; this global itself is staff-only.
+ */
+export const settings = defineModuleSettings({
+  slug: "feedback",
+  name: "Feedback",
+  group: "Feedback",
+  fields: [
+    {
+      type: "tabs",
+      tabs: [
+        {
+          label: "Portal",
+          description:
+            "The public portal at /roadmap, /feedback and /changelog.",
+          fields: [
+            {
+              name: "portalTabs",
+              label: "Tabs",
+              type: "array",
+              minRows: 1,
+              maxRows: 3,
+              admin: {
+                description:
+                  "Order, labels and visibility of the portal tabs. Drag to reorder.",
+              },
+              defaultValue: [
+                { tab: "roadmap", label: "Roadmap", enabled: true },
+                { tab: "feedback", label: "Feedback", enabled: true },
+                { tab: "changelog", label: "Changelog", enabled: true },
+              ],
+              fields: [
+                {
+                  type: "row",
+                  fields: [
+                    {
+                      name: "tab",
+                      type: "select",
+                      required: true,
+                      options: [
+                        { label: "Roadmap", value: "roadmap" },
+                        { label: "Feedback", value: "feedback" },
+                        { label: "Changelog", value: "changelog" },
+                      ],
+                      admin: { width: "33%" },
+                    },
+                    {
+                      name: "label",
+                      type: "text",
+                      required: true,
+                      admin: { width: "33%" },
+                    },
+                    {
+                      name: "enabled",
+                      type: "checkbox",
+                      defaultValue: true,
+                      admin: { width: "33%" },
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              name: "portalTitle",
+              type: "text",
+              defaultValue: "Feedback",
+              admin: {
+                description:
+                  "Shown next to your logo on the portal and in page titles.",
+              },
+            },
+            {
+              name: "feedbackIntro",
+              type: "textarea",
+              defaultValue: "Tell us what would make the product better.",
+            },
+            {
+              name: "searchAllBoards",
+              label: "Search across all boards",
+              type: "checkbox",
+              defaultValue: true,
+              admin: {
+                description:
+                  "The portal search covers every board the visitor can see.",
+              },
+            },
+          ],
+        },
+        {
+          label: "Statuses",
+          description:
+            "Post statuses (Canny: Portal Statuses). Drag to reorder. Removing a status hides it; posts keep it until you move them.",
+          fields: [
+            {
+              name: "statuses",
+              type: "array",
+              minRows: 2,
+              labels: { singular: "Status", plural: "Statuses" },
+              defaultValue: DEFAULT_STATUSES.map((s) => ({ ...s })),
+              validate: (rows: unknown) => {
+                const unique = uniqueKeys("statuses")(rows);
+                if (unique !== true) return unique;
+                const list = (rows ?? []) as {
+                  isDefault?: boolean;
+                  type?: StatusType;
+                  showOnRoadmap?: boolean;
+                }[];
+                const defaults = list.filter((r) => r.isDefault);
+                if (defaults.length !== 1) {
+                  return "Mark exactly one status as the default for new posts.";
+                }
+                if (defaults[0]?.type !== "open") {
+                  return "The default status must have the type Open.";
+                }
+                const columns = list.filter((r) => r.showOnRoadmap).length;
+                if (columns < 1 || columns > 4) {
+                  return "Show between 1 and 4 statuses on the roadmap.";
+                }
+                return true;
+              },
+              fields: [
+                {
+                  type: "row",
+                  fields: [
+                    {
+                      name: "name",
+                      type: "text",
+                      required: true,
+                      admin: { width: "25%" },
+                    },
+                    keyField("name"),
+                    {
+                      name: "type",
+                      type: "select",
+                      required: true,
+                      defaultValue: "active",
+                      options: STATUS_TYPES.map((t) => ({
+                        label: {
+                          open: "Open (initial)",
+                          active: "Active",
+                          complete: "Complete",
+                          closed: "Closed",
+                        }[t],
+                        value: t,
+                      })),
+                      admin: { width: "25%" },
+                    },
+                    toneField("tone", "info"),
+                  ],
+                },
+                {
+                  type: "row",
+                  fields: [
+                    {
+                      name: "showOnRoadmap",
+                      label: "Roadmap column",
+                      type: "checkbox",
+                      defaultValue: false,
+                      admin: { width: "33%" },
+                    },
+                    {
+                      name: "isDefault",
+                      label: "Default for new posts",
+                      type: "checkbox",
+                      defaultValue: false,
+                      admin: { width: "33%" },
+                    },
+                    {
+                      name: "notifyVotersByDefault",
+                      label: "Notify voters by default",
+                      type: "checkbox",
+                      defaultValue: true,
+                      admin: { width: "33%" },
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              name: "staleAfterWeeks",
+              type: "number",
+              min: 1,
+              max: 52,
+              defaultValue: 4,
+              admin: {
+                description:
+                  "Posts in an Active status longer than this show as stale in the staff Inbox.",
+              },
+            },
+          ],
+        },
+        {
+          label: "Tags",
+          description:
+            "Staff-only tags for sorting posts. Drag to reorder. Tags are shared by all boards.",
+          fields: [
+            {
+              name: "tags",
+              type: "array",
+              labels: { singular: "Tag", plural: "Tags" },
+              validate: uniqueKeys("tags"),
+              defaultValue: [
+                { key: "bug", name: "Bug", tone: "destructive" },
+                { key: "feature", name: "Feature", tone: "info" },
+              ],
+              fields: [
+                {
+                  type: "row",
+                  fields: [
+                    {
+                      name: "name",
+                      type: "text",
+                      required: true,
+                      admin: { width: "50%" },
+                    },
+                    keyField("name"),
+                    toneField(),
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          label: "Moderation & Anonymous",
+          description:
+            "Global defaults; each board can override the anonymous rules.",
+          fields: [
+            {
+              type: "row",
+              fields: [
+                {
+                  name: "anonVotes",
+                  label: "Anonymous votes",
+                  type: "checkbox",
+                  defaultValue: true,
+                  admin: {
+                    width: "33%",
+                    description:
+                      "Visitors vote without signing up (protected by Turnstile).",
+                  },
+                },
+                {
+                  name: "anonPosts",
+                  label: "Anonymous posts",
+                  type: "checkbox",
+                  defaultValue: false,
+                  admin: { width: "33%" },
+                },
+                {
+                  name: "anonComments",
+                  label: "Anonymous comments",
+                  type: "checkbox",
+                  defaultValue: false,
+                  admin: { width: "33%" },
+                },
+              ],
+            },
+            {
+              name: "postsPerHour",
+              type: "number",
+              min: 1,
+              max: 1000,
+              defaultValue: 10,
+              admin: { description: "Per person (or per IP when anonymous)." },
+            },
+            {
+              name: "commentsPerHour",
+              type: "number",
+              min: 1,
+              max: 1000,
+              defaultValue: 30,
+            },
+          ],
+        },
+        {
+          label: "Notifications",
+          fields: [
+            {
+              name: "notifyStaffOnNewPost",
+              label: "Tell staff about new posts",
+              type: "checkbox",
+              defaultValue: true,
+            },
+            {
+              name: "notifyVotersOnStaffComment",
+              label: "Tell voters when staff comment",
+              type: "checkbox",
+              defaultValue: true,
+            },
+            {
+              name: "voteMilestones",
+              type: "select",
+              hasMany: true,
+              defaultValue: ["10", "50", "100"],
+              options: VOTE_MILESTONES.map((n) => ({
+                label: `${n} votes`,
+                value: String(n),
+              })),
+              admin: {
+                description:
+                  "Tell staff when a post reaches these vote counts.",
+              },
+            },
+          ],
+        },
+      ],
+    },
+  ],
+});
+
+settings.global.hooks = {
+  ...(settings.global.hooks ?? {}),
+  afterChange: [
+    ...(settings.global.hooks?.afterChange ?? []),
+    syncSettingsAfterChange,
+  ],
+};
+
+export interface PortalTabSetting {
+  tab: "roadmap" | "feedback" | "changelog";
+  label: string;
+  enabled?: boolean | null;
+}
+
+export interface StatusSetting {
+  key?: string | null;
+  name: string;
+  type: StatusType;
+  tone?: Tone | null;
+  showOnRoadmap?: boolean | null;
+  isDefault?: boolean | null;
+  notifyVotersByDefault?: boolean | null;
+}
+
+export interface TagSetting {
+  key?: string | null;
+  name: string;
+  tone?: Tone | null;
+}
+
+export interface FeedbackSettings extends Record<string, unknown> {
+  portalTabs: PortalTabSetting[];
+  portalTitle?: string | null;
+  feedbackIntro?: string | null;
+  searchAllBoards?: boolean | null;
+  statuses: StatusSetting[];
+  staleAfterWeeks?: number | null;
+  tags: TagSetting[];
+  anonVotes?: boolean | null;
+  anonPosts?: boolean | null;
+  anonComments?: boolean | null;
+  postsPerHour?: number | null;
+  commentsPerHour?: number | null;
+  notifyStaffOnNewPost?: boolean | null;
+  notifyVotersOnStaffComment?: boolean | null;
+  voteMilestones?: string[] | null;
+}

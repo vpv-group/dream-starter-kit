@@ -100,6 +100,7 @@ export interface Config {
     "mod-billing-subscriptions": ModBillingSubscription;
     "mod-chat-skills": ModChatSkill;
     "mod-docs-pages": ModDocsPage;
+    "mod-feedback-boards": ModFeedbackBoard;
     forms: Form;
     "form-submissions": FormSubmission;
     "payload-kv": PayloadKv;
@@ -202,6 +203,8 @@ export interface Config {
       | ModBillingSubscriptionsSelect<true>;
     "mod-chat-skills": ModChatSkillsSelect<false> | ModChatSkillsSelect<true>;
     "mod-docs-pages": ModDocsPagesSelect<false> | ModDocsPagesSelect<true>;
+    "mod-feedback-boards":
+      ModFeedbackBoardsSelect<false> | ModFeedbackBoardsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     "form-submissions":
       FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -230,6 +233,7 @@ export interface Config {
     "mod-billing-settings": ModBillingSetting;
     "mod-chat-settings": ModChatSetting;
     "mod-docs-settings": ModDocsSetting;
+    "mod-feedback-settings": ModFeedbackSetting;
     "payload-jobs-stats": PayloadJobsStat;
   };
   globalsSelect: {
@@ -250,6 +254,8 @@ export interface Config {
       ModChatSettingsSelect<false> | ModChatSettingsSelect<true>;
     "mod-docs-settings":
       ModDocsSettingsSelect<false> | ModDocsSettingsSelect<true>;
+    "mod-feedback-settings":
+      ModFeedbackSettingsSelect<false> | ModFeedbackSettingsSelect<true>;
     "payload-jobs-stats":
       PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
@@ -3005,6 +3011,78 @@ export interface KitModule {
     syncStatus?: string | null;
     syncError?: string | null;
   };
+  mod_feedback?: {
+    /**
+     * Order, labels and visibility of the portal tabs. Drag to reorder.
+     */
+    portalTabs?:
+      | {
+          tab: "roadmap" | "feedback" | "changelog";
+          label: string;
+          enabled?: boolean | null;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Shown next to your logo on the portal and in page titles.
+     */
+    portalTitle?: string | null;
+    feedbackIntro?: string | null;
+    /**
+     * The portal search covers every board the visitor can see.
+     */
+    searchAllBoards?: boolean | null;
+    statuses?:
+      | {
+          name: string;
+          /**
+           * Set automatically from the name; never changes.
+           */
+          key?: string | null;
+          type: "open" | "active" | "complete" | "closed";
+          tone?:
+            ("neutral" | "info" | "warning" | "success" | "destructive") | null;
+          showOnRoadmap?: boolean | null;
+          isDefault?: boolean | null;
+          notifyVotersByDefault?: boolean | null;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Posts in an Active status longer than this show as stale in the staff Inbox.
+     */
+    staleAfterWeeks?: number | null;
+    tags?:
+      | {
+          name: string;
+          /**
+           * Set automatically from the name; never changes.
+           */
+          key?: string | null;
+          tone?:
+            ("neutral" | "info" | "warning" | "success" | "destructive") | null;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Visitors vote without signing up (protected by Turnstile).
+     */
+    anonVotes?: boolean | null;
+    anonPosts?: boolean | null;
+    anonComments?: boolean | null;
+    /**
+     * Per person (or per IP when anonymous).
+     */
+    postsPerHour?: number | null;
+    commentsPerHour?: number | null;
+    notifyStaffOnNewPost?: boolean | null;
+    notifyVotersOnStaffComment?: boolean | null;
+    /**
+     * Tell staff when a post reaches these vote counts.
+     */
+    voteMilestones?:
+      ("5" | "10" | "25" | "50" | "100" | "250" | "500" | "1000")[] | null;
+  };
   updatedAt: string;
   createdAt: string;
 }
@@ -3130,6 +3208,100 @@ export interface ModDocsPage {
   updatedAt: string;
   createdAt: string;
   _status?: ("draft" | "published") | null;
+}
+/**
+ * Feedback boards on the portal (/feedback). Drag to reorder. New boards are private (staff only) until you open them up.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "mod-feedback-boards".
+ */
+export interface ModFeedbackBoard {
+  id: number;
+  _order?: string | null;
+  name: string;
+  /**
+   * The board's URL: /feedback/<slug>. Filled from the name.
+   */
+  slug: string;
+  /**
+   * Shown under the board name (markdown links allowed). Also shown in place of the form when new posts are off.
+   */
+  description?: string | null;
+  access: "staff" | "public" | "members" | "segment";
+  /**
+   * User tag names (People → Users → Tags). Users with any of them can see the board.
+   */
+  segmentTags?: string[] | null;
+  /**
+   * List it on /roadmap and in the board switcher. Hidden boards still open by URL.
+   */
+  showOnPortalHome?: boolean | null;
+  searchIndexing?: boolean | null;
+  /**
+   * Off hides the create form; people can still vote and comment.
+   */
+  allowNewPosts?: boolean | null;
+  anonVotes?: ("inherit" | "allow" | "deny") | null;
+  anonPosts?: ("inherit" | "allow" | "deny") | null;
+  anonComments?: ("inherit" | "allow" | "deny") | null;
+  /**
+   * New posts wait in the staff Inbox (/a/feedback).
+   */
+  requireApproval?: boolean | null;
+  showVoteCounts?: boolean | null;
+  showVoters?: boolean | null;
+  showDates?: boolean | null;
+  /**
+   * Off: people only see staff comments and their own.
+   */
+  showCommentsPublicly?: boolean | null;
+  disableVotesWhenDone?: boolean | null;
+  disableCommentsWhenDone?: boolean | null;
+  titleLabel?: string | null;
+  titlePlaceholder?: string | null;
+  detailsLabel?: string | null;
+  detailsPlaceholder?: string | null;
+  submitLabel?: string | null;
+  allowAttachments?: boolean | null;
+  /**
+   * Up to three extra questions on the form.
+   */
+  customFields?:
+    | {
+        label: string;
+        /**
+         * Set automatically from the name; never changes.
+         */
+        key?: string | null;
+        required?: boolean | null;
+        type?: ("text" | "textarea" | "select") | null;
+        placeholder?: string | null;
+        options?: string[] | null;
+        id?: string | null;
+      }[]
+    | null;
+  categories?:
+    | {
+        name: string;
+        /**
+         * Set automatically from the name; never changes.
+         */
+        key?: string | null;
+        subcategories?:
+          | {
+              name: string;
+              /**
+               * Set automatically from the name; never changes.
+               */
+              key?: string | null;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -4753,6 +4925,50 @@ export interface KitModulesSelect<T extends boolean = true> {
         syncStatus?: T;
         syncError?: T;
       };
+  mod_feedback?:
+    | T
+    | {
+        portalTabs?:
+          | T
+          | {
+              tab?: T;
+              label?: T;
+              enabled?: T;
+              id?: T;
+            };
+        portalTitle?: T;
+        feedbackIntro?: T;
+        searchAllBoards?: T;
+        statuses?:
+          | T
+          | {
+              name?: T;
+              key?: T;
+              type?: T;
+              tone?: T;
+              showOnRoadmap?: T;
+              isDefault?: T;
+              notifyVotersByDefault?: T;
+              id?: T;
+            };
+        staleAfterWeeks?: T;
+        tags?:
+          | T
+          | {
+              name?: T;
+              key?: T;
+              tone?: T;
+              id?: T;
+            };
+        anonVotes?: T;
+        anonPosts?: T;
+        anonComments?: T;
+        postsPerHour?: T;
+        commentsPerHour?: T;
+        notifyStaffOnNewPost?: T;
+        notifyVotersOnStaffComment?: T;
+        voteMilestones?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }
@@ -4912,6 +5128,64 @@ export interface ModDocsPagesSelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "mod-feedback-boards_select".
+ */
+export interface ModFeedbackBoardsSelect<T extends boolean = true> {
+  _order?: T;
+  name?: T;
+  slug?: T;
+  description?: T;
+  access?: T;
+  segmentTags?: T;
+  showOnPortalHome?: T;
+  searchIndexing?: T;
+  allowNewPosts?: T;
+  anonVotes?: T;
+  anonPosts?: T;
+  anonComments?: T;
+  requireApproval?: T;
+  showVoteCounts?: T;
+  showVoters?: T;
+  showDates?: T;
+  showCommentsPublicly?: T;
+  disableVotesWhenDone?: T;
+  disableCommentsWhenDone?: T;
+  titleLabel?: T;
+  titlePlaceholder?: T;
+  detailsLabel?: T;
+  detailsPlaceholder?: T;
+  submitLabel?: T;
+  allowAttachments?: T;
+  customFields?:
+    | T
+    | {
+        label?: T;
+        key?: T;
+        required?: T;
+        type?: T;
+        placeholder?: T;
+        options?: T;
+        id?: T;
+      };
+  categories?:
+    | T
+    | {
+        name?: T;
+        key?: T;
+        subcategories?:
+          | T
+          | {
+              name?: T;
+              key?: T;
+              id?: T;
+            };
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -6049,6 +6323,85 @@ export interface ModDocsSetting {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "mod-feedback-settings".
+ */
+export interface ModFeedbackSetting {
+  id: number;
+  /**
+   * Order, labels and visibility of the portal tabs. Drag to reorder.
+   */
+  portalTabs?:
+    | {
+        tab: "roadmap" | "feedback" | "changelog";
+        label: string;
+        enabled?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Shown next to your logo on the portal and in page titles.
+   */
+  portalTitle?: string | null;
+  feedbackIntro?: string | null;
+  /**
+   * The portal search covers every board the visitor can see.
+   */
+  searchAllBoards?: boolean | null;
+  statuses?:
+    | {
+        name: string;
+        /**
+         * Set automatically from the name; never changes.
+         */
+        key?: string | null;
+        type: "open" | "active" | "complete" | "closed";
+        tone?:
+          ("neutral" | "info" | "warning" | "success" | "destructive") | null;
+        showOnRoadmap?: boolean | null;
+        isDefault?: boolean | null;
+        notifyVotersByDefault?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Posts in an Active status longer than this show as stale in the staff Inbox.
+   */
+  staleAfterWeeks?: number | null;
+  tags?:
+    | {
+        name: string;
+        /**
+         * Set automatically from the name; never changes.
+         */
+        key?: string | null;
+        tone?:
+          ("neutral" | "info" | "warning" | "success" | "destructive") | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Visitors vote without signing up (protected by Turnstile).
+   */
+  anonVotes?: boolean | null;
+  anonPosts?: boolean | null;
+  anonComments?: boolean | null;
+  /**
+   * Per person (or per IP when anonymous).
+   */
+  postsPerHour?: number | null;
+  commentsPerHour?: number | null;
+  notifyStaffOnNewPost?: boolean | null;
+  notifyVotersOnStaffComment?: boolean | null;
+  /**
+   * Tell staff when a post reaches these vote counts.
+   */
+  voteMilestones?:
+    ("5" | "10" | "25" | "50" | "100" | "250" | "500" | "1000")[] | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-jobs-stats".
  */
 export interface PayloadJobsStat {
@@ -6494,6 +6847,55 @@ export interface ModDocsSettingsSelect<T extends boolean = true> {
   syncNow?: T;
   syncStatus?: T;
   syncError?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "mod-feedback-settings_select".
+ */
+export interface ModFeedbackSettingsSelect<T extends boolean = true> {
+  portalTabs?:
+    | T
+    | {
+        tab?: T;
+        label?: T;
+        enabled?: T;
+        id?: T;
+      };
+  portalTitle?: T;
+  feedbackIntro?: T;
+  searchAllBoards?: T;
+  statuses?:
+    | T
+    | {
+        name?: T;
+        key?: T;
+        type?: T;
+        tone?: T;
+        showOnRoadmap?: T;
+        isDefault?: T;
+        notifyVotersByDefault?: T;
+        id?: T;
+      };
+  staleAfterWeeks?: T;
+  tags?:
+    | T
+    | {
+        name?: T;
+        key?: T;
+        tone?: T;
+        id?: T;
+      };
+  anonVotes?: T;
+  anonPosts?: T;
+  anonComments?: T;
+  postsPerHour?: T;
+  commentsPerHour?: T;
+  notifyStaffOnNewPost?: T;
+  notifyVotersOnStaffComment?: T;
+  voteMilestones?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

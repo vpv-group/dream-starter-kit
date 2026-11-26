@@ -87,6 +87,25 @@ export const modulesLock = {
       ],
       "edgeFunctions": []
     },
+    "feedback": {
+      "version": "1.0.0",
+      "kitCompat": ">=2.5.0 <3",
+      "source": "local",
+      "installedVia": "preinstalled",
+      "stubs": [
+        "apps/expo/src/app/(app)/a/feedback/index.tsx",
+        "apps/nextjs/src/app/(frontend)/(app)/a/feedback/layout.tsx",
+        "apps/nextjs/src/app/(frontend)/(app)/a/feedback/page.tsx",
+        "apps/nextjs/src/app/(frontend)/(public)/feedback/[board]/create/page.tsx",
+        "apps/nextjs/src/app/(frontend)/(public)/feedback/[board]/p/[post]/page.tsx",
+        "apps/nextjs/src/app/(frontend)/(public)/feedback/[board]/page.tsx",
+        "apps/nextjs/src/app/(frontend)/(public)/feedback/layout.tsx",
+        "apps/nextjs/src/app/(frontend)/(public)/feedback/page.tsx",
+        "apps/nextjs/src/app/(frontend)/(public)/feedback/search/page.tsx",
+        "apps/nextjs/src/payload/migrations/20261126_201522_mod_feedback_initial.ts"
+      ],
+      "edgeFunctions": []
+    },
     "notifications": {
       "version": "1.4.0",
       "kitCompat": ">=2.3.0 <3",

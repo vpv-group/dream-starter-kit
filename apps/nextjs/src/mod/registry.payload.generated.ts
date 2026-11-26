@@ -12,6 +12,7 @@ import * as payload_chat from "@acme/mod-chat/payload";
 import * as payload_chat_adapter_sendblue from "@acme/mod-chat-adapter-sendblue/payload";
 import * as payload_chat_adapter_slack from "@acme/mod-chat-adapter-slack/payload";
 import * as payload_docs from "@acme/mod-docs/payload";
+import * as payload_feedback from "@acme/mod-feedback/payload";
 
 export interface ModPayloadMigration {
   name: string;
@@ -28,12 +29,14 @@ export const modCollections: CollectionConfig[] = [
   ...payload_billing.collections,
   ...payload_chat.collections,
   ...payload_docs.collections,
+  ...payload_feedback.collections,
 ];
 
 export const modGlobals: GlobalConfig[] = [
   payload_billing.settings.global,
   chatSettings.global,
   payload_docs.settings.global,
+  payload_feedback.settings.global,
 ];
 
 export const modPlugins: NonNullable<Config["plugins"]> = [
@@ -46,12 +49,14 @@ export const modPayloadMigrations: ModPayloadMigration[] = [
   ...payload_chat_adapter_sendblue.migrations,
   ...payload_chat_adapter_slack.migrations,
   ...payload_docs.migrations,
+  ...payload_feedback.migrations,
 ];
 
 export const modSeedSteps: ModSeedStep[] = [
   ...payload_billing.seed,
   ...payload_chat.seed,
   ...payload_docs.seed,
+  ...payload_feedback.seed,
 ];
 
 /**
@@ -62,6 +67,7 @@ export const modSettings: Record<string, ModuleSettings> = {
   "billing": payload_billing.settings,
   "chat": chatSettings,
   "docs": payload_docs.settings,
+  "feedback": payload_feedback.settings,
 };
 
 /**
