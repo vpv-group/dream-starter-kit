@@ -212,6 +212,9 @@ to one workspace, or to all of them.
 - **It is not access control.** Modules use it to filter their staff screens
   (e.g. a client portal's inbox, a projects module's company boards); RLS
   and each module's staff policies still decide what staff can read.
+- **Billing follows it:** with the header scoped to a workspace, `/billing`
+  opens that workspace's staff support view, and opening a workspace there
+  scopes the header (docs/BILLING.md §10).
 - Files: `components/workspaces/workspace-view-switcher.tsx`,
   `components/site-header.tsx`, `supabase/migrations/20261126120000_staff_workspaces.sql`,
   `tooling/rls-tests/src/staff-workspaces.test.ts`.

@@ -1,12 +1,16 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
 import { useSession, useSupabase } from "@acme/api";
-import { useMyWorkspaces } from "@acme/app";
+import {
+  useMyWorkspaces,
+  useSetWorkspaceView,
+  useWorkspaceView,
+} from "@acme/app";
 import { Badge } from "@acme/ui/badge";
 import { Button } from "@acme/ui/button";
 import {
@@ -187,7 +191,11 @@ function OwnBilling({ orgId }: { orgId: string | null }) {
  * /billing — "Billing account for …" with a switcher: your personal billing,
  * the workspaces you administer (company plans every member gets), and — for
  * staff — any person or workspace in a read-only support view with plan
- * grants. The choice lives in `?account=` (`org:<id>` / `user:<id>`).
+ * grants. The choice lives in `?account=` (`org:<id>` / `user:<id>` / `me`).
+ *
+ * Staff who scoped the header's workspace switcher to a company land on that
+ * company's billing, and picking a workspace here scopes the header too
+ * (docs/WORKSPACES.md → Staff workspace view).
  */
 export function BillingPage() {
   const router = useRouter();
@@ -196,22 +204,37 @@ export function BillingPage() {
   const { user } = useSession();
   const workspaces = useMyWorkspaces();
   const isStaff = useIsStaff().data === true;
+  const view = useWorkspaceView();
+  const setView = useSetWorkspaceView();
+  // The header's staff scope (server-validated; members never have one).
+  const staffScope = view.isStaffView ? view.orgId : null;
 
-  const account = parseAccount(params.get("account"));
+  const raw = params.get("account");
+  const account: BillingAccount =
+    raw === null && staffScope
+      ? { kind: "org", id: staffScope }
+      : parseAccount(raw);
+  const mine = useMemo(() => workspaces.data ?? [], [workspaces.data]);
   const select = useCallback(
     (a: BillingAccount) => {
       const next = new URLSearchParams(params.toString());
-      const value = accountParam(a);
+      // "Personal" must stay explicit while the header is scoped, or the
+      // page would fall back to the scoped workspace.
+      const value = accountParam(a) ?? (staffScope ? "me" : null);
       if (value) next.set("account", value);
       else next.delete("account");
       next.delete("checkout");
       const qs = next.toString();
       router.push(qs ? `${pathname}?${qs}` : pathname);
+      // Staff opening a company here also scope the header to it.
+      const member = a.kind === "org" && mine.some((w) => w.id === a.id);
+      if (isStaff && a.kind === "org" && !member && a.id !== staffScope) {
+        setView(a.id).catch(() => undefined);
+      }
     },
-    [params, pathname, router],
+    [params, pathname, router, staffScope, isStaff, mine, setView],
   );
 
-  const mine = workspaces.data ?? [];
   const administered =
     account.kind === "org"
       ? mine.find((w) => w.id === account.id && w.role !== "member")

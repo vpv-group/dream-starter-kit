@@ -318,7 +318,10 @@ workspace they're in.
 
 **Staff support view.** Staff (`profiles.is_staff`) get **Find an account… (staff)**
 in the same switcher: search any person (email, name) or workspace (name, slug) and
-open its billing at `/billing?account=user:<id>` / `org:<id>`. It never changes the
+open its billing at `/billing?account=user:<id>` / `org:<id>`. It follows the header's
+**staff workspace view** (docs/WORKSPACES.md): with the header scoped to a
+company, `/billing` opens that company, and opening a company here scopes the
+header to it. It never changes the
 staff member's own active workspace, and it's **read‑only** for money:
 
 | Staff can                                                                   | Staff can't (do it in the provider's dashboard — linked from the view) |
