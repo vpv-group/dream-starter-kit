@@ -5,6 +5,10 @@ packages:
   - modules/*
 
 catalog:
+  '@daypicker/react': ^10.0.2
+  '@dnd-kit/core': ^6.3.1
+  '@dnd-kit/sortable': ^10.0.0
+  '@dnd-kit/utilities': ^3.2.2
   '@eslint/js': ^10.0.1
   '@hookform/resolvers': ^7.0.2
   '@payloadcms/db-postgres': 3.92.1
@@ -24,9 +28,11 @@ catalog:
   '@tailwindcss/postcss': ^4.3.4
   '@tailwindcss/vite': ^4.3.4
   '@tanstack/react-query': ^5.105.3
+  '@tanstack/react-table': ^9.3.1
   '@types/node': ^22.20.5
   '@vitejs/plugin-react': 5.1.0
   ai: ^7.0.162
+  date-fns: ^4.4.0
   eslint: ^10.14.0
   graphql: ^16.8.1
   payload: 3.92.1
