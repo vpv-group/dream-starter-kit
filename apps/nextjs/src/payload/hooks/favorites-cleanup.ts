@@ -41,7 +41,7 @@ async function queueCleanup(
  * Removes favorites of content that's gone. Fires on permanent delete and on
  * move-to-trash: trashing is an UPDATE that sets `deletedAt`, so it never
  * triggers delete hooks. A restored item's favorites stay removed.
- * Housekeeping also sweeps orphans in case a job was lost.
+ * The job retries; there is no periodic orphan sweep (a 2.6+ follow-up).
  */
 export function withFavoritesCleanup<T extends CollectionConfig>(config: T): T {
   if (!FAVORITABLE.has(config.slug)) return config;

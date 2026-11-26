@@ -15,13 +15,16 @@ import { getRequestClient } from "~/lib/supabase/request-client";
  * 1. A sole owner of a workspace with other members must transfer ownership
  *    first (the profiles_guard_delete trigger enforces it; checked here so
  *    nothing irreversible happens and the client can name the workspaces).
- * 2. Live Stripe subscriptions are cancelled (best-effort) — the database
+ * 2. An `account-erasure` Payload job is queued first (it runs two minutes
+ *    later and removes what lives outside `public`: their CMS user row, even
+ *    from the Trash, and their storage objects). If queueing fails, nothing
+ *    has happened yet and the request fails. The job does nothing if the
+ *    auth user still exists, so a deletion that fails below is harmless.
+ * 3. Live Stripe subscriptions are cancelled (best-effort) — the database
  *    cascade only removes our mirror rows, not Stripe's state.
- * 3. The auth user is deleted with the service role; ON DELETE CASCADE removes
- *    everything they own in `public`.
- * 4. An `account-erasure` Payload job removes what lives outside `public`
- *    (their CMS user row, their storage objects), and an audit entry records
- *    the deletion (IDs only — the audit log outlives the account).
+ * 4. The auth user is deleted with the service role; ON DELETE CASCADE removes
+ *    everything they own in `public`. An audit entry records the deletion
+ *    (IDs only — the audit log outlives the account).
  */
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -50,6 +53,27 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient();
+
+  // Queue the erasure of what lives outside `public` (CMS user, storage)
+  // BEFORE deleting: if queueing fails, nothing is deleted and the client can
+  // retry. The job does nothing while the auth user still exists, so a
+  // deletion that fails below never erases a live account.
+  try {
+    const { getPayloadClient } = await import("~/lib/cms/payload-client");
+    const payload = await getPayloadClient();
+    await payload.jobs.queue({
+      task: "account-erasure",
+      input: { supabaseUserId: user.id },
+      // Runs after the deletion below has happened (the job checks).
+      waitUntil: new Date(Date.now() + 2 * 60_000),
+    });
+  } catch (err) {
+    console.error("[account-delete] couldn't queue account-erasure", err);
+    return NextResponse.json(
+      { error: "Couldn't start the account deletion. Please try again." },
+      { status: 500 },
+    );
+  }
 
   if (env.STRIPE_SECRET_KEY) {
     try {
@@ -92,17 +116,6 @@ export async function POST(req: NextRequest) {
     _entity_type: "user",
     _entity_id: user.id,
   });
-
-  try {
-    const { getPayloadClient } = await import("~/lib/cms/payload-client");
-    const payload = await getPayloadClient();
-    await payload.jobs.queue({
-      task: "account-erasure",
-      input: { supabaseUserId: user.id },
-    });
-  } catch (err) {
-    console.error("[account-delete] couldn't queue account-erasure", err);
-  }
 
   return NextResponse.json({ success: true });
 }

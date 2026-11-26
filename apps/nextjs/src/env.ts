@@ -107,6 +107,10 @@ export const env = createEnv({
     // (lib/cms/cached-reads.ts), so a new deployment never serves menus or
     // settings cached by the previous one.
     VERCEL_DEPLOYMENT_ID: z.string().min(1).optional(),
+    // Injected by Vercel when "Protection Bypass for Automation" is on. The
+    // boot step keeps it in Supabase Vault so Supabase Cron's calls get past
+    // Deployment Protection (x-vercel-protection-bypass).
+    VERCEL_AUTOMATION_BYPASS_SECRET: z.string().min(1).optional(),
     // Dream module registry (docs/MODULES.md → Paid modules). Installs and
     // updates authenticate with this site's own license key (the dream-site
     // global) and the Meet Dream AI GitHub App: no tokens in env.

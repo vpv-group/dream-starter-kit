@@ -1,19 +1,41 @@
-import type { CollectionConfig } from "payload";
+import type { CollectionBeforeChangeHook, CollectionConfig } from "payload";
 
 import { isStaff } from "../access";
 
 /**
+ * Re-scheduling a `failed` notification starts its attempts over; otherwise
+ * the first failure of the new run would mark it failed again at once.
+ */
+export const resetAttemptsOnReschedule: CollectionBeforeChangeHook = ({
+  data,
+  operation,
+  originalDoc,
+}) => {
+  const previous = (originalDoc as { status?: string } | undefined)?.status;
+  if (
+    operation === "update" &&
+    previous === "failed" &&
+    (data as { status?: string }).status === "scheduled"
+  ) {
+    return { ...data, attempts: 0 };
+  }
+  return data;
+};
+
+/**
  * Staff-authored notifications across channels (push/email/SMS/in-app).
- * Sending is performed by a job/edge worker that reads `scheduledAt`, honors
- * per-user opt-ins (`pushEnabled`, `smsOptIn` + a present phone) and writes
- * back `sentAt`/`sentCount`. Plain `status` select is safe here — drafts are
- * OFF (the reserved-name collision only exists with versions enabled).
+ * Sending is performed by the `dispatch-notifications` job (runDispatch in
+ * @acme/mcp), which reads `scheduledAt`, retries failed sends (`attempts`)
+ * and writes back `sentAt`/`sentCount`. Plain `status` select is safe here —
+ * drafts are OFF (the reserved-name collision only exists with versions
+ * enabled).
  */
 export const Notifications: CollectionConfig = {
   slug: "notifications",
   // The dispatcher's "due and scheduled" scan.
   indexes: [{ fields: ["status", "scheduledAt"] }],
   trash: true,
+  hooks: { beforeChange: [resetAttemptsOnReschedule] },
   admin: {
     useAsTitle: "title",
     group: "Marketing",
@@ -120,6 +142,18 @@ export const Notifications: CollectionConfig = {
         { label: "Failed", value: "failed" },
       ],
       admin: { position: "sidebar" },
+    },
+    {
+      // Send attempts so far. A failed send goes back to `scheduled` for the
+      // next dispatch run; after 5 attempts the status becomes `failed`.
+      name: "attempts",
+      type: "number",
+      defaultValue: 0,
+      admin: {
+        readOnly: true,
+        position: "sidebar",
+        description: "Send attempts. Marked failed after 5.",
+      },
     },
     {
       type: "row",

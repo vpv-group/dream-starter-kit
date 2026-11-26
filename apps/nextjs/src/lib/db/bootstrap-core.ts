@@ -441,3 +441,54 @@ export function schedulerAppUrl(siteUrl: string): string {
 }
 
 export const SCHEDULER_SECRETS_FN = "private.sync_scheduler_secrets(text,text)";
+export const SCHEDULER_BYPASS_FN = "private.sync_scheduler_bypass(text)";
+
+const LOCAL_HOSTS = new Set([
+  "localhost",
+  "127.0.0.1",
+  "0.0.0.0",
+  "::1",
+  "[::1]",
+  "host.docker.internal",
+]);
+
+function hostOf(url: string): string | null {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return null;
+  }
+}
+
+export interface SchedulerSecrets {
+  appUrl?: string;
+  cronSecret?: string;
+  /** Vercel's "Protection Bypass for Automation" secret, when enabled. */
+  bypassSecret?: string;
+}
+
+/**
+ * What the boot step writes to Supabase Vault for Supabase Cron, or null to
+ * leave Vault alone. A local or plain-http app URL is only written when the
+ * database is local too: `next dev` started with production env must not
+ * point production's scheduler at this laptop.
+ */
+export function schedulerSecretsFor(opts: {
+  siteUrl: string;
+  dbUrl: string;
+  cronSecret?: string;
+  bypassSecret?: string;
+}): SchedulerSecrets | null {
+  const appUrl = schedulerAppUrl(opts.siteUrl);
+  const appHost = hostOf(appUrl);
+  const dbHost = hostOf(opts.dbUrl);
+  const appIsLocal =
+    appHost === null || LOCAL_HOSTS.has(appHost) || appUrl.startsWith("http:");
+  const dbIsLocal = dbHost !== null && LOCAL_HOSTS.has(dbHost);
+  if (appIsLocal && !dbIsLocal) return null;
+  return {
+    appUrl,
+    cronSecret: opts.cronSecret,
+    bypassSecret: opts.bypassSecret,
+  };
+}

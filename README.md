@@ -79,7 +79,7 @@ If anything here disagrees with those, **they win.**
 | Backend       | Supabase — Postgres + Auth + RLS + Storage + Edge Functions (Deno)        |
 | Content / CMS | Payload CMS v3 (web/server only) — own `cms` schema, REST at `/cms-api`   |
 | Data layer    | `@supabase/supabase-js` typed client + react-query hooks (`packages/api`) |
-| Payments      | Stripe (web only) + webhook edge function                                 |
+| Payments      | Stripe (web only) + one self-registering webhook (billing module route)   |
 | AI            | Vercel AI SDK v6 via the AI Gateway (Claude default)                      |
 | MCP           | Remote MCP server (`@acme/mcp`) at `/mcp` — OAuth 2.1, staff-only         |
 | Ship          | Vercel (web) · EAS (mobile) · Expo Push                                   |
@@ -208,25 +208,25 @@ Every variable is validated by a zod schema (`packages/config/env` + each app's
 - The Supabase **service-role key bypasses RLS** and lives **only** server-side
   (edge functions / server routes) — never in web client or mobile code.
 
-| Variable                                                                                | Public? | Where to get it                                                                                                                          |
-| --------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_URL`                                 | ✅      | `supabase start` output / Dashboard → Project Settings → API                                                                             |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`                       | ✅      | same                                                                                                                                     |
-| `SUPABASE_SERVICE_ROLE_KEY`                                                             | 🔒      | same (server-only; bypasses RLS)                                                                                                         |
-| `SUPABASE_DB_URL`                                                                       | 🔒      | local default in `.env.example` / hosted pooler URL                                                                                      |
+| Variable                                                                                | Public? | Where to get it                                                                                                                            |
+| --------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `NEXT_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_URL`                                 | ✅      | `supabase start` output / Dashboard → Project Settings → API                                                                               |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`                       | ✅      | same                                                                                                                                       |
+| `SUPABASE_SERVICE_ROLE_KEY`                                                             | 🔒      | same (server-only; bypasses RLS)                                                                                                           |
+| `SUPABASE_DB_URL`                                                                       | 🔒      | local default in `.env.example` / hosted pooler URL                                                                                        |
 | `CRON_SECRET`                                                                           | 🔒      | optional — derived from the service-role key when unset; guards the scheduled endpoints (Supabase Cron → Payload jobs, module cron routes) |
-| `MCP_JWT_SECRET` / `MCP_ENABLED`                                                        | 🔒      | enables the remote MCP server (`openssl rand -base64 32`); `MCP_ENABLED="off"` is a kill switch — see [docs/MCP.md](./docs/MCP.md)       |
-| `NEXT_PUBLIC_APP_URL` / `EXPO_PUBLIC_API_URL`                                           | ✅      | your web origin (LAN IP in mobile dev). On Vercel the web origin is auto-detected — see `NEXT_PUBLIC_SITE_URL`                           |
-| `NEXT_PUBLIC_SITE_URL`                                                                  | ✅      | optional — pin the public web origin to a custom domain; else auto-detected on Vercel / falls back to `NEXT_PUBLIC_APP_URL`              |
-| `AI_GATEWAY_API_KEY`                                                                    | 🔒      | [Vercel AI Gateway](https://vercel.com/ai-gateway) (auto on Vercel)                                                                      |
-| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`                                           | 🔒      | Stripe Dashboard / `stripe listen`                                                                                                       |
-| `STRIPE_PRICE_MONTHLY` / `STRIPE_PRICE_YEARLY`                                          | 🔒      | Stripe price IDs (`price_…`)                                                                                                             |
-| `PAYLOAD_DATABASE_URL`                                                                  | 🔒      | `payload_cms` role connection (`search_path=cms`); local default in `.env.example` — hosted: optional, derived from the service-role key |
-| `PAYLOAD_SECRET`                                                                        | 🔒      | Payload admin auth/encryption (`openssl rand -base64 32`) — hosted: optional, derived from the service-role key                          |
-| `S3_ENDPOINT` / `S3_REGION` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_BUCKET` | 🔒      | Supabase Storage (S3) for Payload media — the `cms-media` bucket; local defaults in `.env.example`                                       |
-| `NEXT_PUBLIC_CMS_URL` / `EXPO_PUBLIC_CMS_URL`                                           | ✅      | Payload REST origin (mobile reads content; web is same-origin)                                                                           |
-| `SUPABASE_AUTH_EXTERNAL_GOOGLE_*` / `_APPLE_*`                                          | 🔒      | OAuth provider consoles (local dev only; prod uses the Dashboard)                                                                        |
-| `EXPO_PUBLIC_EAS_PROJECT_ID` / `EXPO_PUBLIC_AUTH_SCHEME`                                | ✅      | `eas init` / `app.config.ts` `scheme`                                                                                                    |
+| `MCP_JWT_SECRET` / `MCP_ENABLED`                                                        | 🔒      | enables the remote MCP server (`openssl rand -base64 32`); `MCP_ENABLED="off"` is a kill switch — see [docs/MCP.md](./docs/MCP.md)         |
+| `NEXT_PUBLIC_APP_URL` / `EXPO_PUBLIC_API_URL`                                           | ✅      | your web origin (LAN IP in mobile dev). On Vercel the web origin is auto-detected — see `NEXT_PUBLIC_SITE_URL`                             |
+| `NEXT_PUBLIC_SITE_URL`                                                                  | ✅      | optional — pin the public web origin to a custom domain; else auto-detected on Vercel / falls back to `NEXT_PUBLIC_APP_URL`                |
+| `AI_GATEWAY_API_KEY`                                                                    | 🔒      | [Vercel AI Gateway](https://vercel.com/ai-gateway) (auto on Vercel)                                                                        |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`                                           | 🔒      | Stripe Dashboard / `stripe listen`                                                                                                         |
+| `STRIPE_PRICE_MONTHLY` / `STRIPE_PRICE_YEARLY`                                          | 🔒      | Stripe price IDs (`price_…`)                                                                                                               |
+| `PAYLOAD_DATABASE_URL`                                                                  | 🔒      | `payload_cms` role connection (`search_path=cms`); local default in `.env.example` — hosted: optional, derived from the service-role key   |
+| `PAYLOAD_SECRET`                                                                        | 🔒      | Payload admin auth/encryption (`openssl rand -base64 32`) — hosted: optional, derived from the service-role key                            |
+| `S3_ENDPOINT` / `S3_REGION` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_BUCKET` | 🔒      | Supabase Storage (S3) for Payload media — the `cms-media` bucket; local defaults in `.env.example`                                         |
+| `NEXT_PUBLIC_CMS_URL` / `EXPO_PUBLIC_CMS_URL`                                           | ✅      | Payload REST origin (mobile reads content; web is same-origin)                                                                             |
+| `SUPABASE_AUTH_EXTERNAL_GOOGLE_*` / `_APPLE_*`                                          | 🔒      | OAuth provider consoles (local dev only; prod uses the Dashboard)                                                                          |
+| `EXPO_PUBLIC_EAS_PROJECT_ID` / `EXPO_PUBLIC_AUTH_SCHEME`                                | ✅      | `eas init` / `app.config.ts` `scheme`                                                                                                      |
 
 The AI model id is **not** an env var — it's centralized in `packages/config`
 (`DEFAULT_AI_MODEL`) and is swappable.
@@ -394,8 +394,9 @@ app accepts the publishable and secret keys as its anon and service-role keys.)
    (`sslmode=require`, what the integration injects) are encrypted but **not
    CA-verified** — Supabase's cert chain is rooted in its own CA; set
    `sslmode=verify-full` and supply that CA via `NODE_EXTRA_CA_CERTS` to opt into
-   strict verification. Deploy the edge functions —
-   see [Backend (Supabase)](#backend-supabase).
+   strict verification. There are no edge functions to deploy: billing, account
+   deletion and reminders run in the Next.js app, and scheduled work runs on Supabase
+   Cron, set up by the migrations.
 4. **Redeploy** — in Vercel, **Deployments → ⋯ → Redeploy** so the build picks up the
    injected env vars. The web app should now be live (the first boot runs the DB
    bootstrap above) — verify at `https://<your-domain>/api/health/db`, which reports
@@ -555,8 +556,9 @@ Prefer to wire env yourself instead of using the integration above? Import the r
 the root directory to `apps/nextjs`, and add the Supabase env vars
 (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`)
 plus any `STRIPE_*` / `AI_GATEWAY_API_KEY` (the AI Gateway credential is injected
-automatically on Vercel). Add a Stripe webhook endpoint pointing at the deployed
-`billing-stripe-webhook` function and copy its signing secret into Supabase secrets.
+automatically on Vercel). With `STRIPE_SECRET_KEY` set, the app registers its Stripe
+webhook endpoint (`/api/mod/billing/stripe/webhook`) through the Stripe API within the
+hour and keeps the signing secret in Supabase Vault (docs/STRIPE.md §4).
 
 ### Mobile (EAS)
 
@@ -589,8 +591,9 @@ pnpm 10.19.0). Set `EXPO_PUBLIC_*` values as EAS env/secrets.
    USD; to bill in another currency create the prices in that currency (Stripe price
    IDs are immutable, so set the amount/interval correctly the first time). The display
    strings live in `packages/config` (`PLANS`).
-2. Local webhook: `stripe listen --forward-to localhost:54321/functions/v1/billing-stripe-webhook`
-   and copy the `whsec_…` into `STRIPE_WEBHOOK_SECRET`.
+2. Local webhook: `stripe listen --forward-to localhost:3000/api/mod/billing/stripe/webhook`
+   and copy the `whsec_…` into `STRIPE_WEBHOOK_SECRET` (in production the app
+   registers its own endpoint and keeps the secret in Supabase Vault).
 3. The webhook is signature-verified and idempotent; it syncs the catalog +
    subscription state into Supabase. Mobile reads `subscriptions` (RLS read-own).
 

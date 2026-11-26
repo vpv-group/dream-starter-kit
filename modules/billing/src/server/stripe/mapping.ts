@@ -158,3 +158,36 @@ export function mapSubscription(
       isoOrNull(item?.current_period_end) ?? isoOrNull(sub.current_period_end),
   };
 }
+
+export interface BuyerEmails {
+  /** Set the Stripe customer's email to this (the account email). Absent:
+   *  leave the customer's email as it is. */
+  customerEmail?: string;
+  /** The billing email to store: the wallet/checkout email when it differs
+   *  from the account email, `null` when it matches (clear it). Absent: leave
+   *  the stored one as it is. */
+  billingEmail?: string | null;
+}
+
+/**
+ * The account (login) email is the buyer's identity: the Stripe customer's
+ * email stays pinned to it, and a DIFFERENT wallet email (Apple Pay / Google
+ * Pay / the Checkout email field) is kept as a billing email instead of
+ * overwriting it. Compared case-insensitively. When the account email is
+ * unknown (the lookup failed), nothing is changed: overwriting the customer's
+ * email with the wallet one is exactly what this rule prevents.
+ */
+export function splitBuyerEmails(
+  accountEmail: string | null | undefined,
+  walletEmail: string | null | undefined,
+): BuyerEmails {
+  const account = accountEmail?.trim();
+  const wallet = walletEmail?.trim();
+  if (!account) return {};
+  if (!wallet) return { customerEmail: account };
+  return {
+    customerEmail: account,
+    billingEmail:
+      wallet.toLowerCase() === account.toLowerCase() ? null : wallet,
+  };
+}

@@ -12,6 +12,8 @@ export interface PullRequest {
   headRef: string;
   headSha: string;
   baseRef: string;
+  /** The base branch commit the PR is compared against. */
+  baseSha: string | null;
   labels: string[];
   /** GitHub's mergeability: clean | blocked | dirty | unstable | behind | unknown … */
   mergeableState: string;
@@ -62,7 +64,7 @@ interface RawPull {
   body: string | null;
   created_at: string;
   head: { ref: string; sha: string };
-  base: { ref: string };
+  base: { ref: string; sha?: string };
   labels: { name: string }[];
   mergeable_state?: string;
   merge_commit_sha?: string | null;
@@ -77,6 +79,7 @@ function toPull(raw: RawPull): PullRequest {
     headRef: raw.head.ref,
     headSha: raw.head.sha,
     baseRef: raw.base.ref,
+    baseSha: raw.base.sha ?? null,
     labels: raw.labels.map((l) => l.name),
     mergeableState: raw.mergeable_state ?? "unknown",
     mergeCommitSha: raw.merge_commit_sha ?? null,

@@ -13,6 +13,7 @@ import {
   resolveAdminDbUrl,
   resolveRuntimeDbUrl,
   schedulerAppUrl,
+  schedulerSecretsFor,
   summarizeDbError,
   transactionPoolerUrl,
 } from "./bootstrap-core";
@@ -37,6 +38,45 @@ describe("schedulerAppUrl", () => {
     expect(schedulerAppUrl("https://app.example.com")).toBe(
       "https://app.example.com",
     );
+  });
+});
+
+describe("schedulerSecretsFor", () => {
+  const prodDb =
+    "postgresql://postgres.ref:pw@aws-0.pooler.supabase.com:5432/postgres";
+  const localDb = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+
+  it("stores the production URL, cron secret and bypass secret", () => {
+    expect(
+      schedulerSecretsFor({
+        siteUrl: "https://app.example.com",
+        dbUrl: prodDb,
+        cronSecret: "c",
+        bypassSecret: "b",
+      }),
+    ).toEqual({
+      appUrl: "https://app.example.com",
+      cronSecret: "c",
+      bypassSecret: "b",
+    });
+  });
+
+  it("points a local database at the local app", () => {
+    expect(
+      schedulerSecretsFor({
+        siteUrl: "http://localhost:3000",
+        dbUrl: localDb,
+        cronSecret: "c",
+      })?.appUrl,
+    ).toBe("http://host.docker.internal:3000");
+  });
+
+  it("never points a remote database's scheduler at a local or http app", () => {
+    for (const siteUrl of ["http://localhost:3000", "http://app.example.com"]) {
+      expect(
+        schedulerSecretsFor({ siteUrl, dbUrl: prodDb, cronSecret: "c" }),
+      ).toBeNull();
+    }
   });
 });
 

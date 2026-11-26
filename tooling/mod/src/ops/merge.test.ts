@@ -38,7 +38,7 @@ function session(over: Partial<OpsSession> = {}): OpsSession {
     },
     hold: null,
     releaseHolds: [],
-    site: { canary: false },
+    site: { canary: false, url: null },
     ...over,
   };
 }
@@ -53,6 +53,8 @@ interface FakePr {
   statuses?: CommitStatus[];
   files?: PrFile[];
   createdAt?: string;
+  /** Checks on the base branch commit (default: green). */
+  baseChecks?: CheckRun[];
 }
 
 function fakeGitHub(prs: FakePr[]) {
@@ -64,6 +66,7 @@ function fakeGitHub(prs: FakePr[]) {
     headRef: p.branch ?? `dream/update-x-${p.number}`,
     headSha: `sha${p.number}`,
     baseRef: "main",
+    baseSha: `base${p.number}`,
     labels: p.labels ?? ["dream-update"],
     mergeableState: p.mergeableState ?? "clean",
     mergeCommitSha: null,
@@ -89,7 +92,9 @@ function fakeGitHub(prs: FakePr[]) {
       ),
     listCheckRuns: (sha) =>
       Promise.resolve(
-        prs.find((x) => `sha${x.number}` === sha)?.checks ?? GREEN,
+        prs.find((x) => `base${x.number}` === sha)?.baseChecks ??
+          prs.find((x) => `sha${x.number}` === sha)?.checks ??
+          GREEN,
       ),
     listStatuses: (sha) =>
       Promise.resolve(
@@ -210,6 +215,37 @@ describe("runMerge", () => {
     expect(again.report).not.toHaveBeenCalled();
   });
 
+  it("doesn't blame the update for checks already failing on the base branch", async () => {
+    const failing = [
+      { name: "integration", status: "completed", conclusion: "failure" },
+    ];
+    const { report } = await run([
+      { number: 3, meta: moduleUpdate(), checks: failing, baseChecks: failing },
+    ]);
+    expect(report).toHaveBeenCalledWith(
+      "checks_failed_base_red",
+      expect.anything(),
+      3,
+    );
+    expect(report).not.toHaveBeenCalledWith(
+      "checks_failed",
+      expect.anything(),
+      3,
+    );
+  });
+
+  it("reports a green update waiting for review as ready", async () => {
+    const { report, merged } = await run([
+      {
+        number: 6,
+        meta: kitUpdate,
+        files: [{ filename: ".github/workflows/ci.yml", status: "modified" }],
+      },
+    ]);
+    expect(merged).toEqual([]);
+    expect(report).toHaveBeenCalledWith("ready", expect.anything(), 6);
+  });
+
   it("never merges while Meet Dream holds the release or everything", async () => {
     const held = await run(
       [{ number: 1, meta: moduleUpdate() }],
@@ -288,7 +324,7 @@ describe("runMerge", () => {
     });
     const canary = await run(
       [{ number: 1, meta: fresh }],
-      session({ site: { canary: true } }),
+      session({ site: { canary: true, url: null } }),
     );
     expect(canary.merged).toHaveLength(1);
   });
@@ -403,6 +439,52 @@ describe("helpers", () => {
     ).toBe(false);
   });
 
+  it("reads the up() of Payload .ts migrations, not down()", () => {
+    const file = (filename: string, patch: string): PrFile => ({
+      filename,
+      status: "added",
+      patch,
+    });
+    const payloadMigration = (up: string, down: string) =>
+      [
+        "@@ -0,0 +1,6 @@",
+        "+export async function up({ db }: MigrateUpArgs): Promise<void> {",
+        `+  await db.execute(sql\`${up}\`);`,
+        "+}",
+        "+export async function down({ db }: MigrateDownArgs): Promise<void> {",
+        `+  await db.execute(sql\`${down}\`);`,
+        "+}",
+      ].join("\n");
+    const name = "apps/nextjs/src/payload/migrations/20261201_000000_x.ts";
+    expect(
+      addsContractMigration([
+        file(
+          name,
+          payloadMigration(
+            'ALTER TABLE "cms"."posts" ADD COLUMN "x" varchar;',
+            'ALTER TABLE "cms"."posts" DROP COLUMN "x";',
+          ),
+        ),
+      ]),
+    ).toBe(false);
+    expect(
+      addsContractMigration([
+        file(
+          "modules/crm/src/payload/migrations/20261201_000000_x.ts",
+          payloadMigration('DROP TABLE "cms"."old" CASCADE;', "select 1;"),
+        ),
+      ]),
+    ).toBe(true);
+    expect(
+      addsContractMigration([
+        file(
+          "apps/nextjs/src/payload/migrations/index.ts",
+          "@@ -0,0 +1 @@\n+// drop table x;",
+        ),
+      ]),
+    ).toBe(false);
+  });
+
   it("applies a release hold only to that release", () => {
     const s = session({ releaseHolds: [{ target: "crm", version: "1.3.0" }] });
     expect(holdFor(s, moduleUpdate())).toContain("crm 1.3.0");
@@ -431,5 +513,54 @@ describe("helpers", () => {
         intervalMs: 30_000,
       }),
     ).toBe("unknown");
+  });
+
+  it("confirms a successful deploy on the site's /api/health/db", async () => {
+    const gh = {
+      deploymentStates: () => Promise.resolve(["success"]),
+    } as unknown as GitHubClient;
+    const sleep = () => Promise.resolve();
+    const health = (...answers: [number, unknown][]) => {
+      const calls: string[] = [];
+      const fetchImpl = ((url: string) => {
+        calls.push(url);
+        const [status, body] = answers.shift() ?? [200, { status: "ok" }];
+        return Promise.resolve(new Response(JSON.stringify(body), { status }));
+      }) as unknown as typeof fetch;
+      return { calls, fetchImpl };
+    };
+    const healthUrl = "https://app.acme.com/api/health/db";
+
+    // The bootstrap failed (migration error): a failed deploy.
+    const broken = health([503, { status: "error" }]);
+    expect(
+      await watchDeployment(gh, "s", {
+        sleep,
+        healthUrl,
+        fetchImpl: broken.fetchImpl,
+      }),
+    ).toBe("failed");
+    expect(broken.calls).toEqual([healthUrl]);
+
+    // Not booted yet, then fine.
+    const booting = health(
+      [200, { status: "not-run" }],
+      [200, { status: "ok" }],
+    );
+    expect(
+      await watchDeployment(gh, "s", {
+        sleep,
+        healthUrl,
+        fetchImpl: booting.fetchImpl,
+      }),
+    ).toBe("ok");
+    expect(booting.calls).toHaveLength(2);
+
+    // Unreachable health check: GitHub's verdict stands.
+    const down = (() =>
+      Promise.reject(new Error("ECONNRESET"))) as unknown as typeof fetch;
+    expect(
+      await watchDeployment(gh, "s", { sleep, healthUrl, fetchImpl: down }),
+    ).toBe("ok");
   });
 });

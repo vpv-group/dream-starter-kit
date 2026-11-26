@@ -130,6 +130,8 @@ export async function ensureCmsUser(user: {
       id: string | number;
       email?: string | null;
       phone?: string | null;
+      displayName?: string | null;
+      jobTitle?: string | null;
       address?: Record<string, string | null | undefined> | null;
     };
     const data: Record<string, unknown> = {};
@@ -143,16 +145,29 @@ export async function ensureCmsUser(user: {
     ) {
       data.email = authEmail;
     }
+    // Only fields that actually differ: the `cms-user-sync` job runs this for
+    // every profile change, and a no-op write would still bump the doc's
+    // updatedAt — which refreshes an admin's open edit form mid-edit.
     const sync = user.syncProfile;
     if (sync) {
-      if (sync.displayName !== undefined) {
-        data.displayName = str(sync.displayName) ?? null;
-      }
-      if (sync.phone !== undefined) data.phone = str(sync.phone) ?? null;
-      if (sync.jobTitle !== undefined)
-        data.jobTitle = str(sync.jobTitle) ?? null;
+      const changed = (
+        key: "displayName" | "phone" | "jobTitle",
+        value: string | null | undefined,
+      ) => {
+        if (value === undefined) return;
+        const next = str(value) ?? null;
+        if (next !== (str(doc[key]) ?? null)) data[key] = next;
+      };
+      changed("displayName", sync.displayName);
+      changed("phone", sync.phone);
+      changed("jobTitle", sync.jobTitle);
     }
-    if (phone && !str(doc.phone) && data.phone === undefined)
+    if (
+      phone &&
+      !str(doc.phone) &&
+      data.phone === undefined &&
+      sync?.phone === undefined
+    )
       data.phone = phone;
     if (address) {
       const cur = doc.address ?? {};

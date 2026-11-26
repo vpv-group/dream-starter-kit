@@ -14,6 +14,9 @@
  * A migration that contracts must say so on purpose with a marker comment,
  * `-- dream:contract <why>`. Automatic update merging treats those as needing
  * review. `pnpm mod remove` writes the marker on its teardown migration.
+ *
+ * Payload migrations (`.ts`) are checked too: only their `up()` body, since
+ * `down()` is the generated reverse and always drops what `up()` added.
  */
 
 export interface ContractFinding {
@@ -77,4 +80,24 @@ export function lintMigrationSafety(file: string, sql: string): string[] {
     (f) =>
       `${file}: ${f.message} ("${f.statement}"). Keep migrations backward compatible (expand first, contract in a later release), or mark an intentional contract step with "-- dream:contract <why>".`,
   );
+}
+
+/** Payload's generated migration files (not the `index.ts` registry). */
+export const PAYLOAD_MIGRATION_FILE =
+  /(?:^|\/)(?:apps\/nextjs\/src\/payload\/migrations|modules\/[^/]+\/src\/payload\/migrations)\/(?!index\.ts$)[^/]+\.ts$/;
+
+/**
+ * The `up()` part of a Payload migration: everything before
+ * `export async function down`. Payload generates SQL inside `sql\`…\``
+ * template literals, which `findContractStatements` reads like plain SQL.
+ */
+export function payloadUpSection(ts: string): string {
+  const start = ts.search(/export\s+async\s+function\s+up\b/);
+  const end = ts.search(/export\s+async\s+function\s+down\b/);
+  return ts.slice(start === -1 ? 0 : start, end === -1 ? undefined : end);
+}
+
+/** Lint a Payload migration's `up()` body like a SQL migration. */
+export function lintPayloadMigrationSafety(file: string, ts: string): string[] {
+  return lintMigrationSafety(file, payloadUpSection(ts));
 }

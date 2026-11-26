@@ -16,7 +16,12 @@ export type ReportEvent =
   | "conflicts"
   | "deploy_ok"
   | "deploy_failed"
-  | "reverted";
+  | "reverted"
+  // Green, but waiting for the owner's review (counts as a success).
+  | "ready"
+  // Checks failed, but they were already failing on the base branch, so the
+  // update isn't to blame (never counted against the release).
+  | "checks_failed_base_red";
 
 export function reporter(
   registry: string,

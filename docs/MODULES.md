@@ -147,13 +147,20 @@ short-purged. Server code can append to the kit's audit log with the
 service-role RPC `audit_log_event(action, actor_id, …)` — IDs and labels
 only, never content or PII.
 
-**Database guardrails.** Two checks run in CI's integration job and are
-worth running before you commit a migration:
+**Database guardrails.** These run in CI's integration job (all inside
+`pnpm test:rls`) and are worth running before you commit a migration:
 
 - `pnpm db:advisors` — Supabase's Security + Performance Advisor lints
   (`supabase db advisors --local`): unindexed foreign keys, `auth.uid()` not
   wrapped in a select, overlapping permissive policies, duplicate indexes,
-  RLS gaps. Fails on any warning.
+  RLS gaps. Fails on any warning. In CI, `pnpm test:rls` runs it strictly in
+  the kit's repository and as an advisory report in apps, so a module's
+  warning never blocks an app's kit updates.
+- `tooling/rls-tests/src/definer-guards.test.ts` — every SECURITY DEFINER
+  function in `public` that anon can execute must check its caller
+  (`auth.uid()` / `auth.role()`). Module SQL can't `REVOKE`, so put the guard
+  in the function; a function you register for housekeeping
+  (`kit_register_housekeeping`) also loses API execute automatically.
 - `tooling/rls-tests/src/plans.test.ts` (part of `pnpm test:rls`) — EXPLAINs
   the hot queries as a signed-in user: a public security-definer function
   called per row in a policy (`is_org_member(org_id)`) or a per-row SubPlan
@@ -399,12 +406,12 @@ After the update settings, the founder's `/cms-setup/services` step (and
 `GET /api/health/setup`, staff-only) checks what this deployment still needs
 from its host and database (`lib/setup/services-core.ts`):
 
-| Check | Done when |
-|---|---|
-| Your site's address | the app resolves a public URL (`NEXT_PUBLIC_SITE_URL` or Vercel's production URL) |
-| Sign-in links and emails | Meet Dream configured Supabase Auth for the site (below) |
-| File uploads | S3 keys are set, or Supabase Storage works with the service key |
-| Scheduled jobs | Supabase Cron is set up and reaching the app: the jobs exist, the app stored its URL + cron secret in Vault on boot, and the latest call succeeded (`kit_scheduler_status()`). No `CRON_SECRET` needed — it's derived when unset |
+| Check                    | Done when                                                                                                                                                                                                                        |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Your site's address      | the app resolves a public URL (`NEXT_PUBLIC_SITE_URL` or Vercel's production URL)                                                                                                                                                |
+| Sign-in links and emails | Meet Dream configured Supabase Auth for the site (below)                                                                                                                                                                         |
+| File uploads             | S3 keys are set, or Supabase Storage works with the service key                                                                                                                                                                  |
+| Scheduled jobs           | Supabase Cron is set up and reaching the app: the jobs exist, the app stored its URL + cron secret in Vault on boot, and the latest call succeeded (`kit_scheduler_status()`). No `CRON_SECRET` needed — it's derived when unset |
 
 **Connect Supabase** fixes the sign-in row: Supabase asks the owner to allow
 Meet Dream's OAuth app, then meetdream.com sets the project's auth site URL,
@@ -419,10 +426,10 @@ The app accepts the Vercel Supabase integration's variable names as its own:
 
 ### What happens automatically
 
-| Switch (Updates) | Default | What it does |
-|---|---|---|
-| **Automatic updates** | on | The daily run (06:23 UTC) opens a PR for each outdated module and for a new kit release |
-| **Merge updates automatically** | on | A PR merges itself once every check passes, including `integration` (Supabase, RLS, Playwright) and commit statuses such as Vercel's preview deployment |
+| Switch (Updates)                | Default | What it does                                                                                                                                            |
+| ------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Automatic updates**           | on      | The daily run (06:23 UTC) opens a PR for each outdated module and for a new kit release                                                                 |
+| **Merge updates automatically** | on      | A PR merges itself once every check passes, including `integration` (Supabase, RLS, Playwright) and commit statuses such as Vercel's preview deployment |
 
 The founder picks one of three presets on `/cms-setup/app-updates`: install
 automatically (both on), review each update (merge off), or I'll update it
@@ -449,9 +456,15 @@ a comment saying why:
 It also waits for a kit release's **72-hour soak** (Meet Dream's own canary
 sites get it first) and for a review your branch protection requires: the app
 is never given a bypass. After a merge it watches the production deployment
-GitHub records for the merge commit. **A failed deploy pauses automatic
-merging** for the site (Updates shows why, with **Resume**) and is reported
-to Meet Dream, along with every merge, failure and conflict.
+GitHub records for the merge commit, then asks the site's own
+`/api/health/db` (the URL comes from Meet Dream): a deploy that builds but
+fails at boot, say on a migration, counts as failed too. **A failed deploy
+pauses automatic merging** for the site (Updates shows why, with **Resume**)
+and is reported to Meet Dream, along with every merge, failure and conflict.
+A green update that waits for your review is reported as `ready`, and failing
+checks that were already failing on your default branch as
+`checks_failed_base_red`, so Meet Dream's per-release hold only counts
+failures the update caused.
 
 Every op runs the same CLI a developer would and enforces **path
 confinement**: an op may only write `modules/<slug>/**` plus known sync
@@ -549,7 +562,7 @@ pnpm mod status --check        # update + license state per module
    the plan's modules; nothing to paste.
 3. On a laptop or in a cloud session, set **`DREAM_TOKEN`** to your license
    key from meetdream.com → Account → Modules to run `pnpm mod add
-   dream:<slug>` yourself. Never set it in Vercel or GitHub.
+dream:<slug>` yourself. Never set it in Vercel or GitHub.
 4. Optional: `DREAM_REGISTRY_URL` points at a different registry; the
    Modules catalog is `${DREAM_REGISTRY_URL}/catalog?schema=2`.
 

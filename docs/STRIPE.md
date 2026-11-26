@@ -108,6 +108,7 @@ these. Set **everything not listed below to _None_**:
 | **SetupIntents**                                        | **Write**  | Collect a payment method for trial / $0‑now subscriptions (`/express-intent`) |
 | **Charges**                                             | **Read**   | Capture the buyer's wallet identity from the first charge (edge‑function webhook) |
 | **Invoices**                                            | **Read**   | List a customer's past invoices on `/billing`               |
+| **Webhook Endpoints**                                   | **Write**  | Register the one webhook endpoint (§4.1) and disable the pre‑2.5 ones (§4.3) |
 | _Everything else_                                       | **None**   | Not used                                                    |
 
 > Signature‑verifying incoming webhooks does **not** require any key permission — it
@@ -160,12 +161,27 @@ of truth the web and mobile apps read, and projects subscriptions into the read-
 CMS **Commerce → Subscriptions** list. It handles `product.*`, `price.*`,
 `checkout.session.completed` and `customer.subscription.*`.
 
-It is safe under retries and reordering:
+It is safe under retries, concurrency and reordering:
 
-- Every Stripe event id is recorded, so a redelivered event is acknowledged without
-  being applied twice.
-- A subscription update older than the one already applied is ignored. Stripe doesn't
-  guarantee delivery order.
+- **Every event is claimed before anything runs.** The handler records the event id as
+  `processing` (`mod_billing_claim_webhook_event()`), applies it, then marks it `done`.
+  A redelivery of a `done` event gets `200 {"duplicate": true}`; one that arrives while
+  the first is still running gets `409`, so Stripe retries it later. Side effects such
+  as guest invites and plan tags therefore run once. If processing fails, the claim is
+  released and the response is `500`, so Stripe's retry applies the event. A claim
+  older than five minutes (its instance died) is taken over by the next delivery.
+- **Subscriptions are re-fetched.** For `customer.subscription.*` the handler applies
+  the subscription as `stripe.subscriptions.retrieve()` returns it now, not the event
+  payload, so the order events arrive in no longer matters. Without `STRIPE_SECRET_KEY`
+  (self-signed test events) or if the retrieve fails, it falls back to the payload.
+- **Older events are ignored.** The write is still stamped with the event's `created`
+  time, and an update older than the one already applied is skipped. This is a second
+  line of defense, and it covers the payload fallback.
+- **The account email stays the customer's email.** When the email from Checkout or a
+  wallet (Apple Pay, Google Pay) differs from the buyer's account email, the Stripe
+  customer keeps the account email. The other address is stored as
+  `mod_billing_customers.billing_email` (and `billing_email` in the customer's
+  metadata) instead of overwriting it.
 
 ### 4.1 Production / hosted — nothing to do
 
@@ -175,6 +191,12 @@ endpoint through the Stripe API**. It stores the endpoint's signing secret in Su
 Vault, so there is no Stripe dashboard step and no second secret to copy. It runs
 within the hour of your first deploy; check **Developers → Webhooks** in Stripe for an
 endpoint described "Dream Starter Kit — billing (created automatically)".
+
+The endpoint is created with its `api_version` pinned to the version of the installed
+Stripe SDK (`Stripe.API_VERSION`), so changing your account's default API version in
+the dashboard doesn't change the event payloads the code parses. Stripe sets an
+endpoint's version only at creation; after an SDK upgrade, delete the endpoint and the
+next hourly check recreates it on the new version.
 
 Want to manage the endpoint yourself instead? Create it at that exact URL in the
 dashboard with the events above and set `STRIPE_WEBHOOK_SECRET` to its `whsec_…`; the
@@ -204,10 +226,16 @@ To upgrade:
 
 1. Deploy. The scheduled check registers the new endpoint within the hour, even though
    `STRIPE_WEBHOOK_SECRET` is still set from the old edge function (the webhook accepts
-   either secret). The old endpoints keep working meanwhile, as long as the edge
-   function is still deployed.
-2. Confirm a delivery succeeds on the new endpoint in **Developers → Webhooks**.
-3. Delete the two old endpoints in Stripe, and remove
+   either secret).
+2. Once the new endpoint is enabled, the same check **disables the old endpoints
+   automatically**, so an install whose old edge function is still deployed doesn't
+   process every event twice. It only touches enabled endpoints whose URL ends in one
+   of the two old paths and whose host is this site's or this project's Supabase host
+   (from `NEXT_PUBLIC_SUPABASE_URL`). Endpoints of other apps on the same Stripe
+   account are left alone. It disables them and never deletes them; each one is
+   logged and written to the audit log as `billing.legacy_webhook_disabled`.
+3. Confirm a delivery succeeds on the new endpoint in **Developers → Webhooks**, then
+   delete the two old (disabled) endpoints in Stripe, and remove
    `STRIPE_WEBHOOKS_ENDPOINT_SECRET` from your env. It's deprecated and ignored.
 4. Optional: `supabase functions delete billing-stripe-webhook delete-account
    reminders-process`. The kit no longer ships edge functions.

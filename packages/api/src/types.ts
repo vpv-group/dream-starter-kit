@@ -378,18 +378,21 @@ export type Database = {
       };
       mod_billing_customers: {
         Row: {
+          billing_email: string | null;
           created_at: string;
           id: string;
           stripe_customer_id: string;
           user_id: string;
         };
         Insert: {
+          billing_email?: string | null;
           created_at?: string;
           id?: string;
           stripe_customer_id: string;
           user_id: string;
         };
         Update: {
+          billing_email?: string | null;
           created_at?: string;
           id?: string;
           stripe_customer_id?: string;
@@ -538,18 +541,24 @@ export type Database = {
       };
       mod_billing_webhook_events: {
         Row: {
+          claimed_at: string | null;
           id: string;
           received_at: string;
+          status: string;
           type: string;
         };
         Insert: {
+          claimed_at?: string | null;
           id: string;
           received_at?: string;
+          status?: string;
           type: string;
         };
         Update: {
+          claimed_at?: string | null;
           id?: string;
           received_at?: string;
+          status?: string;
           type?: string;
         };
         Relationships: [];
@@ -946,6 +955,24 @@ export type Database = {
           module?: string;
           transactional?: boolean;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      mod_notifications_push_tickets: {
+        Row: {
+          created_at: string;
+          id: string;
+          token: string;
+        };
+        Insert: {
+          created_at?: string;
+          id: string;
+          token: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          token?: string;
         };
         Relationships: [];
       };
@@ -1393,6 +1420,10 @@ export type Database = {
         Args: { _event_at: string; _row: Json };
         Returns: boolean;
       };
+      mod_billing_claim_webhook_event: {
+        Args: { _id: string; _type: string };
+        Returns: string;
+      };
       mod_billing_purge: { Args: never; Returns: number };
       mod_billing_set_webhook_secret: {
         Args: { _secret: string };
@@ -1479,6 +1510,10 @@ export type Database = {
       mod_notifications_unread_count: { Args: never; Returns: number };
       mod_notifications_unregister_module: {
         Args: { _module: string };
+        Returns: undefined;
+      };
+      mod_notifications_unregister_push_token: {
+        Args: { _token: string };
         Returns: undefined;
       };
       mod_reminders_claim: {

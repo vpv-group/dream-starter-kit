@@ -15,6 +15,11 @@
       "sha256": "481376e95b6421cf9a9aef3eded0334fa3c77e2760281ecf67a326a91cce43a0",
       "target": "20261125235001_mod_billing_003_single_webhook.sql"
     },
+    "billing/004_webhook_claims.sql": {
+      "version": "20261126030001",
+      "sha256": "cbd1373819c284b4b236b646a6f77342badeeb74e54929cf7bc5ef697aef25fa",
+      "target": "20261126030001_mod_billing_004_webhook_claims.sql"
+    },
     "chat/001_initial.sql": {
       "version": "20260612011539",
       "sha256": "5d8de93e3dd24dbcca2955629de0b89a791e6cd44c1944e4fa3cae5d7cae2d65",
@@ -84,6 +89,11 @@
       "version": "20261126002840",
       "sha256": "5ed72861ba1c8fa9271cd68b62a67907c35ec551bb1c9d1842ab02aa4d5954ff",
       "target": "20261126002840_mod_notifications_006_token_compat.sql"
+    },
+    "notifications/007_push_reliability.sql": {
+      "version": "20261126030002",
+      "sha256": "50664c32a2b365d061101bfbbd4e5719b77568e8c54702c74d81fffde863602a",
+      "target": "20261126030002_mod_notifications_007_push_reliability.sql"
     },
     "reminders/001_initial.sql": {
       "version": "20260612011541",

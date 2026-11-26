@@ -32,10 +32,25 @@ const SESSION = {
   },
   hold: null,
   releaseHolds: [],
-  site: { canary: false },
+  site: { canary: false, url: "https://app.acme.com" },
 };
 
 describe("openSession", () => {
+  it("accepts an older registry that sends no site url", async () => {
+    const result = await openSession(
+      REGISTRY,
+      ACTIONS,
+      registryFetch(200, {
+        ...SESSION,
+        site: { canary: false },
+      }) as unknown as typeof fetch,
+    );
+    expect(result.status === "ok" && result.session.site).toEqual({
+      canary: false,
+      url: null,
+    });
+  });
+
   it("trades the OIDC token for a repo token and settings", async () => {
     const fetcher = registryFetch(200, SESSION);
     const result = await openSession(

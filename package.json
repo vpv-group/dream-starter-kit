@@ -1,6 +1,6 @@
 {
   "name": "dream-starter-kit",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "private": true,
   "license": "Apache-2.0",
   "engines": {
@@ -37,7 +37,7 @@
     "postinstall": "pnpm lint:ws",
     "test": "turbo run test",
     "test:e2e": "bash scripts/test-e2e.sh",
-    "test:rls": "pnpm -F @acme/rls-tests test:rls",
+    "test:rls": "bash scripts/db-advisors-ci.sh && pnpm -F @acme/rls-tests test:rls",
     "typecheck": "turbo run typecheck",
     "ui-add": "turbo run ui-add",
     "android": "expo run:android",

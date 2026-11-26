@@ -79,15 +79,44 @@ bucket from a migration. Delete it from the dashboard if it's empty.
 needs nothing from you to keep working; these are the leftovers you can clean
 up once it's live:
 
-| What changed                                                                                                                                                                                                       | What to do                                                                                                                                        |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Scheduled work runs on **Supabase Cron** (installed by the migrations), not Vercel Cron: the app stores its URL and a cron secret in Supabase Vault when it boots. `CRON_SECRET` is optional (derived when unset). | Nothing. /cms-setup/services → **Scheduled jobs** shows whether Supabase reaches the app.                                                         |
-| The kit ships **no edge functions**: billing, account deletion and reminders run in the app. A leftover `reminders-process` pg_cron job is removed by the reminders migration.                                     | `supabase functions delete billing-stripe-webhook delete-account reminders-process`                                                               |
-| **One Stripe webhook** (`/api/mod/billing/stripe/webhook`), registered through the Stripe API within the hour once `STRIPE_SECRET_KEY` is set (docs/STRIPE.md §4).                                                 | After it shows a successful delivery in Stripe, delete the two old endpoints, and remove `STRIPE_WEBHOOKS_ENDPOINT_SECRET` (deprecated, ignored). |
-| Removed CMS fields `likeCount` / `commentCount` and the unused `device-tokens` collection. Their columns/table stay for one release (expand/contract), so a revert is safe.                                        | Nothing; a later release drops them (a `dream:contract` step that waits for your review).                                                         |
+| What changed                                                                                                                                                                                                                                                                   | What to do                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scheduled work runs on **Supabase Cron** (installed by the migrations), not Vercel Cron: the app stores its URL and a cron secret in Supabase Vault when it boots. `CRON_SECRET` is optional (derived when unset).                                                             | Nothing. /cms-setup/services → **Scheduled jobs** shows whether Supabase reaches the app.                                                                             |
+| The kit ships **no edge functions**: billing, account deletion and reminders run in the app. A leftover `reminders-process` pg_cron job is removed by the reminders migration.                                                                                                 | `supabase functions delete billing-stripe-webhook delete-account reminders-process`                                                                                   |
+| **One Stripe webhook** (`/api/mod/billing/stripe/webhook`), registered through the Stripe API within the hour once `STRIPE_SECRET_KEY` is set (docs/STRIPE.md §4). The same hourly check then **disables** this install's two old endpoints, so events aren't processed twice. | After the new one shows a successful delivery in Stripe, delete the two old (disabled) endpoints, and remove `STRIPE_WEBHOOKS_ENDPOINT_SECRET` (deprecated, ignored). |
+| Removed CMS fields `likeCount` / `commentCount` and the unused `device-tokens` collection. Their columns/table stay for one release (expand/contract), so a revert is safe.                                                                                                    | Nothing; a later release drops them (a `dream:contract` step that waits for your review).                                                                             |
 
-This update changes `.github/workflows/ci.yml` (a database-advisors step), so
-under the merge rules its PR waits for you rather than merging itself.
+Also in 2.5:
+
+- **2.4.0 doesn't contain any of this.** 2.4.0 is the updates release (Meet
+  Dream AI, first install); 2.5.0 is the first release with the schema work.
+  Each goes out on its own, so a problem in one can't hide behind the other.
+- **No workflow changes.** Supabase's database advisors run inside
+  `pnpm test:rls` (`scripts/db-advisors-ci.sh`): strict in the kit's own
+  repository, advisory in your app, so a module's advisor warning never fails
+  your kit updates. `pnpm db:advisors` is still the strict local check. Kit
+  updates keep out of `.github/workflows` where they can, because a change
+  there always waits for your review.
+- **Module housekeeping registers itself.** Modules that shipped a
+  `mod_<slug>_housekeeping()` before 2.5 (CRM 1.3, client portal 0.2, …) are
+  registered for the hourly retention run by a 2.5 migration, and the kit
+  revokes API access to every registered housekeeping function.
+- **Clones with their own `vercel.json`:** take the kit's version (no `crons`;
+  Supabase Cron schedules everything) and keep your own settings such as
+  `regions`. Keeping the old crons runs notification dispatch and the daily
+  report twice.
+- **Payload migrations follow expand/contract too.** The lint and the
+  automatic-merge check now read the `up()` of Payload `.ts` migrations
+  (from 2.5 on). If your app dropped or renamed something in its own older
+  migration, list that file in `supabase/migration-safety.allow.json` (a JSON
+  array of repo-relative paths) instead of editing the migration.
+- **Large tables:** 2.5's new indexes are built at boot without
+  `concurrently`, which briefly blocks writes to those tables. That's fine for
+  young apps; if yours has millions of chat messages or notifications, apply
+  the 2.5 migrations in a quiet hour (`supabase db push`) before merging.
+- **Vercel Deployment Protection:** if you protect production deployments, turn
+  on **Protection Bypass for Automation**. The app keeps that secret in Supabase
+  Vault so Supabase Cron can still reach it.
 
 The rest of this guide is the same routine done by hand. (By hand you can merge
 a release tag the same way: `git fetch upstream tag vX.Y.Z` then

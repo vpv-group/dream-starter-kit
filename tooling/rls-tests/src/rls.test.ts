@@ -19,6 +19,15 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { Database } from "@acme/api/types";
 
+import { installed } from "./installed";
+
+const has = {
+  chat: installed("chat"),
+  reminders: installed("reminders"),
+  billing: installed("billing"),
+  notifications: installed("notifications"),
+};
+
 const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
 const rawAnon =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
@@ -81,47 +90,53 @@ beforeAll(async () => {
   clientB = await signIn(userB.email, userB.password);
 
   // As A: create owner-scoped rows (exercises the INSERT WITH CHECK policies).
-  const thread = await clientA
-    .from("mod_chat_threads")
-    .insert({ user_id: aId, title: "A private thread" })
-    .select()
-    .single();
-  expect(thread.error).toBeNull();
-  if (!thread.data) throw new Error("chat_threads insert returned no row");
-  threadAId = thread.data.id;
+  if (has.chat) {
+    const thread = await clientA
+      .from("mod_chat_threads")
+      .insert({ user_id: aId, title: "A private thread" })
+      .select()
+      .single();
+    expect(thread.error).toBeNull();
+    if (!thread.data) throw new Error("chat_threads insert returned no row");
+    threadAId = thread.data.id;
+  }
 
-  const reminder = await clientA
-    .from("mod_reminders")
-    .insert({
-      user_id: aId,
-      due_at: new Date(stamp + 86_400_000).toISOString(),
-      channel: "push",
-    })
-    .select()
-    .single();
-  expect(reminder.error).toBeNull();
-  if (!reminder.data) throw new Error("reminders insert returned no row");
-  reminderAId = reminder.data.id;
+  if (has.reminders) {
+    const reminder = await clientA
+      .from("mod_reminders")
+      .insert({
+        user_id: aId,
+        due_at: new Date(stamp + 86_400_000).toISOString(),
+        channel: "push",
+      })
+      .select()
+      .single();
+    expect(reminder.error).toBeNull();
+    if (!reminder.data) throw new Error("reminders insert returned no row");
+    reminderAId = reminder.data.id;
+  }
 
   // As service role: give A an active subscription (webhook-style write).
-  await admin
-    .from("mod_billing_products")
-    .upsert({ id: "prod_rls", name: "RLS Test" });
-  await admin.from("mod_billing_prices").upsert({
-    id: "price_rls",
-    product_id: "prod_rls",
-    active: true,
-    unit_amount: 100,
-    currency: "usd",
-    type: "recurring",
-    interval: "month",
-  });
-  await admin.from("mod_billing_subscriptions").upsert({
-    id: `sub_rls_${stamp}`,
-    user_id: aId,
-    price_id: "price_rls",
-    status: "active",
-  });
+  if (has.billing) {
+    await admin
+      .from("mod_billing_products")
+      .upsert({ id: "prod_rls", name: "RLS Test" });
+    await admin.from("mod_billing_prices").upsert({
+      id: "price_rls",
+      product_id: "prod_rls",
+      active: true,
+      unit_amount: 100,
+      currency: "usd",
+      type: "recurring",
+      interval: "month",
+    });
+    await admin.from("mod_billing_subscriptions").upsert({
+      id: `sub_rls_${stamp}`,
+      user_id: aId,
+      price_id: "price_rls",
+      status: "active",
+    });
+  }
 
   // As A: an organization. The on_organization_created trigger (SECURITY
   // DEFINER) auto-enrolls A as an 'owner' member — this is what makes the
@@ -138,19 +153,23 @@ beforeAll(async () => {
 
   // As A: a message under A's own thread. chat_messages' policy is INDIRECT —
   // it authorizes via ownership of the parent chat_thread, not a user_id column.
-  const msg = await clientA
-    .from("mod_chat_messages")
-    .insert({ thread_id: threadAId, role: "user", content: "hello" })
-    .select()
-    .single();
-  expect(msg.error).toBeNull();
-  if (!msg.data) throw new Error("chat_messages insert returned no row");
-  msgAId = msg.data.id;
+  if (has.chat) {
+    const msg = await clientA
+      .from("mod_chat_messages")
+      .insert({ thread_id: threadAId, role: "user", content: "hello" })
+      .select()
+      .single();
+    expect(msg.error).toBeNull();
+    if (!msg.data) throw new Error("chat_messages insert returned no row");
+    msgAId = msg.data.id;
+  }
 
   // As A: owner-scoped push token + file metadata rows.
-  await clientA
-    .from("mod_notifications_push_tokens")
-    .insert({ user_id: aId, token: `ExpoTok-${stamp}`, platform: "ios" });
+  if (has.notifications) {
+    await clientA
+      .from("mod_notifications_push_tokens")
+      .insert({ user_id: aId, token: `ExpoTok-${stamp}`, platform: "ios" });
+  }
   await clientA.from("files").insert({
     user_id: aId,
     path: `${aId}/avatar.png`,
@@ -169,16 +188,20 @@ beforeAll(async () => {
 
   // As service role: a customer row and a notification for A (these are written
   // by the server/webhook, never by clients — RLS only grants read-own).
-  await admin
-    .from("mod_billing_customers")
-    .insert({ user_id: aId, stripe_customer_id: `cus_rls_${stamp}` });
-  const notif = await admin
-    .from("mod_notifications")
-    .insert({ user_id: aId, type: "reminder", title: "Hi" })
-    .select()
-    .single();
-  if (!notif.data) throw new Error("notifications insert returned no row");
-  notifAId = notif.data.id;
+  if (has.billing) {
+    await admin
+      .from("mod_billing_customers")
+      .insert({ user_id: aId, stripe_customer_id: `cus_rls_${stamp}` });
+  }
+  if (has.notifications) {
+    const notif = await admin
+      .from("mod_notifications")
+      .insert({ user_id: aId, type: "reminder", title: "Hi" })
+      .select()
+      .single();
+    if (!notif.data) throw new Error("notifications insert returned no row");
+    notifAId = notif.data.id;
+  }
 
   // A tag definition + a link assigning it to A (service-role written).
   const tag = await admin
@@ -192,13 +215,20 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await admin.from("mod_billing_subscriptions").delete().eq("user_id", aId);
-  await admin.from("mod_billing_subscriptions").delete().eq("user_id", bId);
+  if (has.billing) {
+    await admin.from("mod_billing_subscriptions").delete().eq("user_id", aId);
+    await admin.from("mod_billing_subscriptions").delete().eq("user_id", bId);
+    await admin.from("mod_billing_customers").delete().eq("user_id", aId);
+  }
   if (orgAId) await admin.from("organizations").delete().eq("id", orgAId); // cascades memberships + invitations
-  await admin.from("mod_billing_customers").delete().eq("user_id", aId);
-  await admin.from("mod_notifications").delete().eq("user_id", aId);
+  if (has.notifications) {
+    await admin.from("mod_notifications").delete().eq("user_id", aId);
+    await admin
+      .from("mod_notifications_push_tokens")
+      .delete()
+      .eq("user_id", aId);
+  }
   if (tagId) await admin.from("tags").delete().eq("id", tagId); // cascades user_tags
-  await admin.from("mod_notifications_push_tokens").delete().eq("user_id", aId);
   await admin.from("files").delete().eq("user_id", aId);
   if (threadAId)
     await admin.from("mod_chat_threads").delete().eq("id", threadAId); // cascades chat_messages
@@ -209,7 +239,7 @@ afterAll(async () => {
 });
 
 describe("RLS: a user only sees their own rows", () => {
-  it("A can read A's own chat thread", async () => {
+  it.skipIf(!has.chat)("A can read A's own chat thread", async () => {
     const { data, error } = await clientA
       .from("mod_chat_threads")
       .select("*")
@@ -218,7 +248,7 @@ describe("RLS: a user only sees their own rows", () => {
     expect(data).toHaveLength(1);
   });
 
-  it("B cannot read A's chat thread", async () => {
+  it.skipIf(!has.chat)("B cannot read A's chat thread", async () => {
     const { data, error } = await clientB
       .from("mod_chat_threads")
       .select("*")
@@ -227,7 +257,7 @@ describe("RLS: a user only sees their own rows", () => {
     expect(data).toHaveLength(0);
   });
 
-  it("B cannot read A's reminder", async () => {
+  it.skipIf(!has.reminders)("B cannot read A's reminder", async () => {
     const { data } = await clientB
       .from("mod_reminders")
       .select("*")
@@ -235,7 +265,7 @@ describe("RLS: a user only sees their own rows", () => {
     expect(data).toHaveLength(0);
   });
 
-  it("B cannot read A's subscription", async () => {
+  it.skipIf(!has.billing)("B cannot read A's subscription", async () => {
     const { data } = await clientB
       .from("mod_billing_subscriptions")
       .select("*")
@@ -243,7 +273,7 @@ describe("RLS: a user only sees their own rows", () => {
     expect(data).toHaveLength(0);
   });
 
-  it("A can read A's own subscription", async () => {
+  it.skipIf(!has.billing)("A can read A's own subscription", async () => {
     const { data } = await clientA
       .from("mod_billing_subscriptions")
       .select("*")
@@ -253,38 +283,44 @@ describe("RLS: a user only sees their own rows", () => {
 });
 
 describe("RLS: a user cannot write into another user's rows", () => {
-  it("B cannot insert a chat thread owned by A", async () => {
+  it.skipIf(!has.chat)("B cannot insert a chat thread owned by A", async () => {
     const { error } = await clientB
       .from("mod_chat_threads")
       .insert({ user_id: aId, title: "intrusion" });
     expect(error).not.toBeNull(); // WITH CHECK (user_id = auth.uid()) rejects it
   });
 
-  it("B's UPDATE of A's chat thread does not change it", async () => {
-    await clientB
-      .from("mod_chat_threads")
-      .update({ title: "hacked" })
-      .eq("id", threadAId);
-    const { data } = await admin
-      .from("mod_chat_threads")
-      .select("title")
-      .eq("id", threadAId)
-      .single();
-    expect(data?.title).toBe("A private thread");
-  });
+  it.skipIf(!has.chat)(
+    "B's UPDATE of A's chat thread does not change it",
+    async () => {
+      await clientB
+        .from("mod_chat_threads")
+        .update({ title: "hacked" })
+        .eq("id", threadAId);
+      const { data } = await admin
+        .from("mod_chat_threads")
+        .select("title")
+        .eq("id", threadAId)
+        .single();
+      expect(data?.title).toBe("A private thread");
+    },
+  );
 
-  it("B's DELETE of A's chat thread affects zero rows", async () => {
-    await clientB.from("mod_chat_threads").delete().eq("id", threadAId);
-    const { count } = await admin
-      .from("mod_chat_threads")
-      .select("*", { count: "exact", head: true })
-      .eq("id", threadAId);
-    expect(count).toBe(1);
-  });
+  it.skipIf(!has.chat)(
+    "B's DELETE of A's chat thread affects zero rows",
+    async () => {
+      await clientB.from("mod_chat_threads").delete().eq("id", threadAId);
+      const { count } = await admin
+        .from("mod_chat_threads")
+        .select("*", { count: "exact", head: true })
+        .eq("id", threadAId);
+      expect(count).toBe(1);
+    },
+  );
 });
 
 describe("RLS: public catalog is readable", () => {
-  it("B can read the products catalog", async () => {
+  it.skipIf(!has.billing)("B can read the products catalog", async () => {
     const { data, error } = await clientB
       .from("mod_billing_products")
       .select("*");
@@ -440,7 +476,7 @@ describe("auth_events: derived from the auth audit log, read-own", () => {
 });
 
 describe("RLS: chat_messages inherit their thread's owner", () => {
-  it("A can read A's own message", async () => {
+  it.skipIf(!has.chat)("A can read A's own message", async () => {
     const { data, error } = await clientA
       .from("mod_chat_messages")
       .select("*")
@@ -449,24 +485,30 @@ describe("RLS: chat_messages inherit their thread's owner", () => {
     expect(data).toHaveLength(1);
   });
 
-  it("B cannot read a message inside A's thread", async () => {
-    const { data } = await clientB
-      .from("mod_chat_messages")
-      .select("*")
-      .eq("id", msgAId);
-    expect(data).toHaveLength(0);
-  });
+  it.skipIf(!has.chat)(
+    "B cannot read a message inside A's thread",
+    async () => {
+      const { data } = await clientB
+        .from("mod_chat_messages")
+        .select("*")
+        .eq("id", msgAId);
+      expect(data).toHaveLength(0);
+    },
+  );
 
-  it("B cannot insert a message into A's thread", async () => {
-    const { error } = await clientB
-      .from("mod_chat_messages")
-      .insert({ thread_id: threadAId, role: "user", content: "intrusion" });
-    expect(error).not.toBeNull(); // the EXISTS-on-own-thread check fails for B
-  });
+  it.skipIf(!has.chat)(
+    "B cannot insert a message into A's thread",
+    async () => {
+      const { error } = await clientB
+        .from("mod_chat_messages")
+        .insert({ thread_id: threadAId, role: "user", content: "intrusion" });
+      expect(error).not.toBeNull(); // the EXISTS-on-own-thread check fails for B
+    },
+  );
 });
 
 describe("RLS: notifications are private to their owner", () => {
-  it("A can read A's notification", async () => {
+  it.skipIf(!has.notifications)("A can read A's notification", async () => {
     const { data } = await clientA
       .from("mod_notifications")
       .select("*")
@@ -474,42 +516,48 @@ describe("RLS: notifications are private to their owner", () => {
     expect(data).toHaveLength(1);
   });
 
-  it("A can mark A's own notification read", async () => {
-    const { error } = await clientA
-      .from("mod_notifications")
-      .update({ read_at: new Date().toISOString() })
-      .eq("id", notifAId);
-    expect(error).toBeNull();
-    const { data } = await admin
-      .from("mod_notifications")
-      .select("read_at")
-      .eq("id", notifAId)
-      .single();
-    expect(data?.read_at).not.toBeNull();
-  });
+  it.skipIf(!has.notifications)(
+    "A can mark A's own notification read",
+    async () => {
+      const { error } = await clientA
+        .from("mod_notifications")
+        .update({ read_at: new Date().toISOString() })
+        .eq("id", notifAId);
+      expect(error).toBeNull();
+      const { data } = await admin
+        .from("mod_notifications")
+        .select("read_at")
+        .eq("id", notifAId)
+        .single();
+      expect(data?.read_at).not.toBeNull();
+    },
+  );
 
-  it("B cannot read or modify A's notification", async () => {
-    const { data } = await clientB
-      .from("mod_notifications")
-      .select("*")
-      .eq("id", notifAId);
-    expect(data).toHaveLength(0);
+  it.skipIf(!has.notifications)(
+    "B cannot read or modify A's notification",
+    async () => {
+      const { data } = await clientB
+        .from("mod_notifications")
+        .select("*")
+        .eq("id", notifAId);
+      expect(data).toHaveLength(0);
 
-    await clientB
-      .from("mod_notifications")
-      .update({ title: "hacked" })
-      .eq("id", notifAId);
-    const { data: after } = await admin
-      .from("mod_notifications")
-      .select("title")
-      .eq("id", notifAId)
-      .single();
-    expect(after?.title).toBe("Hi");
-  });
+      await clientB
+        .from("mod_notifications")
+        .update({ title: "hacked" })
+        .eq("id", notifAId);
+      const { data: after } = await admin
+        .from("mod_notifications")
+        .select("title")
+        .eq("id", notifAId)
+        .single();
+      expect(after?.title).toBe("Hi");
+    },
+  );
 });
 
 describe("RLS: push_tokens and files are owner-scoped", () => {
-  it("B cannot read A's push token", async () => {
+  it.skipIf(!has.notifications)("B cannot read A's push token", async () => {
     const { data } = await clientB
       .from("mod_notifications_push_tokens")
       .select("*")
@@ -517,12 +565,15 @@ describe("RLS: push_tokens and files are owner-scoped", () => {
     expect(data).toHaveLength(0);
   });
 
-  it("B cannot register a push token owned by A", async () => {
-    const { error } = await clientB
-      .from("mod_notifications_push_tokens")
-      .insert({ user_id: aId, token: `evil-${stamp}`, platform: "ios" });
-    expect(error).not.toBeNull();
-  });
+  it.skipIf(!has.notifications)(
+    "B cannot register a push token owned by A",
+    async () => {
+      const { error } = await clientB
+        .from("mod_notifications_push_tokens")
+        .insert({ user_id: aId, token: `evil-${stamp}`, platform: "ios" });
+      expect(error).not.toBeNull();
+    },
+  );
 
   it("B cannot read A's file metadata", async () => {
     const { data } = await clientB.from("files").select("*").eq("user_id", aId);
@@ -538,7 +589,7 @@ describe("RLS: push_tokens and files are owner-scoped", () => {
 });
 
 describe("RLS: customers are read-own (service-role written)", () => {
-  it("A can read A's own customer row", async () => {
+  it.skipIf(!has.billing)("A can read A's own customer row", async () => {
     const { data } = await clientA
       .from("mod_billing_customers")
       .select("*")
@@ -546,12 +597,29 @@ describe("RLS: customers are read-own (service-role written)", () => {
     expect(data?.length ?? 0).toBeGreaterThanOrEqual(1);
   });
 
-  it("B cannot read A's customer row", async () => {
+  it.skipIf(!has.billing)("B cannot read A's customer row", async () => {
     const { data } = await clientB
       .from("mod_billing_customers")
       .select("*")
       .eq("user_id", aId);
     expect(data).toHaveLength(0);
+  });
+});
+
+describe("billing webhook functions refuse API callers", () => {
+  // SECURITY DEFINER functions reachable over PostgREST: each checks its
+  // caller (module SQL can't REVOKE EXECUTE).
+  it("anon and signed-in users can't purge the event ledger or claim events", async () => {
+    const anon = createClient<Database>(SUPABASE_URL, ANON_KEY, noPersist);
+    for (const client of [anon, clientA]) {
+      const purge = await client.rpc("mod_billing_purge");
+      expect(purge.error?.code).toBe("42501");
+      const claim = await client.rpc("mod_billing_claim_webhook_event", {
+        _id: `evt_rls_${stamp}`,
+        _type: "product.updated",
+      });
+      expect(claim.error?.code).toBe("42501");
+    }
   });
 });
 
@@ -610,48 +678,54 @@ describe("premium gating: only active/trialing subscriptions unlock premium", ()
     return data;
   }
 
-  it("returns nothing when the user has only canceled/past_due rows", async () => {
-    await admin.from("mod_billing_subscriptions").insert([
-      {
-        id: `sub_b_canceled_${stamp}`,
-        user_id: bId,
-        price_id: "price_rls",
-        status: "canceled",
-        current_period_end: new Date(stamp - day).toISOString(),
-      },
-      {
-        id: `sub_b_pastdue_${stamp}`,
-        user_id: bId,
-        price_id: "price_rls",
-        status: "past_due",
-        current_period_end: new Date(stamp - 2 * day).toISOString(),
-      },
-    ]);
-    expect(await premiumRow(clientB)).toBeNull();
-  });
+  it.skipIf(!has.billing)(
+    "returns nothing when the user has only canceled/past_due rows",
+    async () => {
+      await admin.from("mod_billing_subscriptions").insert([
+        {
+          id: `sub_b_canceled_${stamp}`,
+          user_id: bId,
+          price_id: "price_rls",
+          status: "canceled",
+          current_period_end: new Date(stamp - day).toISOString(),
+        },
+        {
+          id: `sub_b_pastdue_${stamp}`,
+          user_id: bId,
+          price_id: "price_rls",
+          status: "past_due",
+          current_period_end: new Date(stamp - 2 * day).toISOString(),
+        },
+      ]);
+      expect(await premiumRow(clientB)).toBeNull();
+    },
+  );
 
-  it("returns the newest active/trialing row once the user has one", async () => {
-    await admin.from("mod_billing_subscriptions").insert([
-      {
-        id: `sub_b_active_${stamp}`,
-        user_id: bId,
-        price_id: "price_rls",
-        status: "active",
-        current_period_end: new Date(stamp + day).toISOString(),
-      },
-      {
-        id: `sub_b_trialing_${stamp}`,
-        user_id: bId,
-        price_id: "price_rls",
-        status: "trialing",
-        current_period_end: new Date(stamp + 10 * day).toISOString(),
-      },
-    ]);
-    const row = await premiumRow(clientB);
-    // trialing has the latest current_period_end among active/trialing, so it
-    // wins — and canceled/past_due are excluded by the status filter.
-    expect(row?.status).toBe("trialing");
-  });
+  it.skipIf(!has.billing)(
+    "returns the newest active/trialing row once the user has one",
+    async () => {
+      await admin.from("mod_billing_subscriptions").insert([
+        {
+          id: `sub_b_active_${stamp}`,
+          user_id: bId,
+          price_id: "price_rls",
+          status: "active",
+          current_period_end: new Date(stamp + day).toISOString(),
+        },
+        {
+          id: `sub_b_trialing_${stamp}`,
+          user_id: bId,
+          price_id: "price_rls",
+          status: "trialing",
+          current_period_end: new Date(stamp + 10 * day).toISOString(),
+        },
+      ]);
+      const row = await premiumRow(clientB);
+      // trialing has the latest current_period_end among active/trialing, so it
+      // wins — and canceled/past_due are excluded by the status filter.
+      expect(row?.status).toBe("trialing");
+    },
+  );
 });
 
 describe("RLS: MCP OAuth tables are server-only (deny-all)", () => {
@@ -688,6 +762,34 @@ describe("RLS: MCP OAuth tables are server-only (deny-all)", () => {
   it("the service role bypasses RLS (can read)", async () => {
     const svc = admin as unknown as SupabaseClient;
     const { error } = await svc.from("mcp_oauth_clients").select("*");
+    expect(error).toBeNull();
+  });
+});
+
+describe("RLS: push tickets are server-only (deny-all)", () => {
+  // mod_notifications_push_tickets (notifications 007) has RLS enabled with
+  // NO policies: only the service role (the dispatcher and the push-receipts
+  // job) reads or writes it. Untyped clients: the table may predate the
+  // regenerated Database type.
+  const TABLE = "mod_notifications_push_tickets";
+
+  it("anonymous and authenticated users read nothing and cannot insert", async () => {
+    const anon = createClient(SUPABASE_URL, ANON_KEY, noPersist);
+    const { data: anonRows } = await anon.from(TABLE).select("*");
+    expect(anonRows ?? []).toHaveLength(0);
+
+    const authed = clientA as unknown as SupabaseClient;
+    const { data: rows } = await authed.from(TABLE).select("*");
+    expect(rows ?? []).toHaveLength(0);
+    const { error } = await authed
+      .from(TABLE)
+      .insert({ id: `evil_${stamp}`, token: "ExponentPushToken[evil]" });
+    expect(error).not.toBeNull();
+  });
+
+  it("the service role reaches it", async () => {
+    const svc = admin as unknown as SupabaseClient;
+    const { error } = await svc.from(TABLE).select("id").limit(1);
     expect(error).toBeNull();
   });
 });
@@ -771,10 +873,13 @@ describe("RLS: anonymous users — favorites yes, AI chat no", () => {
     expect(error).toBeNull();
   });
 
-  it("an anonymous user CANNOT create an AI chat thread (restrictive policy)", async () => {
-    const { error } = await anon
-      .from("mod_chat_threads")
-      .insert({ user_id: anonId, title: "should be blocked" });
-    expect(error).not.toBeNull();
-  });
+  it.skipIf(!has.chat)(
+    "an anonymous user CANNOT create an AI chat thread (restrictive policy)",
+    async () => {
+      const { error } = await anon
+        .from("mod_chat_threads")
+        .insert({ user_id: anonId, title: "should be blocked" });
+      expect(error).not.toBeNull();
+    },
+  );
 });

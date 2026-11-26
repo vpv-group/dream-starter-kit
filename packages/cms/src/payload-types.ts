@@ -261,6 +261,7 @@ export interface Config {
   jobs: {
     tasks: {
       "dispatch-notifications": TaskDispatchNotifications;
+      "push-receipts": TaskPushReceipts;
       "dream-site-report": TaskDreamSiteReport;
       "account-erasure": TaskAccountErasure;
       "favorites-cleanup": TaskFavoritesCleanup;
@@ -2754,6 +2755,10 @@ export interface Notification {
    */
   sentAt?: string | null;
   status: "draft" | "scheduled" | "sending" | "sent" | "failed";
+  /**
+   * Send attempts. Marked failed after 5.
+   */
+  attempts?: number | null;
   sentCount?: number | null;
   openCount?: number | null;
   updatedAt: string;
@@ -3378,6 +3383,7 @@ export interface PayloadJob {
         taskSlug:
           | "inline"
           | "dispatch-notifications"
+          | "push-receipts"
           | "dream-site-report"
           | "account-erasure"
           | "favorites-cleanup"
@@ -3419,6 +3425,7 @@ export interface PayloadJob {
     | (
         | "inline"
         | "dispatch-notifications"
+        | "push-receipts"
         | "dream-site-report"
         | "account-erasure"
         | "favorites-cleanup"
@@ -4605,6 +4612,7 @@ export interface NotificationsSelect<T extends boolean = true> {
   scheduledAt?: T;
   sentAt?: T;
   status?: T;
+  attempts?: T;
   sentCount?: T;
   openCount?: T;
   updatedAt?: T;
@@ -6508,6 +6516,14 @@ export interface CollectionsWidget {
  * via the `definition` "TaskDispatch-notifications".
  */
 export interface TaskDispatchNotifications {
+  input?: unknown;
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskPush-receipts".
+ */
+export interface TaskPushReceipts {
   input?: unknown;
   output?: unknown;
 }
