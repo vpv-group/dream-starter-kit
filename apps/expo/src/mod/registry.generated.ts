@@ -32,7 +32,9 @@ export interface ModNavDefault {
   icon?: string;
   order: number;
   /** Default audience; omitted = everyone. */
-  audience?: "everyone" | "staff";
+  audience?: "everyone" | "staff" | "members";
+  /** Web submenu entry: the key of the entry it's listed under. */
+  parent?: string;
 }
 
 export const modInstalled: ModInstalled[] = [

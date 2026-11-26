@@ -14,7 +14,7 @@ export const SLUG_RE = /^[a-z][a-z0-9-]{1,30}$/;
 /** Plain semver version (manifest version = git tag = package.json version). */
 export const SEMVER_RE = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 
-const navEntrySchema = z.object({
+const navLeafSchema = z.object({
   title: z.string().min(1),
   href: z.string().startsWith("/"),
   /** Icon name resolved through the generated icon map (graceful fallback). */
@@ -22,11 +22,22 @@ const navEntrySchema = z.object({
   /** Menu sort order — lower first. Core entries use 10, 20, 30, … */
   order: z.number().int().default(100),
   /**
-   * Who sees the entry by default: everyone signed in, or only staff
-   * (`profiles.is_staff`). Seeded into the nav item's `audience` once; staff
-   * own it in /admin → Nav Items afterwards.
+   * Who sees the entry by default: everyone signed in, only staff
+   * (`profiles.is_staff`), or only non-staff ("members" — e.g. a client
+   * portal's own pages). Seeded into the nav item's `audience` once; staff
+   * own it in /admin → Navigation afterwards. "members" needs kit ≥ 2.5.
    */
-  audience: z.enum(["everyone", "staff"]).default("everyone"),
+  audience: z.enum(["everyone", "staff", "members"]).default("everyone"),
+});
+
+const navEntrySchema = navLeafSchema.extend({
+  /**
+   * Web only: entries listed under this one as a collapsible submenu (one
+   * level deep). The parent row then only opens and closes the submenu.
+   * Each child becomes its own nav item, which staff can rename, reorder,
+   * move or turn off. Ignored on native. Needs kit ≥ 2.5.
+   */
+  children: z.array(navLeafSchema).default([]),
 });
 
 const routeEntrySchema = z.object({
@@ -71,7 +82,8 @@ export const moduleManifestSchema = z.object({
   nav: z
     .object({
       web: z.array(navEntrySchema).default([]),
-      native: z.array(navEntrySchema).default([]),
+      // Native menus are flat (tab bar + More), so no `children` there.
+      native: z.array(navLeafSchema).default([]),
     })
     .prefault({}),
   routes: z

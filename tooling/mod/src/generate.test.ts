@@ -341,6 +341,41 @@ describe("module access + admin settings", () => {
     );
   });
 
+  it("flattens web submenu children into rows that point at their parent", () => {
+    const grouped = loaded({
+      slug: "crm",
+      name: "CRM",
+      version: "1.3.0",
+      kitCompat: ">=2.5.0 <3",
+      nav: {
+        web: [
+          {
+            title: "CRM",
+            href: "/a/crm",
+            icon: "IconBriefcase",
+            order: 20,
+            children: [
+              { title: "Leads", href: "/a/crm/leads", icon: "IconUserPlus" },
+              { title: "Cases", href: "/a/crm/cases", audience: "members" },
+            ],
+          },
+        ],
+        native: [{ title: "CRM", href: "/a/crm", order: 20 }],
+      },
+      routes: { web: [{ path: "", component: "CrmPage" }] },
+    });
+    const data = buildNextDataRegistry([grouped]);
+    expect(data).toContain(
+      '{ key: "mod:crm:/a/crm/leads", module: "crm", title: "Leads", href: "/a/crm/leads", icon: "IconUserPlus", order: 20.01, parent: "mod:crm:/a/crm" },',
+    );
+    expect(data).toContain(
+      '{ key: "mod:crm:/a/crm/cases", module: "crm", title: "Cases", href: "/a/crm/cases", order: 20.02, audience: "members", parent: "mod:crm:/a/crm" },',
+    );
+    // Native stays flat, and child icons reach the web icon map.
+    expect(buildExpoRegistry([grouped])).not.toContain("/a/crm/leads");
+    expect(buildNextClientRegistry([grouped])).toContain("IconUserPlus");
+  });
+
   it("lists ./admin settings components for the module page", () => {
     expect(buildNextPayloadRegistry([crm])).toContain('{ slug: "crm" },');
     const admin = buildNextAdminRegistry([crm]);

@@ -39,7 +39,7 @@ export interface NativeNavDefault {
   href: string;
   icon?: string;
   order: number;
-  audience?: "everyone" | "staff";
+  audience?: "everyone" | "staff" | "members";
 }
 
 /**

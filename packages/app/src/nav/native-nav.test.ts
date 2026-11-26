@@ -8,6 +8,7 @@ import {
   mergeNativeNav,
   nativeNavConfigSchema,
   nativeNavVersion,
+  navAudienceAllows,
   tabSlotForPath,
 } from "./native-nav";
 import {
@@ -157,6 +158,39 @@ describe("filterNavForUser / buildNativeMenu", () => {
       deniedModules: new Set(["gated"]),
     });
     expect(rows.map((r) => r.key)).toEqual(["d", "a", "e", "f", "g"]);
+  });
+
+  it("hides non-staff-only (members) rows from staff, on a wire old builds parse", () => {
+    const merged = mergeNativeNav({
+      navItems: [nav("portal", { audience: "members" }), nav("all")],
+      rows: [],
+      modules: [],
+    });
+    const portal = merged.items.find((i) => i.key === "portal");
+    // Old app builds only know everyone/staff: members travels as a flag.
+    expect(portal).toMatchObject({ audience: "everyone", hideForStaff: true });
+    expect(merged.items.find((i) => i.key === "all")).not.toHaveProperty(
+      "hideForStaff",
+    );
+    expect(
+      nativeNavConfigSchema.safeParse({ version: "x", ...merged }).success,
+    ).toBe(true);
+    const keysFor = (isStaff: boolean) =>
+      filterNavForUser(merged.items, { isStaff, deniedModules: new Set() }).map(
+        (r) => r.key,
+      );
+    expect(keysFor(true)).toEqual(["all"]);
+    expect(keysFor(false)).toEqual(["portal", "all"]);
+  });
+
+  it("applies each audience rule", () => {
+    expect(navAudienceAllows({ audience: "everyone" }, true)).toBe(true);
+    expect(navAudienceAllows({ audience: null }, false)).toBe(true);
+    expect(navAudienceAllows({ audience: "staff" }, false)).toBe(false);
+    expect(navAudienceAllows({ audience: "staff" }, true)).toBe(true);
+    expect(navAudienceAllows({ audience: "members" }, true)).toBe(false);
+    expect(navAudienceAllows({ audience: "members" }, false)).toBe(true);
+    expect(navAudienceAllows({ hideForStaff: true }, true)).toBe(false);
   });
 
   it("splits visible rows into tabs and More, skipping hidden + unknown screens", () => {

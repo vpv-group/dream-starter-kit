@@ -210,7 +210,11 @@ endpoints instead.
 **Menus are CMS-driven** (`kit-modules` + `nav-items` collections,
 **Modules** admin group): manifest nav entries are _defaults_, seeded by the
 boot reconcile (`lib/mod/reconcile-nav.ts`); staff rename/drag-reorder/re-icon/
-toggle in `/admin` and the web sidebar follows without a redeploy. The
+toggle in `/admin` and the web sidebar follows without a redeploy. A web
+entry can list `children` (kit ≥ 2.5): they become a collapsible submenu
+under it, each child its own nav item staff can rename, reorder, move or
+turn off. The parent row then only toggles the submenu, so keep the module's
+home reachable from its own tabs. Native nav stays flat. The
 native app has its own order on the same rows — **Navigation → iOS and
 Android App** sets the tab bar (3 or 4 tabs, plus a Search / More list of every item) and
 can hide rows on native (deep link only); the app loads it at launch and
@@ -251,9 +255,11 @@ fields })` from `./payload` and set `cms.hasSettings: true`. The fields
   `modules/**` are picked up by the admin stylesheet.
 
 **Access** (who may use a module): staff can set any menu item to
-**Staff only** (`nav-items` `audience`; manifest nav entries may default it
-with `audience: "staff"`). That hides the entry, on web and native, from
-users without `profiles.is_staff`. For a module-wide rule, set
+**Staff only** or **Non-staff only** (`nav-items` `audience`; manifest nav
+entries may default it with `audience: "staff"` or `"members"`, the latter
+on kit ≥ 2.5). Staff only hides the entry, on web and native, from users
+without `profiles.is_staff`; Non-staff only hides it from staff (a client
+portal's own pages, when staff reach the portal through other screens). For a module-wide rule, set
 `access: { check: "mod_<slug>_<fn>" }`: a no-arg SQL function returning
 boolean for the current user. Then:
 

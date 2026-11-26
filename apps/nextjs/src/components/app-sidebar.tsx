@@ -45,9 +45,15 @@ export function AppSidebar({
   // resolved server-side by the (app) layout; icon names map through the
   // core + generated icon registry with a default fallback.
   const navMain = navItems.map((item) => ({
+    key: item.key,
     title: item.label,
     url: item.href,
     icon: resolveNavIcon(item.icon),
+    items: item.items?.map((sub) => ({
+      key: sub.key,
+      title: sub.label,
+      url: sub.href,
+    })),
   }));
   const sidebarUser = {
     name:

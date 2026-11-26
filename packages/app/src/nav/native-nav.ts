@@ -29,6 +29,12 @@ export const nativeNavItemSchema = z.object({
   md: z.string(),
   hidden: z.boolean(),
   audience: z.enum(["everyone", "staff"]),
+  /**
+   * True for "members" rows (non-staff only). Sent beside `audience`, which
+   * stays "everyone", because installed app builds parse `audience` as the
+   * two-value enum above and would reject a third value.
+   */
+  hideForStaff: z.boolean().optional(),
   /** Owning module slug; null for core entries. */
   module: z.string().nullable(),
   /** The module's access check (SQL function), evaluated per user. */
@@ -144,6 +150,7 @@ export function mergeNativeNav(input: {
         md: icon.md,
         hidden: row?.hidden === true,
         audience: nav.audience === "staff" ? "staff" : "everyone",
+        ...(nav.audience === "members" ? { hideForStaff: true } : {}),
         module: nav.module ?? null,
         accessCheck: nav.module
           ? (modBySlug.get(nav.module)?.accessCheck ?? null)
@@ -182,14 +189,33 @@ export interface NavUserContext {
 }
 
 /**
- * Per-user visibility shared by web and native menus: "Staff only" rows need
- * staff, and a module's rows need its access check to pass.
+ * A nav row's audience rule, shared by web and native menus: "staff" rows
+ * need staff; "members" rows (non-staff only, e.g. a client portal's pages)
+ * are hidden from staff. `hideForStaff` is how the native config carries
+ * "members" without breaking app builds that only know everyone/staff.
+ */
+export function navAudienceAllows(
+  row: { audience?: string | null; hideForStaff?: boolean | null },
+  isStaff: boolean,
+): boolean {
+  if (row.audience === "staff") return isStaff;
+  if (row.audience === "members" || row.hideForStaff === true) return !isStaff;
+  return true;
+}
+
+/**
+ * Per-user visibility shared by web and native menus: the audience rule,
+ * and a module's rows need its access check to pass.
  */
 export function filterNavForUser<
-  T extends { audience?: string | null; module?: string | null },
+  T extends {
+    audience?: string | null;
+    hideForStaff?: boolean | null;
+    module?: string | null;
+  },
 >(items: T[], user: NavUserContext): T[] {
   return items
-    .filter((d) => user.isStaff || d.audience !== "staff")
+    .filter((d) => navAudienceAllows(d, user.isStaff))
     .filter((d) => !d.module || !user.deniedModules.has(d.module));
 }
 

@@ -46,7 +46,9 @@ interface NavLiteral {
   href: string;
   icon?: string;
   order: number;
-  audience: "everyone" | "staff";
+  audience: "everyone" | "staff" | "members";
+  /** Web submenu entries: the key of the entry they're listed under. */
+  parent?: string;
 }
 
 function navLiterals(
@@ -57,15 +59,32 @@ function navLiterals(
   for (const { manifest: m } of mods) {
     if (!m.platforms[platform]) continue;
     m.nav[platform].forEach((entry) => {
+      // Same key the boot reconcile gives the nav-items row.
+      const key = `mod:${m.slug}:${entry.href}`;
       out.push({
-        // Same key the boot reconcile gives the nav-items row.
-        key: `mod:${m.slug}:${entry.href}`,
+        key,
         module: m.slug,
         title: entry.title,
         href: entry.href,
         icon: entry.icon,
         order: entry.order,
         audience: entry.audience,
+      });
+      // Web submenus: each child is its own row, ordered right after its
+      // parent in declared order (fractional, so it never collides with
+      // another module's whole-number order).
+      if (platform !== "web") return;
+      (entry as (typeof m.nav.web)[number]).children.forEach((child, i) => {
+        out.push({
+          key: `mod:${m.slug}:${child.href}`,
+          module: m.slug,
+          title: child.title,
+          href: child.href,
+          icon: child.icon,
+          order: entry.order + (i + 1) / 100,
+          audience: child.audience,
+          parent: key,
+        });
       });
     });
   }
@@ -76,7 +95,7 @@ function renderNav(items: NavLiteral[], indent: string): string {
   if (items.length === 0) return "[]";
   const rows = items.map(
     (n) =>
-      `${indent}  { key: ${quote(n.key)}, module: ${quote(n.module)}, title: ${quote(n.title)}, href: ${quote(n.href)}, ${n.icon ? `icon: ${quote(n.icon)}, ` : ""}order: ${n.order}${n.audience === "staff" ? `, audience: "staff"` : ""} },`,
+      `${indent}  { key: ${quote(n.key)}, module: ${quote(n.module)}, title: ${quote(n.title)}, href: ${quote(n.href)}, ${n.icon ? `icon: ${quote(n.icon)}, ` : ""}order: ${n.order}${n.audience !== "everyone" ? `, audience: ${quote(n.audience)}` : ""}${n.parent ? `, parent: ${quote(n.parent)}` : ""} },`,
   );
   return `[\n${rows.join("\n")}\n${indent}]`;
 }
@@ -108,7 +127,9 @@ export interface ModNavDefault {
   icon?: string;
   order: number;
   /** Default audience; omitted = everyone. */
-  audience?: "everyone" | "staff";
+  audience?: "everyone" | "staff" | "members";
+  /** Web submenu entry: the key of the entry it's listed under. */
+  parent?: string;
 }
 `;
 
@@ -145,7 +166,9 @@ export function buildNextClientRegistry(mods: LoadedModule[]): string {
   const iconNames = [
     ...new Set(
       webMods.flatMap((e) =>
-        e.manifest.nav.web.flatMap((n) => (n.icon ? [n.icon] : [])),
+        e.manifest.nav.web
+          .flatMap((n) => [n, ...n.children])
+          .flatMap((n) => (n.icon ? [n.icon] : [])),
       ),
     ),
   ].sort();
