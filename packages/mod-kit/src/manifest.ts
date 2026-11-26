@@ -173,6 +173,21 @@ export const moduleManifestSchema = z.object({
       settingsComponent: z.boolean().default(false),
     })
     .prefault({}),
+  /**
+   * Native (Expo) packages: a module lists the `expo-*` / `react-native-*`
+   * packages it needs in its own package.json `dependencies`. Expo's
+   * autolinking follows dependencies recursively, so they're compiled into
+   * the app; sync records them in apps/expo/src/mod/native.generated.json
+   * and says when an install needs a new native build. Set `plugin: true`
+   * when the module ships a config plugin (`app.plugin.js` at the package
+   * root, exported as "./app.plugin.js") — e.g. to add iOS usage strings or
+   * Android permissions; sync adds it to the app's `plugins`.
+   */
+  native: z
+    .object({
+      plugin: z.boolean().default(false),
+    })
+    .prefault({}),
   env: z
     .object({
       /** `./env` exports a `server` zod shape (vars named MOD_<SLUG>_*). */

@@ -38,6 +38,9 @@ export const MOD_PATHS = {
   nextTranspileJson: "apps/nextjs/mod-packages.generated.json",
   expoRegistry: "apps/expo/src/mod/registry.generated.ts",
   expoEnv: "apps/expo/src/mod/env.generated.ts",
+  expoPlugins: "apps/expo/src/mod/plugins.generated.json",
+  expoNative: "apps/expo/src/mod/native.generated.json",
+  expoPackageJson: "apps/expo/package.json",
   // Stub roots (machine-owned subtrees, wiped + regenerated every sync).
   nextAppGroup: "apps/nextjs/src/app/(frontend)/(app)",
   nextPublicGroup: "apps/nextjs/src/app/(frontend)/(public)",
