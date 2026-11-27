@@ -145,11 +145,11 @@ export function UpdatesAlertClient() {
   };
 
   const action = !data.githubConnected ? (
-    <Button asChild size="sm" variant="outline">
+    <Button asChild size="sm" variant="outline" className="border-border">
       <Link href="/admin/updates">Connect GitHub to update</Link>
     </Button>
   ) : started || data.running ? (
-    <Button asChild size="sm" variant="outline">
+    <Button asChild size="sm" variant="outline" className="border-border">
       <Link href="/admin/updates">
         {started
           ? "Update started · View progress"
@@ -157,11 +157,16 @@ export function UpdatesAlertClient() {
       </Link>
     </Button>
   ) : data.ops.length > 0 ? (
-    <Button size="sm" disabled={busy} onClick={() => void updateAll()}>
+    <Button
+      size="sm"
+      className="border-0"
+      disabled={busy}
+      onClick={() => void updateAll()}
+    >
       {busy ? "Starting…" : data.ops.length === 1 ? "Update" : "Update all"}
     </Button>
   ) : (
-    <Button asChild size="sm" variant="outline">
+    <Button asChild size="sm" variant="outline" className="border-border">
       <Link href="/admin/updates">Review updates</Link>
     </Button>
   );
@@ -169,7 +174,7 @@ export function UpdatesAlertClient() {
   return (
     <div
       role="status"
-      className="updates-alert bg-primary/10 text-foreground border-b px-4 py-2.5 text-sm"
+      className="updates-alert bg-primary/10 text-foreground border-border border-0 border-b border-solid px-4 py-2.5 text-sm"
     >
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <ArrowUpCircle className="text-primary size-4 shrink-0" aria-hidden />
@@ -207,7 +212,7 @@ export function UpdatesAlertClient() {
           <Button
             size="icon"
             variant="ghost"
-            className="size-8"
+            className="size-8 border-0"
             aria-label="Dismiss until the next update"
             onClick={dismiss}
           >
