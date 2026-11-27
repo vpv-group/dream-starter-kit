@@ -107,13 +107,17 @@ export async function ensureStripeWebhook(
   } catch {
     return { status: "skipped", reason: "not_public" };
   }
-  const local = ["localhost", "127.0.0.1"].includes(origin.hostname);
+  const local = isLocalHost(origin.hostname);
   // Stripe only delivers to public https endpoints. Through Meet Dream, a
   // local site may still register outside production: meetdream.com refuses
   // a non-public target itself, and a local stand-in (the E2E's fake
-  // meetdream.com) delivers to localhost.
+  // meetdream.com) delivers to localhost. A production build pointed at a
+  // local stand-in (the kit's release E2E, `next build && next start`) may
+  // too: a real deployment never has a localhost DREAM_REGISTRY_URL.
   const devMeetDream =
-    viaMeetDream && local && process.env.NODE_ENV !== "production";
+    viaMeetDream &&
+    local &&
+    (process.env.NODE_ENV !== "production" || localMeetDream());
   if (!devMeetDream && (origin.protocol !== "https:" || local)) {
     return { status: "skipped", reason: "not_public" };
   }
@@ -207,6 +211,19 @@ export async function ensureStripeWebhook(
 type WebhookTargetResult =
   | { status: "ok"; secret: string }
   | { status: "no_key" | "not_connected" | "error"; message: string };
+
+const isLocalHost = (hostname: string) =>
+  ["localhost", "127.0.0.1"].includes(hostname);
+
+/** Is this site's Meet Dream a local stand-in (DREAM_REGISTRY_URL)? */
+function localMeetDream(): boolean {
+  try {
+    const url = process.env.DREAM_REGISTRY_URL;
+    return !!url && isLocalHost(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
 
 async function meetDreamWebhookTarget(
   url: string,
