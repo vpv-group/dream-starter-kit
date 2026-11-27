@@ -198,6 +198,10 @@ export default buildConfig({
       // Sidebar with accordion groups: one open at a time, and the group of
       // the current page open on load. See payload/components/AdminNav.tsx.
       Nav: "~/payload/components/AdminNav#AdminNav",
+      // "Updates available" bar above every admin page, with Update /
+      // Update all, when the kit or a module is behind (admins only;
+      // payload/components/updates/UpdatesAlert.tsx).
+      header: ["~/payload/components/updates/UpdatesAlert#UpdatesAlert"],
       // "Updates" link for admins (payload/components/updates/).
       afterNavLinks: [
         "~/payload/components/updates/UpdatesNavLink#UpdatesNavLink",

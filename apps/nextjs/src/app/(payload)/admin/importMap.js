@@ -44,6 +44,7 @@ import { FolderTypeField as FolderTypeField_2b8867833a34864a02ddf429b0728a40 } f
 import { RegenerateAllImages as RegenerateAllImages_5552ed3b6af65aa0c30dbc3814b71069 } from '~/payload/components/RegenerateAllImages'
 import { DreamSiteRegister as DreamSiteRegister_8fdc7ad44850bf64e6cb11d7cb127820 } from '~/payload/components/DreamSiteRegister'
 import { AdminNav as AdminNav_5ba77d1ae4e48f9dcf3743b1eca31611 } from '~/payload/components/AdminNav'
+import { UpdatesAlert as UpdatesAlert_b025c112672c8d6534fe251b489ece7f } from '~/payload/components/updates/UpdatesAlert'
 import { LogoutButton as LogoutButton_6c9a924bbf94f383766dffe3be60632c } from '~/payload/components/LogoutButton'
 import { BrandIcon as BrandIcon_7f003298658d3b7c758be66cf37cc99a } from '~/payload/components/BrandIcon'
 import { BrandLogo as BrandLogo_11d3156590230f2611ead54e0eaf3582 } from '~/payload/components/BrandLogo'
@@ -108,6 +109,7 @@ export const importMap = {
   "~/payload/components/RegenerateAllImages#RegenerateAllImages": RegenerateAllImages_5552ed3b6af65aa0c30dbc3814b71069,
   "~/payload/components/DreamSiteRegister#DreamSiteRegister": DreamSiteRegister_8fdc7ad44850bf64e6cb11d7cb127820,
   "~/payload/components/AdminNav#AdminNav": AdminNav_5ba77d1ae4e48f9dcf3743b1eca31611,
+  "~/payload/components/updates/UpdatesAlert#UpdatesAlert": UpdatesAlert_b025c112672c8d6534fe251b489ece7f,
   "~/payload/components/LogoutButton#LogoutButton": LogoutButton_6c9a924bbf94f383766dffe3be60632c,
   "~/payload/components/BrandIcon#BrandIcon": BrandIcon_7f003298658d3b7c758be66cf37cc99a,
   "~/payload/components/BrandLogo#BrandLogo": BrandLogo_11d3156590230f2611ead54e0eaf3582,

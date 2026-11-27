@@ -58,7 +58,9 @@ post-merge validation below and merge it yourself — **merge commit, never
 squash**.
 
 - Turn the daily check off with **Automatic updates** in /admin → Updates.
-- Run it now with **Check now** there.
+- Run it now with **Check now** there, or with **Update** / **Update all** on
+  the **Updates available** bar at the top of /admin, which shows whenever the
+  kit or a module is behind.
 
 **New in 2.6 — billing core + payment providers.** Billing 2.0 is
 provider-neutral; Stripe moved into its own preinstalled module,
