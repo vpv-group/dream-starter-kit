@@ -50,7 +50,8 @@ test.afterAll(async () => {
 async function signedIn(browser: Browser, email: string): Promise<Page> {
   const page = await (await browser.newContext()).newPage();
   await signInWithPasswordUI(page, email, PASSWORD);
-  await page.waitForURL(/\/(a|welcome|onboarding)(\/|$|\?)/, {
+  // Wherever sign-in lands (/a, or the page this user last had open).
+  await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"), {
     timeout: 60_000,
   });
   return page;
