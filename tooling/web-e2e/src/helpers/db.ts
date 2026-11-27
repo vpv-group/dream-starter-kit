@@ -147,3 +147,77 @@ export async function fetchUserTagNames(userId: string): Promise<string[]> {
   const rows = (await res.json()) as { tags: { name: string } | null }[];
   return rows.flatMap((r) => (r.tags ? [r.tags.name] : [])).sort();
 }
+
+/**
+ * A confirmed email+password user, created through GoTrue's admin API (no
+ * Mailpit round-trip) — for specs that need extra accounts, e.g. workspace
+ * members. Returns the auth user id.
+ */
+export async function createConfirmedUser(
+  email: string,
+  password: string,
+  displayName: string,
+): Promise<string> {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+    method: "POST",
+    headers: { ...serviceHeaders(), "content-type": "application/json" },
+    body: JSON.stringify({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { display_name: displayName },
+    }),
+  });
+  if (!res.ok) throw new Error(`createConfirmedUser failed: ${res.status}`);
+  return ((await res.json()) as { id: string }).id;
+}
+
+/** Delete an auth user (its profile, memberships and purchases cascade). */
+export async function deleteAuthUser(id: string): Promise<void> {
+  await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${id}`, {
+    method: "DELETE",
+    headers: serviceHeaders(),
+  });
+}
+
+/**
+ * A workspace owned by `ownerId`, with `members` as [userId, role] pairs
+ * (the owner included). Service-role writes, like the RLS suite's fixtures.
+ */
+export async function createWorkspace(
+  name: string,
+  slug: string,
+  ownerId: string,
+  members: [string, "owner" | "admin" | "member"][],
+): Promise<string> {
+  const headers = {
+    ...serviceHeaders(),
+    "content-type": "application/json",
+    Prefer: "return=representation",
+  };
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/organizations`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ name, slug, owner_id: ownerId }),
+  });
+  if (!res.ok) throw new Error(`createWorkspace failed: ${res.status}`);
+  const [org] = (await res.json()) as { id: string }[];
+  if (!org) throw new Error("createWorkspace returned no row");
+  const ms = await fetch(`${SUPABASE_URL}/rest/v1/memberships`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(
+      members.map(([user_id, role]) => ({ org_id: org.id, user_id, role })),
+    ),
+  });
+  if (!ms.ok) throw new Error(`memberships insert failed: ${ms.status}`);
+  return org.id;
+}
+
+/** Delete a workspace (memberships and its purchases cascade). */
+export async function deleteWorkspace(id: string): Promise<void> {
+  await fetch(`${SUPABASE_URL}/rest/v1/organizations?id=eq.${id}`, {
+    method: "DELETE",
+    headers: serviceHeaders(),
+  });
+}

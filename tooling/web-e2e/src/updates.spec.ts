@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 import { FOUNDER_STORAGE_STATE } from "./helpers/founder";
@@ -33,6 +34,19 @@ async function sent(type: string): Promise<LogEntry[]> {
   return ((await res.json()) as LogEntry[]).filter((e) => e.type === type);
 }
 
+/**
+ * Open /admin → Updates and wait for its first load. The panel shows
+ * "Loading updates…" until its client fetch of /api/modules/updates (which
+ * calls Meet Dream + GitHub — the stub here) returns; on a cold `next dev`
+ * that route compiles on first hit and outlasts the 5 s assertion timeout.
+ */
+async function openUpdates(page: Page) {
+  await page.goto("/admin/updates");
+  await expect(page.getByText("Loading updates…")).toBeHidden({
+    timeout: 60_000,
+  });
+}
+
 test.describe.configure({ mode: "serial" });
 test.use({ storageState: FOUNDER_STORAGE_STATE });
 
@@ -41,7 +55,7 @@ test.afterAll(() => setSiteKey(null));
 
 test("the update switches save to Meet Dream", async ({ page }) => {
   await scene({ connected: true });
-  await page.goto("/admin/updates");
+  await openUpdates(page);
   await expect(page.getByText("Connected to acme/e2e-app")).toBeVisible();
 
   const merge = page.getByRole("switch", {
@@ -75,7 +89,7 @@ test("Meet Dream's hold, a paused merge and Merge now", async ({ page }) => {
       },
     ],
   });
-  await page.goto("/admin/updates");
+  await openUpdates(page);
   await expect(
     page.getByText("Automatic merging is paused by Meet Dream"),
   ).toBeVisible();
@@ -103,7 +117,7 @@ test("not connected: Connect GitHub, and only catalog installs", async ({
   await page.goto("/admin");
   await expect(page.getByText("Finish setup")).toBeVisible();
 
-  await page.goto("/admin/updates");
+  await openUpdates(page);
   await page.getByRole("button", { name: "Connect GitHub" }).click();
   await page.waitForURL(`${STUB}/github-install?state=e2e`);
   expect((await sent("connect")).at(-1)?.body).toMatchObject({
