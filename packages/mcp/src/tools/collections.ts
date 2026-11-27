@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import type { McpToolContext } from "../payload-context";
-import { MCP_COLLECTIONS } from "./registry";
+import { collectionsFor } from "./registry";
 import { jsonResult, runTool } from "./shared";
 
 /**
@@ -28,7 +28,7 @@ export function registerCollectionTools(
         return Promise.resolve(
           jsonResult({
             roles,
-            collections: MCP_COLLECTIONS.map((c) => ({
+            collections: collectionsFor(ctx).map((c) => ({
               slug: c.slug,
               label: c.label,
               group: c.group,

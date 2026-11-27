@@ -26,6 +26,8 @@
     "@acme/mod-chat-adapter-slack": "workspace:*",
     "@acme/mod-dashboard": "workspace:*",
     "@acme/mod-docs": "workspace:*",
+    "@acme/mod-feedback": "workspace:*",
+    "@acme/mod-feedback-source-chat": "workspace:*",
     "@acme/mod-kit": "workspace:*",
     "@acme/mod-notifications": "workspace:*",
     "@acme/mod-reminders": "workspace:*",

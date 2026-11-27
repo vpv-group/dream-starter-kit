@@ -218,11 +218,64 @@ its own `process.env.MOD_<SLUG>_*` keys without tripping
 every call (session cookie on web, `Authorization: Bearer` on native), applies
 the shared rate limit and the enablement gate, then matches `"METHOD /path"` in
 the module's `routes` table — golden rule #6 holds for every module
-endpoint with zero per-module auth code. `publicRoutes` (manifest
-`server.publicRoutes`) skips the session requirement for genuinely anonymous
-flows (billing's guest checkout) and for callers that prove themselves —
-signature-verified webhooks (Stripe, Slack), cron routes (`isCronRequest`) —
-but stays rate-limited and enablement-gated.
+endpoint with zero per-module auth code. **Anonymous Supabase sessions**
+(`is_anonymous`, the visitor identity behind favorites and guest checkout)
+get **401** on `routes`: a flow that must serve them goes in `publicRoutes`
+(manifest `server.publicRoutes`), which skips the session requirement
+(`ctx.user` is the anonymous user or null) but stays rate-limited per user
+or IP. Callers that prove themselves — signature-verified webhooks (Stripe,
+Slack) and cron routes (`isCronRequest`) — are public routes too.
+
+**Embeddable pages.** A web route with `area: "embed"` mounts at
+`/embed/<slug>/…` in the bare `(frontend)/(embed)` group: no site header or
+footer and no app shell, so it fits an iframe on another site. Inside the
+frame, third-party cookies are blocked, so the layout provides its own
+Supabase client with a localStorage session (sign in inside the frame with an
+email code; module hooks already send it as a bearer token). `proxy.ts`
+answers these paths with `Content-Security-Policy: frame-ancestors 'self'
+<origins>`, where the origins are the module's rows in
+`public.kit_embed_origins`. With no rows, only the app itself can frame the
+page. A module sets its list from its own /admin settings with
+`kit_set_embed_origins(slug, origins[])` (service role only; plain `https://`
+origins, or `http://localhost` for development). The proxy caches the list
+for a minute. Serve any loader script (e.g. `embed.js`) from a public route.
+
+**MCP tools.** With `server.mcp: true`, `./server` also exports
+`mcp: ModMcpExtension` (tools built with `defineMcpTool`, optional Payload
+collections and an instructions sentence). The remote MCP server at `/mcp`
+adds them while the module is enabled; tool names must start with
+`<slug>_`. Tools get a service-role client and must check their own staff
+rule. See docs/MCP.md → Module tools and collections.
+
+**Host services (`ctx.host`)** are on both route contexts:
+
+- `ctx.host.github` reaches the repository connected through the Meet Dream
+  AI GitHub App (/admin → Updates) with its short-lived site token, which
+  the module never sees. `status()` returns `{ connected, repo }` or a
+  reason. `api(path, init)` calls `/repos/<repo><path>`, limited to `""`
+  (GET), `/issues…` and `/labels…`; anything else is a 403 and never
+  reaches GitHub. `searchIssues(query)` runs a GitHub issue search scoped to
+  that repo. With GitHub unconnected, calls answer 503
+  `github_not_connected`, so modules must keep working without it.
+
+**Extending another module.** A module can be built to be extended by
+adapter modules, the way `chat` takes channel adapters and `feedback` takes
+issue trackers: the core exports a typed contract plus a route factory from
+a server-only entry (`@acme/mod-feedback/integrations`), adapters declare
+`requires: ["<core>"]`, mount the factory's routes, register themselves in
+the core's table from a migration (`mod_feedback_register_provider(...)`),
+and contribute a settings tab with `defineAdapterSettings({ target })`.
+
+**Anonymous-user data.** A module that lets anonymous users own rows
+registers two SQL functions from a migration:
+`select public.kit_register_anon_data('<slug>', 'public.mod_<slug>_merge_anon', 'public.mod_<slug>_anon_has_data');`.
+`merge_anon(_from uuid, _to uuid)` moves the rows when the visitor signs in
+to an existing account (`lib/auth/merge-anon.ts`, before the anonymous user
+is deleted). `anon_has_data(_user uuid) → boolean` keeps the hourly cleanup
+of idle anonymous users from deleting someone whose rows still count.
+Undo it in `drop.sql` with `kit_unregister_anon_data('<slug>')`. The
+`pg_trgm` and `vector` extensions are enabled in `extensions` for module
+search and similarity; embedding models come from `DEFAULT_EMBEDDING_MODEL`.
 
 **Menus are CMS-driven** (`kit-modules` + `nav-items` collections,
 **Modules** admin group): manifest nav entries are _defaults_, seeded by the

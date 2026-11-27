@@ -84,6 +84,46 @@ describe("generated registries", () => {
     expect(server).toContain("= {}");
   });
 
+  it("puts embed routes in the bare (embed) group under /embed/<slug>", () => {
+    const embed = loaded({
+      slug: "widgety",
+      name: "Widgety",
+      version: "1.0.0",
+      kitCompat: ">=2.0.0 <3",
+      routes: {
+        web: [
+          { path: "", component: "EmbedHome", area: "embed" },
+          { path: "p/[post]", component: "EmbedPost", area: "embed" },
+        ],
+      },
+    });
+    const paths = buildStubs([embed]).map((f) => f.path);
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        "apps/nextjs/src/app/(frontend)/(embed)/embed/widgety/page.tsx",
+        "apps/nextjs/src/app/(frontend)/(embed)/embed/widgety/p/[post]/page.tsx",
+        "apps/nextjs/src/app/(frontend)/(embed)/embed/widgety/layout.tsx",
+      ]),
+    );
+  });
+
+  it("emits modMcp only for modules declaring server.mcp", () => {
+    const withMcp = loaded({
+      slug: "feedback-x",
+      name: "Feedback X",
+      version: "1.0.0",
+      kitCompat: ">=2.0.0 <3",
+      server: { routes: true, mcp: true },
+    });
+    const out = buildNextServerRegistry([chat, withMcp]);
+    expect(out).toContain(
+      'import { routes as routes_feedback_x, mcp as mcp_feedback_x } from "@acme/mod-feedback-x/server";',
+    );
+    expect(out).toMatch(
+      /modMcp: Record<string, ModMcpExtension> = \{\n {2}"feedback-x": mcp_feedback_x,\n\}/,
+    );
+  });
+
   it("bakes nav defaults, widgets and icons as literals", () => {
     const out = buildNextClientRegistry([chat]);
     expect(out).toContain(

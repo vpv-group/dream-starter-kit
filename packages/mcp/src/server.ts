@@ -5,6 +5,7 @@ import type { McpToolContext } from "./payload-context";
 import { registerChatGptTools } from "./tools/chatgpt";
 import { registerCollectionTools } from "./tools/collections";
 import { registerContentTools } from "./tools/content";
+import { registerExtraTools } from "./tools/extra";
 import { registerMediaTools } from "./tools/media";
 import { registerNotificationTools } from "./tools/notifications";
 
@@ -20,12 +21,16 @@ const INSTRUCTIONS =
 
 /** Build a fresh MCP server with every tool bound to this request's context. */
 export function buildMcpServer(ctx: McpToolContext): McpServer {
-  const server = new McpServer(SERVER_INFO, { instructions: INSTRUCTIONS });
+  const instructions = [INSTRUCTIONS, ...(ctx.extraInstructions ?? [])].join(
+    " ",
+  );
+  const server = new McpServer(SERVER_INFO, { instructions });
   registerCollectionTools(server, ctx);
   registerContentTools(server, ctx);
   registerChatGptTools(server, ctx);
   registerNotificationTools(server, ctx);
   registerMediaTools(server, ctx);
+  registerExtraTools(server, ctx);
   return server;
 }
 

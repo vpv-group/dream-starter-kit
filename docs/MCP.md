@@ -180,6 +180,55 @@ authorization is still Payload's job; the allowlist just bounds the surface.
 `searchFields`, optional `publicPath`, optional `chatgptSearch`) to `MCP_COLLECTIONS`.
 The `collection` enum on the content tools and `list_collections` update automatically.
 
+### Module tools and collections
+
+Installed modules can add their own tools and collections without touching
+this package. A module sets `server.mcp: true` in its manifest and exports
+`mcp: ModMcpExtension` from `./server`:
+
+```ts
+import type { ModMcpExtension } from "@acme/mod-kit/server";
+import { defineMcpTool } from "@acme/mod-kit/server";
+
+export const mcp: ModMcpExtension = {
+  instructions: "Feedback tools start with feedback_.",
+  collections: [
+    {
+      slug: "mod-feedback-changelog",
+      label: "Changelog",
+      group: "Feedback",
+      titleField: "title",
+      searchFields: ["title"],
+    },
+  ],
+  tools: [
+    defineMcpTool({
+      name: "feedback_search_posts", // must start with `<slug>_`
+      title: "Search feedback posts",
+      description: "…",
+      inputSchema: { query: z.string() },
+      readOnly: true,
+      run: async ({ query }, ctx) => {
+        /* … */
+      },
+    }),
+  ],
+};
+```
+
+`pnpm mod sync` adds it to `modMcp` in the generated server registry, and
+`/mcp` registers it for every request while the module is **enabled**
+(`lib/mod/mcp-core.ts`; names without the `<slug>_` prefix are dropped).
+`run` gets `ModMcpContext`: the caller's Supabase `userId`, their staff
+`cmsUser`, `payload`, the public `origin`, `ctx.host`, and `admin`, a
+**service-role** Supabase client. The route has only checked that the caller
+is CMS staff, so a tool that reads RLS data must apply its own finer rule
+(e.g. `profiles.is_staff`) and attribute writes to `userId`. Module
+collections still run through Payload access as the staff user.
+
+The feedback module is the reference: `modules/feedback/src/server/mcp.ts`
+(eleven `feedback_*` tools plus its changelog collection).
+
 ---
 
 ## Notifications & delivery

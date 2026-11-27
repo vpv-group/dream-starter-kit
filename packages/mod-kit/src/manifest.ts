@@ -45,8 +45,14 @@ const routeEntrySchema = z.object({
   path: z.string(),
   /** Named export from the `./web` (or `./native`) entry to mount. */
   component: z.string().min(1),
-  /** Web layout group for the generated stub: authed shell (default) or public. */
-  area: z.enum(["app", "public"]).default("app"),
+  /**
+   * Web layout group for the generated stub: authed shell (default), public
+   * site chrome, or `embed` — a bare page meant for an iframe on another
+   * site (no header/footer/shell, its own localStorage session). Embed pages
+   * mount under /embed/<slug> and may only be framed by the origins in
+   * `kit_embed_origins` for that module (proxy.ts sets frame-ancestors).
+   */
+  area: z.enum(["app", "public", "embed"]).default("app"),
   /**
    * Absolute mount override instead of /a/<slug>/<path> (e.g. billing claims
    * "/billing", dashboard claims "/a"). Validated against the reserved core
@@ -114,6 +120,12 @@ export const moduleManifestSchema = z.object({
        * Only for genuinely anonymous flows (e.g. guest checkout).
        */
       publicRoutes: z.boolean().default(false),
+      /**
+       * `./server` also exports `mcp: ModMcpExtension` — tools (and Payload
+       * collections) added to the remote MCP server at /mcp while the module
+       * is enabled. Tool names must start with `<slug>_` (dashes → `_`).
+       */
+      mcp: z.boolean().default(false),
       /** Edge function directory names — must be prefixed `<slug>-`. */
       edgeFunctions: z.array(z.string().min(1)).default([]),
       /**

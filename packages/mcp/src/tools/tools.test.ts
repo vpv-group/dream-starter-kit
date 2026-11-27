@@ -2,6 +2,7 @@ import type { Payload } from "payload";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import type { McpToolContext } from "../payload-context";
 import { buildMcpServer } from "../server";
@@ -74,6 +75,7 @@ let fake: ReturnType<typeof makeFakePayload>;
 
 async function connectClient(
   generateMedia?: McpToolContext["generateMedia"],
+  extra: Partial<McpToolContext> = {},
 ): Promise<Client> {
   const ctx: McpToolContext = {
     payload: fake as unknown as Payload,
@@ -84,6 +86,7 @@ async function connectClient(
     },
     origin: "https://app.test",
     generateMedia,
+    ...extra,
   };
   const server = buildMcpServer(ctx);
   const [clientTransport, serverTransport] =
@@ -266,5 +269,77 @@ describe("mcp tool layer", () => {
     });
     expect(isError(res)).toBe(true);
     expect(textOf(res)).toContain("S3 storage is not configured");
+  });
+});
+
+describe("host-supplied (module) tools and collections", () => {
+  it("registers extra tools and returns their JSON result", async () => {
+    const run = vi.fn((args: Record<string, unknown>) =>
+      Promise.resolve({ echoed: args.q }),
+    );
+    const client = await connectClient(undefined, {
+      extraTools: [
+        {
+          name: "demo_echo",
+          title: "Echo",
+          description: "Echo q back.",
+          inputSchema: { q: z.string() },
+          readOnly: true,
+          run,
+        },
+      ],
+    });
+    const { tools } = await client.listTools();
+    const echo = tools.find((t) => t.name === "demo_echo");
+    expect(echo?.annotations?.readOnlyHint).toBe(true);
+    const res = (await client.callTool({
+      name: "demo_echo",
+      arguments: { q: "hi" },
+    })) as { structuredContent?: unknown };
+    expect(res.structuredContent).toEqual({ echoed: "hi" });
+    expect(run).toHaveBeenCalledWith({ q: "hi" });
+  });
+
+  it("turns a thrown error into an isError result", async () => {
+    const client = await connectClient(undefined, {
+      extraTools: [
+        {
+          name: "demo_fail",
+          title: "Fail",
+          description: "Always fails.",
+          inputSchema: {},
+          run: () => Promise.reject(new Error("Staff only")),
+        },
+      ],
+    });
+    const res: unknown = await client.callTool({
+      name: "demo_fail",
+      arguments: {},
+    });
+    expect(isError(res)).toBe(true);
+  });
+
+  it("adds extra collections to list_collections and the content tools", async () => {
+    const client = await connectClient(undefined, {
+      extraCollections: [
+        {
+          slug: "demo-notes",
+          label: "Notes",
+          group: "Demo",
+          titleField: "title",
+          searchFields: ["title"],
+        },
+      ],
+    });
+    const listed = (await client.callTool({
+      name: "list_collections",
+      arguments: {},
+    })) as { content: { text: string }[] };
+    expect(listed.content[0]?.text).toContain("demo-notes");
+    const res: unknown = await client.callTool({
+      name: "search_content",
+      arguments: { collection: "demo-notes", query: "x" },
+    });
+    expect(isError(res)).toBe(false);
   });
 });

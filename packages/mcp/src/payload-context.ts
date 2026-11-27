@@ -1,4 +1,21 @@
 import type { Payload, TypedUser, Where } from "payload";
+import type { z } from "zod";
+
+import type { CollectionInfo } from "./tools/registry";
+
+/**
+ * A host-supplied tool (e.g. contributed by an installed module). The host
+ * binds whatever context it needs into `run`; this package only registers it
+ * and formats the result like every other tool.
+ */
+export interface ExtraTool {
+  name: string;
+  title: string;
+  description: string;
+  inputSchema: z.ZodRawShape;
+  readOnly?: boolean;
+  run: (args: Record<string, unknown>) => Promise<unknown>;
+}
 
 /**
  * The per-request context every MCP tool runs in. `payload` is the injected
@@ -24,6 +41,12 @@ export interface McpToolContext {
     format?: "hero" | "og" | "square";
     alt?: string;
   }) => Promise<{ id: number | string; url: string | null; alt: string }>;
+  /** Extra tools (installed modules), registered after the built-in ones. */
+  extraTools?: ExtraTool[];
+  /** Extra Payload collections for the generic content tools. */
+  extraCollections?: CollectionInfo[];
+  /** Extra sentences for the server instructions. */
+  extraInstructions?: string[];
 }
 
 /** Roles allowed to use the MCP at all — mirrors /admin's canAccessAdmin gate. */

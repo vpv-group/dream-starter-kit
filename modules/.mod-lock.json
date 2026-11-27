@@ -75,6 +75,46 @@
       "sha256": "3d92502cfbf0b105901f6b6beb517f30f6ace3c7f2d3a304d923a0bd2e2bed7e",
       "target": "20260612100001_ext_demo_001_initial.sql"
     },
+    "feedback-source-chat/001_initial.sql": {
+      "version": "20261126215919",
+      "sha256": "341bb52cc30cca15ea1ce4b1ec4c0583b961bca029db60658919d4dcd9e21548",
+      "target": "20261126215919_mod_feedback_source_chat_001_initial.sql"
+    },
+    "feedback/001_initial.sql": {
+      "version": "20261126202816",
+      "sha256": "0fb4895080c9f0b551336c6bb6ccc244a2a3ff63fd8325a5a121242041ec5c43",
+      "target": "20261126202816_mod_feedback_001_initial.sql"
+    },
+    "feedback/002_ideas.sql": {
+      "version": "20261126211126",
+      "sha256": "37b1e286301b352455771ba2c2bef0361cdda68438bfa28a0f8c6508d0b02104",
+      "target": "20261126211126_mod_feedback_002_ideas.sql"
+    },
+    "feedback/003_changelog.sql": {
+      "version": "20261126212808",
+      "sha256": "0f580d1d8e4534aaef2db5b824008c7ab56691a2579b8cbd95e02a1d7494e3c9",
+      "target": "20261126212808_mod_feedback_003_changelog.sql"
+    },
+    "feedback/004_integrations.sql": {
+      "version": "20261126213409",
+      "sha256": "41cbaada9dc1879a4a212cff9313d13a7a158a4a489bdb34588984b7b9e9f305",
+      "target": "20261126213409_mod_feedback_004_integrations.sql"
+    },
+    "feedback/005_autopilot.sql": {
+      "version": "20261126214941",
+      "sha256": "e24967d4e760bae2b1f3f50de7c5c843ac765b9263c0014ee4d8817c6ea1a779",
+      "target": "20261126214941_mod_feedback_005_autopilot.sql"
+    },
+    "feedback/006_insights.sql": {
+      "version": "20261127030001",
+      "sha256": "4bea87e5de4aff637759be8a66ecde3c33039fad80841fab90c1f166b1921361",
+      "target": "20261127030001_mod_feedback_006_insights.sql"
+    },
+    "feedback/007_digest.sql": {
+      "version": "20261127030002",
+      "sha256": "c06433c3e9436f6729f2bcc59dd5ed365dcf2adba25aa1932fc68f237a8bf42f",
+      "target": "20261127030002_mod_feedback_007_digest.sql"
+    },
     "notifications/001_initial.sql": {
       "version": "20260612011540",
       "sha256": "99010f69124c6d4b6ec8a303848d41501a74e5a3866d06bac399c30774ddebc0",

@@ -285,6 +285,7 @@ registerModAdapters({\n${targets.join("\n")}\n});`;
 export function buildNextServerRegistry(mods: LoadedModule[]): string {
   const serverMods = mods.filter((e) => e.manifest.server.routes);
   const publicMods = mods.filter((e) => e.manifest.server.publicRoutes);
+  const mcpMods = mods.filter((e) => e.manifest.server.mcp);
   const serviceMods = mods.filter((e) => e.manifest.server.services);
   const loaders = adapterLoaders(mods);
   const imports: string[] = [];
@@ -295,6 +296,9 @@ export function buildNextServerRegistry(mods: LoadedModule[]): string {
         : []),
       ...(e.manifest.server.publicRoutes
         ? [`publicRoutes as publicRoutes_${ident(e.manifest.slug)}`]
+        : []),
+      ...(e.manifest.server.mcp
+        ? [`mcp as mcp_${ident(e.manifest.slug)}`]
         : []),
       ...(e.manifest.server.services
         ? [`services as services_${ident(e.manifest.slug)}`]
@@ -317,8 +321,8 @@ export function buildNextServerRegistry(mods: LoadedModule[]): string {
           .join("\n")}\n}`;
 
   const kitImport = loaders
-    ? `import { type ModPublicRouteTable, type ModRouteTable, type ModServices, registerModAdapters } from "@acme/mod-kit/server";`
-    : `import type { ModPublicRouteTable, ModRouteTable, ModServices } from "@acme/mod-kit/server";`;
+    ? `import { type ModMcpExtension, type ModPublicRouteTable, type ModRouteTable, type ModServices, registerModAdapters } from "@acme/mod-kit/server";`
+    : `import type { ModMcpExtension, ModPublicRouteTable, ModRouteTable, ModServices } from "@acme/mod-kit/server";`;
 
   return `${ESLINT_OFF}${HEADER}import "server-only";
 
@@ -329,6 +333,9 @@ export const modServerRoutes: Record<string, ModRouteTable> = ${table(serverMods
 
 /** slug → PUBLIC route table (no session required; still rate-limited). */
 export const modPublicRoutes: Record<string, ModPublicRouteTable> = ${table(publicMods, "publicRoutes")};
+
+/** slug → MCP tools/collections, added to /mcp while the module is enabled. */
+export const modMcp: Record<string, ModMcpExtension> = ${table(mcpMods, "mcp")};
 
 /**
  * slug → the module's host-facing services (manifest server.services). Host
@@ -785,8 +792,14 @@ export function buildStubs(mods: LoadedModule[]): GeneratedFile[] {
         const group =
           r.area === "public"
             ? MOD_PATHS.nextPublicGroup
-            : MOD_PATHS.nextAppGroup;
-        const base = r.mount ? r.mount.replace(/^\//, "") : `a/${slug}`;
+            : r.area === "embed"
+              ? MOD_PATHS.nextEmbedGroup
+              : MOD_PATHS.nextAppGroup;
+        const base = r.mount
+          ? r.mount.replace(/^\//, "")
+          : r.area === "embed"
+            ? `embed/${slug}`
+            : `a/${slug}`;
         bases.add(`${group}/${base}`);
         const seg = r.path ? `/${r.path}` : "";
         const entry = r.rsc ? "web-server" : "web";

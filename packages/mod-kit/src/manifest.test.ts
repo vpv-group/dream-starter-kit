@@ -19,6 +19,7 @@ describe("defineModule", () => {
     expect(m.server).toEqual({
       routes: false,
       publicRoutes: false,
+      mcp: false,
       edgeFunctions: [],
       services: false,
     });

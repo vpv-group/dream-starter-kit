@@ -74,6 +74,15 @@ export const CHAT_MODELS = [
 export const ROUTING_AI_MODEL = "anthropic/claude-haiku-4.5";
 
 /**
+ * Embedding model ("provider/model") for semantic similarity (e.g. the
+ * feedback module's duplicate detection), served through the AI Gateway.
+ * Its vector size is EMBEDDING_DIMENSIONS — a `vector(n)` column must match,
+ * so changing the model means a migration that re-embeds.
+ */
+export const DEFAULT_EMBEDDING_MODEL = "openai/text-embedding-3-small";
+export const EMBEDDING_DIMENSIONS = 1536;
+
+/**
  * Default transcription model ("provider/model"). Only OpenAI is wired up —
  * the AI Gateway doesn't proxy /audio/transcriptions, so transcription calls
  * OpenAI directly with OPENAI_API_KEY.
