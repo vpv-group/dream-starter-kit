@@ -78,6 +78,7 @@ export const modSettings: Record<string, ModuleSettings> = {
  * ModuleAdminSettings wrapper (registry.admin.generated.tsx).
  */
 export const modAdminSettings: { slug: string; page?: string }[] = [
+  { slug: "billing" },
   { slug: "billing-adapter-stripe", page: "billing" },
 ];
 

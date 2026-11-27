@@ -75,6 +75,11 @@ export default defineModule({
     publicRoutes: true,
     services: true,
   },
+  admin: {
+    // Warns on Modules → Billing when no payment provider is installed or
+    // connected (before the providers' own panels).
+    settingsComponent: true,
+  },
   database: {
     tables: [
       "mod_billing_customers",

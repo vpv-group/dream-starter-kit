@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./admin": "./src/admin/index.tsx",
     "./native": "./src/native/index.ts",
     "./payload": "./src/payload/index.ts",
     "./server": "./src/server/index.ts",
