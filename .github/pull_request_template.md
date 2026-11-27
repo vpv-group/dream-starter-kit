@@ -18,4 +18,7 @@
 - [ ] Env changes updated **both** `.env.example` and the zod schema in `packages/config`
 - [ ] Cross-platform logic lives in `packages/`; `apps/*` stay thin
 - [ ] Docs updated (README / `docs/ARCHITECTURE.md` / `docs/ERD.md`) if behavior or structure changed
+- [ ] Billing / Stripe adapter / `stripe` or `@stripe/*` changed? The next release
+      needs the live Stripe check before it's tagged (docs/UPDATING.md → How kit
+      releases work)
 - [ ] Conventional Commit title (e.g. `feat(reminders): …`)

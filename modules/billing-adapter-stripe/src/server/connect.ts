@@ -22,6 +22,7 @@ export const WEBHOOK_EVENTS: Stripe.WebhookEndpointCreateParams.EnabledEvent[] =
     "customer.subscription.created",
     "customer.subscription.updated",
     "customer.subscription.deleted",
+    "payment_intent.succeeded",
   ];
 
 export const WEBHOOK_PATH = "/api/mod/billing-adapter-stripe/webhook";
@@ -106,10 +107,14 @@ export async function ensureStripeWebhook(
   } catch {
     return { status: "skipped", reason: "not_public" };
   }
-  if (
-    origin.protocol !== "https:" ||
-    ["localhost", "127.0.0.1"].includes(origin.hostname)
-  ) {
+  const local = ["localhost", "127.0.0.1"].includes(origin.hostname);
+  // Stripe only delivers to public https endpoints. Through Meet Dream, a
+  // local site may still register outside production: meetdream.com refuses
+  // a non-public target itself, and a local stand-in (the E2E's fake
+  // meetdream.com) delivers to localhost.
+  const devMeetDream =
+    viaMeetDream && local && process.env.NODE_ENV !== "production";
+  if (!devMeetDream && (origin.protocol !== "https:" || local)) {
     return { status: "skipped", reason: "not_public" };
   }
 
@@ -133,6 +138,24 @@ export async function ensureStripeWebhook(
 
     // Ours (secret in Vault) or yours (secret in STRIPE_WEBHOOK_SECRET).
     if (existing && (stored || process.env.STRIPE_WEBHOOK_SECRET)) {
+      // One we created gets any event a newer adapter handles (e.g.
+      // payment_intent.succeeded, 1.2). Yours (STRIPE_WEBHOOK_SECRET) is left
+      // as you set it.
+      const ours =
+        (existing.metadata as Record<string, string> | null | undefined)
+          ?.created_by === "billing-adapter-stripe";
+      const has = new Set<string>(existing.enabled_events);
+      const missing = WEBHOOK_EVENTS.filter(
+        (e) => !has.has(e) && !has.has("*"),
+      );
+      if (ours && missing.length > 0) {
+        await stripe.webhookEndpoints.update(existing.id, {
+          enabled_events: [
+            ...(existing.enabled_events as Stripe.WebhookEndpointUpdateParams.EnabledEvent[]),
+            ...missing,
+          ],
+        });
+      }
       // A disabled one is yours to re-enable; until then the old endpoints
       // keep delivering.
       const legacyDisabled =

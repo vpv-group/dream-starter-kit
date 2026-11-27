@@ -603,6 +603,10 @@ ships preinstalled. Full reference: **docs/BILLING.md**; Stripe setup: docs/STRI
 - E2E: `tooling/web-e2e/src/subscription.spec.ts` covers the webhook with
   self-signed events (new path + the forwarded 1.x path, billing tags) and (with a
   test-mode `STRIPE_SECRET_KEY`) real Checkout — authenticated + guest — with 4242.
+  `src/stripe-connect.spec.ts` covers Connect with Stripe end to end against a fake
+  meetdream.com + fake Stripe (`stub-stripe.mjs`, contract in
+  `packages/mod-kit/contracts/stripe-connector.json`); real Stripe is the manual
+  live check before a billing release (docs/STRIPE.md §9, docs/UPDATING.md).
 
 **User tags** (`public.tags` / `public.user_tags`, RLS read-own) are staff-manageable from the
 Payload **Users** page, and **billing keeps billing tags in step** with each user's purchases

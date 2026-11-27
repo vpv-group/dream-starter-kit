@@ -35,8 +35,21 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: [/founder\.setup\.ts/, /workspaces?[.-].*\.ts/],
+      testIgnore: [
+        /founder\.setup\.ts/,
+        /workspaces?[.-].*\.ts/,
+        /stripe-connect\.spec\.ts/,
+      ],
       dependencies: ["setup"],
+    },
+    // "Connect with Stripe" against the fake meetdream.com (stub-stripe.mjs).
+    // After the main suite: updates.spec shares the stub server and the site
+    // license key it sets and clears.
+    {
+      name: "stripe-connect",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /stripe-connect\.spec\.ts/,
+      dependencies: ["chromium"],
     },
     // Workspace (B2B) specs need the site-wide account model set to Teams,
     // which would reroute every consumer sign-up running in parallel — so a
@@ -45,7 +58,7 @@ export default defineConfig({
     {
       name: "workspaces-setup",
       testMatch: /workspaces\.setup\.ts/,
-      dependencies: ["chromium"],
+      dependencies: ["chromium", "stripe-connect"],
       teardown: "workspaces-teardown",
     },
     { name: "workspaces-teardown", testMatch: /workspaces\.teardown\.ts/ },

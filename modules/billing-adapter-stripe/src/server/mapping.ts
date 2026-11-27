@@ -324,3 +324,11 @@ export function normalizePrice(pr: PriceInput): CatalogPrice {
     metadata: r.metadata,
   };
 }
+
+/**
+ * PaymentIntent metadata `purchase` value for an on-site one-time purchase
+ * (express-intent). Only those are recorded from payment_intent.succeeded:
+ * subscription invoices and hosted Checkout also succeed PaymentIntents, and
+ * are recorded from their own events.
+ */
+export const ON_SITE_ONE_TIME = "one_time_on_site";

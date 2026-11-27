@@ -12,14 +12,18 @@ import { dreamRegistryUrl } from "./dream-registry";
  *
  * The key is cached for a few minutes: connector lookups run inside Payload
  * hooks (catalog sync), and a fresh read each time would take an extra pool
- * connection while the save's transaction holds one.
+ * connection while the save's transaction holds one. "No key" is cached
+ * only briefly, so a site that registers (or a test that sets a key) is
+ * picked up within seconds rather than minutes.
  */
 const TTL_MS = 5 * 60_000;
+const NO_KEY_TTL_MS = 15_000;
 let cached: { key: string | null; at: number } | null = null;
 
 export async function connectorCallOpts(): Promise<CallOpts | null> {
   try {
-    if (!cached || Date.now() - cached.at > TTL_MS) {
+    const ttl = cached?.key ? TTL_MS : NO_KEY_TTL_MS;
+    if (!cached || Date.now() - cached.at > ttl) {
       cached = {
         key: await siteLicenseKey(await getPayloadClient()),
         at: Date.now(),

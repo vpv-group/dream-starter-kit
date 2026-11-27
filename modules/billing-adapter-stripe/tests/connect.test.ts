@@ -12,6 +12,7 @@ import {
   ensureStripeWebhook,
   isOwnLegacyEndpoint,
   WEBHOOK_API_VERSION,
+  WEBHOOK_EVENTS,
   WEBHOOK_PATH,
 } from "../src/server/connect";
 import { fakeAdmin } from "./fakes";
@@ -24,6 +25,8 @@ interface Endpoint {
   id: string;
   url: string;
   status: "enabled" | "disabled";
+  enabled_events?: string[];
+  metadata?: Record<string, string>;
 }
 
 function fakeStripe(endpoints: Endpoint[], failUpdate: string[] = []) {
@@ -162,6 +165,37 @@ describe("ensureStripeWebhook", () => {
     expect(result).toMatchObject({ status: "connected", created: false });
     expect(s.created).toEqual([]);
     expect(s.updates.map(([id]) => id)).toEqual(["we_edge", "we_cms"]);
+  });
+
+  it("adds newly handled events to the endpoint it created, not to yours", async () => {
+    const fake = fakeAdmin({
+      rpc: {
+        mod_billing_adapter_stripe_webhook_secret: {
+          data: "whsec_vault",
+          error: null,
+        },
+      },
+    });
+    const old = WEBHOOK_EVENTS.filter((e) => e !== "payment_intent.succeeded");
+    const ours = fakeStripe([
+      {
+        id: "we_new",
+        url: NEW_URL,
+        status: "enabled",
+        enabled_events: old,
+        metadata: { created_by: "billing-adapter-stripe" },
+      },
+    ]);
+    await ensureStripeWebhook(fake.admin, SITE, { stripe: ours.stripe });
+    expect(ours.updates).toEqual([
+      ["we_new", { enabled_events: [...old, "payment_intent.succeeded"] }],
+    ]);
+
+    const yours = fakeStripe([
+      { id: "we_new", url: NEW_URL, status: "enabled", enabled_events: old },
+    ]);
+    await ensureStripeWebhook(fake.admin, SITE, { stripe: yours.stripe });
+    expect(yours.updates).toEqual([]);
   });
 
   it("leaves legacy endpoints enabled while the new endpoint is disabled", async () => {

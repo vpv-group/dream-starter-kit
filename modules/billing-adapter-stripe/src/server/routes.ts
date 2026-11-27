@@ -23,7 +23,7 @@ import {
   resolveCustomer,
   resolveOrgCustomer,
 } from "./customers";
-import { normalizeSubscription } from "./mapping";
+import { normalizeSubscription, ON_SITE_ONE_TIME } from "./mapping";
 
 /**
  * The embedded (on-site) purchase flow — Stripe Elements on /checkout and the
@@ -147,7 +147,14 @@ export const purchaseRoutes: ModPublicRouteTable = {
           ...(customerId ? { customer: customerId } : {}),
           ...(buyer.email ? { receipt_email: buyer.email } : {}),
           automatic_payment_methods: { enabled: true },
-          metadata,
+          // The marker tells the webhook this payment IS the purchase (unlike
+          // a subscription invoice's or hosted Checkout's PaymentIntent,
+          // which are recorded from their own events).
+          metadata: {
+            ...metadata,
+            price_id: plan.stripePriceId,
+            purchase: ON_SITE_ONE_TIME,
+          },
         });
         return Response.json({
           clientSecret: pi.client_secret,

@@ -8,10 +8,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ConnectorBroker, ConnectorStatus } from "@acme/mod-kit/server";
-import { registerConnectorBroker } from "@acme/mod-kit/server";
+import {
+  getConnectorBroker,
+  registerConnectorBroker,
+} from "@acme/mod-kit/server";
 
 import { ensureStripeWebhook, WEBHOOK_PATH } from "../src/server/connect";
 import {
+  asStripeResponse,
   getPaymentsStripeOrNull,
   getStripeOrNull,
   stripeCredentials,
@@ -96,6 +100,51 @@ describe("Connect with Stripe through Meet Dream", () => {
     expect(JSON.stringify(forwarded[0]?.headers)).not.toContain("sk_live");
   });
 
+  it("turns Meet Dream's own error answers into Stripe errors", async () => {
+    // stripe-node reads a body without `error` as success: a `not_connected`
+    // or an outage answer must fail the call instead of returning nothing.
+    broker(READY);
+    const current = getConnectorBroker();
+    if (!current) throw new Error("no broker");
+    registerConnectorBroker({
+      ...current,
+      forward: () =>
+        Promise.resolve(
+          Response.json(
+            { code: "not_allowed", message: "That Stripe call isn't allowed" },
+            { status: 403 },
+          ),
+        ),
+    });
+    const stripe = await getStripeOrNull();
+    await expect(
+      stripe?.customers.create({ email: "a@b.c" }),
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      code: "not_allowed",
+      message: "Meet Dream: That Stripe call isn't allowed",
+    });
+  });
+
+  it("passes Stripe's own errors through unchanged", async () => {
+    const res = await asStripeResponse(
+      Response.json(
+        {
+          error: {
+            type: "card_error",
+            code: "card_declined",
+            message: "Declined",
+          },
+        },
+        { status: 402 },
+      ),
+    );
+    expect(res.status).toBe(402);
+    expect(await res.json()).toEqual({
+      error: { type: "card_error", code: "card_declined", message: "Declined" },
+    });
+  });
+
   it("keeps payments off while Stripe onboarding isn't finished", async () => {
     broker({
       ...READY,
@@ -120,6 +169,33 @@ describe("Connect with Stripe through Meet Dream", () => {
       fn: "mod_billing_adapter_stripe_set_webhook_secret",
       args: { _secret: "whsec_meetdream_site" },
     });
+  });
+
+  it("registers a localhost site with Meet Dream outside production (local stand-in)", async () => {
+    broker(READY);
+    const fake = fakeAdmin();
+    const result = await ensureStripeWebhook(
+      fake.admin,
+      "http://localhost:3000",
+    );
+    expect(result).toMatchObject({
+      status: "connected",
+      url: `http://localhost:3000${WEBHOOK_PATH}`,
+    });
+  });
+
+  it("still skips a localhost site in production", async () => {
+    broker(READY);
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      const result = await ensureStripeWebhook(
+        fakeAdmin().admin,
+        "http://localhost:3000",
+      );
+      expect(result).toEqual({ status: "skipped", reason: "not_public" });
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("leaves Vault alone when the stored secret already matches", async () => {

@@ -383,3 +383,81 @@ describe("persistBuyerDetails keeps the account email", () => {
     ).toBe(false);
   });
 });
+
+describe("on-site one-time purchases (payment_intent.succeeded)", () => {
+  const appliedRows = (fake: ReturnType<typeof fakeAdmin>) =>
+    fake.rpcCalls.filter((c) => c.fn === "mod_billing_apply_subscription");
+  const piEvent = (metadata: Record<string, string>) => ({
+    id: "evt_pi_1",
+    object: "event",
+    type: "payment_intent.succeeded",
+    created: 1_800_000_000,
+    livemode: false,
+    data: {
+      object: {
+        id: "pi_1",
+        object: "payment_intent",
+        customer: "cus_1",
+        status: "succeeded",
+        metadata,
+      },
+    },
+  });
+
+  it("records the purchase express-intent marked as one", async () => {
+    const fake = adminWithClaim("claimed");
+    const res = await handleStripeWebhook(
+      await signedRequest(
+        piEvent({
+          purchase: "one_time_on_site",
+          supabase_user_id: USER_ID,
+          plan_id: "7",
+          price_id: "price_lifetime",
+        }),
+      ),
+      { admin: fake.admin },
+    );
+    expect(res.status).toBe(200);
+    expect(appliedRows(fake)[0]?.args).toMatchObject({
+      _row: {
+        id: "pi_1",
+        user_id: USER_ID,
+        price_id: "price_lifetime",
+        status: "active",
+        kind: "one_time",
+        plan_id: "7",
+        provider: "stripe",
+        store: "web",
+        environment: "test",
+      },
+    });
+    expect(fake.ops).toContainEqual(
+      expect.objectContaining({
+        table: "mod_billing_customer_links",
+        op: "upsert",
+      }),
+    );
+  });
+
+  it("ignores other PaymentIntents (subscription invoices, hosted Checkout)", async () => {
+    const fake = adminWithClaim("claimed");
+    const res = await handleStripeWebhook(
+      await signedRequest(piEvent({ supabase_user_id: USER_ID, plan_id: "7" })),
+      { admin: fake.admin },
+    );
+    expect(res.status).toBe(200);
+    expect(appliedRows(fake)).toEqual([]);
+  });
+
+  it("doesn't record a marked payment without a buyer", async () => {
+    const fake = adminWithClaim("claimed");
+    const res = await handleStripeWebhook(
+      await signedRequest(
+        piEvent({ purchase: "one_time_on_site", price_id: "price_lifetime" }),
+      ),
+      { admin: fake.admin },
+    );
+    expect(res.status).toBe(200);
+    expect(appliedRows(fake)).toEqual([]);
+  });
+});

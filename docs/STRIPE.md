@@ -332,3 +332,50 @@ is none.
 **Outages.** API calls fail while meetdream.com is unreachable (checkout and the
 portal show an error and recover by themselves); webhook deliveries are retried. The
 status is cached for a minute, so the panel may lag a connection change by that much.
+
+**Errors from meetdream.com itself** (not connected, a call outside the allowed
+list, unavailable) come back as `{ code, message }`, not Stripe's `{ error }`. The
+adapter's forwarding client turns them into Stripe errors (`asStripeResponse` in
+`src/stripe/client.ts`), so a refused call fails instead of reading as an empty
+success.
+
+**The contract file.** Every answer above, the Stripe calls the adapter may forward
+(`stripeCalls`) and the webhook events it handles are in
+[`packages/mod-kit/contracts/stripe-connector.json`](../packages/mod-kit/contracts/stripe-connector.json).
+The kit's connector client, the E2E's fake meetdream.com and meet-dream's broker all
+test against it, and meet-dream receives it with each kit update. Change it only
+together with both sides.
+
+**Stripe API version.** The adapter uses the API version of the installed `stripe`
+package (`Stripe.API_VERSION`). Bumping that package changes it, so update
+meetdream.com's Connect webhook endpoint to the same version in the Stripe Dashboard
+(meetdream.com's hourly Stripe health check flags a mismatch). Renovate never merges
+a Stripe package update on its own for this reason (§9).
+
+---
+
+## 9. Testing
+
+**Every PR, no secrets: `tooling/web-e2e/src/stripe-connect.spec.ts`.** It runs the
+real kit code against a fake meetdream.com with an in-memory fake Stripe behind it
+(`tooling/web-e2e/stub-stripe.mjs`, served by the E2E stub server):
+
+- connecting in test mode, the Onboarding → Connected states, webhook registration
+  and the test call;
+- catalog sync, and a price change creating a new price;
+- a subscription bought on-site (ledger, billing tags, `/billing`, the portal);
+- a one-time purchase on-site (recorded from `payment_intent.succeeded`);
+- hosted Checkout, an outage of meetdream.com, a forged and a replayed webhook;
+- disconnecting, and that every forwarded call is in the contract file and carried
+  no Stripe credential.
+
+Stripe.js confirming a card can't run against a fake, so the stub's
+`POST /__stripe/pay` stands in for it and sends the events Stripe would. The spec
+needs `STRIPE_SECRET_KEY` unset (own keys win).
+
+**Before a release that touches billing: the live check.** Real Stripe, real
+hosted onboarding and real meetdream.com are checked by hand with
+`tooling/web-e2e/live/stripe-connect.live.spec.ts` against a licensed staging site
+(steps in `tooling/web-e2e/README.md`). Run it, headed, whenever `modules/billing*`,
+the Stripe adapter or a `stripe` / `@stripe/*` package changed since the last tag —
+see docs/UPDATING.md → How kit releases work.

@@ -32,6 +32,7 @@ import {
   normalizePrice,
   normalizeProduct,
   normalizeSubscription,
+  ON_SITE_ONE_TIME,
   resolveCheckoutCustomer,
   splitBuyerEmails,
   subscriptionCustomerId,
@@ -405,6 +406,49 @@ async function applyEvent(
           record,
         );
       }
+      break;
+    }
+    case "payment_intent.succeeded": {
+      const pi = event.data.object;
+      if (pi.metadata.purchase !== ON_SITE_ONE_TIME) break;
+      const userId = pi.metadata.supabase_user_id ?? null;
+      const orgId = pi.metadata.org_id ?? null;
+      const priceId = pi.metadata.price_id ?? null;
+      if (!userId || !priceId) {
+        console.warn(
+          `[billing-adapter-stripe] one-time payment ${pi.id} has no buyer or price in its metadata; not recorded`,
+        );
+        break;
+      }
+      const customerId =
+        typeof pi.customer === "string"
+          ? pi.customer
+          : (pi.customer?.id ?? null);
+      if (customerId && orgId) {
+        await linkOrgCustomer(admin, { orgId, provider: PROVIDER, customerId });
+      } else if (customerId) {
+        await linkCustomer(admin, { userId, provider: PROVIDER, customerId });
+      }
+      await recordSubscription(
+        admin,
+        {
+          provider: PROVIDER,
+          id: pi.id,
+          userId,
+          priceId,
+          status: "active",
+          quantity: 1,
+          cancelAtPeriodEnd: false,
+          currentPeriodEnd: null,
+          kind: "one_time",
+          planId: pi.metadata.plan_id ?? null,
+          store: "web",
+          environment: event.livemode ? "live" : "test",
+          orgId,
+        },
+        null,
+        record,
+      );
       break;
     }
     case "customer.subscription.created":
