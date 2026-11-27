@@ -5,6 +5,17 @@
     {
       "matchPackagePatterns": ["^@acme/"],
       "enabled": false
+    },
+    {
+      "description": "Stripe moves the API version with the SDK: never merge on its own; the next release needs the live Stripe check (docs/UPDATING.md) and meetdream.com's Connect endpoint version must follow (docs/STRIPE.md \u00a78).",
+      "matchPackageNames": [
+        "stripe",
+        "@stripe/stripe-js",
+        "@stripe/react-stripe-js"
+      ],
+      "groupName": "Stripe",
+      "automerge": false,
+      "labels": ["needs-live-stripe-check"]
     }
   ],
   "updateInternalDeps": true,

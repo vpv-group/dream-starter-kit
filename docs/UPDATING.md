@@ -179,6 +179,14 @@ Kit releases are made by `.github/workflows/release.yml` in the kit repository:
 
 1. Bump `version` in the root `package.json` (`KIT_VERSION` follows; a unit test
    keeps them equal) and merge it to `main`.
+   - **Billing changed since the last tag?** (`modules/billing*`, the Stripe
+     adapter, or a `stripe` / `@stripe/*` package.) Tag `vX.Y.Z-rc.N` first and
+     run the live Stripe check against a licensed staging site before the stable
+     tag: `tooling/web-e2e/live/stripe-connect.live.spec.ts`, headed (steps in
+     `tooling/web-e2e/README.md`). CI covers the kit against a fake
+     meetdream.com (docs/STRIPE.md §9); this is the one check of real Stripe,
+     real hosted onboarding and the real meetdream.com. If `stripe` was bumped,
+     also update meetdream.com's Connect endpoint API version (docs/STRIPE.md §8).
 2. Tag the merge commit `vX.Y.Z` and push the tag. Use `vX.Y.Z-rc.N` first to
    publish a release candidate (a GitHub pre-release; apps never receive it).
 3. The workflow checks the tag matches the version, runs the full CI suite with
