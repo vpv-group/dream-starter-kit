@@ -203,13 +203,17 @@ export async function createWorkspace(
   if (!res.ok) throw new Error(`createWorkspace failed: ${res.status}`);
   const [org] = (await res.json()) as { id: string }[];
   if (!org) throw new Error("createWorkspace returned no row");
-  const ms = await fetch(`${SUPABASE_URL}/rest/v1/memberships`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(
-      members.map(([user_id, role]) => ({ org_id: org.id, user_id, role })),
-    ),
-  });
+  // Upsert: creating the organization already made the owner a member.
+  const ms = await fetch(
+    `${SUPABASE_URL}/rest/v1/memberships?on_conflict=org_id,user_id`,
+    {
+      method: "POST",
+      headers: { ...headers, Prefer: "resolution=merge-duplicates" },
+      body: JSON.stringify(
+        members.map(([user_id, role]) => ({ org_id: org.id, user_id, role })),
+      ),
+    },
+  );
   if (!ms.ok) throw new Error(`memberships insert failed: ${ms.status}`);
   return org.id;
 }
