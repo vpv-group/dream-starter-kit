@@ -198,6 +198,42 @@ describe("Connect with Stripe through Meet Dream", () => {
     }
   });
 
+  it("registers a localhost site in production with a local Meet Dream stand-in", async () => {
+    broker(READY);
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DREAM_REGISTRY_URL", "http://localhost:4010/registry");
+    try {
+      const result = await ensureStripeWebhook(
+        fakeAdmin().admin,
+        "http://localhost:3000",
+      );
+      expect(result).toMatchObject({
+        status: "connected",
+        url: `http://localhost:3000${WEBHOOK_PATH}`,
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("still skips a localhost site in production with the real Meet Dream", async () => {
+    broker(READY);
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv(
+      "DREAM_REGISTRY_URL",
+      "https://www.meetdream.com/api/mod/modules/v1",
+    );
+    try {
+      const result = await ensureStripeWebhook(
+        fakeAdmin().admin,
+        "http://localhost:3000",
+      );
+      expect(result).toEqual({ status: "skipped", reason: "not_public" });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("leaves Vault alone when the stored secret already matches", async () => {
     broker(READY);
     const fake = fakeAdmin({
