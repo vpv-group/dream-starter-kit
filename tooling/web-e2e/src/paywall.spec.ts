@@ -59,7 +59,10 @@ async function firstPublishedPost(): Promise<PostDoc> {
 
 /**
  * Ensure a published PREMIUM post exists (staff create via the CMS API) and
- * return it. Idempotent across runs via a stable slug.
+ * return it. Idempotent across runs via a stable slug, and safe across
+ * workers: the tests in this file run in parallel (`fullyParallel`), so two of
+ * them can both miss the lookup and both create. The slug is unique, so the
+ * loser gets a 400 — it then returns the post the other worker created.
  */
 async function ensurePremiumPost(): Promise<PostDoc> {
   const slug = "e2e-premium-post";
@@ -67,11 +70,15 @@ async function ensurePremiumPost(): Promise<PostDoc> {
     baseURL: BASE_URL,
     storageState: FOUNDER_STORAGE_STATE,
   });
-  const existing = await staff.get(
-    `/cms-api/posts?where[slug][equals]=${slug}&limit=1&depth=0`,
-  );
-  const found = (await existing.json()) as { docs: PostDoc[] };
-  if (found.docs[0]) return found.docs[0];
+  const findBySlug = async (): Promise<PostDoc | undefined> => {
+    const existing = await staff.get(
+      `/cms-api/posts?where[slug][equals]=${slug}&limit=1&depth=0`,
+    );
+    const found = (await existing.json()) as { docs: PostDoc[] };
+    return found.docs[0];
+  };
+  const existing = await findBySlug();
+  if (existing) return existing;
 
   const created = await staff.post("/cms-api/posts", {
     data: {
@@ -112,7 +119,12 @@ async function ensurePremiumPost(): Promise<PostDoc> {
     },
   });
   if (!created.ok()) {
-    throw new Error(`premium post create failed: ${created.status()}`);
+    // Lost the create race to a parallel worker (unique slug → 400).
+    const raced = await findBySlug();
+    if (raced) return raced;
+    throw new Error(
+      `premium post create failed: ${created.status()} ${await created.text()}`,
+    );
   }
   const doc = (await created.json()) as { doc: PostDoc };
   return doc.doc;
