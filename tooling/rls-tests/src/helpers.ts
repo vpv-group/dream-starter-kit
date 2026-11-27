@@ -39,7 +39,12 @@ export const admin: SupabaseClient<Database> = createClient<Database>(
 export const testEmail = (tag: string) =>
   `${tag}-${Date.now()}-${Math.round(Math.random() * 1e6)}@test.local`;
 
-/** Create a confirmed user and return its id. */
+/**
+ * Create a confirmed user and return its id. Never staff: on a fresh
+ * database the first permanent signup becomes the founder (staff) via
+ * handle_new_user, which would make whichever suite runs first see its
+ * "member" as staff. Suites that need staff set `is_staff` explicitly.
+ */
 export async function createUser(
   email: string,
   password = "password123!",
@@ -50,6 +55,12 @@ export async function createUser(
     email_confirm: true,
   });
   if (error) throw error;
+  const reset = await admin
+    .from("profiles")
+    .update({ is_staff: false })
+    .eq("id", data.user.id)
+    .eq("is_staff", true);
+  if (reset.error) throw reset.error;
   return data.user.id;
 }
 
