@@ -161,6 +161,26 @@ export const MCP_COLLECTIONS: CollectionInfo[] = [
 
 const BY_SLUG = new Map(MCP_COLLECTIONS.map((c) => [c.slug, c]));
 
+/**
+ * This request's allowlist: the built-in collections plus any the host added
+ * (installed modules). Built-ins win on a slug clash.
+ */
+export function collectionsFor(ctx: {
+  extraCollections?: CollectionInfo[];
+}): CollectionInfo[] {
+  const extra = (ctx.extraCollections ?? []).filter(
+    (c) => !BY_SLUG.has(c.slug),
+  );
+  return [...MCP_COLLECTIONS, ...extra];
+}
+
+export function collectionInfoFor(
+  ctx: { extraCollections?: CollectionInfo[] },
+  slug: string,
+): CollectionInfo | undefined {
+  return collectionsFor(ctx).find((c) => c.slug === slug);
+}
+
 export function getCollectionInfo(slug: string): CollectionInfo | undefined {
   return BY_SLUG.get(slug);
 }

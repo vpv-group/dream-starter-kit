@@ -218,6 +218,7 @@ export const modIcons: Record<string, React.ComponentType<{ className?: string }
 export function buildNextServerRegistry(mods: LoadedModule[]): string {
   const serverMods = mods.filter((e) => e.manifest.server.routes);
   const publicMods = mods.filter((e) => e.manifest.server.publicRoutes);
+  const mcpMods = mods.filter((e) => e.manifest.server.mcp);
   const imports: string[] = [];
   for (const e of mods) {
     const names = [
@@ -226,6 +227,9 @@ export function buildNextServerRegistry(mods: LoadedModule[]): string {
         : []),
       ...(e.manifest.server.publicRoutes
         ? [`publicRoutes as publicRoutes_${ident(e.manifest.slug)}`]
+        : []),
+      ...(e.manifest.server.mcp
+        ? [`mcp as mcp_${ident(e.manifest.slug)}`]
         : []),
     ];
     if (names.length > 0) {
@@ -246,13 +250,20 @@ export function buildNextServerRegistry(mods: LoadedModule[]): string {
 
   return `${ESLINT_OFF}${HEADER}import "server-only";
 
-import type { ModPublicRouteTable, ModRouteTable } from "@acme/mod-kit/server";
+import type {
+  ModMcpExtension,
+  ModPublicRouteTable,
+  ModRouteTable,
+} from "@acme/mod-kit/server";
 ${imports.length > 0 ? `\n${imports.join("\n")}\n` : ""}
 /** slug → authed route table, dispatched by /api/mod/[mod]/[[...route]]. */
 export const modServerRoutes: Record<string, ModRouteTable> = ${table(serverMods, "routes")};
 
 /** slug → PUBLIC route table (no session required; still rate-limited). */
 export const modPublicRoutes: Record<string, ModPublicRouteTable> = ${table(publicMods, "publicRoutes")};
+
+/** slug → MCP tools/collections, added to /mcp while the module is enabled. */
+export const modMcp: Record<string, ModMcpExtension> = ${table(mcpMods, "mcp")};
 `;
 }
 

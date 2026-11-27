@@ -13,7 +13,7 @@ import {
   getCollectionFields,
   updateDoc,
 } from "../payload-context";
-import { COLLECTION_SLUGS, docTitle, getCollectionInfo } from "./registry";
+import { collectionInfoFor, collectionsFor, docTitle } from "./registry";
 import { errorResult, jsonResult, runTool } from "./shared";
 import { collectFieldMeta, detectDroppedFields } from "./verify";
 
@@ -80,7 +80,7 @@ export function registerContentTools(
   ctx: McpToolContext,
 ): void {
   const collection = z
-    .enum(COLLECTION_SLUGS)
+    .enum(collectionsFor(ctx).map((c) => c.slug) as [string, ...string[]])
     .describe("The CMS collection slug (see list_collections).");
 
   server.registerTool(
@@ -100,7 +100,7 @@ export function registerContentTools(
     },
     ({ collection: slug, query, limit, page }) =>
       runTool(async () => {
-        const info = getCollectionInfo(slug);
+        const info = collectionInfoFor(ctx, slug);
         if (!info) return errorResult(`Unknown collection: ${slug}`);
 
         let where: Where | undefined;

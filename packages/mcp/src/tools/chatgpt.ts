@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import type { McpToolContext } from "../payload-context";
 import { findDoc, findDocs } from "../payload-context";
-import { docTitle, getCollectionInfo, MCP_COLLECTIONS } from "./registry";
+import { collectionInfoFor, collectionsFor, docTitle } from "./registry";
 import { errorResult, jsonResult, runTool } from "./shared";
 
 /**
@@ -14,14 +14,12 @@ import { errorResult, jsonResult, runTool } from "./shared";
  * encoded as `collection:id` so `fetch` can route back to the right collection.
  * Both also expose `structuredContent` for clients that prefer it.
  */
-const SEARCHABLE = MCP_COLLECTIONS.filter((c) => c.chatgptSearch);
-
 function urlFor(
   ctx: McpToolContext,
   slug: string,
   doc: Record<string, unknown>,
 ): string {
-  const info = getCollectionInfo(slug);
+  const info = collectionInfoFor(ctx, slug);
   const path = info?.publicPath?.(doc);
   return path
     ? `${ctx.origin}${path}`
@@ -43,6 +41,7 @@ export function registerChatGptTools(
   server: McpServer,
   ctx: McpToolContext,
 ): void {
+  const SEARCHABLE = collectionsFor(ctx).filter((c) => c.chatgptSearch);
   server.registerTool(
     "search",
     {
@@ -100,7 +99,7 @@ export function registerChatGptTools(
         }
         const slug = id.slice(0, sep);
         const docId = id.slice(sep + 1);
-        const info = getCollectionInfo(slug);
+        const info = collectionInfoFor(ctx, slug);
         if (!info) return errorResult(`Unknown collection in id: ${slug}`);
 
         const doc = await findDoc(ctx, slug, docId);

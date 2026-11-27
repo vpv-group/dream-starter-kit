@@ -213,6 +213,13 @@ get **401** on `routes`: a flow that must serve them goes in `publicRoutes`
 or IP. Signature-verified webhooks (billing's Stripe endpoint) and cron
 endpoints (`isCronRequest`) are public routes too.
 
+**MCP tools.** With `server.mcp: true`, `./server` also exports
+`mcp: ModMcpExtension` (tools built with `defineMcpTool`, optional Payload
+collections and an instructions sentence). The remote MCP server at `/mcp`
+adds them while the module is enabled; tool names must start with
+`<slug>_`. Tools get a service-role client and must check their own staff
+rule. See docs/MCP.md → Module tools and collections.
+
 **Host services (`ctx.host`)** are on both route contexts:
 
 - `ctx.host.github` reaches the repository connected through the Meet Dream

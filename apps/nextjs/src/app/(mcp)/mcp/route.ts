@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import type { McpToolContext } from "@acme/mcp";
+import type { ModMcpContext } from "@acme/mod-kit/server";
 import { slidingWindow } from "@acme/config";
 import {
   handleMcpRequest,
@@ -14,7 +15,12 @@ import {
 import { getMcpOAuthConfig, isMcpEnabled } from "~/lib/mcp/config";
 import { generateMediaAsset } from "~/lib/mcp/generate-media";
 import { corsPreflight, MCP_CORS_HEADERS } from "~/lib/mcp/http";
+import { isModuleEnabled } from "~/lib/mod/enabled";
+import { hostServices } from "~/lib/mod/host-services";
+import { moduleMcpExtras } from "~/lib/mod/mcp-core";
 import { getSiteUrl } from "~/lib/site-url";
+import { createAdminClient } from "~/lib/supabase/admin";
+import { modMcp } from "~/mod/registry.server.generated";
 
 // MCP tool calls chain Payload Local API ops on a small pool; give them room.
 export const runtime = "nodejs";
@@ -103,6 +109,20 @@ async function authenticate(
     );
   }
 
+  // Installed + enabled modules' tools (manifest `server.mcp`). They get the
+  // service-role client and must apply their own finer staff checks.
+  const extras =
+    Object.keys(modMcp).length > 0
+      ? await moduleMcpExtras(modMcp, isModuleEnabled, {
+          userId: supabaseUserId,
+          cmsUser: user as unknown as ModMcpContext["cmsUser"],
+          payload,
+          admin: createAdminClient(),
+          origin,
+          host: hostServices,
+        })
+      : {};
+
   return {
     payload,
     user,
@@ -110,6 +130,7 @@ async function authenticate(
     // Inject the server-only image renderer so @acme/mcp stays framework-agnostic.
     // Runs as this staff user (overrideAccess: false) — see generate-media.ts.
     generateMedia: (args) => generateMediaAsset(payload, user, args),
+    ...extras,
   };
 }
 

@@ -1,5 +1,6 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { BasePayload } from "payload";
+import type { z } from "zod";
 
 import type { Database } from "@acme/api";
 
@@ -117,3 +118,71 @@ export const MOD_HTTP_METHODS = [
   "DELETE",
 ] as const;
 export type ModHttpMethod = (typeof MOD_HTTP_METHODS)[number];
+
+/* -------------------------------------------------------------------------- */
+/* Remote MCP server contributions (manifest `server.mcp: true`)               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * What a module's MCP tool runs with. The /mcp route has already verified the
+ * OAuth token and that the caller is CMS staff (admin/editor/author). Supabase
+ * data has no user session here, so `admin` is the SERVICE-ROLE client: tools
+ * must check whatever finer rule they need (e.g. `profiles.is_staff` for
+ * `userId`) before reading or writing, and attribute writes to `userId`.
+ */
+export interface ModMcpContext {
+  /** The caller's Supabase user id. */
+  userId: string;
+  /** The caller's `cms.users` row (id + roles) for Payload Local API calls. */
+  cmsUser: { id: number | string; roles?: string[] | null } & Record<
+    string,
+    unknown
+  >;
+  payload: BasePayload;
+  /** Service-role client — bypasses RLS. Server-only (golden rule #2). */
+  admin: SupabaseClient<Database>;
+  /** Public app origin, for absolute links. */
+  origin: string;
+  host: ModHostServices;
+}
+
+export interface ModMcpTool<S extends z.ZodRawShape = z.ZodRawShape> {
+  /** Must start with `<slug>_`, e.g. `feedback_search_posts`. */
+  name: string;
+  title: string;
+  description: string;
+  inputSchema: S;
+  /** Marks the tool read-only for clients that show write warnings. */
+  readOnly?: boolean;
+  /** Return any JSON-serializable value; throw to report an error. */
+  run: (args: z.infer<z.ZodObject<S>>, ctx: ModMcpContext) => Promise<unknown>;
+}
+
+/** Typed helper: infers `args` from `inputSchema`. */
+export function defineMcpTool<S extends z.ZodRawShape>(
+  tool: ModMcpTool<S>,
+): ModMcpTool {
+  return tool as unknown as ModMcpTool;
+}
+
+/**
+ * A Payload collection the MCP's generic content tools (list_collections,
+ * *_content, search/fetch) may operate on. Access is still enforced by the
+ * collection's own Payload rules, as the calling staff user.
+ */
+export interface ModMcpCollection {
+  slug: string;
+  label: string;
+  group: string;
+  titleField: string;
+  searchFields: string[];
+  publicPath?: (doc: Record<string, unknown>) => string | null;
+  chatgptSearch?: boolean;
+}
+
+export interface ModMcpExtension {
+  tools?: ModMcpTool[];
+  collections?: ModMcpCollection[];
+  /** One sentence appended to the server's instructions. */
+  instructions?: string;
+}

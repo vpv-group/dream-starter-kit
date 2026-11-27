@@ -109,6 +109,12 @@ export const moduleManifestSchema = z.object({
        * Only for genuinely anonymous flows (e.g. guest checkout).
        */
       publicRoutes: z.boolean().default(false),
+      /**
+       * `./server` also exports `mcp: ModMcpExtension` — tools (and Payload
+       * collections) added to the remote MCP server at /mcp while the module
+       * is enabled. Tool names must start with `<slug>_` (dashes → `_`).
+       */
+      mcp: z.boolean().default(false),
       /** Edge function directory names — must be prefixed `<slug>-`. */
       edgeFunctions: z.array(z.string().min(1)).default([]),
     })

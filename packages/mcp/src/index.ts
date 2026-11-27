@@ -48,8 +48,9 @@ export type { McpOAuthDatabase, McpStoreClient } from "./auth/store";
 // --- MCP server + tools -------------------------------------------------------
 export { buildMcpServer, handleMcpRequest } from "./server";
 export { resolveStaffPayloadUser } from "./payload-context";
-export type { McpToolContext } from "./payload-context";
+export type { ExtraTool, McpToolContext } from "./payload-context";
 export { MCP_COLLECTIONS } from "./tools/registry";
+export type { CollectionInfo } from "./tools/registry";
 
 // --- Notifications dispatch worker --------------------------------------------
 export { runDispatch } from "./dispatch/run-dispatch";

@@ -4,7 +4,11 @@
 // `pnpm test` via apps/nextjs/src/mod/registry-drift.test.ts.
 import "server-only";
 
-import type { ModPublicRouteTable, ModRouteTable } from "@acme/mod-kit/server";
+import type {
+  ModMcpExtension,
+  ModPublicRouteTable,
+  ModRouteTable,
+} from "@acme/mod-kit/server";
 
 import { routes as routes_billing, publicRoutes as publicRoutes_billing } from "@acme/mod-billing/server";
 import { routes as routes_chat } from "@acme/mod-chat/server";
@@ -35,3 +39,6 @@ export const modPublicRoutes: Record<string, ModPublicRouteTable> = {
   "feedback-source-chat": publicRoutes_feedback_source_chat,
   "reminders": publicRoutes_reminders,
 };
+
+/** slug → MCP tools/collections, added to /mcp while the module is enabled. */
+export const modMcp: Record<string, ModMcpExtension> = {};
