@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ModulesLock } from "./lock";
 import { git, modifiedFiles, snapshotModule, supportsMergeBase } from "./git";
 import {
+  deregisterHostMigration,
   eject,
   EJECT_GITIGNORE,
   ensureEjectGitignore,
@@ -319,5 +320,38 @@ describe("ensureEjectGitignore", () => {
     expect(readFileSync(path.join(dir, ".gitignore"), "utf8")).toBe(
       ["node_modules/", ".env", ...EJECT_GITIGNORE.slice(1)].join("\n") + "\n",
     );
+  });
+});
+
+describe("deregisterHostMigration", () => {
+  const index = [
+    "import * as migration_a from './a';",
+    "import * as migration_b_mod from './b_mod';",
+    "",
+    "export const migrations = [",
+    "  {",
+    "    up: migration_a.up,",
+    "    down: migration_a.down,",
+    "    name: 'a',",
+    "  },",
+    "  {",
+    "    up: migration_b_mod.up,",
+    "    down: migration_b_mod.down,",
+    "    name: 'b_mod'",
+    "  },",
+    "];",
+    "",
+  ].join("\n");
+
+  it("drops the import and the array entry, keeping the rest", () => {
+    const out = deregisterHostMigration(index, "b_mod");
+    expect(out).not.toContain("b_mod");
+    expect(out).toContain("import * as migration_a from './a';");
+    expect(out).toContain("name: 'a',");
+    expect(out.trimEnd().endsWith("];")).toBe(true);
+  });
+
+  it("leaves the index alone for an unknown migration", () => {
+    expect(deregisterHostMigration(index, "zzz")).toBe(index);
   });
 });

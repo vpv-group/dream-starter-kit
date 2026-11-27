@@ -445,9 +445,6 @@ importers:
       ai:
         specifier: 'catalog:'
         version: 7.0.162(zod@4.6.7)
-      canvas-confetti:
-        specifier: ^1.9.4
-        version: 1.9.4
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -518,9 +515,6 @@ importers:
       '@acme/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/typescript
-      '@types/canvas-confetti':
-        specifier: ^1.9.0
-        version: 1.9.0
       '@types/node':
         specifier: 'catalog:'
         version: 22.20.5
@@ -587,9 +581,15 @@ importers:
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.105.3(@types/react@19.3.0)(react@19.3.0)
+      canvas-confetti:
+        specifier: ^1.9.4
+        version: 1.9.4
       expo-router:
         specifier: ~58.0.30
         version: 58.0.30(a6255892e73e5c81bb9dec6875ddc712)
+      lucide-react:
+        specifier: ^1.67.0
+        version: 1.67.0(@types/react@19.3.0)(react@19.3.0)
       next:
         specifier: ^16.4.5
         version: 16.4.5(@babel/core@7.29.7)(@opentelemetry/api@1.9.0)(@playwright/test@1.64.1)(@types/node@22.20.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4)
@@ -615,6 +615,9 @@ importers:
       '@payloadcms/db-postgres':
         specifier: 'catalog:'
         version: 3.92.1(@opentelemetry/api@1.9.0)(payload@3.92.1(bufferutil@4.0.8)(graphql@16.14.1)(typescript@6.0.3))
+      '@types/canvas-confetti':
+        specifier: ^1.9.0
+        version: 1.9.0
       '@types/node':
         specifier: 'catalog:'
         version: 22.20.5
@@ -1560,6 +1563,9 @@ importers:
       '@acme/api':
         specifier: workspace:*
         version: link:../api
+      '@acme/app':
+        specifier: workspace:*
+        version: link:../app
       zod:
         specifier: 'catalog:'
         version: 4.6.7

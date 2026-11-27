@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { PlanLite } from "./paywall-copy";
+import type { PlanLite } from "../src/paywall-copy";
 import {
   buildPlanCopy,
   buildUpsellCopy,
@@ -8,7 +8,7 @@ import {
   formatPrice,
   resolveAnnualPlan,
   resolvePremiumPlan,
-} from "./paywall-copy";
+} from "../src/paywall-copy";
 
 describe("formatPrice", () => {
   it("drops decimals on whole-dollar amounts", () => {

@@ -18,6 +18,9 @@ import { Providers } from "~/app/providers";
 import { AuthUrlMessage } from "~/components/auth/auth-url-message";
 import { ThemeStyle } from "~/components/theme-style";
 import { getBranding } from "~/lib/payload";
+
+import "~/lib/mod/host-services";
+
 import { getSiteUrl } from "~/lib/site-url";
 
 import "~/app/styles.css";

@@ -3,5 +3,6 @@
 // Recomputed from modules/*/module.config.ts; a stale copy fails
 // `pnpm test` via apps/nextjs/src/mod/registry-drift.test.ts.
 export { PricingPage as default } from "@acme/mod-billing/web-server";
+export { pricingMetadata as metadata } from "@acme/mod-billing/web-server";
 
 export const dynamic = "force-dynamic";

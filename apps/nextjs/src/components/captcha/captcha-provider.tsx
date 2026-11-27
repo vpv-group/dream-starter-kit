@@ -8,24 +8,17 @@
 // `token` and pass it as `options.captchaToken`, then call `reset()` (tokens are
 // single-use). When no site key is set the provider is inert and `token` is
 // undefined — callers pass that straight through and CAPTCHA is simply off.
+//
+// The context itself lives in @acme/app so modules (billing's paywall) can
+// read the token without importing host code.
 import type { TurnstileInstance } from "@marsidev/react-turnstile";
-import { createContext, useContext, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Turnstile } from "@marsidev/react-turnstile";
 
-interface CaptchaContextValue {
-  /** Latest Turnstile token, or undefined when CAPTCHA is disabled / not ready. */
-  token?: string;
-  /** Mint a fresh token after using one (tokens are single-use). */
-  reset: () => void;
-}
+import type { CaptchaContextValue } from "@acme/app";
+import { CaptchaContext } from "@acme/app";
 
-const CaptchaContext = createContext<CaptchaContextValue>({
-  reset: () => undefined,
-});
-
-export function useCaptcha(): CaptchaContextValue {
-  return useContext(CaptchaContext);
-}
+export { useCaptcha } from "@acme/app";
 
 export function CaptchaProvider({
   siteKey,

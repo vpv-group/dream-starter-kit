@@ -16,11 +16,11 @@ import {
 import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 
+import type { PlanLite } from "../../paywall-copy";
 import type { CheckoutVariant, PayMethod } from "./payment-provider";
-import type { PlanLite } from "~/lib/paywall-copy";
-import { resolveAnnualPlan, resolvePremiumPlan } from "~/lib/paywall-copy";
+import { usePremium } from "../../hooks/use-premium";
+import { resolveAnnualPlan, resolvePremiumPlan } from "../../paywall-copy";
 import { useWebPaymentProvider } from "./payment-provider";
-import { usePremium } from "./use-premium";
 
 interface ResolvedPlans {
   plan: PlanLite | null;

@@ -140,6 +140,9 @@ export function validateManifest(m: ModuleManifest): string[] {
       `[${m.slug}] cms.hasCollectionTabs needs cms.settingsTabFor (collection tabs go to the same target module)`,
     );
   }
+  if (Object.keys(m.slots.web).length > 0 && !m.platforms.web) {
+    errors.push(`[${m.slug}] declares web slots but platforms.web is false`);
+  }
   for (const fn of m.server.edgeFunctions) {
     if (!fn.startsWith(`${m.slug}-`)) {
       errors.push(
@@ -267,6 +270,7 @@ export function validateManifestSet(manifests: ModuleManifest[]): string[] {
   const webMounts = new Map<string, string>();
   const nativeMounts = new Map<string, string>();
   const edgeFns = new Map<string, string>();
+  const webSlots = new Map<string, string>();
 
   for (const m of manifests) {
     if (slugs.has(m.slug)) {
@@ -288,6 +292,8 @@ export function validateManifestSet(manifests: ModuleManifest[]): string[] {
       if (r.mount) claim("native mount", r.mount, m.slug, nativeMounts);
     for (const fn of m.server.edgeFunctions)
       claim("edge function", fn, m.slug, edgeFns);
+    for (const slot of Object.keys(m.slots.web))
+      claim("web slot", slot, m.slug, webSlots);
   }
 
   for (const m of manifests) {

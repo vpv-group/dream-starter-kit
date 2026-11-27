@@ -401,6 +401,11 @@ Rules that keep modules modular:
 - **Cross-module access** is declared: `requires: [...]` + `database.dml`
   whitelists; services are plain typed package exports (`notify()`,
   `usePremium()`).
+- **Host ↔ module UI seams** (docs/MODULES.md): the host renders module UI
+  through **slots** (`<ModSlot name>`), a module embeds core UI through **host
+  components** (`<HostComponent name="auth-flow">`), and module RSC pages reach
+  the session/auth settings/branding through **host services**
+  (`getHostServices()`). Never import host code from a module.
 - After schema/CMS changes: `pnpm db:reset && pnpm db:gen-types`
   (+ `pnpm cms:gen-types`), commit the regenerated files.
 
@@ -462,7 +467,7 @@ JIT-provisions staff): the server auth navigations `/welcome` + `/auth/callback`
 the `/confirm-email` client page (the anon→permanent buyer conversion returns to its
 origin page, never touching `/welcome`); the **paywall guest-checkout** flow, which
 signs the buyer in client-side via a one-time `loginToken` and unlocks inline —
-`paywall-modal.tsx` + `/confirm-email` POST `/api/cms/mirror-self` (mirrors the
+billing's `paywall-modal.tsx` + `/confirm-email` POST `/api/cms/mirror-self` (mirrors the
 current session user) so those buyers aren't stranded out of the table; and a
 universal best-effort backstop in the `(app)` shell layout (any member reaching the
 app is mirrored regardless of entry path). All paths are idempotent. The catch-up
@@ -544,8 +549,10 @@ ships preinstalled. Full reference: **docs/BILLING.md**; Stripe setup: docs/STRI
   `recordSubscription` → `finishWebhookEvent`, `linkCustomer`, …). Host code reaches
   billing only through generated registries: `modServices.billing`
   (`lib/mod/billing.ts` — entitlement, account delete, anon merge, new-user tags) and
-  the web payment provider via `useModAdapters("billing")`
-  (`components/paywall/payment-provider.ts`). No Stripe SDK in host code.
+  the web payment provider via `useModAdapters("billing")`. The paywall and
+  `/checkout` are billing's own (`modules/billing/src/web/{paywall,checkout}`,
+  docs/BILLING.md §5.6): posts render it through the `premium-content` slot, and
+  checkout embeds the host's `auth-flow` host component. No Stripe SDK in host code.
 - **Stripe → app is ONE webhook**, the adapter's
   `POST /api/mod/billing-adapter-stripe/webhook` (`server/webhook.ts`). Every event
   is **claimed before its side effects run** (done → `200 duplicate`, in progress →

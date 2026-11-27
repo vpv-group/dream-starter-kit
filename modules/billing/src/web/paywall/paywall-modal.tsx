@@ -18,8 +18,10 @@ import {
   convertAnonToPermanent,
   ensureAnonSession,
   isAnonymousUser,
+  useCaptcha,
 } from "@acme/app";
 
+import type { BuyerDetails, PaywallCopy, PlanLite } from "../../paywall-copy";
 import type {
   CheckoutVariant,
   CreatedPurchase,
@@ -27,9 +29,7 @@ import type {
   PayMethod,
   PurchaseRef,
 } from "./payment-provider";
-import type { BuyerDetails, PaywallCopy, PlanLite } from "~/lib/paywall-copy";
-import { useCaptcha } from "~/components/captcha/captcha-provider";
-import { buildPlanCopy, buildUpsellCopy } from "~/lib/paywall-copy";
+import { buildPlanCopy, buildUpsellCopy } from "../../paywall-copy";
 import { useWebPaymentProvider } from "./payment-provider";
 import { PaywallOffer } from "./paywall-offer";
 
@@ -154,7 +154,7 @@ export function PaywallModal({
   // emission loop (~1s) so the celebration lingers about a second longer.
   useEffect(() => {
     if (!paid) return;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     let raf = 0;
     const end = Date.now() + 1000;
     void confetti({
@@ -289,6 +289,8 @@ export function PaywallModal({
         // possibly-not-yet-present) customer link.
         ref: purchaseRef.current,
         // Guest (no session) upsell: verified against the purchase.
+        // An empty email means none.
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
         email: buyerRef.current?.email?.trim() || undefined,
       });
       await proceedAfterPay();

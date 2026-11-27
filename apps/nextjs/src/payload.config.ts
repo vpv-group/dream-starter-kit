@@ -73,6 +73,7 @@ import { migrations } from "./payload/migrations";
 // Side effect: module Payload hooks (e.g. billing's plan sync) may use a
 // "Connect with …" (Meet Dream) connection. Lazy inside — CLI-safe.
 import "./lib/mod/connector-broker";
+import "./lib/mod/host-services";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 

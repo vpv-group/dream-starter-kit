@@ -539,6 +539,19 @@ export async function remove(
       .map((t) => `  DROP TABLE IF EXISTS "cms"."${t}" CASCADE;`)
       .join("\n");
     const dir = toAbs(repoRoot, "apps/nextjs/src/payload/migrations");
+    // The module's own Payload migrations are generated copies in the host
+    // dir; `sync` below deletes them, so the index must stop importing them
+    // (their rows stay in the ledger — harmless).
+    const modMigDir = path.join(target.dir, "src/payload/migrations");
+    const owned = existsSync(modMigDir)
+      ? readdirSync(modMigDir)
+          .filter((f) => f.endsWith(".ts") && f !== "index.ts")
+          .map((f) => f.replace(/\.ts$/, ""))
+      : [];
+    const ownedIndex = path.join(dir, "index.ts");
+    let ownedIdx = readFileSync(ownedIndex, "utf8");
+    for (const m of owned) ownedIdx = deregisterHostMigration(ownedIdx, m);
+    writeFileSync(ownedIndex, ownedIdx);
     writeFileSync(
       path.join(dir, `${name}.ts`),
       `import { MigrateDownArgs, MigrateUpArgs, sql } from "@payloadcms/db-postgres";
@@ -810,20 +823,10 @@ export async function payloadMigrate(
   cpSync(path.join(hostDir, created), path.join(modMigDir, created));
   rmSync(path.join(hostDir, created));
   const indexFile = path.join(hostDir, "index.ts");
-  const idx = readFileSync(indexFile, "utf8")
-    .replace(
-      new RegExp(
-        `import \\* as migration_${migName} from '\\./${migName}';\\n`,
-      ),
-      "",
-    )
-    .replace(
-      new RegExp(
-        `  \\{\\n    up: migration_${migName}\\.up,\\n    down: migration_${migName}\\.down,\\n    name: '${migName}'\\n?,?\\n?  \\},\\n`,
-      ),
-      "",
-    );
-  writeFileSync(indexFile, idx);
+  writeFileSync(
+    indexFile,
+    deregisterHostMigration(readFileSync(indexFile, "utf8"), migName),
+  );
 
   console.log(
     `Created modules/${slug}/src/payload/migrations/${created}.\n` +
@@ -843,6 +846,34 @@ export const EJECT_GITIGNORE = [
 ];
 
 /** Add the EJECT_GITIGNORE entries a module's own .gitignore lacks. */
+/**
+ * Drop one migration's import + array entry from the host Payload migrations
+ * index (either quote style, trailing comma optional). Used when a migration
+ * moves into a module (payload-migrate) and when its module is removed —
+ * `mod sync` deletes the generated copy, so the index must stop importing it.
+ */
+export function deregisterHostMigration(
+  indexText: string,
+  name: string,
+): string {
+  const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return indexText
+    .replace(
+      new RegExp(
+        `^import \\* as migration_${esc} from ['"]\\./${esc}['"];\\n`,
+        "m",
+      ),
+      "",
+    )
+    .replace(
+      new RegExp(
+        `^\\s*\\{\\s*\\n\\s*up: migration_${esc}\\.up,\\s*\\n\\s*down: migration_${esc}\\.down,\\s*\\n\\s*name: ['"]${esc}['"],?\\s*\\n\\s*\\},?\\n`,
+        "m",
+      ),
+      "",
+    );
+}
+
 export function ensureEjectGitignore(dir: string): void {
   const file = path.join(dir, ".gitignore");
   const current = existsSync(file) ? readFileSync(file, "utf8") : "";

@@ -3,4 +3,9 @@
  * separate from ./web so the client registry's widget imports never pull
  * payload/node modules into client chunks.
  */
-export { PricingPage } from "./pricing-page";
+export { PricingPage, pricingMetadata } from "./pricing-page";
+export { CheckoutPage, checkoutMetadata } from "./checkout-page";
+export {
+  CheckoutReturnPage,
+  checkoutReturnMetadata,
+} from "./checkout-return-page";

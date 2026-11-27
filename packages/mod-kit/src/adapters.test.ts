@@ -12,8 +12,10 @@ import {
 } from "./payload";
 import {
   getConnectorBroker,
+  getHostServices,
   getModAdapters,
   registerConnectorBroker,
+  registerHostServices,
   registerModAdapters,
   setModAdaptersForTest,
 } from "./server";
@@ -73,6 +75,26 @@ describe("adapter manifests", () => {
     });
     expect(validateManifest(m).join("\n")).toMatch(
       /hasCollectionTabs needs cms.settingsTabFor/,
+    );
+  });
+});
+
+describe("web slots", () => {
+  it("flags a web slot claimed by two modules", () => {
+    const a = defineModule({
+      ...base,
+      slug: "aaa",
+      name: "A",
+      slots: { web: { "premium-content": "Gate" } },
+    });
+    const b = defineModule({
+      ...base,
+      slug: "bbb",
+      name: "B",
+      slots: { web: { "premium-content": "Gate" } },
+    });
+    expect(validateManifestSet([a, b]).join("\n")).toMatch(
+      /web slot "premium-content" claimed by both "aaa" and "bbb"/,
     );
   });
 });
@@ -228,5 +250,17 @@ describe("connector broker", () => {
     };
     registerConnectorBroker(broker);
     expect(getConnectorBroker()).toBe(broker);
+  });
+});
+
+describe("host services", () => {
+  it("is null until the host registers, then returns what it registered", async () => {
+    expect(getHostServices()).toBeNull();
+    registerHostServices({
+      getSessionClient: () => Promise.reject(new Error("unused")),
+      getAuthSettings: () => Promise.reject(new Error("unused")),
+      getBranding: () => Promise.resolve({ appName: "Acme" }),
+    });
+    expect(await getHostServices()?.getBranding()).toEqual({ appName: "Acme" });
   });
 });

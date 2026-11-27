@@ -910,7 +910,7 @@ export async function seedCmsContent(
         // (offer → terms/consent → Apple/Google Pay or card → confetti, then the
         // anon→permanent email-confirmation + annual-upgrade flow). Lets you
         // exercise the whole paywall end-to-end on a fresh clone at
-        // /posts/premium-preview. See components/paywall + docs/TURNSTILE.md.
+        // /posts/premium-preview. See billing's paywall (modules/billing/src/web/paywall) + docs/TURNSTILE.md.
         await payload.create({
           collection: "posts",
           context: { skipImageGeneration: true },

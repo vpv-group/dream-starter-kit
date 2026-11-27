@@ -43,6 +43,8 @@ export {
   staffWorkspacesKey,
 } from "./hooks/use-workspace-view";
 export type { WorkspaceView, StaffWorkspace } from "./hooks/use-workspace-view";
+export { CaptchaContext, useCaptcha } from "./hooks/use-captcha";
+export type { CaptchaContextValue } from "./hooks/use-captcha";
 export { useNavMenu } from "./hooks/use-nav-menu";
 export type { NavMenuEntry } from "./hooks/use-nav-menu";
 export { useNativeNav, defaultNativeNavConfig } from "./hooks/use-native-nav";

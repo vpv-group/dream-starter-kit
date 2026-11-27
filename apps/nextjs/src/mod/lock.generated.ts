@@ -12,7 +12,7 @@ export const modulesLock = {
   },
   "modules": {
     "billing": {
-      "version": "2.1.0",
+      "version": "2.2.0",
       "kitCompat": ">=2.6.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
@@ -20,6 +20,9 @@ export const modulesLock = {
         "apps/expo/src/app/(app)/a/billing/index.tsx",
         "apps/nextjs/src/app/(frontend)/(app)/billing/layout.tsx",
         "apps/nextjs/src/app/(frontend)/(app)/billing/page.tsx",
+        "apps/nextjs/src/app/(frontend)/(public)/checkout/layout.tsx",
+        "apps/nextjs/src/app/(frontend)/(public)/checkout/page.tsx",
+        "apps/nextjs/src/app/(frontend)/(public)/checkout/return/page.tsx",
         "apps/nextjs/src/app/(frontend)/(public)/pricing/layout.tsx",
         "apps/nextjs/src/app/(frontend)/(public)/pricing/page.tsx",
         "apps/nextjs/src/payload/migrations/20260612_023534_ext_billing.ts"

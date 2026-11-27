@@ -17,6 +17,7 @@ import type {
   BillingSubject,
   NormalizedSubscription,
 } from "./core/types";
+import { resolvePremiumPlan } from "../paywall-copy";
 import { createAdminClient } from "./admin-client";
 import { entitlementFor } from "./core/entitlement";
 import { expireGrants } from "./core/grants";
@@ -381,6 +382,27 @@ export const services = {
   /** Whether the user ever bought anything (any provider). */
   hasBillingRecord: ({ userId }: { userId: string }) =>
     hasBillingRecord(createAdminClient(), userId),
+
+  /**
+   * The plan a premium page's paywall offers, resolved server-side so the
+   * `premium-content` slot opens with pricing and no client fetch. Null when
+   * no plan is set up yet (the gate degrades gracefully).
+   */
+  getPremiumPlan: async (ctx: BillingServiceContext) => {
+    try {
+      const payload = await ctx.getPayload();
+      const { docs } = await payload.find({
+        collection: "mod-billing-plans",
+        where: { active: { equals: true } },
+        sort: "displayOrder",
+        limit: 50,
+        depth: 0,
+      });
+      return resolvePremiumPlan(docs);
+    } catch {
+      return null;
+    }
+  },
 };
 
 export type BillingServices = typeof services;

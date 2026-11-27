@@ -6,10 +6,6 @@ import type { ComponentType, ReactNode } from "react";
  * `webProvider`). The checkout page and the paywall render whichever
  * provider is installed through `useModAdapters("billing")`, so they hold no
  * provider code. Client-safe: types only.
- *
- * The host app can't import modules, so it keeps a structural copy of this
- * contract (apps/nextjs/src/components/paywall/payment-provider.ts) — keep
- * the two in step.
  */
 
 /** Buyer identity captured at payment (a wallet sheet or the card form). */
