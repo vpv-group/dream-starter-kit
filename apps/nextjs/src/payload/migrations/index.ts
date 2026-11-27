@@ -40,6 +40,8 @@ import * as migration_20261126_213738_mod_feedback_integrations from './20261126
 import * as migration_20261126_215221_mod_feedback_autopilot from './20261126_215221_mod_feedback_autopilot';
 import * as migration_20261126_220015_mod_feedback_source_chat_initial from './20261126_220015_mod_feedback_source_chat_initial';
 import * as migration_20261127_025940_mod_feedback_digest from './20261127_025940_mod_feedback_digest';
+import * as migration_20261127_030754_mod_feedback_widget from './20261127_030754_mod_feedback_widget';
+import * as migration_20261127_174251_sync_snapshot_after_billing_adapters from './20261127_174251_sync_snapshot_after_billing_adapters';
 
 export const migrations = [
   {
@@ -251,5 +253,15 @@ export const migrations = [
     up: migration_20261127_025940_mod_feedback_digest.up,
     down: migration_20261127_025940_mod_feedback_digest.down,
     name: '20261127_025940_mod_feedback_digest',
+  },
+  {
+    up: migration_20261127_030754_mod_feedback_widget.up,
+    down: migration_20261127_030754_mod_feedback_widget.down,
+    name: '20261127_030754_mod_feedback_widget',
+  },
+  {
+    up: migration_20261127_174251_sync_snapshot_after_billing_adapters.up,
+    down: migration_20261127_174251_sync_snapshot_after_billing_adapters.down,
+    name: '20261127_174251_sync_snapshot_after_billing_adapters'
   },
 ];
