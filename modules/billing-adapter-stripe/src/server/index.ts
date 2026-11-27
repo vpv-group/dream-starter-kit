@@ -46,7 +46,7 @@ export const publicRoutes: ModPublicRouteTable = {
     const c = creds.status === "ok" ? creds.credentials : null;
     return Response.json(
       {
-        enabled: settings.enabled && c !== null,
+        enabled: settings.enabled && c?.ready === true,
         publishableKey: c?.publishableKey ?? null,
         stripeAccount: c?.stripeAccount ?? null,
         checkoutExperience: settings.hostedCheckout ? "hosted" : "embedded",
@@ -137,7 +137,13 @@ export const routes: ModRouteTable = {
 
     let endpoint: { url: string; status: string } | null = null;
     let apiError: string | null = null;
-    const stripe = c ? await getStripeOrNull() : null;
+    // Through Meet Dream, Stripe delivers to Meet Dream's platform endpoint,
+    // which forwards here: the stored per-site secret is the registration.
+    const stripe =
+      c && c.source !== "meetdream" ? await getStripeOrNull() : null;
+    if (c?.source === "meetdream" && expectedUrl && secret) {
+      endpoint = { url: expectedUrl, status: "enabled" };
+    }
     if (stripe && expectedUrl) {
       try {
         const list = await stripe.webhookEndpoints.list({ limit: 100 });
@@ -157,6 +163,8 @@ export const routes: ModRouteTable = {
             accountName: c.accountName,
             livemode: c.livemode,
             publishableKey: Boolean(c.publishableKey),
+            ready: c.ready,
+            onboardingUrl: c.onboardingUrl,
           }
         : {
             source: "none",
@@ -181,7 +189,10 @@ export const routes: ModRouteTable = {
     });
   }),
 
-  /** Start "Connect with Stripe" (OAuth via the Meet Dream AI app). */
+  /**
+   * Start "Connect with Stripe": Meet Dream creates (or reuses) this site's
+   * connected account and returns Stripe-hosted onboarding.
+   */
   "POST /admin/connect": adminOnly(async (req) => {
     const parsed = connectSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) return json(400, { error: "Invalid return path" });

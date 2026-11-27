@@ -570,9 +570,12 @@ ships preinstalled. Full reference: **docs/BILLING.md**; Stripe setup: docs/STRI
   `/api/mod/billing/stripe/webhook`, pre-2.5 ones — never deletes; audited). Billing
   still forwards its 1.x paths for one release. `STRIPE_WEBHOOK_SECRET` overrides the
   Vault secret (e.g. `stripe listen`).
-- **Connecting Stripe:** "Connect with Stripe" on Modules → Billing (OAuth through
-  the Meet Dream AI app, brokered by meetdream.com via the host's connector broker —
-  `getConnectorBroker()`; the site never stores a Stripe secret), or your own
+- **Connecting Stripe:** "Connect with Stripe" on Modules → Billing is the default:
+  meetdream.com is a **Stripe Connect platform** — Stripe‑hosted onboarding creates
+  the site's connected account (direct charges, full Dashboard), Meet Dream forwards
+  the adapter's Stripe calls with `Stripe-Account` and delivers re‑signed webhooks
+  (host connector broker, `getConnectorBroker()`; the site never holds a Stripe
+  secret, docs/STRIPE.md §8). An existing Stripe account uses your own
   `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, which win. The
   publishable key is served at runtime (`GET …/config`). The connector panel shows
   connection, webhook and catalog state with test/register/resync actions; checkout

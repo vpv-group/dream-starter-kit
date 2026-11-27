@@ -18,11 +18,13 @@ import {
  * `admin.settingsComponent`, rendered on billing's page because this module
  * is a billing adapter). Three parts:
  *
- * - Connection — "Connect with Stripe" (OAuth through the Meet Dream AI app;
- *   meetdream.com keeps the OAuth secret, this site only gets a short-lived
- *   credential for its own account) or your own keys in env, which win.
- * - Webhook — the one endpoint the hourly check registers through the Stripe
- *   API, its Vault secret, and the last event received.
+ * - Connection — "Connect with Stripe": Meet Dream is a Stripe Connect
+ *   platform; connecting creates this business's own Stripe account
+ *   (Stripe-hosted onboarding) and Meet Dream makes the Stripe calls for it.
+ *   Or your own keys in env, which win (the way to use an existing account).
+ * - Webhook — the one endpoint the hourly check registers (through the Stripe
+ *   API, or with Meet Dream, which forwards the account's events), its Vault
+ *   secret, and the last event received.
  * - Catalog — billing plans/coupons pushed to Stripe on save.
  *
  * Every action goes through admin-only routes (src/server/index.ts); no
@@ -46,6 +48,8 @@ interface Status {
         accountName: string | null;
         livemode: boolean | null;
         publishableKey: boolean;
+        ready?: boolean;
+        onboardingUrl?: string | null;
       }
     | { source: "none"; message: string | null };
   envKeys: boolean;
@@ -177,6 +181,7 @@ export function AdminSettings() {
 
   const c = status.connection;
   const connected = c.source !== "none";
+  const onboarding = c.source === "meetdream" && c.ready === false;
   const w = status.webhook;
   const plans = status.catalog.plans;
   const coupons = status.catalog.coupons;
@@ -188,7 +193,13 @@ export function AdminSettings() {
           <CardTitle className="flex flex-wrap items-center gap-2">
             Stripe
             {connected ? (
-              <Badge>{c.source === "env" ? "Own API keys" : "Connected"}</Badge>
+              <Badge variant={onboarding ? "outline" : "default"}>
+                {c.source === "env"
+                  ? "Own API keys"
+                  : onboarding
+                    ? "Onboarding"
+                    : "Connected"}
+              </Badge>
             ) : (
               <Badge variant="outline">Not connected</Badge>
             )}
@@ -224,31 +235,57 @@ export function AdminSettings() {
           )}
           {c.source === "meetdream" && (
             <p className="text-sm">
-              Connected via the Meet Dream AI app to{" "}
+              Connected via Meet Dream to{" "}
               <strong>{c.accountName ?? c.accountId}</strong>
               {c.accountName && c.accountId ? ` (${c.accountId})` : ""}.
+              Payments go straight to this Stripe account.
             </p>
+          )}
+          {onboarding && (
+            <Alert>
+              <AlertTitle>Finish setting up Stripe</AlertTitle>
+              <AlertDescription>
+                Stripe needs a few more details before this account can take
+                payments. Until then checkout says payments aren’t set up yet.
+              </AlertDescription>
+            </Alert>
           )}
           {c.source === "none" && (
             <p className="text-muted-foreground text-sm">
-              Connect your Stripe account to start selling — no keys to copy. Or
-              set <code>STRIPE_SECRET_KEY</code> and{" "}
-              <code>NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> in the
-              environment.
+              Connect with Stripe to start selling — no keys to copy. Stripe
+              walks you through setting up the account payments go to. To use a
+              Stripe account you already have, set{" "}
+              <code>STRIPE_SECRET_KEY</code> and{" "}
+              <code>NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> in the environment
+              instead.
               {c.message ? ` (${c.message})` : ""}
             </p>
           )}
 
           <div className="flex flex-wrap gap-2">
-            {status.canConnect && c.source !== "env" && (
+            {onboarding && c.source === "meetdream" && c.onboardingUrl && (
+              <Button asChild>
+                <a href={c.onboardingUrl}>Finish Stripe onboarding</a>
+              </Button>
+            )}
+            {c.source === "meetdream" && !onboarding && (
+              <Button asChild variant="outline">
+                <a
+                  href="https://dashboard.stripe.com"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open Stripe Dashboard
+                </a>
+              </Button>
+            )}
+            {status.canConnect && c.source === "none" && (
               <>
                 <Button
                   disabled={busy !== null}
                   onClick={() => void connect("live")}
                 >
-                  {c.source === "meetdream"
-                    ? "Reconnect Stripe"
-                    : "Connect with Stripe"}
+                  Connect with Stripe
                 </Button>
                 <Button
                   variant="outline"

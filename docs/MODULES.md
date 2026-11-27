@@ -404,10 +404,11 @@ collection, label, fields })` — an unnamed tab on one of the target's
 
 **Connections ("Connect with …")** (kit ≥ 2.6): the host registers a connector
 broker with `@acme/mod-kit/server`; a module calls `getConnectorBroker()` →
-`startConnect(target, returnTo)`, `token(target)`, `disconnect(target)` to use
-an OAuth connection that meetdream.com brokers for this site (the Meet Dream AI
-apps; GitHub for updates, Stripe for billing). The site license key never
-reaches the module, and no provider secret is stored in the app. `null` when
+`startConnect(target, returnTo)`, `status(target)`, `forward(target, path, init)`,
+`setWebhookTarget(target, url)` and `disconnect(target)` to use a connection that
+meetdream.com holds for this site (Stripe for billing: Meet Dream is the Stripe
+Connect platform and makes the site's Stripe calls for it). The site license key
+never reaches the module, and no provider secret is stored in the app. `null` when
 no broker is registered (tests, CLIs) — degrade to "not connected" and keep
 env keys as the override. Protocol: `apps/nextjs/src/lib/mod/connectors-core.ts`,
 docs/STRIPE.md §8.

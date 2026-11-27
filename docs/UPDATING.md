@@ -102,6 +102,15 @@ them as modify/delete conflicts: re-apply your change on the billing file, then
 delete the host file. `useCaptcha` now comes from `@acme/app` (the host's
 `components/captcha/captcha-provider` still re-exports it).
 
+**Also in 2.6 — Connect with Stripe uses Stripe Connect.** Meet Dream is now a
+Stripe Connect platform (the model Stripe recommends): connecting runs Stripe‑hosted
+onboarding for a new connected account, Meet Dream makes the site's Stripe calls
+and delivers its webhooks, and no token ever expires. The connector broker's
+`token()` is replaced by `status()`, `forward()` and `setWebhookTarget()`
+(docs/MODULES.md → Connections); a module that called `token()` must move to
+those. Sites on their own `STRIPE_SECRET_KEY` see no change, and that stays the
+way to use an existing Stripe account (docs/STRIPE.md §2).
+
 **Removed in 2.4.** Automatic updates no longer use a personal access token
 or repository settings. Once GitHub is connected, delete these if you set
 them; nothing reads them any more:

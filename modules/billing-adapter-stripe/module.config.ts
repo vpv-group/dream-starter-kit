@@ -21,7 +21,7 @@ import { defineModule } from "@acme/mod-kit";
 export default defineModule({
   slug: "billing-adapter-stripe",
   name: "Stripe",
-  version: "1.0.0",
+  version: "1.1.0",
   kitCompat: ">=2.6.0 <3",
   description: "Stripe payments for billing: checkout, portal, webhook.",
   requires: ["billing"],

@@ -241,11 +241,14 @@ describe("connector broker", () => {
     expect(getConnectorBroker()).toBeNull();
     const broker = {
       startConnect: () => Promise.resolve({ status: "ok" as const, url: "x" }),
-      token: () =>
+      status: () =>
         Promise.resolve({
           status: "not_connected" as const,
           message: "no",
         }),
+      forward: () => Promise.resolve(new Response("{}")),
+      setWebhookTarget: () =>
+        Promise.resolve({ status: "ok" as const, secret: "whsec_x" }),
       disconnect: () => Promise.resolve({ status: "ok" as const }),
     };
     registerConnectorBroker(broker);
