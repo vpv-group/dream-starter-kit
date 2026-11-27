@@ -312,6 +312,13 @@ export default buildConfig({
     // @acme/cms and the Expo app. We re-declare it locally where Payload's
     // Local API is used: apps/nextjs/src/payload-augment.d.ts.
     declare: false,
+    // Only `pnpm cms:gen-types` writes the types file, and it runs Prettier
+    // afterwards. Payload's own generation (on every non-production boot —
+    // `next dev`, cms:migrate, cms:seed, db:reset — and on dev hot reload)
+    // writes it unformatted, which shows up as a spurious diff and fails
+    // CI's `@acme/cms#format` check when committed. The explicit
+    // `payload generate:types` command ignores this flag.
+    autoGenerate: false,
     outputFile: path.resolve(
       dirname,
       "../../../packages/cms/src/payload-types.ts",
