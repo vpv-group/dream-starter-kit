@@ -9,19 +9,8 @@
  * and safe to import from a client component.
  */
 
-/**
- * Buyer identity captured at checkout — from the Apple/Google Pay sheet
- * (`billingDetails`) or the card form. Used to convert an anonymous account to
- * a permanent one (email) and to persist profile data. All fields optional;
- * the wallet decides what it shares.
- */
-export interface BuyerDetails {
-  name?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  /** Stripe billing address object (loosely typed — persisted as-is). */
-  address?: Record<string, unknown> | null;
-}
+/** Buyer identity captured at checkout (billing's payment contract). */
+export type { BuyerDetails } from "./payment";
 
 /** The subset of a Payload `mod-billing-plans` doc the paywall copy needs. */
 export interface PlanLite {

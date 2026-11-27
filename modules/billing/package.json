@@ -1,6 +1,6 @@
 {
   "name": "@acme/mod-billing",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -30,7 +30,9 @@
     "@supabase/supabase-js": "catalog:",
     "@tabler/icons-react": "^3.50.0",
     "@tanstack/react-query": "catalog:",
+    "canvas-confetti": "^1.9.4",
     "expo-router": "~58.0.30",
+    "lucide-react": "^1.67.0",
     "next": "^16.4.5",
     "payload": "catalog:",
     "server-only": "^0.0.1",
@@ -45,6 +47,7 @@
     "@acme/prettier-config": "workspace:*",
     "@acme/tsconfig": "workspace:*",
     "@payloadcms/db-postgres": "catalog:",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "catalog:",
     "@types/react": "catalog:react19",
     "eslint": "catalog:",

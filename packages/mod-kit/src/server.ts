@@ -2,6 +2,7 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { BasePayload } from "payload";
 
 import type { Database } from "@acme/api";
+import type { AuthSettings } from "@acme/app";
 
 /**
  * Server route contract for modules (docs/MODULES-PLAN.md §2).
@@ -236,4 +237,36 @@ export function registerConnectorBroker(broker: ConnectorBroker): void {
  */
 export function getConnectorBroker(): ConnectorBroker | null {
   return (globalThis as { [BROKER_KEY]?: ConnectorBroker })[BROKER_KEY] ?? null;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Host services — server-side core helpers a module's RSC pages may need      */
+/* (the viewer's RLS session, the auth settings, the brand name). Module pages */
+/* can't import host code, so the host registers these once at load, next to  */
+/* the connector broker; a module calls getHostServices() and handles null.    */
+/* -------------------------------------------------------------------------- */
+
+export interface HostServices {
+  /** The viewer's Supabase client (cookie session, RLS applies). */
+  getSessionClient(): Promise<SupabaseClient<Database>>;
+  /** The staff-configured auth settings (`authentication-settings` global). */
+  getAuthSettings(): Promise<AuthSettings>;
+  /** Site branding; `appName` at least. */
+  getBranding(): Promise<{ appName: string }>;
+}
+
+const HOST_SERVICES_KEY = Symbol.for("acme.mod-kit.host-services");
+
+/** Called once by the host when its server code loads. */
+export function registerHostServices(services: HostServices): void {
+  (globalThis as { [HOST_SERVICES_KEY]?: HostServices })[HOST_SERVICES_KEY] =
+    services;
+}
+
+/** The host's services, or null when none are registered (tests, CLIs). */
+export function getHostServices(): HostServices | null {
+  return (
+    (globalThis as { [HOST_SERVICES_KEY]?: HostServices })[HOST_SERVICES_KEY] ??
+    null
+  );
 }

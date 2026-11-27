@@ -20,7 +20,7 @@ import { defineModule } from "@acme/mod-kit";
 export default defineModule({
   slug: "billing",
   name: "Billing",
-  version: "2.1.0",
+  version: "2.2.0",
   kitCompat: ">=2.6.0 <3",
   description:
     "Plans, purchases and entitlements, with pluggable payment providers.",
@@ -46,11 +46,30 @@ export default defineModule({
         area: "public",
         mount: "/pricing",
         rsc: true,
+        metadata: "pricingMetadata",
+      },
+      {
+        path: "",
+        component: "CheckoutPage",
+        area: "public",
+        mount: "/checkout",
+        rsc: true,
+        metadata: "checkoutMetadata",
+      },
+      {
+        path: "return",
+        component: "CheckoutReturnPage",
+        area: "public",
+        mount: "/checkout",
+        rsc: true,
+        metadata: "checkoutReturnMetadata",
       },
     ],
     native: [{ path: "", component: "PricingScreen" }],
   },
   widgets: { web: "BillingWidget", native: "BillingWidget" },
+  /** The host wraps premium post bodies in this slot (paywall + gate). */
+  slots: { web: { "premium-content": "PremiumContent" } },
   server: {
     routes: true,
     publicRoutes: true,

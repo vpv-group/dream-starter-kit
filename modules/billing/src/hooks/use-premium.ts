@@ -33,6 +33,8 @@ export function usePremium() {
   return {
     isPremium: !!query.data,
     subscription: query.data ?? null,
-    isLoading: query.isLoading,
+    isLoading: !!user && query.isLoading,
+    /** The signed-in viewer's email (prefills the paywall's buyer step). */
+    userEmail: user?.email ?? null,
   };
 }

@@ -17,20 +17,29 @@ import type { AuthSettings } from "@acme/app";
 import type { ModBillingPlan } from "@acme/cms";
 import { useSession, useSupabase } from "@acme/api";
 import { isAnonymousUser, signOut } from "@acme/app";
+import { HostComponent } from "@acme/mod-kit/react";
+import { Button } from "@acme/ui/button";
+import { Card, CardContent, CardHeader } from "@acme/ui/card";
 
-import type { CheckoutTestimonialData } from "~/components/checkout/checkout-testimonial";
-import type {
-  PaidResult,
-  PurchaseRef,
-} from "~/components/paywall/payment-provider";
-import { AuthFlow } from "~/components/auth/auth-flow";
-import { CheckoutPayment } from "~/components/checkout/checkout-payment";
-import { CheckoutTestimonial } from "~/components/checkout/checkout-testimonial";
-import { PlanSummary } from "~/components/checkout/plan-summary";
-import { useWebPaymentProvider } from "~/components/paywall/payment-provider";
-import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardHeader } from "~/components/ui/card";
-import { buildPlanCopy, buildUpsellCopy } from "~/lib/paywall-copy";
+import type { PaidResult, PurchaseRef } from "../paywall/payment-provider";
+import type { CheckoutTestimonialData } from "./checkout-testimonial";
+import { buildPlanCopy, buildUpsellCopy } from "../../paywall-copy";
+import { useWebPaymentProvider } from "../paywall/payment-provider";
+import { CheckoutPayment } from "./checkout-payment";
+import { CheckoutTestimonial } from "./checkout-testimonial";
+import { PlanSummary } from "./plan-summary";
+
+/**
+ * The host's sign-in/sign-up flow (registered as host component "auth-flow",
+ * docs/MODULES.md → Host components). The props billing passes.
+ */
+export interface CheckoutAuthProps {
+  mode: "signIn";
+  settings: AuthSettings;
+  appName: string;
+  onAuthenticated: () => void;
+  redirectTo: string;
+}
 
 function StepBadge({ n, done }: { n: number; done?: boolean }) {
   return (
@@ -181,17 +190,31 @@ export function CheckoutFlow({
             {!accountDone && (
               <CardContent>
                 <div className="mx-auto max-w-sm">
-                  <AuthFlow
-                    mode="signIn"
-                    settings={authSettings}
-                    appName={appName}
-                    onAuthenticated={() => {
-                      setJustAuthed(true);
-                      setEditingAccount(false);
-                    }}
-                    redirectTo={`/checkout?plan=${encodeURIComponent(
-                      String(planId),
-                    )}&step=payment`}
+                  <HostComponent
+                    name="auth-flow"
+                    {...({
+                      mode: "signIn",
+                      settings: authSettings,
+                      appName,
+                      onAuthenticated: () => {
+                        setJustAuthed(true);
+                        setEditingAccount(false);
+                      },
+                      redirectTo: `/checkout?plan=${encodeURIComponent(
+                        String(planId),
+                      )}&step=payment`,
+                    } satisfies CheckoutAuthProps)}
+                    fallback={
+                      <Button asChild className="w-full">
+                        <a
+                          href={`/sign-in?redirectTo=${encodeURIComponent(
+                            `/checkout?plan=${String(planId)}&step=payment`,
+                          )}`}
+                        >
+                          Sign in to continue
+                        </a>
+                      </Button>
+                    }
                   />
                 </div>
               </CardContent>

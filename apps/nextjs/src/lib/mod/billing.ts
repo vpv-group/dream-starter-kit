@@ -27,6 +27,8 @@ export interface BillingHostServices {
   ): Promise<void>;
   onUserCreated(ctx: ServiceContext, input: { userId: string }): Promise<void>;
   hasBillingRecord(input: { userId: string }): Promise<boolean>;
+  /** The paywall's plan for a premium page (passed to the slot as-is). */
+  getPremiumPlan(ctx: ServiceContext): Promise<unknown>;
 }
 
 interface ServiceContext {

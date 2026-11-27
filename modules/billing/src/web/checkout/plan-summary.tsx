@@ -5,16 +5,16 @@
 import { Check } from "lucide-react";
 
 import type { ModBillingPlan } from "@acme/cms";
+import { Card, CardContent, CardHeader } from "@acme/ui/card";
+import { Separator } from "@acme/ui/separator";
 
-import type { PlanLite } from "~/lib/paywall-copy";
-import { Card, CardContent, CardHeader } from "~/components/ui/card";
-import { Separator } from "~/components/ui/separator";
-import { buildPlanCopy, cadence, formatPrice } from "~/lib/paywall-copy";
+import type { PlanLite } from "../../paywall-copy";
+import { buildPlanCopy, cadence, formatPrice } from "../../paywall-copy";
 
 export function PlanSummary({ plan }: { plan: ModBillingPlan }) {
   const lite = plan as unknown as PlanLite;
   const copy = buildPlanCopy(lite);
-  const currency = plan.currency ?? "usd";
+  const currency = plan.currency;
   const intro =
     plan.pricingType === "recurring" &&
     plan.introOffer?.enabled &&

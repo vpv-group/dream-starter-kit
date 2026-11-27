@@ -61,6 +61,11 @@ const routeEntrySchema = z.object({
    * widgets, so server imports there would leak into client chunks.
    */
   rsc: z.boolean().default(false),
+  /**
+   * Web rsc pages: a named `Metadata` export from `./web-server` the page
+   * stub re-exports as `metadata` (title, robots …).
+   */
+  metadata: z.string().min(1).optional(),
 });
 
 export const moduleManifestSchema = z.object({
@@ -184,6 +189,19 @@ export const moduleManifestSchema = z.object({
       native: z.string().min(1).optional(),
     })
     .optional(),
+  /**
+   * Web UI slots the HOST renders (generated `modSlots`), keyed by slot
+   * name → named export from `./web`. Lets host pages host module UI (e.g.
+   * billing's `premium-content` around premium post bodies) without importing
+   * the module; an absent slot renders its fallback. Needs kit ≥ 2.6.
+   */
+  slots: z
+    .object({
+      web: z
+        .record(z.string().regex(/^[a-z][a-z0-9-]*$/), z.string().min(1))
+        .default({}),
+    })
+    .prefault({}),
   /**
    * Runtime access gate. `check` names a `mod_<slug>_*` SQL function (no
    * args, returns boolean, callable by `authenticated`) that says whether the

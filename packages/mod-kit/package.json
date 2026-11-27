@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@acme/api": "workspace:*",
+    "@acme/app": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

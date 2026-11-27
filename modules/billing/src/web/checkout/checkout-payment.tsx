@@ -8,12 +8,11 @@
 import { useCallback } from "react";
 
 import { useSupabase } from "@acme/api";
-import { ensureAnonSession } from "@acme/app";
+import { ensureAnonSession, useCaptcha } from "@acme/app";
 
-import type { PaidResult } from "~/components/paywall/payment-provider";
-import type { PaywallCopy, PlanLite } from "~/lib/paywall-copy";
-import { useCaptcha } from "~/components/captcha/captcha-provider";
-import { useWebPaymentProvider } from "~/components/paywall/payment-provider";
+import type { PaywallCopy, PlanLite } from "../../paywall-copy";
+import type { PaidResult } from "../paywall/payment-provider";
+import { useWebPaymentProvider } from "../paywall/payment-provider";
 
 export type { PaidResult };
 

@@ -6,8 +6,8 @@ premium?":
 
 - **`billing`** (`modules/billing`, the core) — provider‑neutral. It owns the plan
   catalog, the purchase ledger, entitlements, billing tags, the CMS subscriptions
-  list, `/pricing` and `/billing` — including **workspace (company) plans** and the
-  **staff support view** (§10).
+  list, `/pricing`, `/billing`, `/checkout` and the paywall — including
+  **workspace (company) plans** and the **staff support view** (§10).
 - **Payment providers** — adapter modules that plug into billing
   (`adapter: { for: "billing" }`). **`billing-adapter-stripe`** ships preinstalled
   (web checkout; setup in [`docs/STRIPE.md`](STRIPE.md)). An in‑app purchase
@@ -175,12 +175,10 @@ interface BillingWebProvider {
 }
 ```
 
-The paywall modal and `/checkout` are provider‑neutral host components: they render
+Billing's paywall modal and `/checkout` (§5.6) are provider‑neutral: they render
 the installed provider's `PaymentForm` (Stripe's mounts Elements lazily, so its SDK
 isn't in every page's bundle), handle account conversion and the success/upsell
-screens, and call `completeGuestPurchase` / `switchPlan`. The host keeps a structural
-copy of this contract (`apps/nextjs/src/components/paywall/payment-provider.ts`)
-because host code may not import modules — keep them in step.
+screens, and call `completeGuestPurchase` / `switchPlan`.
 
 ### 5.4 Native
 
@@ -193,8 +191,29 @@ purchase provider's `purchase(plan)` goes (§7).
 Billing exposes `services` (manifest `server.services`) that the host reaches through
 the generated `modServices.billing` (`apps/nextjs/src/lib/mod/billing.ts`):
 `getViewerEntitlement`, `onAccountDelete`, `onUserMerge`, `onUserCreated`,
-`hasBillingRecord`. Without billing installed they're absent and the host degrades
-(nobody is premium, nothing to cancel, no tags).
+`hasBillingRecord`, `getPremiumPlan`. Without billing installed they're absent and
+the host degrades (nobody is premium, nothing to cancel, no tags).
+
+### 5.6 Paywall and checkout (billing's own UI)
+
+The paywall and the two-step checkout are billing's, provider-neutral, and render
+the installed provider's `PaymentForm` (§5.3):
+
+- **Paywall** (`src/web/paywall/`): `PaywallProvider`, `PremiumGate` (blurred
+  body + dock), the modal, wallet button and copy (`src/paywall-copy.ts`). The host
+  shows it through the **`premium-content` slot** — `post-detail.tsx` renders
+  `<ModSlot name="premium-content" initialPlan={…} fallback={body}>`, with the plan
+  from the `getPremiumPlan` service. Without billing the slot renders the teaser;
+  Payload's `premiumFieldAccess` has withheld the premium body server-side either
+  way.
+- **Checkout** (`/checkout`, `/checkout/return`, rsc pages in `src/web-server/`):
+  plan summary, testimonial (billing settings → featured review), and the account
+  step, which embeds the host's sign-in flow through the **`auth-flow` host
+  component** (a "Sign in to continue" link when the host has none). The pages read
+  the viewer's session, auth settings and app name through **host services**
+  (docs/MODULES.md).
+- Captcha: the paywall mints anonymous sessions with the Turnstile token from
+  `useCaptcha()` (`@acme/app`), which the host's `CaptchaProvider` fills.
 
 ---
 

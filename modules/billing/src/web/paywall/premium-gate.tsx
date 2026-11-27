@@ -8,10 +8,10 @@
 // renders untouched.
 import type { ReactNode } from "react";
 
-import { ReloadOnBfcacheRestore } from "~/components/reload-on-bfcache-restore";
-import { buildPlanCopy } from "~/lib/paywall-copy";
+import { buildPlanCopy } from "../../paywall-copy";
 import { PaywallOffer } from "./paywall-offer";
 import { usePaywall } from "./paywall-provider";
+import { ReloadOnBfcacheRestore } from "./reload-on-bfcache-restore";
 
 import "./paywall.css";
 

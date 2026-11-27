@@ -11,7 +11,7 @@ import { buttonVariants } from "@acme/ui/button";
 
 import { settings } from "../payload/settings";
 
-export const metadata: Metadata = {
+export const pricingMetadata: Metadata = {
   title: "Pricing",
   description: "Simple, transparent pricing. Start free, upgrade anytime.",
 };

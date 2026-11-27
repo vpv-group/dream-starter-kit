@@ -358,6 +358,30 @@ no broker is registered (tests, CLIs) — degrade to "not connected" and keep
 env keys as the override. Protocol: `apps/nextjs/src/lib/mod/connectors-core.ts`,
 docs/STRIPE.md §8.
 
+**Slots** (kit ≥ 2.6): module UI the HOST renders. Declare
+`slots: { web: { "<name>": "<ExportOf./web>" } }`; the host places
+`<ModSlot name="<name>" fallback={…} {...props} />` (`@acme/mod-kit/react`)
+where it may appear and gets the module's component, or `fallback` when the
+module is absent or runtime-disabled. One module per slot name (collisions
+fail `mod sync`). Billing's `premium-content` wraps premium post bodies in its
+paywall (`components/content/post-detail.tsx`).
+
+**Host components** (kit ≥ 2.6): the inverse — core UI a module may embed.
+The host registers them by name (`HostComponentsProvider`,
+`components/mod-widgets-provider.tsx`; today `"auth-flow"`, the sign-in/sign-up
+flow); a module renders `<HostComponent name="auth-flow" {...props}
+fallback={…} />` (or reads `useHostComponent<P>(name)`), types the props it
+passes, and must handle a host that doesn't provide it.
+
+**Host services** (kit ≥ 2.6): the server side of the same idea, for a
+module's RSC pages (`./web-server`), which can't import host code.
+`getHostServices()` from `@acme/mod-kit/server` returns the viewer's RLS
+session client (`getSessionClient`), the auth settings and the branding, or
+`null` (tests, CLIs) — degrade. The host registers them in
+`apps/nextjs/src/lib/mod/host-services.ts`. Billing's `/checkout` uses them.
+An rsc route can also set `metadata: "<export>"` so its stub re-exports a
+`Metadata` from `./web-server` (title, robots).
+
 **Notifications are produced, not delivered, by your module.** Register your
 categories in a migration (`mod_notifications_register_category`), emit with
 `notify()` (TypeScript) or `mod_notifications_emit(...)` (SQL triggers and

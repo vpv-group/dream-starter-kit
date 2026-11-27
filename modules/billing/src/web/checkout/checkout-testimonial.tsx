@@ -4,8 +4,8 @@
 // and the optional `authorTitle` is their role line.
 import { Star } from "lucide-react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
-import { Card, CardContent } from "~/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@acme/ui/avatar";
+import { Card, CardContent } from "@acme/ui/card";
 
 export interface CheckoutTestimonialData {
   quote: string;

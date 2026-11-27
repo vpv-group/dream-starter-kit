@@ -190,6 +190,20 @@ export function buildNextClientRegistry(mods: LoadedModule[]): string {
       `import { ${e.manifest.adapter?.web} as adapter_${ident(e.manifest.slug)} } from "${e.packageName}/web";`,
     );
   }
+  const slotRows: string[] = [];
+  for (const e of webMods) {
+    for (const [slot, component] of Object.entries(e.manifest.slots.web).sort(
+      ([a], [b]) => a.localeCompare(b),
+    )) {
+      const local = `slot_${ident(e.manifest.slug)}_${ident(slot)}`;
+      imports.push(
+        `import { ${component} as ${local} } from "${e.packageName}/web";`,
+      );
+      slotRows.push(
+        `  { slug: ${quote(e.manifest.slug)}, name: ${quote(slot)}, Component: ${local} as unknown as React.ComponentType<Record<string, unknown>> },`,
+      );
+    }
+  }
   const clientAdapters =
     adapterMods.length === 0
       ? "[]"
@@ -199,6 +213,7 @@ export function buildNextClientRegistry(mods: LoadedModule[]): string {
               `  { slug: ${quote(e.manifest.slug)}, target: ${quote(e.manifest.adapter?.for ?? "")}, adapter: adapter_${ident(e.manifest.slug)} },`,
           )
           .join("\n")}\n]`;
+  const slots = slotRows.length === 0 ? "[]" : `[\n${slotRows.join("\n")}\n]`;
 
   const widgets =
     widgetMods.length === 0
@@ -232,6 +247,9 @@ export const modIcons: Record<string, React.ComponentType<{ className?: string }
  * (enabled modules only); the target reads them with useModAdapters().
  */
 export const modClientAdapters: { slug: string; target: string; adapter: unknown }[] = ${clientAdapters};
+
+/** Host-rendered UI slots (manifest slots.web) — see <ModSlot />. */
+export const modSlots: { slug: string; name: string; Component: React.ComponentType<Record<string, unknown>> }[] = ${slots};
 `;
 }
 
@@ -778,10 +796,14 @@ export function buildStubs(mods: LoadedModule[]): GeneratedFile[] {
         const dynamic = r.rsc
           ? `\nexport const dynamic = "force-dynamic";\n`
           : "";
+        const metadata =
+          r.rsc && r.metadata
+            ? `export { ${r.metadata} as metadata } from "${e.packageName}/web-server";\n`
+            : "";
         files.push({
           path: `${group}/${base}${seg}/page.tsx`,
           slug,
-          content: `${ESLINT_OFF}${HEADER}export { ${r.component} as default } from "${e.packageName}/${entry}";\n${dynamic}`,
+          content: `${ESLINT_OFF}${HEADER}export { ${r.component} as default } from "${e.packageName}/${entry}";\n${metadata}${dynamic}`,
         });
       }
       for (const baseDir of [...bases].sort()) {
