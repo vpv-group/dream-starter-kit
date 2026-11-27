@@ -62,6 +62,11 @@ squash**.
   the **Updates available** bar at the top of /admin, which shows whenever the
   kit or a module is behind.
 
+**New in 2.6.1 — "Updates available" in /admin.** A bar above every admin
+page lists the starter kit and modules that are behind their newest release,
+with **Update** / **Update all** (MODULES.md → Admin panel + automatic
+updates). Nothing to do: it appears once this release is merged.
+
 **New in 2.6 — billing core + payment providers.** Billing 2.0 is
 provider-neutral; Stripe moved into its own preinstalled module,
 `billing-adapter-stripe` (docs/BILLING.md, docs/STRIPE.md). The update keeps
