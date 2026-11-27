@@ -25,6 +25,8 @@ import {
   resolveInboxItem,
   summarizePost,
 } from "./autopilot";
+import { parseKeywords } from "./chat-source/filter";
+import { scanChat } from "./chat-source/scan";
 import { handle, HttpError, json, must, ok, parseBody, staff } from "./http";
 
 /**
@@ -73,6 +75,25 @@ export const autopilotPublicRoutes: ModPublicRouteTable = {
     const posts = await processNewPosts(db, gatewayAi, s);
     const inbox = await processInbox(db, gatewayAi, s);
     return ok({ posts, inbox });
+  }),
+
+  /**
+   * Supabase Cron, every 15 minutes: feedback from AI chat (Settings → Chat;
+   * off by default; does nothing without the chat module).
+   */
+  "GET /cron/chat-scan": handle(async (req, ctx) => {
+    if (!isCronRequest(req)) return json(401, { error: "Unauthorized" });
+    const s = await getModuleSettings<FeedbackSettings>(
+      await ctx.getPayload(),
+      settingsDef,
+    );
+    if (!s.chat?.enabled) return ok({ skipped: "disabled" });
+    const result = await scanChat(createAdminClient(), {
+      keywords: parseKeywords(s.chat.keywords),
+      minLength: s.chat.minLength ?? 20,
+      ingest: ingestFeedback,
+    });
+    return ok(result);
   }),
 
   /**

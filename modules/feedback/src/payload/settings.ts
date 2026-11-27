@@ -2,6 +2,7 @@ import { defineModuleSettings } from "@acme/mod-kit/payload";
 
 import type { StatusType, Tone } from "../shared/config";
 import type { ScoreFactor } from "../shared/score";
+import { DEFAULT_KEYWORDS } from "../server/chat-source/filter";
 import {
   DEFAULT_STATUSES,
   STATUS_TYPES,
@@ -517,6 +518,49 @@ export const settings = defineModuleSettings({
           ],
         },
         {
+          label: "Chat",
+          description:
+            "Collect feedback from conversations with the AI chat (needs the chat module). Messages that look like feedback go to the Autopilot inbox; nothing reaches the portal until staff accept it.",
+          fields: [
+            {
+              name: "chat",
+              type: "group",
+              label: "Feedback from chat",
+              fields: [
+                {
+                  name: "enabled",
+                  label: "Scan chat messages for feedback",
+                  type: "checkbox",
+                  defaultValue: false,
+                  admin: {
+                    description:
+                      "Every 15 minutes. Staff will see the matching messages and the sender's email, so mention this in your privacy policy.",
+                  },
+                },
+                {
+                  name: "keywords",
+                  label: "Phrases",
+                  type: "textarea",
+                  admin: {
+                    description: `Only messages containing one of these phrases (comma-separated) are forwarded; Autopilot then decides whether each is feedback. Empty uses the defaults: ${DEFAULT_KEYWORDS.join(", ")}.`,
+                  },
+                },
+                {
+                  name: "minLength",
+                  label: "Minimum length",
+                  type: "number",
+                  defaultValue: 20,
+                  min: 1,
+                  admin: {
+                    description:
+                      "Ignore messages shorter than this (characters).",
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        {
           label: "Autopilot",
           description:
             "AI triage (Canny's Autopilot). Needs the AI Gateway (AI_GATEWAY_API_KEY). Everything Autopilot does is logged with undo, and feedback from other sources stays internal until staff accept it.",
@@ -991,5 +1035,10 @@ export interface FeedbackSettings extends Record<string, unknown> {
   voteMilestones?: string[] | null;
   digest?: "weekly" | "daily" | "never" | null;
   embedEnabled?: boolean | null;
+  chat?: {
+    enabled?: boolean | null;
+    keywords?: string | null;
+    minLength?: number | null;
+  } | null;
   embedOrigins?: string | null;
 }

@@ -100,7 +100,7 @@ export const modulesLock = {
     },
     "feedback": {
       "version": "1.0.0",
-      "kitCompat": ">=2.5.0 <3",
+      "kitCompat": ">=2.6.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
       "stubs": [
@@ -129,7 +129,8 @@ export const modulesLock = {
         "apps/nextjs/src/payload/migrations/20261126_213738_mod_feedback_integrations.ts",
         "apps/nextjs/src/payload/migrations/20261126_215221_mod_feedback_autopilot.ts",
         "apps/nextjs/src/payload/migrations/20261127_025940_mod_feedback_digest.ts",
-        "apps/nextjs/src/payload/migrations/20261127_030754_mod_feedback_widget.ts"
+        "apps/nextjs/src/payload/migrations/20261127_030754_mod_feedback_widget.ts",
+        "apps/nextjs/src/payload/migrations/20261127_172948_mod_feedback_chat_source.ts"
       ],
       "edgeFunctions": []
     },

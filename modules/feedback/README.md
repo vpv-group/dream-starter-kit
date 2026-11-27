@@ -16,6 +16,20 @@ configuration lives in `/admin` under **Feedback**.
 | `/a/feedback`                | Staff workspace: Inbox, Ideas (score table + record sheet), Roadmap (ideas kanban), Posts, Changelog, Insights  |
 | `/embed/feedback…`           | The embeddable widget (iframe pages: feedback, post, roadmap, changelog)                                        |
 
+## Install
+
+Dream Feedback is a **paid add-on** for the Dream Starter Kit, included in
+Meet Dream plans (see meetdream.com/pricing). With your plan on the site:
+
+```bash
+pnpm mod add dream:feedback
+pnpm install && pnpm db:reset && pnpm db:gen-types
+```
+
+Or **Modules → Install module** in `/admin`. Requires kit ≥ 2.6.0 and the
+pre-installed `notifications` module; the `chat` module is optional (feedback
+from AI chat). Licensed under [LICENSE.commercial.md](LICENSE.commercial.md).
+
 ## Where the data lives
 
 | Data                                                       | Store                                                              | Why                                                                                                                                                                                                                                                                                                 |
@@ -126,8 +140,8 @@ and API feedback still lands in the inbox for manual review.
 - **Sources.** Other feedback enters through `ingestFeedback()`
   (`@acme/mod-feedback/server`) into `mod_feedback_inbox`: the inbound API
   (`POST /api/mod/feedback/ingest` with `Authorization: Bearer fbk_…`; the
-  key is shown once in the inbox and only its hash is stored) and the
-  `feedback-source-chat` module. Autopilot titles each message, drops
+  key is shown once in the inbox and only its hash is stored) and **AI
+  chat** (below). Autopilot titles each message, drops
   non-feedback and suggests a matching post; staff then **Create post**
   (on the API board, author matched by email), **Add to that post** (an
   internal note + the author's vote) or **Dismiss**. Nothing reaches the
@@ -135,6 +149,20 @@ and API feedback still lands in the inbox for manual review.
 
 `mod_feedback_inbox` and `mod_feedback_api_keys` are staff-only under RLS;
 keys are minted server-side only.
+
+## Feedback from AI chat
+
+Settings → **Chat** (off by default; needs the kit's `chat` module, which
+feedback doesn't require). Every 15 minutes (`GET /cron/chat-scan`) the
+scan reads users' new chat messages — web, mobile and the channel adapters
+alike — keeps the ones that read like feedback (a phrase prefilter with an
+editable list and a minimum length; anonymous accounts and unlinked channel
+contacts are skipped) and sends them to the Autopilot inbox as
+`source: "chat"`. The cursor lives in `mod_feedback_chat_scan_state`
+(server-only); the first run starts at "now", so history isn't back-filled.
+Without the chat module the route answers `{ skipped: "chat not installed" }`.
+Turning it on shares chat snippets and the sender's email with staff, so
+mention it in your privacy policy.
 
 ## Insights and the staff digest
 

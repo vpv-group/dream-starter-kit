@@ -3200,6 +3200,20 @@ export interface KitModule {
      * One site per line, e.g. https://www.example.com (https only; http://localhost for testing). Paths are ignored.
      */
     embedOrigins?: string | null;
+    chat?: {
+      /**
+       * Every 15 minutes. Staff will see the matching messages and the sender's email, so mention this in your privacy policy.
+       */
+      enabled?: boolean | null;
+      /**
+       * Only messages containing one of these phrases (comma-separated) are forwarded; Autopilot then decides whether each is feedback. Empty uses the defaults: feature, would be nice, would be great, wish, please add, can you add, could you add, should be able, bug, broken, doesn't work, does not work, not working, missing, suggestion, feedback.
+       */
+      keywords?: string | null;
+      /**
+       * Ignore messages shorter than this (characters).
+       */
+      minLength?: number | null;
+    };
     ap?: {
       enabled?: boolean | null;
       actions?: ("manual" | "automated") | null;
@@ -5308,6 +5322,13 @@ export interface KitModulesSelect<T extends boolean = true> {
         changelogShipStage?: T;
         embedEnabled?: T;
         embedOrigins?: T;
+        chat?:
+          | T
+          | {
+              enabled?: T;
+              keywords?: T;
+              minLength?: T;
+            };
         ap?:
           | T
           | {
@@ -6934,6 +6955,20 @@ export interface ModFeedbackSetting {
    * One site per line, e.g. https://www.example.com (https only; http://localhost for testing). Paths are ignored.
    */
   embedOrigins?: string | null;
+  chat?: {
+    /**
+     * Every 15 minutes. Staff will see the matching messages and the sender's email, so mention this in your privacy policy.
+     */
+    enabled?: boolean | null;
+    /**
+     * Only messages containing one of these phrases (comma-separated) are forwarded; Autopilot then decides whether each is feedback. Empty uses the defaults: feature, would be nice, would be great, wish, please add, can you add, could you add, should be able, bug, broken, doesn't work, does not work, not working, missing, suggestion, feedback.
+     */
+    keywords?: string | null;
+    /**
+     * Ignore messages shorter than this (characters).
+     */
+    minLength?: number | null;
+  };
   ap?: {
     enabled?: boolean | null;
     actions?: ("manual" | "automated") | null;
@@ -7582,6 +7617,13 @@ export interface ModFeedbackSettingsSelect<T extends boolean = true> {
   changelogShipStage?: T;
   embedEnabled?: T;
   embedOrigins?: T;
+  chat?:
+    | T
+    | {
+        enabled?: T;
+        keywords?: T;
+        minLength?: T;
+      };
   ap?:
     | T
     | {

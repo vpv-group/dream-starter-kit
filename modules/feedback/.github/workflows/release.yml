@@ -1,0 +1,126 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+env:
+  KIT_REPO: vpv-group/dream-starter-kit
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # Build provenance for the zip (actions/attest-build-provenance).
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: module
+
+      - name: Resolve slug / version / kitCompat from module.config.ts
+        id: meta
+        working-directory: module
+        run: |
+          slug=$(grep -oP 'slug:\s*"\K[^"]+' module.config.ts | head -1)
+          version=$(grep -oP 'version:\s*"\K[^"]+' module.config.ts | head -1)
+          kit_compat=$(grep -oP 'kitCompat:\s*"\K[^"]+' module.config.ts | head -1)
+          test -n "$slug" && test -n "$version" && test -n "$kit_compat"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME != module.config.ts version $version"
+            exit 1
+          fi
+          {
+            echo "slug=$slug"
+            echo "version=$version"
+            echo "kit_compat=$kit_compat"
+            echo "zip=$slug-$version.zip"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build the module zip
+        run: |
+          cd module
+          zip -r "../${{ steps.meta.outputs.zip }}" . \
+            -x ".git/*" -x "node_modules/*" -x "*/node_modules/*" -x ".github/*"
+          cd ..
+          sha256sum "${{ steps.meta.outputs.zip }}" \
+            | cut -d' ' -f1 > "${{ steps.meta.outputs.zip }}.sha256"
+          cat "${{ steps.meta.outputs.zip }}.sha256"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install gate — fresh kit + mod add + typecheck + test
+        run: |
+          git clone --depth 1 "https://github.com/$KIT_REPO" kit
+          cd kit
+          pnpm install --frozen-lockfile
+          pnpm mod add "../${{ steps.meta.outputs.zip }}"
+          pnpm typecheck
+          pnpm test
+
+      # Proof this zip was built by this repository's release workflow, after
+      # the install gate passed. Kits can verify it before installing
+      # (`gh attestation verify <zip> --repo <this repo>`). Artifact
+      # attestations in PRIVATE repositories need GitHub Enterprise Cloud; on
+      # other plans this step warns and the release still ships with its
+      # sha256 (the registry pins it).
+      - name: Attest the module zip
+        continue-on-error: true
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ${{ steps.meta.outputs.zip }}
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "${{ steps.meta.outputs.slug }} ${{ steps.meta.outputs.version }}" \
+            --notes "kitCompat: ${{ steps.meta.outputs.kit_compat }}" \
+            "${{ steps.meta.outputs.zip }}" \
+            "${{ steps.meta.outputs.zip }}.sha256"
+
+      - name: Register with the Meet Dream registry
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DREAM_PUBLISH_URL: ${{ vars.DREAM_PUBLISH_URL }}
+          DREAM_PUBLISH_SECRET: ${{ secrets.DREAM_PUBLISH_SECRET }}
+        run: |
+          if [ -z "$DREAM_PUBLISH_URL" ] || [ -z "$DREAM_PUBLISH_SECRET" ]; then
+            echo "::warning::DREAM_PUBLISH_URL/DREAM_PUBLISH_SECRET not set — release NOT registered with Meet Dream."
+            exit 0
+          fi
+          asset_id=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME" \
+            --jq ".assets[] | select(.name == \"${{ steps.meta.outputs.zip }}\") | .id")
+          sha256=$(cat "${{ steps.meta.outputs.zip }}.sha256")
+          body=$(jq -nc \
+            --arg slug "${{ steps.meta.outputs.slug }}" \
+            --arg version "${{ steps.meta.outputs.version }}" \
+            --arg kitCompat "${{ steps.meta.outputs.kit_compat }}" \
+            --argjson releaseAssetId "$asset_id" \
+            --arg sha256 "$sha256" \
+            --arg changelog "kitCompat: ${{ steps.meta.outputs.kit_compat }}" \
+            '{slug: $slug, version: $version, kitCompat: $kitCompat, releaseAssetId: $releaseAssetId, sha256: $sha256, changelog: $changelog}')
+          t=$(date +%s)
+          sig=$(printf '%s.%s' "$t" "$body" \
+            | openssl dgst -sha256 -hmac "$DREAM_PUBLISH_SECRET" -hex \
+            | sed 's/^.*= //')
+          status=$(curl -sS -o /tmp/publish-response -w '%{http_code}' \
+            -X POST "$DREAM_PUBLISH_URL" \
+            -H "Content-Type: application/json" \
+            -H "X-Dream-Signature: t=$t,v1=$sig" \
+            --data-binary "$body")
+          cat /tmp/publish-response; echo
+          case "$status" in
+            201) echo "registered with Meet Dream" ;;
+            409) echo "::warning::already registered (409) — ok" ;;
+            *) echo "::error::publish failed with HTTP $status"; exit 1 ;;
+          esac

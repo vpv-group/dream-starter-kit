@@ -15,7 +15,7 @@ export default defineModule({
   slug: "feedback",
   name: "Feedback",
   version: "1.0.0",
-  kitCompat: ">=2.5.0 <3",
+  kitCompat: ">=2.6.0 <3",
   description:
     "Feedback boards with voting, a public roadmap and a changelog (Canny-style).",
   requires: ["notifications"],
@@ -130,6 +130,7 @@ export default defineModule({
       "mod_feedback_api_keys",
       "mod_feedback_staff_prefs",
       "mod_feedback_digest_runs",
+      "mod_feedback_chat_scan_state",
     ],
     dml: [
       "mod_notifications",

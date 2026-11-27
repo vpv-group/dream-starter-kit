@@ -115,6 +115,11 @@
       "sha256": "c06433c3e9436f6729f2bcc59dd5ed365dcf2adba25aa1932fc68f237a8bf42f",
       "target": "20261127030002_mod_feedback_007_digest.sql"
     },
+    "feedback/008_chat_source.sql": {
+      "version": "20261127172706",
+      "sha256": "1702c79c20167060fbb521b0573e45eb25c9dc978214960be4bc61bf2ee0341c",
+      "target": "20261127172706_mod_feedback_008_chat_source.sql"
+    },
     "notifications/001_initial.sql": {
       "version": "20260612011540",
       "sha256": "99010f69124c6d4b6ec8a303848d41501a74e5a3866d06bac399c30774ddebc0",

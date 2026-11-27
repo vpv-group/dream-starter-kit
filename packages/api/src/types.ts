@@ -1291,6 +1291,30 @@ export type Database = {
           },
         ];
       };
+      mod_feedback_chat_scan_state: {
+        Row: {
+          cursor: string;
+          forwarded: number;
+          id: number;
+          scanned: number;
+          updated_at: string;
+        };
+        Insert: {
+          cursor: string;
+          forwarded?: number;
+          id?: number;
+          scanned?: number;
+          updated_at?: string;
+        };
+        Update: {
+          cursor?: string;
+          forwarded?: number;
+          id?: number;
+          scanned?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       mod_feedback_comments: {
         Row: {
           attachments: Json;

@@ -13,7 +13,7 @@
     "./web-server": "./src/web-server/index.ts",
     "./integrations/testing": "./src/integrations/testing.ts"
   },
-  "license": "Apache-2.0",
+  "license": "SEE LICENSE IN LICENSE.commercial.md",
   "scripts": {
     "clean": "git clean -xdf .cache .turbo node_modules",
     "format": "prettier --check . --ignore-path ../../.gitignore",
