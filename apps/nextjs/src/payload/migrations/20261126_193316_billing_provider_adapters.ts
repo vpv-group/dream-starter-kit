@@ -1,4 +1,6 @@
-import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'
+// GENERATED copy (`pnpm mod sync`) of modules/billing/src/payload/migrations/20261126_193316_billing_provider_adapters.ts
+// so the local `payload migrate` CLI applies it — do not edit.
+import { MigrateDownArgs, MigrateUpArgs, sql } from "@payloadcms/db-postgres";
 
 export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   await db.execute(sql`
@@ -62,10 +64,14 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_adapter_stripe_phone_number_collection" boolean DEFAULT false;
   CREATE INDEX "mod_billing_subscriptions_provider_idx" ON "cms"."mod_billing_subscriptions" USING btree ("provider");
   CREATE INDEX "mod_billing_subscriptions_provider_subscription_id_idx" ON "cms"."mod_billing_subscriptions" USING btree ("provider_subscription_id");
-  CREATE INDEX "mod_billing_subscriptions_provider_customer_id_idx" ON "cms"."mod_billing_subscriptions" USING btree ("provider_customer_id");`)
+  CREATE INDEX "mod_billing_subscriptions_provider_customer_id_idx" ON "cms"."mod_billing_subscriptions" USING btree ("provider_customer_id");`);
 }
 
-export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {
+export async function down({
+  db,
+  payload,
+  req,
+}: MigrateDownArgs): Promise<void> {
   await db.execute(sql`
    DROP INDEX "cms"."mod_billing_subscriptions_provider_idx";
   DROP INDEX "cms"."mod_billing_subscriptions_provider_subscription_id_idx";
@@ -127,5 +133,5 @@ export async function down({ db, payload, req }: MigrateDownArgs): Promise<void>
   ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_adapter_stripe_allow_promotion_codes";
   ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_adapter_stripe_automatic_tax";
   ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_adapter_stripe_require_billing_address";
-  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_adapter_stripe_phone_number_collection";`)
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_adapter_stripe_phone_number_collection";`);
 }

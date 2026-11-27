@@ -33,6 +33,8 @@ import * as migration_20261125_234244_jobs_tasks_2 from './20261125_234244_jobs_
 import * as migration_20261126_024654_notifications_attempts_receipts from './20261126_024654_notifications_attempts_receipts';
 import * as migration_20261126_040551_nav_groups from './20261126_040551_nav_groups';
 import * as migration_20261126_193316_billing_provider_adapters from './20261126_193316_billing_provider_adapters';
+import * as migration_20261127_174251_sync_snapshot_after_billing_adapters from './20261127_174251_sync_snapshot_after_billing_adapters';
+import * as migration_20261127_180845_sync_snapshot_after_feedback_removal from './20261127_180845_sync_snapshot_after_feedback_removal';
 
 export const migrations = [
   {
@@ -209,5 +211,15 @@ export const migrations = [
     up: migration_20261126_193316_billing_provider_adapters.up,
     down: migration_20261126_193316_billing_provider_adapters.down,
     name: '20261126_193316_billing_provider_adapters',
+  },
+  {
+    up: migration_20261127_174251_sync_snapshot_after_billing_adapters.up,
+    down: migration_20261127_174251_sync_snapshot_after_billing_adapters.down,
+    name: '20261127_174251_sync_snapshot_after_billing_adapters',
+  },
+  {
+    up: migration_20261127_180845_sync_snapshot_after_feedback_removal.up,
+    down: migration_20261127_180845_sync_snapshot_after_feedback_removal.down,
+    name: '20261127_180845_sync_snapshot_after_feedback_removal',
   },
 ];

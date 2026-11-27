@@ -331,6 +331,61 @@ export interface ConnectorBroker {
   token(target: string): Promise<ConnectorResult<{ token: ConnectorToken }>>;
   /** Revoke the site's connection to `target`. */
   disconnect(target: string): Promise<ConnectorResult<object>>;
+  /**
+   * GitHub repositories granted for issue sync (kit ≥ 2.6). Optional: a
+   * host built before it has none, so callers degrade to "not connected".
+   */
+  githubSync?: GithubSyncBroker;
+}
+
+/** A repository the site's owner granted for sync on meetdream.com. */
+export interface GithubSyncRepo {
+  /** `owner/name`. */
+  repo: string;
+  repoId: string;
+  installationId: string;
+}
+
+export interface GithubSyncToken {
+  /** Installation token for ONE granted repository (issues, not code). */
+  token: string;
+  /** ISO time it expires (about an hour). */
+  expiresAt: string;
+  repo: string;
+  /** What GitHub granted, e.g. `{ issues: "write", metadata: "read" }`. */
+  permissions: Record<string, string>;
+}
+
+/**
+ * Issue sync with GitHub through the Meet Dream AI App (docs/MODULES.md →
+ * Connections). The site's owner grants repositories on meetdream.com; the
+ * module then gets one-hour tokens for those repositories only, and
+ * meetdream.com forwards their webhooks to `forwardPath`, signed
+ * `X-Dream-Signature: sha256=<HMAC-SHA256 of the body with forwardSecret>`.
+ */
+export interface GithubSyncBroker {
+  /**
+   * Start granting repositories. The browser opens `url` (GitHub sign-in,
+   * then a repository picker) and returns to `returnTo?github=sync-connected`.
+   * `forwardPath` is the module route that receives forwarded webhooks
+   * (`/api/mod/<slug>/…`).
+   */
+  startGrant(
+    returnTo: string,
+    forwardPath: string,
+  ): Promise<ConnectorResult<{ url: string }>>;
+  /** Granted repositories and the forwarding secret (null before a grant). */
+  access(): Promise<
+    ConnectorResult<{
+      repos: GithubSyncRepo[];
+      forwardPath: string | null;
+      forwardSecret: string | null;
+    }>
+  >;
+  /** A token for one granted repository (cached until 5 minutes before expiry). */
+  token(repo: string): Promise<ConnectorResult<{ token: GithubSyncToken }>>;
+  /** Stop syncing a repository (revokes its grant on meetdream.com). */
+  revoke(repo: string): Promise<ConnectorResult<{ revoked: boolean }>>;
 }
 
 const BROKER_KEY = Symbol.for("acme.mod-kit.connector-broker");
