@@ -257,6 +257,8 @@ html[data-theme="dark"] {
   flex-direction: column;
   gap: calc(var(--base) * 2);
   padding-bottom: calc(var(--base) * 3);
+  /* The drawer is a <dialog>, whose UA colour can follow the OS scheme. */
+  color: var(--theme-text);
 }
 .kit-modules-install__section > form {
   max-width: 640px;
@@ -273,53 +275,139 @@ html[data-theme="dark"] {
   margin-top: calc(var(--base) * 0.25);
 }
 
+/* The catalog, App Store style: one row per module (tile, name + version,
+   description, a meta line) with a capsule button on the right that turns
+   into a progress ring while the install runs (ModuleInstallButton.tsx). */
 .kit-modules-catalog {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: var(--base);
-}
-.kit-modules-catalog__card {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--base) * 0.5);
-  padding: var(--base);
-  border: 1px solid var(--theme-elevation-150);
-  border-radius: var(--style-radius-m);
-  background: var(--theme-elevation-0);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kit-modules-catalog__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: calc(var(--base) * 0.75);
+  padding: calc(var(--base) * 0.75) 0;
+  border-bottom: 1px solid var(--theme-elevation-100);
+}
+.kit-modules-catalog__row:last-child {
+  border-bottom: 0;
+}
+.kit-modules-catalog__tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  background: var(--theme-elevation-100);
+  color: var(--theme-elevation-800);
+  font-weight: 600;
+  font-size: 1.1em;
+}
+.kit-modules-catalog__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
 .kit-modules-catalog__head {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: baseline;
   gap: calc(var(--base) * 0.4);
+  min-width: 0;
 }
-/* "Included in [Plan A] and [Plan B]": text with one pill per plan. */
-.kit-modules-catalog__plans {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: calc(var(--base) * 0.25);
-  margin: 0;
-  color: var(--theme-elevation-800);
-  font-size: 0.9em;
-}
-.kit-modules-catalog__plans .pill {
-  max-width: 100%;
+.kit-modules-catalog__head strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .kit-modules-catalog__version {
   color: var(--theme-elevation-500);
   font-size: 0.85em;
 }
 .kit-modules-catalog__desc {
-  flex: 1;
+  display: -webkit-box;
   margin: 0;
+  overflow: hidden;
   color: var(--theme-elevation-800);
+  font-size: 0.9em;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
-.kit-modules-catalog__foot {
+.kit-modules-catalog__meta {
+  margin: 0;
+  color: var(--theme-elevation-500);
+  font-size: 0.82em;
+}
+.kit-modules-catalog__action {
   display: flex;
+  justify-content: flex-end;
+  min-width: 84px;
+}
+
+/* The capsule button ("Install", "Installed", "Get", "Retry"). */
+.kit-capsule {
+  display: inline-flex;
   align-items: center;
-  min-height: calc(var(--base) * 1.6);
+  justify-content: center;
+  min-width: 76px;
+  height: 28px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--theme-elevation-100);
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.85em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  cursor: pointer;
+}
+.kit-capsule:hover:not(:disabled) {
+  background: var(--theme-elevation-150);
+}
+.kit-capsule:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.kit-capsule--done {
+  color: var(--theme-elevation-500);
+  font-weight: 600;
+}
+.kit-capsule--retry {
+  color: var(--theme-error-500);
+}
+
+/* The ring (stop square inside) and its stage label underneath. */
+.kit-install-progress {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.kit-install-progress__stop {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--theme-elevation-800);
+}
+.kit-install-progress__label {
+  max-width: 120px;
+  color: var(--theme-elevation-500);
+  font-size: 0.75em;
+  text-align: center;
+  text-decoration: none;
+}
+a.kit-install-progress__label:hover {
+  text-decoration: underline;
+}
+.kit-install-progress__label--error {
+  color: var(--theme-error-500);
 }
 .kit-modules-catalog__command {
   display: inline-flex;

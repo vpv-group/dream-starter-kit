@@ -124,15 +124,44 @@ test("not connected: Connect GitHub, and only catalog installs", async ({
     returnTo: expect.stringMatching(/\/admin\/updates$/),
   });
 
-  // Connected: Install from the catalog dispatches a catalog slug only,
-  // approved (it merges once its checks pass).
+  // Connected: Install from the catalog dispatches catalog slugs only,
+  // approved (it merges once its checks pass). App Store style: each Install
+  // turns into a progress ring at once, the drawer stays open, and clicks a
+  // few seconds apart go out as one run.
   await scene({ connected: true });
   await page.goto("/admin/collections/kit-modules");
   await page.getByRole("button", { name: "Install module" }).click();
-  await page.getByRole("button", { name: "Install", exact: true }).click();
+  const row = (name: string) =>
+    page
+      .locator(".kit-modules-catalog__row")
+      .filter({ has: page.getByText(name, { exact: true }) });
+
+  // A module whose requirement isn't installed says it brings it along.
+  await expect(row("Projects · GitHub")).toContainText(
+    "Also installs Projects",
+  );
+
+  await row("CRM").getByRole("button", { name: "Install" }).click();
+  await row("Projects · GitHub")
+    .getByRole("button", { name: "Install" })
+    .click();
+  for (const name of ["CRM", "Projects · GitHub", "Projects"]) {
+    await expect(row(name).getByRole("progressbar")).toBeVisible();
+    // Once requested, a module can't be requested again.
+    await expect(
+      row(name).getByRole("button", { name: "Install" }),
+    ).toHaveCount(0);
+  }
   await expect
-    .poll(async () => (await sent("dispatch")).at(-1)?.body)
+    .poll(async () => (await sent("dispatch")).at(-1)?.body, {
+      timeout: 15_000,
+    })
     .toMatchObject({
-      inputs: { op: "add", source: "dream:crm", approved: "true" },
+      inputs: {
+        op: "add",
+        source: "dream:crm dream:projects-adapter-github",
+        approved: "true",
+      },
     });
+  expect(await sent("dispatch")).toHaveLength(1);
 });

@@ -621,7 +621,18 @@ Four places in `/admin`, all admin-only:
   updates in one list, two switches, the GitHub connection and the license.
 - **Modules** (`/admin/collections/kit-modules`): installed modules, their
   settings, **Install module** (the Dream catalog), **Update** and
-  **Remove module…**.
+  **Remove module…**. The **Install module** drawer works like the App
+  Store: each row's **Install** turns into a progress ring at once
+  (Starting → Preparing → Running checks → Deploying), then **Installed**,
+  and the drawer stays open so several modules can install at once. Clicks
+  within a few seconds go out as one run and one PR (`sources` on
+  `POST /api/modules/ops`). A module that is already installing can't be
+  requested again (the route answers 409). A row whose `requires` aren't
+  installed says "Also installs …" and installs them with it, or waits while
+  one is already installing on its own. Stages come from the run-name, the
+  PR marker (`slug` + `also`) and recently merged PRs
+  (`lib/mod/install-state.ts`); the drawer polls every 10 seconds while
+  anything is in flight.
 - A **Finish setup** row on the dashboard while GitHub isn't connected.
 
 ### Connect GitHub (once)
@@ -824,10 +835,10 @@ URL **immediately** (it expires in minutes), verifies its `sha256` before
 anything touches disk, and then runs the normal zip install path. The lock
 records a `{ type: "registry", registry, slug, version, sha256 }` source, so
 updates are the same pristine-base three-way merge as GitHub sources — local
-edits survive. In the Modules screen's **Install module** drawer, paid catalog cards show "Included in
-\<plan\>" with **Install** when the key is entitled (dispatching
+edits survive. In the Modules screen's **Install module** drawer, paid catalog rows say
+"Included in your plan" with **Install** when the key is entitled (dispatching
 `op: add, source: dream:<slug>` through the same PR pipeline) and
-**Get access** (the module's pricing page) when it isn't or no key is set;
+**Get** (the module's pricing page) when it isn't or no key is set;
 installed registry modules show version, update state and license status.
 
 **When the license lapses** (`revoked_key` / `not_entitled`) nothing breaks:

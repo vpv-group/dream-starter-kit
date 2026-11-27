@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { GithubPr } from "./ops-core";
-import { classifyOpsPr, dispatchBody, prTarget, toOpsPrs } from "./ops-core";
+import {
+  classifyOpsPr,
+  dispatchBody,
+  prTarget,
+  runTarget,
+  toOpsPrs,
+} from "./ops-core";
 
 const pr = (number: number, ref: string, labels: string[] = []): GithubPr => ({
   number,
@@ -115,15 +121,54 @@ describe("prTarget", () => {
       prTarget(
         'Update.\n\n<!-- dream-update {"kind":"module","op":"update","slug":"crm","to":"1.3.0","verified":true} -->',
       ),
-    ).toEqual({ slug: "crm", to: "1.3.0" });
-    expect(prTarget(null)).toEqual({ slug: null, to: null });
+    ).toEqual({ slug: "crm", to: "1.3.0", also: [] });
+    expect(prTarget(null)).toEqual({ slug: null, to: null, also: [] });
     expect(prTarget("<!-- dream-update {oops} -->")).toEqual({
       slug: null,
       to: null,
+      also: [],
     });
+    expect(
+      prTarget(
+        '<!-- dream-update {"kind":"module","op":"add","slug":"projects-adapter-github","to":"0.1.0","verified":true,"also":["projects"]} -->',
+      ).also,
+    ).toEqual(["projects"]);
   });
 
   it("passes the chosen PR to a merge dispatch", () => {
     expect(dispatchBody({ op: "merge", pr: 12 }, "main").inputs.pr).toBe("12");
+  });
+});
+
+describe("runTarget", () => {
+  it("reads the op and modules from a run-name", () => {
+    expect(runTarget("Module ops · add dream:projects-adapter-github")).toEqual(
+      { op: "add", slugs: ["projects-adapter-github"] },
+    );
+    expect(runTarget("Module ops · add dream:a dream:b@1.2.0")).toEqual({
+      op: "add",
+      slugs: ["a", "b"],
+    });
+    expect(runTarget("Module ops · update crm")).toEqual({
+      op: "update",
+      slugs: ["crm"],
+    });
+    expect(runTarget("Module ops · check")).toEqual({ op: "check", slugs: [] });
+    expect(runTarget("Module ops")).toBeNull();
+  });
+});
+
+describe("dispatchBody batches", () => {
+  it("joins several add sources into one run", () => {
+    expect(
+      dispatchBody(
+        {
+          op: "add",
+          sources: ["dream:a", "dream:b", "dream:a"],
+          approved: true,
+        },
+        "main",
+      ).inputs.source,
+    ).toBe("dream:a dream:b");
   });
 });
