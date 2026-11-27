@@ -232,6 +232,16 @@ never the bare prefix, with the rest of the path in `ctx.params["*"]`. An
 exact key wins, then the longest matching prefix (`matchModRoute` in
 `@acme/mod-kit/server`). A path that matches under another method gets 405.
 
+**Rate limits.** Every module call spends one shared budget per user (per IP
+for anonymous public calls), 60 a minute, in memory per server instance. A
+route can set its own with `withRateLimit(handler, …)` from
+`@acme/mod-kit/server`, which gives it a separate budget:
+`{ limit, windowMs?, key? }`, where `key` is `"user"` (default), `"ip"` or a
+function of the request (say, a hash of an API key the handler checks).
+`withRateLimit(handler, false)` turns the dispatcher's limit off; use it only
+for callers the handler verifies before doing any work, like a signed webhook
+(the Stripe adapter's `POST /webhook` does).
+
 **Embeddable pages.** A web route with `area: "embed"` mounts at
 `/embed/<slug>/…` in the bare `(frontend)/(embed)` group: no site header or
 footer and no app shell, so it fits an iframe on another site. Inside the

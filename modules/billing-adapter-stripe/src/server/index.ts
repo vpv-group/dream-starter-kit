@@ -9,7 +9,7 @@ import type {
   ModRouteTable,
 } from "@acme/mod-kit/server";
 import { createAdminClient, siteUrl } from "@acme/mod-billing/server";
-import { getConnectorBroker } from "@acme/mod-kit/server";
+import { getConnectorBroker, withRateLimit } from "@acme/mod-kit/server";
 
 import {
   getStripeOrNull,
@@ -32,7 +32,9 @@ const json = (status: number, body: Record<string, unknown>) =>
   Response.json(body, { status });
 
 export const publicRoutes: ModPublicRouteTable = {
-  "POST /webhook": webhookRoute,
+  // Stripe sends bursts from a few shared IPs; every event is signature-
+  // verified before any work, so the shared per-IP budget doesn't apply.
+  "POST /webhook": withRateLimit(webhookRoute, false),
   "GET /cron/connect": cronConnectRoute,
 
   /**
