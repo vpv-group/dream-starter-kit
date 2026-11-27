@@ -411,6 +411,31 @@ no broker is registered (tests, CLIs) — degrade to "not connected" and keep
 env keys as the override. Protocol: `apps/nextjs/src/lib/mod/connectors-core.ts`,
 docs/STRIPE.md §8.
 
+**GitHub issue sync** (`getConnectorBroker()?.githubSync`, kit ≥ 2.6): for
+modules that sync issues with repositories beyond the site's own update
+repository (the Projects GitHub adapter).
+
+- `startGrant(returnTo, forwardPath)` sends the site's owner to meetdream.com.
+  They sign in with GitHub and tick the repositories they can write to in the
+  Meet Dream AI App's installations; the browser comes back to
+  `returnTo?github=sync-connected`.
+- `access()` lists the granted repositories, plus the secret that forwarded
+  webhooks are signed with.
+- `token(repo)` returns a one-hour token for one granted repository: issues
+  write, pull requests read, and org Projects, issue types and issue fields
+  when the App has them. It never includes code access. The broker caches it
+  until 5 minutes before it expires.
+- `revoke(repo)` drops a grant.
+- meetdream.com forwards the App's webhooks for granted repositories to
+  `forwardPath`, a route in the module's `publicRoutes`. Each carries
+  `X-GitHub-Event`, `X-GitHub-Delivery` and
+  `X-Dream-Signature: sha256=<HMAC-SHA256 of the raw body, keyed with the
+forwarding secret>`. Verify the signature with a constant-time compare
+  before trusting the body. Failed deliveries are retried with backoff for
+  about 10 attempts.
+- Like `githubSync` itself (it's optional), every method degrades:
+  `no_key` / `not_connected` mean "show Connect".
+
 **Slots** (kit ≥ 2.6): module UI the HOST renders. Declare
 `slots: { web: { "<name>": "<ExportOf./web>" } }`; the host places
 `<ModSlot name="<name>" fallback={…} {...props} />` (`@acme/mod-kit/react`)
