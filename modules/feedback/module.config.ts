@@ -103,7 +103,7 @@ export default defineModule({
     native: [{ path: "", component: "FeedbackScreen" }],
   },
   widgets: { web: "FeedbackWidget", native: "FeedbackWidget" },
-  server: { routes: true, publicRoutes: true },
+  server: { routes: true, publicRoutes: true, mcp: true },
   database: {
     tables: [
       "mod_feedback_boards",

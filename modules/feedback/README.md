@@ -13,7 +13,8 @@ configuration lives in `/admin` under **Feedback**.
 | `/feedback/<board>/p/<post>` | Post: voters, status, activity feed (comments + status changes), staff controls                                 |
 | `/feedback/search?search=`   | Search across every board the visitor can see                                                                   |
 | `/roadmap`                   | Public roadmap: board cards, Filters, one column per roadmap status (posts, as in Canny)                        |
-| `/a/feedback`                | Staff workspace: Inbox, Ideas (score table + record sheet), Roadmap (ideas kanban), Posts                       |
+| `/a/feedback`                | Staff workspace: Inbox, Ideas (score table + record sheet), Roadmap (ideas kanban), Posts, Changelog, Insights  |
+| `/embed/feedback…`           | The embeddable widget (iframe pages: feedback, post, roadmap, changelog)                                        |
 
 ## Where the data lives
 
@@ -135,6 +136,67 @@ and API feedback still lands in the inbox for manual review.
 `mod_feedback_inbox` and `mod_feedback_api_keys` are staff-only under RLS;
 keys are minted server-side only.
 
+## Insights and the staff digest
+
+`/a/feedback` → **Insights** shows the last 7/30/90/365 days, for all boards
+or one: new posts, votes, voters and shipped posts against the previous
+period, one bar chart per measure (with a table view), all posts by
+status, top requests by votes gained, where posts came from, posts by
+board, the median time to a first status update and changelog readers.
+Everything comes from one SQL call, `mod_feedback_insights()`
+(`006_insights.sql`; staff only).
+
+The **staff digest** (Settings → Notifications → "Staff digest email";
+weekly on Mondays by default, daily, or off) emails staff a summary of the
+same numbers plus what needs attention (approvals, Autopilot suggestions,
+stale posts) and links to the most-voted and new posts. A daily cron
+(`GET /cron/digest`, 14:17 UTC) sends it only when something happened,
+claims the period first so a retry never sends twice, and skips staff who
+turned off "Email me the digest" in `/a/feedback`. It uses
+`payload.sendEmail`, so it needs SMTP (Mailpit locally).
+
+## Embeddable widget
+
+Settings → **Widget**: turn it on and list the sites that may show it
+(`https://…`, or `http://localhost` for testing). `/a/feedback` → **Embed**
+gives the snippets:
+
+```html
+<div data-dream-feedback data-tab="feedback"></div>
+<script
+  src="https://your-app.example.com/api/mod/feedback/embed.js"
+  async
+></script>
+```
+
+- `data-tab`: `feedback`, `roadmap` or `changelog`; `data-board`: a board
+  slug; `data-theme`: `light` or `dark`.
+- `DreamFeedback.open({ tab })` opens a side panel;
+  `<button data-dream-changelog-badge>` gets an unread dot and opens the
+  changelog.
+- The iframe pages live at `/embed/feedback…` (the kit's `area: "embed"`):
+  no site chrome, and they report their height so the frame never scrolls.
+  The proxy only lets the listed sites frame them (`frame-ancestors`, from
+  `kit_embed_origins`, synced on save).
+- Inside the frame, browsers block the main site's cookies, so the widget
+  keeps its own session: people vote anonymously where the board allows it,
+  or log in with an emailed code (existing accounts; "Sign up" opens the
+  portal, which applies the sign-up rules). Anything done anonymously in
+  the frame moves to the account on log-in (`POST /claim-anon`, which needs
+  both sessions).
+
+## MCP tools
+
+With the kit's remote MCP server on (docs/MCP.md), staff can triage
+feedback from Claude, ChatGPT or Cursor: `feedback_search_posts`,
+`feedback_get_post`, `feedback_set_status`, `feedback_comment`,
+`feedback_list_ideas`, `feedback_create_idea`, `feedback_set_idea_stage`,
+`feedback_inbox`, `feedback_inbox_resolve`, `feedback_changelog_draft` and
+`feedback_insights`. The changelog collection also appears in the generic
+content tools. Each tool checks that the caller is feedback staff
+(`profiles.is_staff`), then uses the same RPCs, cascades and notifications
+as the workspace, attributed to the caller.
+
 ## Anonymous visitors
 
 Each board decides whether anonymous visitors may **vote**, **post** and
@@ -163,6 +225,10 @@ account. Otherwise the portal opens a "Sign up for …" prompt.
   staff `GET /staff/autopilot`, `POST /staff/autopilot/resolve`,
   `POST /staff/summary`, `POST /staff/changelog/draft`,
   `GET /staff/api-keys`, `POST /staff/api-keys/rotate`.
+- Insights, digest and widget: staff `GET /staff/insights`,
+  `GET|POST /staff/prefs`, `GET /staff/widget`; `GET /cron/digest` (cron
+  secret); public `GET /embed.js` and `GET /embed/latest` (CORS-open);
+  authed `POST /claim-anon`.
 
 ## Notifications
 
@@ -180,4 +246,6 @@ automatically. Merges notify nobody, as in Canny.
   and merge, internal notes, and the anonymous-data handlers;
   `autopilot.test.ts` runs the triage against the live database with a
   deterministic fake AI (dedupe, automated merge, ingest → accept/merge,
-  summary caching, staff-only inbox and keys).
+  summary caching, staff-only inbox and keys); `insights.test.ts`,
+  `digest.test.ts` (one email per period, opt-outs) and `mcp.test.ts`
+  (staff-only tools, attribution).

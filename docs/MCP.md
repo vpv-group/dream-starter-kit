@@ -226,6 +226,9 @@ is CMS staff, so a tool that reads RLS data must apply its own finer rule
 (e.g. `profiles.is_staff`) and attribute writes to `userId`. Module
 collections still run through Payload access as the staff user.
 
+The feedback module is the reference: `modules/feedback/src/server/mcp.ts`
+(eleven `feedback_*` tools plus its changelog collection).
+
 ---
 
 ## Notifications & delivery

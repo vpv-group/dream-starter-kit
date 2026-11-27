@@ -387,6 +387,10 @@ Rules that keep modules modular:
   `native-navigation` global, loaded at launch by `useNativeNav` and cached
   offline — docs/CMS.md). The web app's phone/tablet bottom tab bar
   (`components/glass-tab-bar.tsx`, below `lg`) renders that same native menu.
+- **Embeddable pages and MCP tools:** a web route with `area: "embed"`
+  mounts at `/embed/<slug>` in a bare layout (framing limited to the
+  module's `kit_embed_origins`); `server.mcp: true` adds the module's
+  `mcp` export (tools prefixed `<slug>_`) to `/mcp`. See docs/MODULES.md.
 - **Cross-module access** is declared: `requires: [...]` + `database.dml`
   whitelists; services are plain typed package exports (`notify()`,
   `usePremium()`).

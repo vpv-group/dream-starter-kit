@@ -1,6 +1,15 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      // Module suites may import server code (`import "server-only"`).
+      "server-only": fileURLToPath(
+        new URL("./src/server-only-stub.ts", import.meta.url),
+      ),
+    },
+  },
   test: {
     environment: "node",
     // Scan from the repo root so module-owned RLS suites

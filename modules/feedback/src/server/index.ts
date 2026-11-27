@@ -20,6 +20,8 @@ import { publicRoutes as portalRoutes } from "./public-routes";
 import { staffRoutes } from "./staff-routes";
 
 export { syncAllConfig } from "./full-sync";
+/** Remote MCP server tools + collections (manifest server.mcp). */
+export { mcp } from "./mcp";
 /** For source adapters (feedback-source-chat…): add raw feedback to the Inbox. */
 export { ingestFeedback } from "./autopilot";
 export type { IngestInput } from "./autopilot";

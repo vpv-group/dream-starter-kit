@@ -1,4 +1,4 @@
-import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'
+import { MigrateDownArgs, MigrateUpArgs, sql } from "@payloadcms/db-postgres";
 
 export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   await db.execute(sql`
@@ -7,15 +7,19 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE TYPE "cms"."enum__mod_feedback_settings_v_version_digest" AS ENUM('weekly', 'daily', 'never');
   ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_feedback_digest" "cms"."enum_kit_modules_mod_feedback_digest" DEFAULT 'weekly';
   ALTER TABLE "cms"."mod_feedback_settings" ADD COLUMN "digest" "cms"."enum_mod_feedback_settings_digest" DEFAULT 'weekly';
-  ALTER TABLE "cms"."_mod_feedback_settings_v" ADD COLUMN "version_digest" "cms"."enum__mod_feedback_settings_v_version_digest" DEFAULT 'weekly';`)
+  ALTER TABLE "cms"."_mod_feedback_settings_v" ADD COLUMN "version_digest" "cms"."enum__mod_feedback_settings_v_version_digest" DEFAULT 'weekly';`);
 }
 
-export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {
+export async function down({
+  db,
+  payload,
+  req,
+}: MigrateDownArgs): Promise<void> {
   await db.execute(sql`
    ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_feedback_digest";
   ALTER TABLE "cms"."mod_feedback_settings" DROP COLUMN "digest";
   ALTER TABLE "cms"."_mod_feedback_settings_v" DROP COLUMN "version_digest";
   DROP TYPE "cms"."enum_kit_modules_mod_feedback_digest";
   DROP TYPE "cms"."enum_mod_feedback_settings_digest";
-  DROP TYPE "cms"."enum__mod_feedback_settings_v_version_digest";`)
+  DROP TYPE "cms"."enum__mod_feedback_settings_v_version_digest";`);
 }
