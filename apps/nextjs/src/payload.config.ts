@@ -56,6 +56,7 @@ import { SpaceGroups } from "./payload/collections/SpaceGroups";
 import { TagGroups, Tags } from "./payload/collections/Tags";
 import { Users } from "./payload/collections/Users";
 import { Videos } from "./payload/collections/Videos";
+import { keepContractPendingTables } from "./payload/contract-pending";
 import { AuthenticationSettings } from "./payload/globals/AuthenticationSettings";
 import { DreamSite } from "./payload/globals/DreamSite";
 import { ImageGenerationSettings } from "./payload/globals/ImageGenerationSettings";
@@ -385,6 +386,10 @@ export default buildConfig({
     // the cms.payload_migrations ledger). After changing a collection, regenerate
     // with `pnpm cms:migrate:create` and commit the new file in payload/migrations.
     push: process.env.NODE_ENV !== "production",
+    // Removed collections' tables kept for one release stay in the pushed
+    // schema, so dev push doesn't try (and fail) to drop them — see
+    // payload/contract-pending.ts.
+    beforeSchemaInit: [keepContractPendingTables],
     // Core + module migrations merged by timestamp prefix, each name once;
     // Payload's cms.payload_migrations ledger keys by name, so boot runs stay
     // idempotent.

@@ -95,6 +95,24 @@ const grantSchema = z.object({
 });
 
 export const staffRoutes: ModRouteTable = {
+  /**
+   * Installed payment providers and whether each is set up — billing's
+   * panel on Modules → Billing warns when buyers can't pay.
+   */
+  "GET /admin/providers": staffOnly(async () => {
+    const providers = await getBillingProviders();
+    return Response.json({
+      providers: await Promise.all(
+        providers.map(async (p) => ({
+          id: p.id,
+          label: p.label,
+          platforms: p.platforms,
+          configured: await p.isConfigured().catch(() => false),
+        })),
+      ),
+    });
+  }),
+
   /** Find people (email / name) and workspaces (name / slug). */
   "GET /admin/search": staffOnly(async (req, _ctx, admin) => {
     const q = (new URL(req.url).searchParams.get("q") ?? "").trim();
@@ -252,8 +270,11 @@ export const staffRoutes: ModRouteTable = {
     }
     const now = Date.now();
     const purchases = (rows ?? []).map((r) => {
+      // A grant that ran out while still active reads "expired" (the daily
+      // sweep then cancels it); a revoked one keeps its "canceled" status.
       const expiredGrant =
         r.provider === "manual" &&
+        (r.status === "active" || r.status === "trialing") &&
         r.current_period_end !== null &&
         Date.parse(r.current_period_end) <= now;
       return {

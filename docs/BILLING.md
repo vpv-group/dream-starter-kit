@@ -309,7 +309,10 @@ Billing 2.0 needs kit ≥ 2.6. Everything moves over by itself:
 - Your env keys keep working (they take priority over a Meet Dream connection).
 - If a kit update brings billing 2.0 without the Stripe adapter (e.g. you removed it
   before), checkout answers "Billing not configured" until you
-  `pnpm mod add billing-adapter-stripe`.
+  `pnpm mod add billing-adapter-stripe`. Modules → Billing says so to staff: a
+  **No payment provider installed** notice (or **No payment provider is
+  connected yet** while one isn't set up), from
+  `GET /api/mod/billing/admin/providers`.
 
 ---
 

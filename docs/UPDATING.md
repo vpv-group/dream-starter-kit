@@ -75,7 +75,8 @@ working without anything from you:
 
 If your app removed billing's Stripe module or doesn't receive it with the
 update, add it with `pnpm mod add billing-adapter-stripe` — until then checkout
-answers "Billing not configured". If your app removed **billing** itself, the
+answers "Billing not configured", and Modules → Billing shows staff a
+"No payment provider installed" notice. If your app removed **billing** itself, the
 merge still brings `modules/billing-adapter-stripe/` (a new folder), which
 `requires` billing: delete that folder too (like the modify/delete conflicts
 below), then `pnpm mod sync`.
