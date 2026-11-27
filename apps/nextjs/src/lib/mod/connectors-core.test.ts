@@ -2,9 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   connectorDisconnect,
+  connectorForward,
   connectorStartUrl,
-  connectorToken,
-  connectorTokenCache,
+  connectorStatus,
+  connectorWebhookTarget,
 } from "./connectors-core";
 
 const REGISTRY = "https://www.meetdream.com/api/mod/modules/v1";
@@ -46,59 +47,83 @@ describe("Meet Dream connectors", () => {
     });
   });
 
-  it("parses a connected account's token", async () => {
+  it("parses the site's connection status", async () => {
     const fetcher = fake(200, {
-      accessToken: "rk_test_x",
-      expiresAt: "2030-01-01T00:00:00.000Z",
       accountId: "acct_123",
       accountName: "Acme",
       livemode: false,
-      publishableKey: "pk_test_x",
+      publishableKey: "pk_test_platform",
+      ready: false,
+      onboardingUrl: "https://connect.stripe.com/setup/x",
     });
-    const res = await connectorToken(opts(fetcher), "stripe");
+    const res = await connectorStatus(opts(fetcher), "stripe");
     expect(res.status).toBe("ok");
     if (res.status === "ok") {
-      expect(res.token.accountId).toBe("acct_123");
-      expect(res.token.publishableKey).toBe("pk_test_x");
+      expect(res.connection.accountId).toBe("acct_123");
+      expect(res.connection.ready).toBe(false);
+      expect(res.connection.onboardingUrl).toContain("connect.stripe.com");
     }
     expect(fetcher.mock.calls[0]?.[0]).toBe(
-      `${REGISTRY}/sites/connectors/stripe/token`,
+      `${REGISTRY}/sites/connectors/stripe/status`,
     );
   });
 
   it("maps not_connected and malformed answers to calm states", async () => {
     expect(
       (
-        await connectorToken(
+        await connectorStatus(
           opts(fake(404, { code: "not_connected", message: "Not connected" })),
           "stripe",
         )
       ).status,
     ).toBe("not_connected");
     expect(
-      (await connectorToken(opts(fake(200, { nope: true })), "stripe")).status,
+      (await connectorStatus(opts(fake(200, { nope: true })), "stripe")).status,
     ).toBe("error");
     expect(
       (await connectorDisconnect(opts(fake(200, {})), "stripe")).status,
     ).toBe("ok");
   });
 
-  it("caches tokens per target until 5 minutes before expiry", () => {
-    let now = Date.parse("2030-01-01T00:00:00.000Z");
-    const cache = connectorTokenCache(() => now);
-    const token = {
-      accessToken: "a",
-      expiresAt: "2030-01-01T01:00:00.000Z",
-      accountId: "acct_1",
-    };
-    cache.set("stripe", token);
-    expect(cache.get("stripe")).toBe(token);
-    expect(cache.get("github")).toBeNull();
-    now += 56 * 60_000;
-    expect(cache.get("stripe")).toBeNull();
-    cache.set("stripe", { ...token, expiresAt: null });
-    expect(cache.get("stripe")?.expiresAt).toBeNull();
-    cache.clear("stripe");
-    expect(cache.get("stripe")).toBeNull();
+  it("forwards a provider call with the site key, never a provider credential, and passes the answer through", async () => {
+    const fetcher = fake(402, { error: { type: "card_error" } });
+    const res = await connectorForward(
+      opts(fetcher),
+      "stripe",
+      "/v1/products",
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer sk_placeholder",
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Idempotency-Key": "idem_1",
+        },
+        body: "name=Pro",
+      },
+    );
+    expect(res.status).toBe(402);
+    expect(await res.json()).toEqual({ error: { type: "card_error" } });
+    const [url, init] = fetcher.mock.calls[0] ?? [];
+    expect(url).toBe(`${REGISTRY}/sites/connectors/stripe/api/v1/products`);
+    const headers = init?.headers as Record<string, string>;
+    expect(headers["X-Dream-License-Key"]).toBe("dsk_site");
+    expect(headers.Authorization).toBeUndefined();
+    expect(headers["Idempotency-Key"]).toBe("idem_1");
+    expect(init?.body).toBe("name=Pro");
+  });
+
+  it("registers the site's webhook target and returns its signing secret", async () => {
+    const fetcher = fake(200, { secret: "whsec_site" });
+    const res = await connectorWebhookTarget(
+      opts(fetcher),
+      "stripe",
+      "https://app.example.com/api/mod/billing-adapter-stripe/webhook",
+    );
+    expect(res).toEqual({ status: "ok", secret: "whsec_site" });
+    const [url, init] = fetcher.mock.calls[0] ?? [];
+    expect(url).toBe(`${REGISTRY}/sites/connectors/stripe/webhook-target`);
+    expect(JSON.parse(init?.body as string)).toEqual({
+      url: "https://app.example.com/api/mod/billing-adapter-stripe/webhook",
+    });
   });
 });

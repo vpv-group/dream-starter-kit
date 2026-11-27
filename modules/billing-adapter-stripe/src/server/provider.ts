@@ -15,6 +15,7 @@ import {
 } from "@acme/mod-billing/server";
 
 import {
+  getPaymentsStripeOrNull,
   getStripeOrNull,
   stripeCredentials,
   stripeSettings,
@@ -32,7 +33,7 @@ import { legacyRoutes } from "./legacy";
 
 async function enabledStripe(): Promise<Stripe | null> {
   if (!(await stripeSettings()).enabled) return null;
-  return await getStripeOrNull();
+  return await getPaymentsStripeOrNull();
 }
 
 export const adapter: BillingProvider = {
@@ -42,7 +43,8 @@ export const adapter: BillingProvider = {
 
   async isConfigured() {
     if (!(await stripeSettings()).enabled) return false;
-    return (await stripeCredentials()).status === "ok";
+    const res = await stripeCredentials();
+    return res.status === "ok" && res.credentials.ready;
   },
 
   /** Hosted Stripe Checkout for a plan (guest buyers welcome). */

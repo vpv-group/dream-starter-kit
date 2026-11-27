@@ -1,35 +1,37 @@
 import { z } from "zod/v4";
 
-import type { ConnectorResult, ConnectorToken } from "@acme/mod-kit/server";
+import type { ConnectorResult, ConnectorStatus } from "@acme/mod-kit/server";
 
 import type { CallOpts, UpdatesProblem } from "./updates-core";
 import { call } from "./updates-core";
 
 /**
  * Connector protocol with meetdream.com (pure: injected fetch, unit tested in
- * connectors-core.test.ts). Meet Dream runs the OAuth apps ("Meet Dream AI")
- * and keeps their client secrets + refresh tokens; a site only ever holds a
- * short-lived credential for its OWN connected account, fetched with its site
- * license key. The kit treats every provider the same:
+ * connectors-core.test.ts). Meet Dream runs the platforms ("Meet Dream AI" —
+ * for Stripe, a Stripe Connect platform) and keeps every provider credential;
+ * a site authenticates with its site license key and Meet Dream acts on the
+ * site's OWN connected account only. The kit treats every provider the same:
  *
- * - `POST /connect/<target>/start`             → `{ url }` (browser goes to the
- *   provider's consent screen; Meet Dream's registered redirect URI finishes
- *   the exchange, then bounces back to `returnTo?<target>=connected`)
- * - `POST /sites/connectors/<target>/token`    → `ConnectorToken`
+ * - `POST /connect/<target>/start`               → `{ url }` (onboarding or
+ *   consent; Meet Dream finishes it and returns to `returnTo?<target>=connected`)
+ * - `POST /sites/connectors/<target>/status`     → `ConnectorStatus`
  *   (404/`not_connected` when the site never connected)
- * - `POST /sites/connectors/<target>/disconnect` → revoke
+ * - `ANY  /sites/connectors/<target>/api/<path>` → the provider's API, called
+ *   by Meet Dream for this site (response passed through unchanged)
+ * - `POST /sites/connectors/<target>/webhook-target` `{ url }` → `{ secret }`
+ *   (Meet Dream delivers the provider's events there, signed with `secret`)
+ * - `POST /sites/connectors/<target>/disconnect` → stop brokering
  *
  * Stripe is the first target (docs/STRIPE.md → Connect with Stripe).
  */
 
-const tokenSchema = z.object({
-  accessToken: z.string().min(1),
-  expiresAt: z.string().nullable().default(null),
+const statusSchema = z.object({
   accountId: z.string().min(1),
   accountName: z.string().nullable().optional(),
-  livemode: z.boolean().optional(),
+  livemode: z.boolean().nullable().optional(),
   publishableKey: z.string().nullable().optional(),
-  onBehalfOf: z.string().nullable().optional(),
+  ready: z.boolean().optional(),
+  onboardingUrl: z.string().nullable().optional(),
 });
 
 function problem(p: UpdatesProblem): ConnectorResult<never> {
@@ -59,17 +61,66 @@ export async function connectorStartUrl(
     : { status: "error", message: "Unexpected answer from Meet Dream." };
 }
 
-export async function connectorToken(
+export async function connectorStatus(
   opts: CallOpts,
   target: string,
-): Promise<ConnectorResult<{ token: ConnectorToken }>> {
-  const res = await call(opts, `/sites/connectors/${enc(target)}/token`, {
+): Promise<ConnectorResult<{ connection: ConnectorStatus }>> {
+  const res = await call(opts, `/sites/connectors/${enc(target)}/status`, {
     method: "POST",
   });
   if (!("ok" in res)) return problem(res);
-  const parsed = tokenSchema.safeParse(res.body);
+  const parsed = statusSchema.safeParse(res.body);
   return parsed.success
-    ? { status: "ok", token: parsed.data }
+    ? { status: "ok", connection: parsed.data }
+    : { status: "error", message: "Unexpected answer from Meet Dream." };
+}
+
+/**
+ * One provider API call made by Meet Dream for this site. The provider's
+ * response comes back unchanged (status, headers, body), so the provider's
+ * own SDK can parse it; only a network failure rejects.
+ */
+export async function connectorForward(
+  opts: CallOpts,
+  target: string,
+  path: string,
+  init: { method: string; headers?: Record<string, string>; body?: string },
+): Promise<Response> {
+  const headers: Record<string, string> = {};
+  for (const [k, v] of Object.entries(init.headers ?? {})) {
+    // The provider credential is Meet Dream's: never send one from here.
+    if (k.toLowerCase() === "authorization") continue;
+    headers[k] = v;
+  }
+  headers["X-Dream-License-Key"] = opts.siteKey;
+  return (opts.fetchImpl ?? fetch)(
+    `${opts.registry.replace(/\/$/, "")}/sites/connectors/${enc(target)}/api${
+      path.startsWith("/") ? path : `/${path}`
+    }`,
+    {
+      method: init.method,
+      headers,
+      ...(init.body === undefined ? {} : { body: init.body }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(60_000),
+    },
+  );
+}
+
+export async function connectorWebhookTarget(
+  opts: CallOpts,
+  target: string,
+  url: string,
+): Promise<ConnectorResult<{ secret: string }>> {
+  const res = await call(
+    opts,
+    `/sites/connectors/${enc(target)}/webhook-target`,
+    { method: "POST", body: { url } },
+  );
+  if (!("ok" in res)) return problem(res);
+  const parsed = z.object({ secret: z.string().min(1) }).safeParse(res.body);
+  return parsed.success
+    ? { status: "ok", secret: parsed.data.secret }
     : { status: "error", message: "Unexpected answer from Meet Dream." };
 }
 
@@ -82,26 +133,4 @@ export async function connectorDisconnect(
   });
   if (!("ok" in res)) return problem(res);
   return { status: "ok" };
-}
-
-/**
- * Per-target token cache, refreshed 5 minutes before expiry (tokens without
- * an expiry are kept until `clear`).
- */
-export function connectorTokenCache(now: () => number = Date.now) {
-  const cached = new Map<string, ConnectorToken>();
-  return {
-    get(target: string): ConnectorToken | null {
-      const t = cached.get(target);
-      if (!t) return null;
-      if (t.expiresAt === null) return t;
-      return Date.parse(t.expiresAt) - now() > 5 * 60_000 ? t : null;
-    },
-    set(target: string, token: ConnectorToken) {
-      cached.set(target, token);
-    },
-    clear(target: string) {
-      cached.delete(target);
-    },
-  };
 }

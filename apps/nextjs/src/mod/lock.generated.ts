@@ -30,7 +30,7 @@ export const modulesLock = {
       "edgeFunctions": []
     },
     "billing-adapter-stripe": {
-      "version": "1.0.0",
+      "version": "1.1.0",
       "kitCompat": ">=2.6.0 <3",
       "source": "local",
       "installedVia": "preinstalled",

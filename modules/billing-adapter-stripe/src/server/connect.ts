@@ -3,8 +3,9 @@ import "server-only";
 import Stripe from "stripe";
 
 import type { AdminClient as SupabaseClient } from "@acme/mod-billing/server";
+import { getConnectorBroker } from "@acme/mod-kit/server";
 
-import { getStripeOrNull } from "../stripe/client";
+import { stripeCredentials, stripeFor } from "../stripe/client";
 import { resetWebhookSecretCache } from "./webhook";
 
 /** The Stripe calls this file makes (a fake one in tests). */
@@ -82,10 +83,23 @@ export type ConnectResult =
 export async function ensureStripeWebhook(
   admin: SupabaseClient,
   siteUrl: string,
-  deps: { stripe?: StripeEndpointsClient } = {},
+  deps: {
+    stripe?: StripeEndpointsClient;
+    /** Meet Dream's webhook-target call (tests inject it). */
+    meetDreamTarget?: (url: string) => Promise<WebhookTargetResult>;
+  } = {},
 ): Promise<ConnectResult> {
-  const client = deps.stripe ?? (await getStripeOrNull());
-  if (!client) return { status: "skipped", reason: "no_stripe_key" };
+  const creds = deps.stripe ? null : await stripeCredentials();
+  const viaMeetDream =
+    !!deps.meetDreamTarget ||
+    (creds?.status === "ok" && creds.credentials.source === "meetdream");
+  const client = viaMeetDream
+    ? null
+    : (deps.stripe ??
+      (creds?.status === "ok" ? stripeFor(creds.credentials) : null));
+  if (!viaMeetDream && !client) {
+    return { status: "skipped", reason: "no_stripe_key" };
+  }
   let origin: URL;
   try {
     origin = new URL(siteUrl);
@@ -98,6 +112,15 @@ export async function ensureStripeWebhook(
   ) {
     return { status: "skipped", reason: "not_public" };
   }
+
+  if (viaMeetDream) {
+    return registerWithMeetDream(
+      admin,
+      `${origin.origin}${WEBHOOK_PATH}`,
+      deps.meetDreamTarget ?? meetDreamWebhookTarget,
+    );
+  }
+  if (!client) return { status: "skipped", reason: "no_stripe_key" };
 
   try {
     const stripe: StripeEndpointsClient = client;
@@ -150,6 +173,63 @@ export async function ensureStripeWebhook(
       origin,
     );
     return { status: "connected", url, created: true, legacyDisabled };
+  } catch (err) {
+    return {
+      status: "error",
+      message: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+type WebhookTargetResult =
+  | { status: "ok"; secret: string }
+  | { status: "no_key" | "not_connected" | "error"; message: string };
+
+async function meetDreamWebhookTarget(
+  url: string,
+): Promise<WebhookTargetResult> {
+  const broker = getConnectorBroker();
+  if (!broker) {
+    return { status: "error", message: "No Meet Dream connector broker" };
+  }
+  return broker.setWebhookTarget("stripe", url);
+}
+
+/**
+ * Connected through Meet Dream (a Stripe Connect platform): Stripe sends the
+ * connected account's events to Meet Dream's platform endpoint, which
+ * delivers them here signed with a per-site secret in Stripe's own
+ * `Stripe-Signature` format — so the webhook route verifies them exactly as
+ * it verifies Stripe's. This registers the URL and stores that secret in
+ * Vault (the same slot the self-registered endpoint uses). Idempotent.
+ */
+async function registerWithMeetDream(
+  admin: SupabaseClient,
+  url: string,
+  target: (url: string) => Promise<WebhookTargetResult>,
+): Promise<ConnectResult> {
+  try {
+    const res = await target(url);
+    if (res.status !== "ok") return { status: "error", message: res.message };
+    const { data: stored } = await admin.rpc(
+      "mod_billing_adapter_stripe_webhook_secret",
+    );
+    const created = stored !== res.secret;
+    if (created) {
+      const { error } = await admin.rpc(
+        "mod_billing_adapter_stripe_set_webhook_secret",
+        { _secret: res.secret },
+      );
+      if (error) throw new Error(error.message);
+      resetWebhookSecretCache();
+      await admin.rpc("audit_log_event", {
+        _action: "billing.webhook_connected",
+        _actor_type: "system",
+        _entity_type: "meetdream_webhook_target",
+        _entity_id: url,
+      });
+    }
+    return { status: "connected", url, created, legacyDisabled: [] };
   } catch (err) {
     return {
       status: "error",

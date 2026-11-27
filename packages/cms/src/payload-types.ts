@@ -13,53 +13,53 @@
  * via the `definition` "supportedTimezones".
  */
 export type SupportedTimezones =
-  | "Pacific/Midway"
-  | "Pacific/Niue"
-  | "Pacific/Honolulu"
-  | "Pacific/Rarotonga"
-  | "America/Anchorage"
-  | "Pacific/Gambier"
-  | "America/Los_Angeles"
-  | "America/Tijuana"
-  | "America/Denver"
-  | "America/Phoenix"
-  | "America/Chicago"
-  | "America/Guatemala"
-  | "America/New_York"
-  | "America/Bogota"
-  | "America/Caracas"
-  | "America/Santiago"
-  | "America/Buenos_Aires"
-  | "America/Sao_Paulo"
-  | "Atlantic/South_Georgia"
-  | "Atlantic/Azores"
-  | "Atlantic/Cape_Verde"
-  | "Europe/London"
-  | "Europe/Berlin"
-  | "Africa/Lagos"
-  | "Europe/Athens"
-  | "Africa/Cairo"
-  | "Europe/Moscow"
-  | "Asia/Riyadh"
-  | "Asia/Dubai"
-  | "Asia/Baku"
-  | "Asia/Karachi"
-  | "Asia/Tashkent"
-  | "Asia/Calcutta"
-  | "Asia/Dhaka"
-  | "Asia/Almaty"
-  | "Asia/Jakarta"
-  | "Asia/Bangkok"
-  | "Asia/Shanghai"
-  | "Asia/Singapore"
-  | "Asia/Tokyo"
-  | "Asia/Seoul"
-  | "Australia/Brisbane"
-  | "Australia/Sydney"
-  | "Pacific/Guam"
-  | "Pacific/Noumea"
-  | "Pacific/Auckland"
-  | "Pacific/Fiji";
+  | 'Pacific/Midway'
+  | 'Pacific/Niue'
+  | 'Pacific/Honolulu'
+  | 'Pacific/Rarotonga'
+  | 'America/Anchorage'
+  | 'Pacific/Gambier'
+  | 'America/Los_Angeles'
+  | 'America/Tijuana'
+  | 'America/Denver'
+  | 'America/Phoenix'
+  | 'America/Chicago'
+  | 'America/Guatemala'
+  | 'America/New_York'
+  | 'America/Bogota'
+  | 'America/Caracas'
+  | 'America/Santiago'
+  | 'America/Buenos_Aires'
+  | 'America/Sao_Paulo'
+  | 'Atlantic/South_Georgia'
+  | 'Atlantic/Azores'
+  | 'Atlantic/Cape_Verde'
+  | 'Europe/London'
+  | 'Europe/Berlin'
+  | 'Africa/Lagos'
+  | 'Europe/Athens'
+  | 'Africa/Cairo'
+  | 'Europe/Moscow'
+  | 'Asia/Riyadh'
+  | 'Asia/Dubai'
+  | 'Asia/Baku'
+  | 'Asia/Karachi'
+  | 'Asia/Tashkent'
+  | 'Asia/Calcutta'
+  | 'Asia/Dhaka'
+  | 'Asia/Almaty'
+  | 'Asia/Jakarta'
+  | 'Asia/Bangkok'
+  | 'Asia/Shanghai'
+  | 'Asia/Singapore'
+  | 'Asia/Tokyo'
+  | 'Asia/Seoul'
+  | 'Australia/Brisbane'
+  | 'Australia/Sydney'
+  | 'Pacific/Guam'
+  | 'Pacific/Noumea'
+  | 'Pacific/Auckland'
+  | 'Pacific/Fiji';
 
 export interface Config {
   auth: {
@@ -68,7 +68,7 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
-    "feed-tokens": FeedToken;
+    'feed-tokens': FeedToken;
     enrollments: Enrollment;
     reviews: Review;
     media: Media;
@@ -82,10 +82,10 @@ export interface Config {
     events: Event;
     categories: Category;
     tags: Tag;
-    "tag-groups": TagGroup;
-    "space-groups": SpaceGroup;
-    "community-spaces": CommunitySpace;
-    "community-posts": CommunityPost;
+    'tag-groups': TagGroup;
+    'space-groups': SpaceGroup;
+    'community-spaces': CommunitySpace;
+    'community-posts': CommunityPost;
     comments: Comment;
     reports: Report;
     pages: Page;
@@ -93,82 +93,82 @@ export interface Config {
     banners: Banner;
     notifications: Notification;
     legal: Legal;
-    "kit-modules": KitModule;
-    "nav-items": NavItem;
-    "mod-billing-plans": ModBillingPlan;
-    "mod-billing-coupons": ModBillingCoupon;
-    "mod-billing-subscriptions": ModBillingSubscription;
-    "mod-chat-skills": ModChatSkill;
-    "mod-docs-pages": ModDocsPage;
-    "mod-feedback-boards": ModFeedbackBoard;
-    "mod-feedback-changelog": ModFeedbackChangelog;
-    "mod-feedback-changelog-labels": ModFeedbackChangelogLabel;
+    'kit-modules': KitModule;
+    'nav-items': NavItem;
+    'mod-billing-plans': ModBillingPlan;
+    'mod-billing-coupons': ModBillingCoupon;
+    'mod-billing-subscriptions': ModBillingSubscription;
+    'mod-chat-skills': ModChatSkill;
+    'mod-docs-pages': ModDocsPage;
+    'mod-feedback-boards': ModFeedbackBoard;
+    'mod-feedback-changelog': ModFeedbackChangelog;
+    'mod-feedback-changelog-labels': ModFeedbackChangelogLabel;
     forms: Form;
-    "form-submissions": FormSubmission;
-    "payload-kv": PayloadKv;
-    "payload-jobs": PayloadJob;
-    "payload-folders": FolderInterface;
-    "payload-locked-documents": PayloadLockedDocument;
-    "payload-preferences": PayloadPreference;
-    "payload-migrations": PayloadMigration;
+    'form-submissions': FormSubmission;
+    'payload-kv': PayloadKv;
+    'payload-jobs': PayloadJob;
+    'payload-folders': FolderInterface;
+    'payload-locked-documents': PayloadLockedDocument;
+    'payload-preferences': PayloadPreference;
+    'payload-migrations': PayloadMigration;
   };
   collectionsJoins: {
     users: {
-      subscriptions: "mod-billing-subscriptions";
-      enrollments: "enrollments";
+      subscriptions: 'mod-billing-subscriptions';
+      enrollments: 'enrollments';
     };
     posts: {
-      comments: "comments";
+      comments: 'comments';
     };
     series: {
-      videoEpisodes: "videos";
-      audioEpisodes: "audio";
-      lessons: "lessons";
+      videoEpisodes: 'videos';
+      audioEpisodes: 'audio';
+      lessons: 'lessons';
     };
     locations: {
-      reviews: "reviews";
-      events: "events";
+      reviews: 'reviews';
+      events: 'events';
     };
-    "tag-groups": {
-      tags: "tags";
+    'tag-groups': {
+      tags: 'tags';
     };
-    "space-groups": {
-      spaces: "community-spaces";
+    'space-groups': {
+      spaces: 'community-spaces';
     };
-    "community-spaces": {
-      posts: "community-posts";
+    'community-spaces': {
+      posts: 'community-posts';
     };
-    "community-posts": {
-      comments: "comments";
-      reports: "reports";
+    'community-posts': {
+      comments: 'comments';
+      reports: 'reports';
     };
     comments: {
-      replies: "comments";
+      replies: 'comments';
     };
-    "mod-billing-plans": {
-      subscriptions: "mod-billing-subscriptions";
-      coupons: "mod-billing-coupons";
+    'mod-billing-plans': {
+      subscriptions: 'mod-billing-subscriptions';
+      coupons: 'mod-billing-coupons';
     };
     forms: {
-      submissions: "form-submissions";
+      submissions: 'form-submissions';
     };
-    "payload-folders": {
+    'payload-folders': {
       documentsAndFolders:
-        | "payload-folders"
-        | "media"
-        | "posts"
-        | "videos"
-        | "audio"
-        | "photos"
-        | "series"
-        | "lessons"
-        | "locations"
-        | "events";
+        | 'payload-folders'
+        | 'media'
+        | 'posts'
+        | 'videos'
+        | 'audio'
+        | 'photos'
+        | 'series'
+        | 'lessons'
+        | 'locations'
+        | 'events';
     };
   };
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
-    "feed-tokens": FeedTokensSelect<false> | FeedTokensSelect<true>;
+    'feed-tokens': FeedTokensSelect<false> | FeedTokensSelect<true>;
     enrollments: EnrollmentsSelect<false> | EnrollmentsSelect<true>;
     reviews: ReviewsSelect<false> | ReviewsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
@@ -182,11 +182,10 @@ export interface Config {
     events: EventsSelect<false> | EventsSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     tags: TagsSelect<false> | TagsSelect<true>;
-    "tag-groups": TagGroupsSelect<false> | TagGroupsSelect<true>;
-    "space-groups": SpaceGroupsSelect<false> | SpaceGroupsSelect<true>;
-    "community-spaces":
-      CommunitySpacesSelect<false> | CommunitySpacesSelect<true>;
-    "community-posts": CommunityPostsSelect<false> | CommunityPostsSelect<true>;
+    'tag-groups': TagGroupsSelect<false> | TagGroupsSelect<true>;
+    'space-groups': SpaceGroupsSelect<false> | SpaceGroupsSelect<true>;
+    'community-spaces': CommunitySpacesSelect<false> | CommunitySpacesSelect<true>;
+    'community-posts': CommunityPostsSelect<false> | CommunityPostsSelect<true>;
     comments: CommentsSelect<false> | CommentsSelect<true>;
     reports: ReportsSelect<false> | ReportsSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
@@ -194,77 +193,56 @@ export interface Config {
     banners: BannersSelect<false> | BannersSelect<true>;
     notifications: NotificationsSelect<false> | NotificationsSelect<true>;
     legal: LegalSelect<false> | LegalSelect<true>;
-    "kit-modules": KitModulesSelect<false> | KitModulesSelect<true>;
-    "nav-items": NavItemsSelect<false> | NavItemsSelect<true>;
-    "mod-billing-plans":
-      ModBillingPlansSelect<false> | ModBillingPlansSelect<true>;
-    "mod-billing-coupons":
-      ModBillingCouponsSelect<false> | ModBillingCouponsSelect<true>;
-    "mod-billing-subscriptions":
-      | ModBillingSubscriptionsSelect<false>
-      | ModBillingSubscriptionsSelect<true>;
-    "mod-chat-skills": ModChatSkillsSelect<false> | ModChatSkillsSelect<true>;
-    "mod-docs-pages": ModDocsPagesSelect<false> | ModDocsPagesSelect<true>;
-    "mod-feedback-boards":
-      ModFeedbackBoardsSelect<false> | ModFeedbackBoardsSelect<true>;
-    "mod-feedback-changelog":
-      ModFeedbackChangelogSelect<false> | ModFeedbackChangelogSelect<true>;
-    "mod-feedback-changelog-labels":
-      | ModFeedbackChangelogLabelsSelect<false>
-      | ModFeedbackChangelogLabelsSelect<true>;
+    'kit-modules': KitModulesSelect<false> | KitModulesSelect<true>;
+    'nav-items': NavItemsSelect<false> | NavItemsSelect<true>;
+    'mod-billing-plans': ModBillingPlansSelect<false> | ModBillingPlansSelect<true>;
+    'mod-billing-coupons': ModBillingCouponsSelect<false> | ModBillingCouponsSelect<true>;
+    'mod-billing-subscriptions': ModBillingSubscriptionsSelect<false> | ModBillingSubscriptionsSelect<true>;
+    'mod-chat-skills': ModChatSkillsSelect<false> | ModChatSkillsSelect<true>;
+    'mod-docs-pages': ModDocsPagesSelect<false> | ModDocsPagesSelect<true>;
+    'mod-feedback-boards': ModFeedbackBoardsSelect<false> | ModFeedbackBoardsSelect<true>;
+    'mod-feedback-changelog': ModFeedbackChangelogSelect<false> | ModFeedbackChangelogSelect<true>;
+    'mod-feedback-changelog-labels': ModFeedbackChangelogLabelsSelect<false> | ModFeedbackChangelogLabelsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
-    "form-submissions":
-      FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
-    "payload-kv": PayloadKvSelect<false> | PayloadKvSelect<true>;
-    "payload-jobs": PayloadJobsSelect<false> | PayloadJobsSelect<true>;
-    "payload-folders": PayloadFoldersSelect<false> | PayloadFoldersSelect<true>;
-    "payload-locked-documents":
-      PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
-    "payload-preferences":
-      PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
-    "payload-migrations":
-      PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
+    'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
+    'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
+    'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
+    'payload-folders': PayloadFoldersSelect<false> | PayloadFoldersSelect<true>;
+    'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
+    'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
+    'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
   };
   db: {
     defaultIDType: number;
   };
   fallbackLocale: null;
   globals: {
-    "site-settings": SiteSetting;
-    "theme-settings": ThemeSetting;
-    "image-generation-settings": ImageGenerationSetting;
-    "profile-fields": ProfileField;
-    "authentication-settings": AuthenticationSetting;
-    "dream-site": DreamSite;
-    "native-navigation": NativeNavigation;
-    "mod-billing-settings": ModBillingSetting;
-    "mod-chat-settings": ModChatSetting;
-    "mod-docs-settings": ModDocsSetting;
-    "mod-feedback-settings": ModFeedbackSetting;
-    "payload-jobs-stats": PayloadJobsStat;
+    'site-settings': SiteSetting;
+    'theme-settings': ThemeSetting;
+    'image-generation-settings': ImageGenerationSetting;
+    'profile-fields': ProfileField;
+    'authentication-settings': AuthenticationSetting;
+    'dream-site': DreamSite;
+    'native-navigation': NativeNavigation;
+    'mod-billing-settings': ModBillingSetting;
+    'mod-chat-settings': ModChatSetting;
+    'mod-docs-settings': ModDocsSetting;
+    'mod-feedback-settings': ModFeedbackSetting;
+    'payload-jobs-stats': PayloadJobsStat;
   };
   globalsSelect: {
-    "site-settings": SiteSettingsSelect<false> | SiteSettingsSelect<true>;
-    "theme-settings": ThemeSettingsSelect<false> | ThemeSettingsSelect<true>;
-    "image-generation-settings":
-      | ImageGenerationSettingsSelect<false>
-      | ImageGenerationSettingsSelect<true>;
-    "profile-fields": ProfileFieldsSelect<false> | ProfileFieldsSelect<true>;
-    "authentication-settings":
-      AuthenticationSettingsSelect<false> | AuthenticationSettingsSelect<true>;
-    "dream-site": DreamSiteSelect<false> | DreamSiteSelect<true>;
-    "native-navigation":
-      NativeNavigationSelect<false> | NativeNavigationSelect<true>;
-    "mod-billing-settings":
-      ModBillingSettingsSelect<false> | ModBillingSettingsSelect<true>;
-    "mod-chat-settings":
-      ModChatSettingsSelect<false> | ModChatSettingsSelect<true>;
-    "mod-docs-settings":
-      ModDocsSettingsSelect<false> | ModDocsSettingsSelect<true>;
-    "mod-feedback-settings":
-      ModFeedbackSettingsSelect<false> | ModFeedbackSettingsSelect<true>;
-    "payload-jobs-stats":
-      PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
+    'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
+    'theme-settings': ThemeSettingsSelect<false> | ThemeSettingsSelect<true>;
+    'image-generation-settings': ImageGenerationSettingsSelect<false> | ImageGenerationSettingsSelect<true>;
+    'profile-fields': ProfileFieldsSelect<false> | ProfileFieldsSelect<true>;
+    'authentication-settings': AuthenticationSettingsSelect<false> | AuthenticationSettingsSelect<true>;
+    'dream-site': DreamSiteSelect<false> | DreamSiteSelect<true>;
+    'native-navigation': NativeNavigationSelect<false> | NativeNavigationSelect<true>;
+    'mod-billing-settings': ModBillingSettingsSelect<false> | ModBillingSettingsSelect<true>;
+    'mod-chat-settings': ModChatSettingsSelect<false> | ModChatSettingsSelect<true>;
+    'mod-docs-settings': ModDocsSettingsSelect<false> | ModDocsSettingsSelect<true>;
+    'mod-feedback-settings': ModFeedbackSettingsSelect<false> | ModFeedbackSettingsSelect<true>;
+    'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
   locale: null;
   widgets: {
@@ -273,12 +251,12 @@ export interface Config {
   user: User;
   jobs: {
     tasks: {
-      "dispatch-notifications": TaskDispatchNotifications;
-      "push-receipts": TaskPushReceipts;
-      "dream-site-report": TaskDreamSiteReport;
-      "account-erasure": TaskAccountErasure;
-      "favorites-cleanup": TaskFavoritesCleanup;
-      "cms-user-sync": TaskCmsUserSync;
+      'dispatch-notifications': TaskDispatchNotifications;
+      'push-receipts': TaskPushReceipts;
+      'dream-site-report': TaskDreamSiteReport;
+      'account-erasure': TaskAccountErasure;
+      'favorites-cleanup': TaskFavoritesCleanup;
+      'cms-user-sync': TaskCmsUserSync;
       schedulePublish: TaskSchedulePublish;
       inline: {
         input: unknown;
@@ -330,8 +308,8 @@ export interface User {
   /**
    * admin/editor/author can sign in to /admin; member is an app user only. Saving updates their staff access.
    */
-  roles: ("admin" | "editor" | "author" | "member")[];
-  memberStatus?: ("active" | "invited" | "suspended" | "banned") | null;
+  roles: ('admin' | 'editor' | 'author' | 'member')[];
+  memberStatus?: ('active' | 'invited' | 'suspended' | 'banned') | null;
   /**
    * Public handle / profile URL slug.
    */
@@ -369,7 +347,7 @@ export interface User {
    * Member interests / skills (CMS tags).
    */
   interests?: (number | Tag)[] | null;
-  profileVisibility?: ("public" | "members" | "private") | null;
+  profileVisibility?: ('public' | 'members' | 'private') | null;
   /**
    * How they found the app (optional).
    */
@@ -400,57 +378,56 @@ export interface User {
    */
   timezone?:
     | (
-        | "Pacific/Midway"
-        | "Pacific/Niue"
-        | "Pacific/Honolulu"
-        | "Pacific/Rarotonga"
-        | "America/Anchorage"
-        | "Pacific/Gambier"
-        | "America/Los_Angeles"
-        | "America/Tijuana"
-        | "America/Denver"
-        | "America/Phoenix"
-        | "America/Chicago"
-        | "America/Guatemala"
-        | "America/New_York"
-        | "America/Bogota"
-        | "America/Caracas"
-        | "America/Santiago"
-        | "America/Buenos_Aires"
-        | "America/Sao_Paulo"
-        | "Atlantic/South_Georgia"
-        | "Atlantic/Azores"
-        | "Atlantic/Cape_Verde"
-        | "Europe/London"
-        | "Europe/Berlin"
-        | "Africa/Lagos"
-        | "Europe/Athens"
-        | "Africa/Cairo"
-        | "Europe/Moscow"
-        | "Asia/Riyadh"
-        | "Asia/Dubai"
-        | "Asia/Baku"
-        | "Asia/Karachi"
-        | "Asia/Tashkent"
-        | "Asia/Calcutta"
-        | "Asia/Dhaka"
-        | "Asia/Almaty"
-        | "Asia/Jakarta"
-        | "Asia/Bangkok"
-        | "Asia/Shanghai"
-        | "Asia/Singapore"
-        | "Asia/Tokyo"
-        | "Asia/Seoul"
-        | "Australia/Brisbane"
-        | "Australia/Sydney"
-        | "Pacific/Guam"
-        | "Pacific/Noumea"
-        | "Pacific/Auckland"
-        | "Pacific/Fiji"
+        | 'Pacific/Midway'
+        | 'Pacific/Niue'
+        | 'Pacific/Honolulu'
+        | 'Pacific/Rarotonga'
+        | 'America/Anchorage'
+        | 'Pacific/Gambier'
+        | 'America/Los_Angeles'
+        | 'America/Tijuana'
+        | 'America/Denver'
+        | 'America/Phoenix'
+        | 'America/Chicago'
+        | 'America/Guatemala'
+        | 'America/New_York'
+        | 'America/Bogota'
+        | 'America/Caracas'
+        | 'America/Santiago'
+        | 'America/Buenos_Aires'
+        | 'America/Sao_Paulo'
+        | 'Atlantic/South_Georgia'
+        | 'Atlantic/Azores'
+        | 'Atlantic/Cape_Verde'
+        | 'Europe/London'
+        | 'Europe/Berlin'
+        | 'Africa/Lagos'
+        | 'Europe/Athens'
+        | 'Africa/Cairo'
+        | 'Europe/Moscow'
+        | 'Asia/Riyadh'
+        | 'Asia/Dubai'
+        | 'Asia/Baku'
+        | 'Asia/Karachi'
+        | 'Asia/Tashkent'
+        | 'Asia/Calcutta'
+        | 'Asia/Dhaka'
+        | 'Asia/Almaty'
+        | 'Asia/Jakarta'
+        | 'Asia/Bangkok'
+        | 'Asia/Shanghai'
+        | 'Asia/Singapore'
+        | 'Asia/Tokyo'
+        | 'Asia/Seoul'
+        | 'Australia/Brisbane'
+        | 'Australia/Sydney'
+        | 'Pacific/Guam'
+        | 'Pacific/Noumea'
+        | 'Pacific/Auckland'
+        | 'Pacific/Fiji'
       )
     | null;
-  preferredLanguage?:
-    ("en" | "es" | "fr" | "de" | "pt" | "it" | "ja" | "ko" | "zh") | null;
+  preferredLanguage?: ('en' | 'es' | 'fr' | 'de' | 'pt' | 'it' | 'ja' | 'ko' | 'zh') | null;
   /**
    * Optional billing address.
    */
@@ -468,7 +445,7 @@ export interface User {
   smsOptIn?: boolean | null;
   marketingOptIn?: boolean | null;
   notificationPreferences?: {
-    emailDigest?: ("off" | "daily" | "weekly") | null;
+    emailDigest?: ('off' | 'daily' | 'weekly') | null;
     communityReplies?: boolean | null;
     mentions?: boolean | null;
     directMessages?: boolean | null;
@@ -493,7 +470,7 @@ export interface User {
   updatedAt: string;
   createdAt: string;
   deletedAt?: string | null;
-  collection: "users";
+  collection: 'users';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -601,43 +578,43 @@ export interface FolderInterface {
   documentsAndFolders?: {
     docs?: (
       | {
-          relationTo?: "payload-folders";
+          relationTo?: 'payload-folders';
           value: number | FolderInterface;
         }
       | {
-          relationTo?: "media";
+          relationTo?: 'media';
           value: number | Media;
         }
       | {
-          relationTo?: "posts";
+          relationTo?: 'posts';
           value: number | Post;
         }
       | {
-          relationTo?: "videos";
+          relationTo?: 'videos';
           value: number | Video;
         }
       | {
-          relationTo?: "audio";
+          relationTo?: 'audio';
           value: number | Audio;
         }
       | {
-          relationTo?: "photos";
+          relationTo?: 'photos';
           value: number | Photo;
         }
       | {
-          relationTo?: "series";
+          relationTo?: 'series';
           value: number | Series;
         }
       | {
-          relationTo?: "lessons";
+          relationTo?: 'lessons';
           value: number | Lesson;
         }
       | {
-          relationTo?: "locations";
+          relationTo?: 'locations';
           value: number | Location;
         }
       | {
-          relationTo?: "events";
+          relationTo?: 'events';
           value: number | Event;
         }
     )[];
@@ -645,18 +622,7 @@ export interface FolderInterface {
     totalDocs?: number;
   };
   folderType?:
-    | (
-        | "media"
-        | "posts"
-        | "videos"
-        | "audio"
-        | "photos"
-        | "series"
-        | "lessons"
-        | "locations"
-        | "events"
-      )[]
-    | null;
+    ('media' | 'posts' | 'videos' | 'audio' | 'photos' | 'series' | 'lessons' | 'locations' | 'events')[] | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -680,8 +646,8 @@ export interface Post {
         version: number;
         [k: string]: unknown;
       }[];
-      direction: ("ltr" | "rtl") | null;
-      format: "left" | "start" | "center" | "right" | "end" | "justify" | "";
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
       indent: number;
       version: number;
     };
@@ -715,7 +681,7 @@ export interface Post {
   /**
    * Who can view this content in the app.
    */
-  accessLevel?: ("public" | "members" | "premium") | null;
+  accessLevel?: ('public' | 'members' | 'premium') | null;
   /**
    * Pin to home/feed.
    */
@@ -766,7 +732,7 @@ export interface Post {
   updatedAt: string;
   createdAt: string;
   deletedAt?: string | null;
-  _status?: ("draft" | "published") | null;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -812,31 +778,31 @@ export interface Comment {
   author: number | User;
   target:
     | {
-        relationTo: "community-posts";
+        relationTo: 'community-posts';
         value: number | CommunityPost;
       }
     | {
-        relationTo: "posts";
+        relationTo: 'posts';
         value: number | Post;
       }
     | {
-        relationTo: "videos";
+        relationTo: 'videos';
         value: number | Video;
       }
     | {
-        relationTo: "audio";
+        relationTo: 'audio';
         value: number | Audio;
       }
     | {
-        relationTo: "photos";
+        relationTo: 'photos';
         value: number | Photo;
       }
     | {
-        relationTo: "events";
+        relationTo: 'events';
         value: number | Event;
       }
     | {
-        relationTo: "locations";
+        relationTo: 'locations';
         value: number | Location;
       };
   /**
@@ -844,7 +810,7 @@ export interface Comment {
    */
   parent?: (number | null) | Comment;
   body: string;
-  status: "pending" | "approved" | "spam";
+  status: 'pending' | 'approved' | 'spam';
   reportCount?: number | null;
   isPinned?: boolean | null;
   editedAt?: string | null;
@@ -880,8 +846,8 @@ export interface CommunityPost {
         version: number;
         [k: string]: unknown;
       }[];
-      direction: ("ltr" | "rtl") | null;
-      format: "left" | "start" | "center" | "right" | "end" | "justify" | "";
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
       indent: number;
       version: number;
     };
@@ -892,34 +858,34 @@ export interface CommunityPost {
    */
   media?: (number | Media)[] | null;
   link?: {
-    type?: ("page" | "appScreen" | "url") | null;
+    type?: ('page' | 'appScreen' | 'url') | null;
     page?:
       | ({
-          relationTo: "pages";
+          relationTo: 'pages';
           value: number | Page;
         } | null)
       | ({
-          relationTo: "posts";
+          relationTo: 'posts';
           value: number | Post;
         } | null)
       | ({
-          relationTo: "videos";
+          relationTo: 'videos';
           value: number | Video;
         } | null)
       | ({
-          relationTo: "audio";
+          relationTo: 'audio';
           value: number | Audio;
         } | null)
       | ({
-          relationTo: "series";
+          relationTo: 'series';
           value: number | Series;
         } | null)
       | ({
-          relationTo: "events";
+          relationTo: 'events';
           value: number | Event;
         } | null)
       | ({
-          relationTo: "locations";
+          relationTo: 'locations';
           value: number | Location;
         } | null);
     /**
@@ -941,7 +907,7 @@ export interface CommunityPost {
   /**
    * Who can view this content in the app.
    */
-  accessLevel?: ("public" | "members" | "premium") | null;
+  accessLevel?: ('public' | 'members' | 'premium') | null;
   /**
    * Allow members to comment on this item.
    */
@@ -950,7 +916,7 @@ export interface CommunityPost {
    * Mods pin to top.
    */
   pinned?: boolean | null;
-  status: "published" | "pending" | "hidden" | "flagged";
+  status: 'published' | 'pending' | 'hidden' | 'flagged';
   reportCount?: number | null;
   authorName?: string | null;
   publishedAt?: string | null;
@@ -992,12 +958,12 @@ export interface CommunitySpace {
   /**
    * Who can view this content in the app.
    */
-  accessLevel?: ("public" | "members" | "premium") | null;
+  accessLevel?: ('public' | 'members' | 'premium') | null;
   /**
    * Plans that unlock a premium space.
    */
   requiredPlans?: (number | ModBillingPlan)[] | null;
-  postingPolicy: "members" | "moderators" | "admins";
+  postingPolicy: 'members' | 'moderators' | 'admins';
   moderators?: (number | User)[] | null;
   /**
    * Sidebar order within the group.
@@ -1028,7 +994,7 @@ export interface SpaceGroup {
   /**
    * Who can view this content in the app.
    */
-  accessLevel?: ("public" | "members" | "premium") | null;
+  accessLevel?: ('public' | 'members' | 'premium') | null;
   /**
    * Plans that unlock this group.
    */
@@ -1066,20 +1032,20 @@ export interface ModBillingPlan {
   /**
    * Content accessLevel this plan unlocks.
    */
-  entitlement?: ("members" | "premium") | null;
+  entitlement?: ('members' | 'premium') | null;
   /**
    * Don't push this plan to the payment providers on save.
    */
   skipSync?: boolean | null;
-  syncStatus?: ("unsynced" | "synced" | "error") | null;
+  syncStatus?: ('unsynced' | 'synced' | 'error') | null;
   syncError?: string | null;
   lastSyncedAt?: string | null;
   name: string;
   active?: boolean | null;
   slug: string;
   description?: string | null;
-  pricingType: "recurring" | "one_time";
-  interval?: ("day" | "week" | "month" | "year") | null;
+  pricingType: 'recurring' | 'one_time';
+  interval?: ('day' | 'week' | 'month' | 'year') | null;
   /**
    * Bill every N intervals, e.g. every 3 months.
    */
@@ -1105,7 +1071,7 @@ export interface ModBillingPlan {
      * Intro-period price, e.g. 100 = $1.00.
      */
     introAmount?: number | null;
-    introInterval?: ("month" | "year") | null;
+    introInterval?: ('month' | 'year') | null;
     /**
      * How many intro periods the discount lasts (1 = first invoice only; years count as 12 months each).
      */
@@ -1157,8 +1123,7 @@ export interface ModBillingSubscription {
   user?: (number | null) | User;
   plan?: (number | null) | ModBillingPlan;
   coupon?: (number | null) | ModBillingCoupon;
-  status:
-    "trialing" | "active" | "past_due" | "canceled" | "churned" | "paused";
+  status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'churned' | 'paused';
   startedAt?: string | null;
   trialEndsAt?: string | null;
   currentPeriodStart?: string | null;
@@ -1198,22 +1163,22 @@ export interface ModBillingCoupon {
    * Don't push this coupon to Stripe on save.
    */
   skipSync?: boolean | null;
-  syncStatus?: ("unsynced" | "synced" | "error") | null;
+  syncStatus?: ('unsynced' | 'synced' | 'error') | null;
   syncError?: string | null;
   lastSyncedAt?: string | null;
   name: string;
-  discountType: "percent_off" | "amount_off";
+  discountType: 'percent_off' | 'amount_off';
   /**
    * Percent (1–100) or amount in cents.
    */
   value: number;
   currency?: string | null;
-  duration: "once" | "repeating" | "forever";
+  duration: 'once' | 'repeating' | 'forever';
   durationCount?: number | null;
   /**
    * Years are converted to months for Stripe (2 years → 24 months).
    */
-  durationUnit?: ("month" | "year") | null;
+  durationUnit?: ('month' | 'year') | null;
   /**
    * Total redemptions allowed.
    */
@@ -1251,17 +1216,7 @@ export interface Page {
   id: number;
   title: string;
   slug: string;
-  layout?:
-    | (
-        | HeroBlock
-        | ItemsBlock
-        | LogosBlock
-        | StatsBlock
-        | CTABlock
-        | FAQBlock
-        | ProseBlock
-      )[]
-    | null;
+  layout?: (HeroBlock | ItemsBlock | LogosBlock | StatsBlock | CTABlock | FAQBlock | ProseBlock)[] | null;
   showInNav?: boolean | null;
   publishedAt?: string | null;
   /**
@@ -1308,7 +1263,7 @@ export interface Page {
   updatedAt: string;
   createdAt: string;
   deletedAt?: string | null;
-  _status?: ("draft" | "published") | null;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1327,7 +1282,7 @@ export interface HeroBlock {
     | {
         text: string;
         href: string;
-        variant?: ("default" | "glow" | "outline" | "secondary") | null;
+        variant?: ('default' | 'glow' | 'outline' | 'secondary') | null;
         id?: string | null;
       }[]
     | null;
@@ -1341,7 +1296,7 @@ export interface HeroBlock {
   mockupDark?: (number | null) | Media;
   id?: string | null;
   blockName?: string | null;
-  blockType: "hero";
+  blockType: 'hero';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1362,26 +1317,26 @@ export interface ItemsBlock {
          */
         icon?:
           | (
-              | "Rocket"
-              | "Zap"
-              | "ShieldCheck"
-              | "Sparkles"
-              | "Star"
-              | "Heart"
-              | "Globe"
-              | "Code"
-              | "Layers"
-              | "Smartphone"
-              | "Palette"
-              | "Lock"
-              | "Check"
-              | "Cloud"
-              | "Bell"
-              | "Settings"
-              | "Users"
-              | "ChartBar"
-              | "Search"
-              | "Mail"
+              | 'Rocket'
+              | 'Zap'
+              | 'ShieldCheck'
+              | 'Sparkles'
+              | 'Star'
+              | 'Heart'
+              | 'Globe'
+              | 'Code'
+              | 'Layers'
+              | 'Smartphone'
+              | 'Palette'
+              | 'Lock'
+              | 'Check'
+              | 'Cloud'
+              | 'Bell'
+              | 'Settings'
+              | 'Users'
+              | 'ChartBar'
+              | 'Search'
+              | 'Mail'
             )
           | null;
         id?: string | null;
@@ -1389,7 +1344,7 @@ export interface ItemsBlock {
     | null;
   id?: string | null;
   blockName?: string | null;
-  blockType: "items";
+  blockType: 'items';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1410,7 +1365,7 @@ export interface LogosBlock {
     | null;
   id?: string | null;
   blockName?: string | null;
-  blockType: "logos";
+  blockType: 'logos';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1428,7 +1383,7 @@ export interface StatsBlock {
     | null;
   id?: string | null;
   blockName?: string | null;
-  blockType: "stats";
+  blockType: 'stats';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1440,13 +1395,13 @@ export interface CTABlock {
     | {
         text: string;
         href: string;
-        variant?: ("default" | "glow" | "outline" | "secondary") | null;
+        variant?: ('default' | 'glow' | 'outline' | 'secondary') | null;
         id?: string | null;
       }[]
     | null;
   id?: string | null;
   blockName?: string | null;
-  blockType: "cta";
+  blockType: 'cta';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1463,7 +1418,7 @@ export interface FAQBlock {
     | null;
   id?: string | null;
   blockName?: string | null;
-  blockType: "faq";
+  blockType: 'faq';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1479,8 +1434,8 @@ export interface ProseBlock {
         version: number;
         [k: string]: unknown;
       }[];
-      direction: ("ltr" | "rtl") | null;
-      format: "left" | "start" | "center" | "right" | "end" | "justify" | "";
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
       indent: number;
       version: number;
     };
@@ -1488,7 +1443,7 @@ export interface ProseBlock {
   };
   id?: string | null;
   blockName?: string | null;
-  blockType: "prose";
+  blockType: 'prose';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1510,8 +1465,8 @@ export interface Video {
         version: number;
         [k: string]: unknown;
       }[];
-      direction: ("ltr" | "rtl") | null;
-      format: "left" | "start" | "center" | "right" | "end" | "justify" | "";
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
       indent: number;
       version: number;
     };
@@ -1520,12 +1475,12 @@ export interface Video {
   /**
    * Drives the player and which feed this is in.
    */
-  orientation: "landscape" | "vertical";
+  orientation: 'landscape' | 'vertical';
   /**
    * Defaults from orientation when unset.
    */
-  aspectRatio?: ("16:9" | "9:16" | "1:1" | "4:5") | null;
-  sourceType: "url" | "upload" | "mux" | "youtube" | "vimeo";
+  aspectRatio?: ('16:9' | '9:16' | '1:1' | '4:5') | null;
+  sourceType: 'url' | 'upload' | 'mux' | 'youtube' | 'vimeo';
   /**
    * External URL or provider playback ID.
    */
@@ -1550,8 +1505,7 @@ export interface Video {
   captions?:
     | {
         label: string;
-        language?:
-          ("en" | "es" | "fr" | "de" | "pt" | "it" | "ja" | "ko" | "zh") | null;
+        language?: ('en' | 'es' | 'fr' | 'de' | 'pt' | 'it' | 'ja' | 'ko' | 'zh') | null;
         file?: (number | null) | Media;
         id?: string | null;
       }[]
@@ -1577,7 +1531,7 @@ export interface Video {
   /**
    * Who can view this content in the app.
    */
-  accessLevel?: ("public" | "members" | "premium") | null;
+  accessLevel?: ('public' | 'members' | 'premium') | null;
   featured?: boolean | null;
   /**
    * Allow members to comment on this item.
@@ -1620,7 +1574,7 @@ export interface Video {
   updatedAt: string;
   createdAt: string;
   deletedAt?: string | null;
-  _status?: ("draft" | "published") | null;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1630,7 +1584,7 @@ export interface Series {
   id: number;
   title: string;
   slug: string;
-  kind: "series" | "season" | "playlist" | "album" | "podcast" | "course";
+  kind: 'series' | 'season' | 'playlist' | 'album' | 'podcast' | 'course';
   description?: {
     root: {
       type: string;
@@ -1639,8 +1593,8 @@ export interface Series {
         version: number;
         [k: string]: unknown;
       }[];
-      direction: ("ltr" | "rtl") | null;
-      format: "left" | "start" | "center" | "right" | "end" | "justify" | "";
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
       indent: number;
       version: number;
     };
@@ -1657,7 +1611,7 @@ export interface Series {
   /**
    * Who can view this content in the app.
    */
-  accessLevel?: ("public" | "members" | "premium") | null;
+  accessLevel?: ('public' | 'members' | 'premium') | null;
   /**
    * Plans that unlock this show/course (premium gating).
    */
@@ -1677,52 +1631,52 @@ export interface Series {
     artwork?: (number | null) | Media;
     category?:
       | (
-          | "arts"
-          | "business"
-          | "comedy"
-          | "education"
-          | "fiction"
-          | "government"
-          | "health_fitness"
-          | "history"
-          | "kids_family"
-          | "leisure"
-          | "music"
-          | "news"
-          | "religion_spirituality"
-          | "science"
-          | "society_culture"
-          | "sports"
-          | "tv_film"
-          | "technology"
-          | "true_crime"
+          | 'arts'
+          | 'business'
+          | 'comedy'
+          | 'education'
+          | 'fiction'
+          | 'government'
+          | 'health_fitness'
+          | 'history'
+          | 'kids_family'
+          | 'leisure'
+          | 'music'
+          | 'news'
+          | 'religion_spirituality'
+          | 'science'
+          | 'society_culture'
+          | 'sports'
+          | 'tv_film'
+          | 'technology'
+          | 'true_crime'
         )
       | null;
     subcategory?:
       | (
-          | "arts"
-          | "business"
-          | "comedy"
-          | "education"
-          | "fiction"
-          | "government"
-          | "health_fitness"
-          | "history"
-          | "kids_family"
-          | "leisure"
-          | "music"
-          | "news"
-          | "religion_spirituality"
-          | "science"
-          | "society_culture"
-          | "sports"
-          | "tv_film"
-          | "technology"
-          | "true_crime"
+          | 'arts'
+          | 'business'
+          | 'comedy'
+          | 'education'
+          | 'fiction'
+          | 'government'
+          | 'health_fitness'
+          | 'history'
+          | 'kids_family'
+          | 'leisure'
+          | 'music'
+          | 'news'
+          | 'religion_spirituality'
+          | 'science'
+          | 'society_culture'
+          | 'sports'
+          | 'tv_film'
+          | 'technology'
+          | 'true_crime'
         )
       | null;
     explicit?: boolean | null;
-    type?: ("episodic" | "serial") | null;
+    type?: ('episodic' | 'serial') | null;
     language?: string | null;
     copyright?: string | null;
     /**
@@ -1753,7 +1707,7 @@ export interface Series {
     instructors?: (number | User)[] | null;
     summary?: string | null;
     dripEnabled?: boolean | null;
-    dripAnchor?: ("enrollment" | "fixed_date") | null;
+    dripAnchor?: ('enrollment' | 'fixed_date') | null;
     certificateOnComplete?: boolean | null;
     estimatedHours?: number | null;
   };
@@ -1816,7 +1770,7 @@ export interface Series {
   updatedAt: string;
   createdAt: string;
   deletedAt?: string | null;
-  _status?: ("draft" | "published") | null;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1846,8 +1800,8 @@ export interface Audio {
         version: number;
         [k: string]: unknown;
       }[];
-      direction: ("ltr" | "rtl") | null;
-      format: "left" | "start" | "center" | "right" | "end" | "justify" | "";
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
       indent: number;
       version: number;
     };
@@ -1863,7 +1817,7 @@ export interface Audio {
   duration?: number | null;
   episodeNumber?: number | null;
   seasonNumber?: number | null;
-  episodeType?: ("full" | "trailer" | "bonus") | null;
+  episodeType?: ('full' | 'trailer' | 'bonus') | null;
   explicit?: boolean | null;
   transcript?: {
     root: {
@@ -1873,8 +1827,8 @@ export interface Audio {
         version: number;
         [k: string]: unknown;
       }[];
-      direction: ("ltr" | "rtl") | null;
-      format: "left" | "start" | "center" | "right" | "end" | "justify" | "";
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
       indent: number;
       version: number;
     };
@@ -1912,7 +1866,7 @@ export interface Audio {
   /**
    * Who can view this content in the app.
    */
-  accessLevel?: ("public" | "members" | "premium") | null;
+  accessLevel?: ('public' | 'members' | 'premium') | null;
   featured?: boolean | null;
   /**
    * Allow members to comment on this item.
@@ -1995,8 +1949,8 @@ export interface Lesson {
         version: number;
         [k: string]: unknown;
       }[];
-      direction: ("ltr" | "rtl") | null;
-      format: "left" | "start" | "center" | "right" | "end" | "justify" | "";
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
       indent: number;
       version: number;
     };
@@ -2016,10 +1970,10 @@ export interface Lesson {
    * Free preview — bypasses gating.
    */
   preview?: boolean | null;
-  dripType?: ("none" | "scheduled" | "relative") | null;
+  dripType?: ('none' | 'scheduled' | 'relative') | null;
   releaseAt?: string | null;
   releaseAfterDays?: number | null;
-  dripMode?: ("gate_content" | "notify_only") | null;
+  dripMode?: ('gate_content' | 'notify_only') | null;
   notifyPush?: boolean | null;
   notifyEmail?: boolean | null;
   /**
@@ -2030,7 +1984,7 @@ export interface Lesson {
   updatedAt: string;
   createdAt: string;
   deletedAt?: string | null;
-  _status?: ("draft" | "published") | null;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2052,8 +2006,8 @@ export interface Event {
         version: number;
         [k: string]: unknown;
       }[];
-      direction: ("ltr" | "rtl") | null;
-      format: "left" | "start" | "center" | "right" | "end" | "justify" | "";
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
       indent: number;
       version: number;
     };
@@ -2065,60 +2019,60 @@ export interface Event {
   allDay?: boolean | null;
   timezone?:
     | (
-        | "Pacific/Midway"
-        | "Pacific/Niue"
-        | "Pacific/Honolulu"
-        | "Pacific/Rarotonga"
-        | "America/Anchorage"
-        | "Pacific/Gambier"
-        | "America/Los_Angeles"
-        | "America/Tijuana"
-        | "America/Denver"
-        | "America/Phoenix"
-        | "America/Chicago"
-        | "America/Guatemala"
-        | "America/New_York"
-        | "America/Bogota"
-        | "America/Caracas"
-        | "America/Santiago"
-        | "America/Buenos_Aires"
-        | "America/Sao_Paulo"
-        | "Atlantic/South_Georgia"
-        | "Atlantic/Azores"
-        | "Atlantic/Cape_Verde"
-        | "Europe/London"
-        | "Europe/Berlin"
-        | "Africa/Lagos"
-        | "Europe/Athens"
-        | "Africa/Cairo"
-        | "Europe/Moscow"
-        | "Asia/Riyadh"
-        | "Asia/Dubai"
-        | "Asia/Baku"
-        | "Asia/Karachi"
-        | "Asia/Tashkent"
-        | "Asia/Calcutta"
-        | "Asia/Dhaka"
-        | "Asia/Almaty"
-        | "Asia/Jakarta"
-        | "Asia/Bangkok"
-        | "Asia/Shanghai"
-        | "Asia/Singapore"
-        | "Asia/Tokyo"
-        | "Asia/Seoul"
-        | "Australia/Brisbane"
-        | "Australia/Sydney"
-        | "Pacific/Guam"
-        | "Pacific/Noumea"
-        | "Pacific/Auckland"
-        | "Pacific/Fiji"
+        | 'Pacific/Midway'
+        | 'Pacific/Niue'
+        | 'Pacific/Honolulu'
+        | 'Pacific/Rarotonga'
+        | 'America/Anchorage'
+        | 'Pacific/Gambier'
+        | 'America/Los_Angeles'
+        | 'America/Tijuana'
+        | 'America/Denver'
+        | 'America/Phoenix'
+        | 'America/Chicago'
+        | 'America/Guatemala'
+        | 'America/New_York'
+        | 'America/Bogota'
+        | 'America/Caracas'
+        | 'America/Santiago'
+        | 'America/Buenos_Aires'
+        | 'America/Sao_Paulo'
+        | 'Atlantic/South_Georgia'
+        | 'Atlantic/Azores'
+        | 'Atlantic/Cape_Verde'
+        | 'Europe/London'
+        | 'Europe/Berlin'
+        | 'Africa/Lagos'
+        | 'Europe/Athens'
+        | 'Africa/Cairo'
+        | 'Europe/Moscow'
+        | 'Asia/Riyadh'
+        | 'Asia/Dubai'
+        | 'Asia/Baku'
+        | 'Asia/Karachi'
+        | 'Asia/Tashkent'
+        | 'Asia/Calcutta'
+        | 'Asia/Dhaka'
+        | 'Asia/Almaty'
+        | 'Asia/Jakarta'
+        | 'Asia/Bangkok'
+        | 'Asia/Shanghai'
+        | 'Asia/Singapore'
+        | 'Asia/Tokyo'
+        | 'Asia/Seoul'
+        | 'Australia/Brisbane'
+        | 'Australia/Sydney'
+        | 'Pacific/Guam'
+        | 'Pacific/Noumea'
+        | 'Pacific/Auckland'
+        | 'Pacific/Fiji'
       )
     | null;
   /**
    * Optional recurring schedule.
    */
   recurrence?: {
-    frequency?: ("daily" | "weekly" | "monthly" | "yearly") | null;
+    frequency?: ('daily' | 'weekly' | 'monthly' | 'yearly') | null;
     /**
      * Every N periods.
      */
@@ -2132,13 +2086,13 @@ export interface Event {
   gallery?: (number | Media)[] | null;
   isFree?: boolean | null;
   price?: number | null;
-  currency?: ("usd" | "eur" | "gbp" | "cad" | "aud") | null;
+  currency?: ('usd' | 'eur' | 'gbp' | 'cad' | 'aud') | null;
   ticketUrl?: string | null;
   capacity?: number | null;
   registrationRequired?: boolean | null;
   organizer?: (number | null) | User;
   speakers?: (number | User)[] | null;
-  eventStatus?: ("scheduled" | "rescheduled" | "cancelled" | "sold_out") | null;
+  eventStatus?: ('scheduled' | 'rescheduled' | 'cancelled' | 'sold_out') | null;
   featured?: boolean | null;
   /**
    * Allow members to comment on this item.
@@ -2189,7 +2143,7 @@ export interface Event {
   updatedAt: string;
   createdAt: string;
   deletedAt?: string | null;
-  _status?: ("draft" | "published") | null;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2211,8 +2165,8 @@ export interface Location {
         version: number;
         [k: string]: unknown;
       }[];
-      direction: ("ltr" | "rtl") | null;
-      format: "left" | "start" | "center" | "right" | "end" | "justify" | "";
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
       indent: number;
       version: number;
     };
@@ -2233,14 +2187,7 @@ export interface Location {
   coordinates?: [number, number] | null;
   hours?:
     | {
-        day:
-          | "monday"
-          | "tuesday"
-          | "wednesday"
-          | "thursday"
-          | "friday"
-          | "saturday"
-          | "sunday";
+        day: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
         opensAt?: string | null;
         closesAt?: string | null;
         closed?: boolean | null;
@@ -2250,19 +2197,9 @@ export interface Location {
   phone?: string | null;
   email?: string | null;
   website?: string | null;
-  priceRange?: ("$" | "$$" | "$$$" | "$$$$") | null;
+  priceRange?: ('$' | '$$' | '$$$' | '$$$$') | null;
   amenities?:
-    | (
-        | "wifi"
-        | "parking"
-        | "accessible"
-        | "pets"
-        | "outdoor_seating"
-        | "restrooms"
-        | "food"
-        | "drinks"
-      )[]
-    | null;
+    ('wifi' | 'parking' | 'accessible' | 'pets' | 'outdoor_seating' | 'restrooms' | 'food' | 'drinks')[] | null;
   featuredImage?: (number | null) | Media;
   gallery?: (number | Media)[] | null;
   locationType?: (number | null) | Category;
@@ -2331,7 +2268,7 @@ export interface Location {
   updatedAt: string;
   createdAt: string;
   deletedAt?: string | null;
-  _status?: ("draft" | "published") | null;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2345,11 +2282,11 @@ export interface Review {
    */
   target?:
     | ({
-        relationTo: "locations";
+        relationTo: 'locations';
         value: number | Location;
       } | null)
     | ({
-        relationTo: "events";
+        relationTo: 'events';
         value: number | Event;
       } | null);
   rating: number;
@@ -2360,7 +2297,7 @@ export interface Review {
   authorTitle?: string | null;
   body?: string | null;
   photos?: (number | Media)[] | null;
-  status: "pending" | "approved" | "rejected";
+  status: 'pending' | 'approved' | 'rejected';
   helpfulCount?: number | null;
   verifiedVisit?: boolean | null;
   /**
@@ -2386,24 +2323,17 @@ export interface Report {
   reporter: number | User;
   target:
     | {
-        relationTo: "community-posts";
+        relationTo: 'community-posts';
         value: number | CommunityPost;
       }
     | {
-        relationTo: "comments";
+        relationTo: 'comments';
         value: number | Comment;
       };
-  reason:
-    | "spam"
-    | "harassment"
-    | "hate"
-    | "nudity"
-    | "violence"
-    | "misinformation"
-    | "other";
+  reason: 'spam' | 'harassment' | 'hate' | 'nudity' | 'violence' | 'misinformation' | 'other';
   details?: string | null;
-  status: "open" | "reviewing" | "actioned" | "dismissed";
-  resolution?: ("none" | "hidden" | "deleted" | "warned" | "banned") | null;
+  status: 'open' | 'reviewing' | 'actioned' | 'dismissed';
+  resolution?: ('none' | 'hidden' | 'deleted' | 'warned' | 'banned') | null;
   resolvedBy?: (number | null) | User;
   resolvedAt?: string | null;
   updatedAt: string;
@@ -2434,7 +2364,7 @@ export interface Photo {
   /**
    * Who can view this content in the app.
    */
-  accessLevel?: ("public" | "members" | "premium") | null;
+  accessLevel?: ('public' | 'members' | 'premium') | null;
   featured?: boolean | null;
   /**
    * Allow members to comment on this item.
@@ -2503,8 +2433,8 @@ export interface Enrollment {
    * Anchor for relative drip.
    */
   enrolledAt: string;
-  status: "active" | "completed" | "refunded" | "expired";
-  source?: ("purchase" | "subscription" | "free" | "manual") | null;
+  status: 'active' | 'completed' | 'refunded' | 'expired';
+  source?: ('purchase' | 'subscription' | 'free' | 'manual') | null;
   /**
    * When access comes from a plan.
    */
@@ -2567,34 +2497,34 @@ export interface Onboarding {
      */
     label?: string | null;
     destination?: {
-      type?: ("page" | "appScreen" | "url") | null;
+      type?: ('page' | 'appScreen' | 'url') | null;
       page?:
         | ({
-            relationTo: "pages";
+            relationTo: 'pages';
             value: number | Page;
           } | null)
         | ({
-            relationTo: "posts";
+            relationTo: 'posts';
             value: number | Post;
           } | null)
         | ({
-            relationTo: "videos";
+            relationTo: 'videos';
             value: number | Video;
           } | null)
         | ({
-            relationTo: "audio";
+            relationTo: 'audio';
             value: number | Audio;
           } | null)
         | ({
-            relationTo: "series";
+            relationTo: 'series';
             value: number | Series;
           } | null)
         | ({
-            relationTo: "events";
+            relationTo: 'events';
             value: number | Event;
           } | null)
         | ({
-            relationTo: "locations";
+            relationTo: 'locations';
             value: number | Location;
           } | null);
       /**
@@ -2619,34 +2549,34 @@ export interface Onboarding {
   secondaryCta?: {
     label?: string | null;
     destination?: {
-      type?: ("page" | "appScreen" | "url") | null;
+      type?: ('page' | 'appScreen' | 'url') | null;
       page?:
         | ({
-            relationTo: "pages";
+            relationTo: 'pages';
             value: number | Page;
           } | null)
         | ({
-            relationTo: "posts";
+            relationTo: 'posts';
             value: number | Post;
           } | null)
         | ({
-            relationTo: "videos";
+            relationTo: 'videos';
             value: number | Video;
           } | null)
         | ({
-            relationTo: "audio";
+            relationTo: 'audio';
             value: number | Audio;
           } | null)
         | ({
-            relationTo: "series";
+            relationTo: 'series';
             value: number | Series;
           } | null)
         | ({
-            relationTo: "events";
+            relationTo: 'events';
             value: number | Event;
           } | null)
         | ({
-            relationTo: "locations";
+            relationTo: 'locations';
             value: number | Location;
           } | null);
       /**
@@ -2688,7 +2618,7 @@ export interface Banner {
   body?: string | null;
   image?: (number | null) | Media;
   icon?: string | null;
-  variant: "info" | "promo" | "warning" | "announcement";
+  variant: 'info' | 'promo' | 'warning' | 'announcement';
   /**
    * Optional CTA.
    */
@@ -2702,14 +2632,14 @@ export interface Banner {
      */
     url?: string | null;
     newTab?: boolean | null;
-    appearance?: ("default" | "button" | "outline" | "link") | null;
+    appearance?: ('default' | 'button' | 'outline' | 'link') | null;
   };
-  placement: "home" | "global" | "content" | "onboarding";
+  placement: 'home' | 'global' | 'content' | 'onboarding';
   /**
    * Empty = all platforms.
    */
-  targetPlatform?: ("ios" | "android" | "web")[] | null;
-  audience?: ("all" | "guests" | "members") | null;
+  targetPlatform?: ('ios' | 'android' | 'web')[] | null;
+  audience?: ('all' | 'guests' | 'members') | null;
   startsAt?: string | null;
   endsAt?: string | null;
   /**
@@ -2749,12 +2679,12 @@ export interface Notification {
     | number
     | boolean
     | null;
-  channel: ("push" | "email" | "sms" | "in_app")[];
+  channel: ('push' | 'email' | 'sms' | 'in_app')[];
   /**
    * Short SMS variant (≤160 chars). Sends require smsOptIn + phone.
    */
   smsBody?: string | null;
-  audience: "all" | "segment" | "users";
+  audience: 'all' | 'segment' | 'users';
   /**
    * Filter criteria for the send job.
    */
@@ -2773,7 +2703,7 @@ export interface Notification {
    * Set by the send job.
    */
   sentAt?: string | null;
-  status: "draft" | "scheduled" | "sending" | "sent" | "failed";
+  status: 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';
   /**
    * Send attempts. Marked failed after 5.
    */
@@ -2800,8 +2730,8 @@ export interface Legal {
         version: number;
         [k: string]: unknown;
       }[];
-      direction: ("ltr" | "rtl") | null;
-      format: "left" | "start" | "center" | "right" | "end" | "justify" | "";
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
       indent: number;
       version: number;
     };
@@ -2823,7 +2753,7 @@ export interface Legal {
   updatedAt: string;
   createdAt: string;
   deletedAt?: string | null;
-  _status?: ("draft" | "published") | null;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * Installed modules. Disabling a module hides its menu items and blocks its pages and API without uninstalling it.
@@ -2856,7 +2786,7 @@ export interface KitModule {
     /**
      * Which billing cadence the pricing page preselects.
      */
-    billingToggleDefault?: ("monthly" | "annual") | null;
+    billingToggleDefault?: ('monthly' | 'annual') | null;
     /**
      * Pick up to three paid plans to feature, in display order. Empty = all active plans by display order.
      */
@@ -3001,20 +2931,20 @@ export interface KitModule {
           label?: string | null;
           channels?:
             | (
-                | "web"
-                | "native"
-                | "slack"
-                | "sms-sendblue"
-                | "telegram"
-                | "whatsapp"
-                | "discord"
-                | "teams"
-                | "google-chat"
-                | "messenger"
-                | "email"
-                | "twilio-sms"
-                | "github"
-                | "linear"
+                | 'web'
+                | 'native'
+                | 'slack'
+                | 'sms-sendblue'
+                | 'telegram'
+                | 'whatsapp'
+                | 'discord'
+                | 'teams'
+                | 'google-chat'
+                | 'messenger'
+                | 'email'
+                | 'twilio-sms'
+                | 'github'
+                | 'linear'
               )[]
             | null;
           prompt: string;
@@ -3034,12 +2964,7 @@ export interface KitModule {
      */
     useLlmFallback?: boolean | null;
     llmFallbackModel?:
-      | (
-          | "anthropic/claude-sonnet-4.5"
-          | "anthropic/claude-opus-4.1"
-          | "anthropic/claude-haiku-4.5"
-        )
-      | null;
+      ('anthropic/claude-sonnet-4.5' | 'anthropic/claude-opus-4.1' | 'anthropic/claude-haiku-4.5') | null;
     /**
      * Turns an active skill stays selected before re-routing.
      */
@@ -3096,7 +3021,7 @@ export interface KitModule {
      */
     portalTabs?:
       | {
-          tab: "roadmap" | "feedback" | "changelog";
+          tab: 'roadmap' | 'feedback' | 'changelog';
           label: string;
           enabled?: boolean | null;
           id?: string | null;
@@ -3118,9 +3043,8 @@ export interface KitModule {
            * Set automatically from the name; never changes.
            */
           key?: string | null;
-          type: "open" | "active" | "complete" | "closed";
-          tone?:
-            ("neutral" | "info" | "warning" | "success" | "destructive") | null;
+          type: 'open' | 'active' | 'complete' | 'closed';
+          tone?: ('neutral' | 'info' | 'warning' | 'success' | 'destructive') | null;
           showOnRoadmap?: boolean | null;
           isDefault?: boolean | null;
           notifyVotersByDefault?: boolean | null;
@@ -3141,9 +3065,8 @@ export interface KitModule {
            * Set automatically from the name; never changes.
            */
           key?: string | null;
-          type: "open" | "active" | "complete" | "closed";
-          tone?:
-            ("neutral" | "info" | "warning" | "success" | "destructive") | null;
+          type: 'open' | 'active' | 'complete' | 'closed';
+          tone?: ('neutral' | 'info' | 'warning' | 'success' | 'destructive') | null;
           /**
            * Status key linked posts move to (e.g. planned). Empty = leave posts alone.
            */
@@ -3162,20 +3085,10 @@ export interface KitModule {
            * Set automatically from the name; never changes.
            */
           key?: string | null;
-          kind: "impact" | "effort";
+          kind: 'impact' | 'effort';
           weight: number;
-          source: "manual" | "votes" | "priority" | "tagVoters";
-          scale?:
-            | (
-                | "0-10"
-                | "0-100"
-                | "fibonacci"
-                | "stars"
-                | "checkbox"
-                | "percentage"
-                | "number"
-              )
-            | null;
+          source: 'manual' | 'votes' | 'priority' | 'tagVoters';
+          scale?: ('0-10' | '0-100' | 'fibonacci' | 'stars' | 'checkbox' | 'percentage' | 'number') | null;
           /**
            * e.g. your paid plan names (billing tags voters by plan).
            */
@@ -3202,7 +3115,7 @@ export interface KitModule {
     embedOrigins?: string | null;
     ap?: {
       enabled?: boolean | null;
-      actions?: ("manual" | "automated") | null;
+      actions?: ('manual' | 'automated') | null;
       dedupe?: boolean | null;
       threshold?: number | null;
       mergeAsVotes?: boolean | null;
@@ -3228,9 +3141,9 @@ export interface KitModule {
        */
       map?:
         | {
-            ext: "unstarted" | "started" | "completed" | "canceled";
+            ext: 'unstarted' | 'started' | 'completed' | 'canceled';
             stage: string;
-            direction: "both" | "inbound" | "outbound";
+            direction: 'both' | 'inbound' | 'outbound';
             id?: string | null;
           }[]
         | null;
@@ -3248,8 +3161,7 @@ export interface KitModule {
            * Set automatically from the name; never changes.
            */
           key?: string | null;
-          tone?:
-            ("neutral" | "info" | "warning" | "success" | "destructive") | null;
+          tone?: ('neutral' | 'info' | 'warning' | 'success' | 'destructive') | null;
           id?: string | null;
         }[]
       | null;
@@ -3269,12 +3181,11 @@ export interface KitModule {
     /**
      * Tell staff when a post reaches these vote counts.
      */
-    voteMilestones?:
-      ("5" | "10" | "25" | "50" | "100" | "250" | "500" | "1000")[] | null;
+    voteMilestones?: ('5' | '10' | '25' | '50' | '100' | '250' | '500' | '1000')[] | null;
     /**
      * A summary of new posts, votes, the inbox and what shipped, emailed to staff around 14:00 UTC. Each staff member can opt out in /a/feedback. Needs email (SMTP) to be set up.
      */
-    digest?: ("weekly" | "daily" | "never") | null;
+    digest?: ('weekly' | 'daily' | 'never') | null;
     adapter_feedback_source_chat?: {
       /**
        * Scan new chat messages every 15 minutes. Staff will see the matching messages and the sender's email, so mention this in your privacy policy.
@@ -3302,7 +3213,7 @@ export interface KitModule {
 export interface NavItem {
   id: number;
   _order?: string | null;
-  kind?: ("link" | "group") | null;
+  kind?: ('link' | 'group') | null;
   key: string;
   /**
    * Empty for core entries.
@@ -3318,11 +3229,11 @@ export interface NavItem {
    * Icon name from the kit's icon map (e.g. IconMessageCircle). Unknown names fall back to a default icon.
    */
   icon?: string | null;
-  platforms?: ("web" | "native")[] | null;
+  platforms?: ('web' | 'native')[] | null;
   /**
    * Staff only = shown only to users with staff access (profiles.is_staff). Non-staff only = hidden from staff (e.g. a client portal's own pages). Applies on web and native. A module can also hide its entries for users it doesn't allow (its own access setting).
    */
-  audience?: ("everyone" | "staff" | "members") | null;
+  audience?: ('everyone' | 'staff' | 'members') | null;
   enabled?: boolean | null;
   updatedAt: string;
   createdAt: string;
@@ -3360,7 +3271,7 @@ export interface ModChatSkill {
   triggers?:
     | {
         pattern: string;
-        patternType: "keyword" | "synonym" | "regex";
+        patternType: 'keyword' | 'synonym' | 'regex';
         weight?: number | null;
         id?: string | null;
       }[]
@@ -3388,8 +3299,8 @@ export interface ModDocsPage {
         version: number;
         [k: string]: unknown;
       }[];
-      direction: ("ltr" | "rtl") | null;
-      format: "left" | "start" | "center" | "right" | "end" | "justify" | "";
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
       indent: number;
       version: number;
     };
@@ -3403,7 +3314,7 @@ export interface ModDocsPage {
    * Sort order within category.
    */
   order?: number | null;
-  source?: ("manual" | "github") | null;
+  source?: ('manual' | 'github') | null;
   /**
    * Repo-relative file path.
    */
@@ -3414,7 +3325,7 @@ export interface ModDocsPage {
   sourceSha?: string | null;
   updatedAt: string;
   createdAt: string;
-  _status?: ("draft" | "published") | null;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * Feedback boards on the portal (/feedback). Drag to reorder. New boards are private (staff only) until you open them up.
@@ -3434,7 +3345,7 @@ export interface ModFeedbackBoard {
    * Shown under the board name (markdown links allowed). Also shown in place of the form when new posts are off.
    */
   description?: string | null;
-  access: "staff" | "public" | "members" | "segment";
+  access: 'staff' | 'public' | 'members' | 'segment';
   /**
    * User tag names (People → Users → Tags). Users with any of them can see the board.
    */
@@ -3448,9 +3359,9 @@ export interface ModFeedbackBoard {
    * Off hides the create form; people can still vote and comment.
    */
   allowNewPosts?: boolean | null;
-  anonVotes?: ("inherit" | "allow" | "deny") | null;
-  anonPosts?: ("inherit" | "allow" | "deny") | null;
-  anonComments?: ("inherit" | "allow" | "deny") | null;
+  anonVotes?: ('inherit' | 'allow' | 'deny') | null;
+  anonPosts?: ('inherit' | 'allow' | 'deny') | null;
+  anonComments?: ('inherit' | 'allow' | 'deny') | null;
   /**
    * New posts wait in the staff Inbox (/a/feedback).
    */
@@ -3481,7 +3392,7 @@ export interface ModFeedbackBoard {
          */
         key?: string | null;
         required?: boolean | null;
-        type?: ("text" | "textarea" | "select") | null;
+        type?: ('text' | 'textarea' | 'select') | null;
         placeholder?: string | null;
         options?: string[] | null;
         id?: string | null;
@@ -3523,7 +3434,7 @@ export interface ModFeedbackChangelog {
    * /changelog/<slug>. Filled from the title.
    */
   slug: string;
-  type: "new" | "improved" | "fixed";
+  type: 'new' | 'improved' | 'fixed';
   labels?: (number | ModFeedbackChangelogLabel)[] | null;
   /**
    * One or two sentences: shown in RSS, emails and the What's new widget.
@@ -3537,8 +3448,8 @@ export interface ModFeedbackChangelog {
         version: number;
         [k: string]: unknown;
       }[];
-      direction: ("ltr" | "rtl") | null;
-      format: "left" | "start" | "center" | "right" | "end" | "justify" | "";
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
       indent: number;
       version: number;
     };
@@ -3548,7 +3459,7 @@ export interface ModFeedbackChangelog {
   /**
    * Members-only entries skip RSS and sharing.
    */
-  audience: "everyone" | "members";
+  audience: 'everyone' | 'members';
   /**
    * On first publish: email changelog subscribers and tell voters of linked ideas.
    */
@@ -3567,7 +3478,7 @@ export interface ModFeedbackChangelog {
   announcedAt?: string | null;
   updatedAt: string;
   createdAt: string;
-  _status?: ("draft" | "published") | null;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * Labels for changelog entries; readers filter by them on /changelog.
@@ -3579,7 +3490,7 @@ export interface ModFeedbackChangelogLabel {
   id: number;
   _order?: string | null;
   name: string;
-  tone?: ("neutral" | "info" | "warning" | "success" | "destructive") | null;
+  tone?: ('neutral' | 'info' | 'warning' | 'success' | 'destructive') | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -3600,7 +3511,7 @@ export interface Form {
             defaultValue?: boolean | null;
             id?: string | null;
             blockName?: string | null;
-            blockType: "checkbox";
+            blockType: 'checkbox';
           }
         | {
             name: string;
@@ -3609,7 +3520,7 @@ export interface Form {
             required?: boolean | null;
             id?: string | null;
             blockName?: string | null;
-            blockType: "email";
+            blockType: 'email';
           }
         | {
             message?: {
@@ -3620,15 +3531,8 @@ export interface Form {
                   version: number;
                   [k: string]: unknown;
                 }[];
-                direction: ("ltr" | "rtl") | null;
-                format:
-                  | "left"
-                  | "start"
-                  | "center"
-                  | "right"
-                  | "end"
-                  | "justify"
-                  | "";
+                direction: ('ltr' | 'rtl') | null;
+                format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
                 indent: number;
                 version: number;
               };
@@ -3636,7 +3540,7 @@ export interface Form {
             } | null;
             id?: string | null;
             blockName?: string | null;
-            blockType: "message";
+            blockType: 'message';
           }
         | {
             name: string;
@@ -3646,7 +3550,7 @@ export interface Form {
             required?: boolean | null;
             id?: string | null;
             blockName?: string | null;
-            blockType: "number";
+            blockType: 'number';
           }
         | {
             name: string;
@@ -3664,7 +3568,7 @@ export interface Form {
             required?: boolean | null;
             id?: string | null;
             blockName?: string | null;
-            blockType: "select";
+            blockType: 'select';
           }
         | {
             name: string;
@@ -3674,7 +3578,7 @@ export interface Form {
             required?: boolean | null;
             id?: string | null;
             blockName?: string | null;
-            blockType: "text";
+            blockType: 'text';
           }
         | {
             name: string;
@@ -3684,12 +3588,12 @@ export interface Form {
             required?: boolean | null;
             id?: string | null;
             blockName?: string | null;
-            blockType: "textarea";
+            blockType: 'textarea';
           }
       )[]
     | null;
   submitButtonLabel?: string | null;
-  confirmationType?: ("message" | "redirect") | null;
+  confirmationType?: ('message' | 'redirect') | null;
   confirmationMessage?: {
     root: {
       type: string;
@@ -3698,17 +3602,17 @@ export interface Form {
         version: number;
         [k: string]: unknown;
       }[];
-      direction: ("ltr" | "rtl") | null;
-      format: "left" | "start" | "center" | "right" | "end" | "justify" | "";
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
       indent: number;
       version: number;
     };
     [k: string]: unknown;
   } | null;
   redirect?: {
-    type?: ("reference" | "custom") | null;
+    type?: ('reference' | 'custom') | null;
     reference?: {
-      relationTo: "pages";
+      relationTo: 'pages';
       value: number | Page;
     } | null;
     url?: string | null;
@@ -3729,9 +3633,8 @@ export interface Form {
               version: number;
               [k: string]: unknown;
             }[];
-            direction: ("ltr" | "rtl") | null;
-            format:
-              "left" | "start" | "center" | "right" | "end" | "justify" | "";
+            direction: ('ltr' | 'rtl') | null;
+            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
             indent: number;
             version: number;
           };
@@ -3838,14 +3741,14 @@ export interface PayloadJob {
         executedAt: string;
         completedAt: string;
         taskSlug:
-          | "inline"
-          | "dispatch-notifications"
-          | "push-receipts"
-          | "dream-site-report"
-          | "account-erasure"
-          | "favorites-cleanup"
-          | "cms-user-sync"
-          | "schedulePublish";
+          | 'inline'
+          | 'dispatch-notifications'
+          | 'push-receipts'
+          | 'dream-site-report'
+          | 'account-erasure'
+          | 'favorites-cleanup'
+          | 'cms-user-sync'
+          | 'schedulePublish';
         taskID: string;
         input?:
           | {
@@ -3865,7 +3768,7 @@ export interface PayloadJob {
           | number
           | boolean
           | null;
-        state: "failed" | "succeeded";
+        state: 'failed' | 'succeeded';
         error?:
           | {
               [k: string]: unknown;
@@ -3880,14 +3783,14 @@ export interface PayloadJob {
     | null;
   taskSlug?:
     | (
-        | "inline"
-        | "dispatch-notifications"
-        | "push-receipts"
-        | "dream-site-report"
-        | "account-erasure"
-        | "favorites-cleanup"
-        | "cms-user-sync"
-        | "schedulePublish"
+        | 'inline'
+        | 'dispatch-notifications'
+        | 'push-receipts'
+        | 'dream-site-report'
+        | 'account-erasure'
+        | 'favorites-cleanup'
+        | 'cms-user-sync'
+        | 'schedulePublish'
       )
     | null;
   queue?: string | null;
@@ -3913,20 +3816,20 @@ export interface PayloadLockedDocument {
   id: number;
   document?:
     | ({
-        relationTo: "forms";
+        relationTo: 'forms';
         value: number | Form;
       } | null)
     | ({
-        relationTo: "form-submissions";
+        relationTo: 'form-submissions';
         value: number | FormSubmission;
       } | null)
     | ({
-        relationTo: "payload-folders";
+        relationTo: 'payload-folders';
         value: number | FolderInterface;
       } | null);
   globalSlug?: string | null;
   user: {
-    relationTo: "users";
+    relationTo: 'users';
     value: number | User;
   };
   updatedAt: string;
@@ -3939,7 +3842,7 @@ export interface PayloadLockedDocument {
 export interface PayloadPreference {
   id: number;
   user: {
-    relationTo: "users";
+    relationTo: 'users';
     value: number | User;
   };
   key?: string | null;
@@ -5883,7 +5786,7 @@ export interface SiteSetting {
     | {
         label: string;
         url: string;
-        variant?: ("default" | "glow" | "outline" | "secondary") | null;
+        variant?: ('default' | 'glow' | 'outline' | 'secondary') | null;
         isButton?: boolean | null;
         id?: string | null;
       }[]
@@ -6236,15 +6139,15 @@ export interface ThemeSetting {
   /**
    * Body / UI font (--font-sans)
    */
-  fontSans?: ("geist" | "inter" | "system") | null;
+  fontSans?: ('geist' | 'inter' | 'system') | null;
   /**
    * Serif font (--font-serif)
    */
-  fontSerif?: ("instrument-serif" | "merriweather" | "lora" | "system") | null;
+  fontSerif?: ('instrument-serif' | 'merriweather' | 'lora' | 'system') | null;
   /**
    * Monospace font (--font-mono)
    */
-  fontMono?: ("geist-mono" | "jetbrains-mono") | null;
+  fontMono?: ('geist-mono' | 'jetbrains-mono') | null;
   /**
    * Base letter spacing, e.g. 0rem (--tracking-normal)
    */
@@ -6268,7 +6171,7 @@ export interface ThemeSetting {
     offsetX?: number | null;
     offsetY?: number | null;
   };
-  _status?: ("draft" | "published") | null;
+  _status?: ('draft' | 'published') | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -6289,10 +6192,10 @@ export interface ImageGenerationSetting {
    */
   model?:
     | (
-        | "google/imagen-4.0-generate-001"
-        | "google/imagen-4.0-fast-generate-001"
-        | "openai/gpt-image-1"
-        | "bfl/flux-pro-1.1"
+        | 'google/imagen-4.0-generate-001'
+        | 'google/imagen-4.0-fast-generate-001'
+        | 'openai/gpt-image-1'
+        | 'bfl/flux-pro-1.1'
       )
     | null;
   /**
@@ -6311,17 +6214,11 @@ export interface ImageGenerationSetting {
   /**
    * After the final failed attempt, either keep the last image anyway, or skip it — leaving the slot empty so a later save can retry.
    */
-  auditFailureAction?: ("publish" | "skip") | null;
+  auditFailureAction?: ('publish' | 'skip') | null;
   /**
    * Vision model (AI Gateway slug) that reviews each generated image. Must support image input.
    */
-  auditModel?:
-    | (
-        | "anthropic/claude-sonnet-4.5"
-        | "anthropic/claude-opus-4.1"
-        | "anthropic/claude-haiku-4.5"
-      )
-    | null;
+  auditModel?: ('anthropic/claude-sonnet-4.5' | 'anthropic/claude-opus-4.1' | 'anthropic/claude-haiku-4.5') | null;
   /**
    * Additional, workspace-specific acceptance rules layered on top of the defaults (depicts the subject, no text/logos, not garbled).
    */
@@ -6344,15 +6241,7 @@ export interface ProfileField {
          */
         key: string;
         label: string;
-        type:
-          | "text"
-          | "textarea"
-          | "number"
-          | "select"
-          | "multiselect"
-          | "checkbox"
-          | "date"
-          | "url";
+        type: 'text' | 'textarea' | 'number' | 'select' | 'multiselect' | 'checkbox' | 'date' | 'url';
         options?:
           | {
               label: string;
@@ -6361,7 +6250,7 @@ export interface ProfileField {
             }[]
           | null;
         required?: boolean | null;
-        visibility?: ("public" | "members" | "private" | "admin") | null;
+        visibility?: ('public' | 'members' | 'private' | 'admin') | null;
         editableByMember?: boolean | null;
         order?: number | null;
         id?: string | null;
@@ -6381,13 +6270,12 @@ export interface AuthenticationSetting {
   /**
    * Switching Teams → Individuals keeps all workspace data but hides it. Switching Individuals → Teams sends existing members to “Name your workspace” on their next sign-in.
    */
-  accountModel?: ("consumer" | "business" | "hybrid") | null;
+  accountModel?: ('consumer' | 'business' | 'hybrid') | null;
   accountModelChosenAt?: string | null;
   /**
    * What a shared space is called everywhere.
    */
-  workspaceLabel?:
-    ("Workspace" | "Organization" | "Team" | "Studio" | "Practice") | null;
+  workspaceLabel?: ('Workspace' | 'Organization' | 'Team' | 'Studio' | 'Practice') | null;
   /**
    * Shown before the URL field. Blank uses your site's host.
    */
@@ -6405,7 +6293,7 @@ export interface AuthenticationSetting {
    */
   onboardingSteps?:
     | {
-        step: "profile" | "invite" | "integrations" | "updates" | "plan";
+        step: 'profile' | 'invite' | 'integrations' | 'updates' | 'plan';
         enabled?: boolean | null;
         id?: string | null;
       }[]
@@ -6415,8 +6303,7 @@ export interface AuthenticationSetting {
    */
   loginMethods?:
     | {
-        method:
-          "password" | "magicLink" | "emailOtp" | "google" | "apple" | "sso";
+        method: 'password' | 'magicLink' | 'emailOtp' | 'google' | 'apple' | 'sso';
         enabled?: boolean | null;
         id?: string | null;
       }[]
@@ -6428,7 +6315,7 @@ export interface AuthenticationSetting {
   /**
    * Restrict which email domains may sign up (checked client-side and in the sign-up/checkout server route).
    */
-  emailDomainMode?: ("off" | "allowlist" | "blocklist") | null;
+  emailDomainMode?: ('off' | 'allowlist' | 'blocklist') | null;
   /**
    * Bare domains, e.g. acme.com (no @ or scheme).
    */
@@ -6531,7 +6418,7 @@ export interface NativeNavigation {
   /**
    * How many menu items show in the bottom tab bar. The rest are listed under More (Android) / Search (iOS).
    */
-  tabCount: "3" | "4";
+  tabCount: '3' | '4';
   /**
    * Order = tab bar order, then the More list.
    */
@@ -6553,7 +6440,7 @@ export interface NativeNavigation {
         id?: string | null;
       }[]
     | null;
-  _status?: ("draft" | "published") | null;
+  _status?: ('draft' | 'published') | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -6569,7 +6456,7 @@ export interface ModBillingSetting {
   /**
    * Which billing cadence the pricing page preselects.
    */
-  billingToggleDefault?: ("monthly" | "annual") | null;
+  billingToggleDefault?: ('monthly' | 'annual') | null;
   /**
    * Pick up to three paid plans to feature, in display order. Empty = all active plans by display order.
    */
@@ -6721,20 +6608,20 @@ export interface ModChatSetting {
         label?: string | null;
         channels?:
           | (
-              | "web"
-              | "native"
-              | "slack"
-              | "sms-sendblue"
-              | "telegram"
-              | "whatsapp"
-              | "discord"
-              | "teams"
-              | "google-chat"
-              | "messenger"
-              | "email"
-              | "twilio-sms"
-              | "github"
-              | "linear"
+              | 'web'
+              | 'native'
+              | 'slack'
+              | 'sms-sendblue'
+              | 'telegram'
+              | 'whatsapp'
+              | 'discord'
+              | 'teams'
+              | 'google-chat'
+              | 'messenger'
+              | 'email'
+              | 'twilio-sms'
+              | 'github'
+              | 'linear'
             )[]
           | null;
         prompt: string;
@@ -6754,12 +6641,7 @@ export interface ModChatSetting {
    */
   useLlmFallback?: boolean | null;
   llmFallbackModel?:
-    | (
-        | "anthropic/claude-sonnet-4.5"
-        | "anthropic/claude-opus-4.1"
-        | "anthropic/claude-haiku-4.5"
-      )
-    | null;
+    ('anthropic/claude-sonnet-4.5' | 'anthropic/claude-opus-4.1' | 'anthropic/claude-haiku-4.5') | null;
   /**
    * Turns an active skill stays selected before re-routing.
    */
@@ -6830,7 +6712,7 @@ export interface ModFeedbackSetting {
    */
   portalTabs?:
     | {
-        tab: "roadmap" | "feedback" | "changelog";
+        tab: 'roadmap' | 'feedback' | 'changelog';
         label: string;
         enabled?: boolean | null;
         id?: string | null;
@@ -6852,9 +6734,8 @@ export interface ModFeedbackSetting {
          * Set automatically from the name; never changes.
          */
         key?: string | null;
-        type: "open" | "active" | "complete" | "closed";
-        tone?:
-          ("neutral" | "info" | "warning" | "success" | "destructive") | null;
+        type: 'open' | 'active' | 'complete' | 'closed';
+        tone?: ('neutral' | 'info' | 'warning' | 'success' | 'destructive') | null;
         showOnRoadmap?: boolean | null;
         isDefault?: boolean | null;
         notifyVotersByDefault?: boolean | null;
@@ -6875,9 +6756,8 @@ export interface ModFeedbackSetting {
          * Set automatically from the name; never changes.
          */
         key?: string | null;
-        type: "open" | "active" | "complete" | "closed";
-        tone?:
-          ("neutral" | "info" | "warning" | "success" | "destructive") | null;
+        type: 'open' | 'active' | 'complete' | 'closed';
+        tone?: ('neutral' | 'info' | 'warning' | 'success' | 'destructive') | null;
         /**
          * Status key linked posts move to (e.g. planned). Empty = leave posts alone.
          */
@@ -6896,20 +6776,10 @@ export interface ModFeedbackSetting {
          * Set automatically from the name; never changes.
          */
         key?: string | null;
-        kind: "impact" | "effort";
+        kind: 'impact' | 'effort';
         weight: number;
-        source: "manual" | "votes" | "priority" | "tagVoters";
-        scale?:
-          | (
-              | "0-10"
-              | "0-100"
-              | "fibonacci"
-              | "stars"
-              | "checkbox"
-              | "percentage"
-              | "number"
-            )
-          | null;
+        source: 'manual' | 'votes' | 'priority' | 'tagVoters';
+        scale?: ('0-10' | '0-100' | 'fibonacci' | 'stars' | 'checkbox' | 'percentage' | 'number') | null;
         /**
          * e.g. your paid plan names (billing tags voters by plan).
          */
@@ -6936,7 +6806,7 @@ export interface ModFeedbackSetting {
   embedOrigins?: string | null;
   ap?: {
     enabled?: boolean | null;
-    actions?: ("manual" | "automated") | null;
+    actions?: ('manual' | 'automated') | null;
     dedupe?: boolean | null;
     threshold?: number | null;
     mergeAsVotes?: boolean | null;
@@ -6962,9 +6832,9 @@ export interface ModFeedbackSetting {
      */
     map?:
       | {
-          ext: "unstarted" | "started" | "completed" | "canceled";
+          ext: 'unstarted' | 'started' | 'completed' | 'canceled';
           stage: string;
-          direction: "both" | "inbound" | "outbound";
+          direction: 'both' | 'inbound' | 'outbound';
           id?: string | null;
         }[]
       | null;
@@ -6982,8 +6852,7 @@ export interface ModFeedbackSetting {
          * Set automatically from the name; never changes.
          */
         key?: string | null;
-        tone?:
-          ("neutral" | "info" | "warning" | "success" | "destructive") | null;
+        tone?: ('neutral' | 'info' | 'warning' | 'success' | 'destructive') | null;
         id?: string | null;
       }[]
     | null;
@@ -7003,12 +6872,11 @@ export interface ModFeedbackSetting {
   /**
    * Tell staff when a post reaches these vote counts.
    */
-  voteMilestones?:
-    ("5" | "10" | "25" | "50" | "100" | "250" | "500" | "1000")[] | null;
+  voteMilestones?: ('5' | '10' | '25' | '50' | '100' | '250' | '500' | '1000')[] | null;
   /**
    * A summary of new posts, votes, the inbox and what shipped, emailed to staff around 14:00 UTC. Each staff member can opt out in /a/feedback. Needs email (SMTP) to be set up.
    */
-  digest?: ("weekly" | "daily" | "never") | null;
+  digest?: ('weekly' | 'daily' | 'never') | null;
   adapter_feedback_source_chat?: {
     /**
      * Scan new chat messages every 15 minutes. Staff will see the matching messages and the sender's email, so mention this in your privacy policy.
@@ -7661,7 +7529,7 @@ export interface CollectionsWidget {
   data?: {
     [k: string]: unknown;
   };
-  width: "full";
+  width: 'full';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -7722,48 +7590,48 @@ export interface TaskCmsUserSync {
  */
 export interface TaskSchedulePublish {
   input: {
-    type?: ("publish" | "unpublish") | null;
+    type?: ('publish' | 'unpublish') | null;
     locale?: string | null;
     doc?:
       | ({
-          relationTo: "posts";
+          relationTo: 'posts';
           value: number | Post;
         } | null)
       | ({
-          relationTo: "videos";
+          relationTo: 'videos';
           value: number | Video;
         } | null)
       | ({
-          relationTo: "series";
+          relationTo: 'series';
           value: number | Series;
         } | null)
       | ({
-          relationTo: "lessons";
+          relationTo: 'lessons';
           value: number | Lesson;
         } | null)
       | ({
-          relationTo: "locations";
+          relationTo: 'locations';
           value: number | Location;
         } | null)
       | ({
-          relationTo: "events";
+          relationTo: 'events';
           value: number | Event;
         } | null)
       | ({
-          relationTo: "pages";
+          relationTo: 'pages';
           value: number | Page;
         } | null)
       | ({
-          relationTo: "legal";
+          relationTo: 'legal';
           value: number | Legal;
         } | null)
       | ({
-          relationTo: "mod-feedback-changelog";
+          relationTo: 'mod-feedback-changelog';
           value: number | ModFeedbackChangelog;
         } | null);
     global?: string | null;
     user?: {
-      relationTo: "users";
+      relationTo: 'users';
       value: number | User;
     } | null;
   };

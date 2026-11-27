@@ -17,7 +17,7 @@ import {
   siteUrl,
 } from "@acme/mod-billing/server";
 
-import { getStripeOrNull, stripeSettings } from "../stripe/client";
+import { getPaymentsStripeOrNull, stripeSettings } from "../stripe/client";
 import {
   applyCustomerIdentity,
   resolveCustomer,
@@ -42,7 +42,7 @@ async function stripeForCheckout(
 ): Promise<Stripe | null> {
   const settings = await stripeSettings(await ctx.getPayload());
   if (!settings.enabled) return null;
-  return await getStripeOrNull();
+  return await getPaymentsStripeOrNull();
 }
 
 const expressIntentSchema = z.object({

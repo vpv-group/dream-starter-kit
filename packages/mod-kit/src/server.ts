@@ -304,32 +304,62 @@ export type ConnectorResult<T> =
   | ({ status: "ok" } & T)
   | { status: "no_key" | "not_connected" | "error"; message: string };
 
-export interface ConnectorToken {
-  /** Bearer credential for the provider API (short-lived where supported). */
-  accessToken: string;
-  /** ISO time the token stops working; null = until revoked. */
-  expiresAt: string | null;
-  /** Provider account id, e.g. a Stripe `acct_…`. */
+/** A site's connection to a provider through Meet Dream (e.g. Stripe Connect). */
+export interface ConnectorStatus {
+  /** The provider account this site acts as, e.g. a Stripe `acct_…`. */
   accountId: string;
   /** Account display name, when the provider exposes one. */
   accountName?: string | null;
-  livemode?: boolean;
-  /** Public (client-safe) key for the connected account, e.g. Stripe's pk. */
+  livemode?: boolean | null;
+  /**
+   * Public (client-safe) key the browser uses with `accountId` — for Stripe
+   * Connect, the PLATFORM's publishable key (direct charges load Stripe.js
+   * with `{ stripeAccount: accountId }`).
+   */
   publishableKey?: string | null;
-  /** Act-as header value when the token is a platform credential. */
-  onBehalfOf?: string | null;
+  /** The account can take payments (onboarding finished). */
+  ready?: boolean;
+  /** Where the owner finishes onboarding while it isn't `ready`. */
+  onboardingUrl?: string | null;
 }
 
+/**
+ * The host's link to meetdream.com for connections brokered by the Meet
+ * Dream platforms (GitHub for updates, Stripe for billing). Modules never see
+ * the site license key or any provider secret: Meet Dream keeps the
+ * provider credentials and performs this site's provider API calls itself
+ * (`forward`), scoped to the site's own connected account.
+ */
 export interface ConnectorBroker {
-  /** Start the OAuth flow; the browser opens `url` and returns to `returnTo`. */
+  /** Start connecting; the browser opens `url` and returns to `returnTo`. */
   startConnect(
     target: string,
     returnTo: string,
     opts?: { mode?: "test" | "live" },
   ): Promise<ConnectorResult<{ url: string }>>;
-  /** A usable credential for the site's connection to `target`. */
-  token(target: string): Promise<ConnectorResult<{ token: ConnectorToken }>>;
-  /** Revoke the site's connection to `target`. */
+  /** The site's connection to `target`. */
+  status(
+    target: string,
+  ): Promise<ConnectorResult<{ connection: ConnectorStatus }>>;
+  /**
+   * One provider API request made by Meet Dream on this site's behalf
+   * (`path` is the provider's, e.g. `/v1/products`). Returns the provider's
+   * response unchanged; rejects only when Meet Dream can't be reached.
+   */
+  forward(
+    target: string,
+    path: string,
+    init: { method: string; headers?: Record<string, string>; body?: string },
+  ): Promise<Response>;
+  /**
+   * Where Meet Dream delivers the provider's events for this site, and the
+   * secret it signs them with (in the provider's own signature format).
+   */
+  setWebhookTarget(
+    target: string,
+    url: string,
+  ): Promise<ConnectorResult<{ secret: string }>>;
+  /** Stop brokering `target` for this site. */
   disconnect(target: string): Promise<ConnectorResult<object>>;
 }
 

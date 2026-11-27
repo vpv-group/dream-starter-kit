@@ -47,22 +47,43 @@ Open `/admin` → **Modules → Billing**. Below the settings tabs is the **Stri
 panel: connection, webhook and catalog. There are two ways to connect; your own keys
 win if both are present.
 
-### 2.1 Connect with Stripe (recommended — no keys to copy)
+### 2.1 Connect with Stripe (the default — no keys to copy)
 
-Click **Connect with Stripe** (or **Connect in test mode** while you set up). You sign
-in to Stripe, pick or create the account, approve, and come back to the panel showing
-**Connected**, the account name and test/live mode.
+Click **Connect with Stripe** (or **Connect in test mode** while you set up). Stripe
+walks you through setting up the account your payments go to (Stripe‑hosted
+onboarding), then you come back to the panel showing **Connected**, the account name
+and test/live mode. If Stripe still needs details, the panel says **Onboarding** with a
+**Finish Stripe onboarding** button; checkout stays off until it's done.
 
-How it works: the OAuth app ("Meet Dream AI") belongs to Meet Dream, which keeps the
-OAuth secret and refresh token. Your site never stores a Stripe secret — when it needs
-Stripe, it asks meetdream.com (signed with the site's free license key) for a
-short‑lived credential for **your** account, and caches it until shortly before it
-expires. The publishable key for on‑site checkout comes the same way, so connecting
-needs no redeploy.
+How it works — the model Stripe recommends for platforms (Stripe Connect):
 
-Needs: the site's free Meet Dream license, which it registers after the first setup on
-a public domain (`/cms-setup`). With `DREAM_TELEMETRY=off` there's no license, so use
-your own keys (§2.2). **Disconnect** in the panel revokes the connection.
+- **Meet Dream is a Stripe Connect platform**, and your business is one of its
+  connected accounts, with the full Stripe Dashboard. Payments are **direct
+  charges**: they land in your account, and Stripe's fees and disputes are yours as
+  for any Stripe account.
+- **Your site holds no Stripe secret.** When it needs Stripe (catalog sync,
+  checkout, the customer portal, invoices), it sends the request to meetdream.com,
+  signed with the site's free license key. Meet Dream makes the call with its
+  platform key on **your** account only, and passes Stripe's answer back unchanged.
+- **Stripe's events reach your site through Meet Dream.** Stripe sends them to
+  Meet Dream's platform endpoint, which delivers them to your site's webhook signed
+  with a secret only your site knows (§5.1).
+- On‑site checkout loads Stripe.js with Meet Dream's publishable key and your
+  account id, served at runtime, so connecting needs no redeploy.
+
+Things to know:
+
+- **Connecting creates a new Stripe account** for the business (Stripe can reuse
+  details you've already given it). To use a Stripe account you **already have**,
+  use your own keys instead (§2.2).
+- **meetdream.com must be reachable** for checkout and the customer portal. If it
+  isn't, those pause, and events are delivered once it's back. Sites that can't
+  accept that dependency use their own keys.
+- Needs the site's free Meet Dream license, which it registers after the first setup
+  on a public domain (`/cms-setup`). With `DREAM_TELEMETRY=off` there's no license,
+  so use your own keys (§2.2).
+- **Disconnect** in the panel stops Meet Dream acting for the site. The Stripe
+  account stays yours, with its Dashboard.
 
 ### 2.2 Your own API keys (self‑hosting, CI, `stripe listen`)
 
@@ -174,9 +195,16 @@ reordering:
 
 Once Stripe is connected (§2) and the site has a public `https://` URL, an hourly check
 (Supabase Cron → `GET /api/mod/billing-adapter-stripe/cron/connect`, or **Register
-now** in the panel) **registers the endpoint through the Stripe API** on the connected
-account and keeps its signing secret in Supabase Vault. Look for an endpoint described
-"Dream Starter Kit — billing (created automatically)" under **Developers → Webhooks**.
+now** in the panel) sets the webhook up and keeps its signing secret in Supabase Vault:
+
+- **Connected with Stripe (§2.1):** the check tells Meet Dream the site's webhook URL.
+  Stripe sends your account's events to Meet Dream's platform endpoint, and Meet Dream
+  delivers each one to that URL, signed in Stripe's own `Stripe-Signature` format with
+  a secret only your site holds, retrying until your site accepts it. Your Stripe
+  account has no webhook endpoint of its own.
+- **Your own keys (§2.2):** the check **registers the endpoint through the Stripe API**
+  on your account. Look for an endpoint described "Dream Starter Kit — billing
+  (created automatically)" under **Developers → Webhooks**.
 
 The endpoint's `api_version` is pinned to the installed Stripe SDK's
 (`Stripe.API_VERSION`), so changing your account's default API version can't change
@@ -272,28 +300,35 @@ to the Stripe adapter:
 ## 8. Reference — the Meet Dream connector contract
 
 "Connect with Stripe" is brokered by meetdream.com, like **Connect GitHub** in
-/admin → Updates. The kit side is `apps/nextjs/src/lib/mod/connectors-core.ts` (pure,
-tested) + `connector-broker.ts`, exposed to modules as `getConnectorBroker()` in
-`@acme/mod-kit/server` — modules never see the site license key. Every call is signed
+/admin → Updates. Meet Dream is a **Stripe Connect platform**, the model Stripe
+recommends for software platforms: connected accounts created with Accounts v2
+(`merchant` configuration, full Stripe Dashboard), Stripe‑hosted onboarding through
+Account Links, **direct charges**, the platform key with a `Stripe-Account` header on
+every call, and one platform Connect webhook endpoint. (Stripe calls OAuth "not
+recommended for new Connect platforms"; Stripe Apps are for extending the Dashboard.)
+
+The kit side is `apps/nextjs/src/lib/mod/connectors-core.ts` (pure, tested) +
+`connector-broker.ts`, exposed to modules as `getConnectorBroker()` in
+`@acme/mod-kit/server`; modules never see the site license key. Every call is signed
 with the `X-Dream-License-Key` header:
 
-| Call                                              | Answer                                                                                                                                                                                 |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /connect/stripe/start` `{ returnTo, mode }` | `{ url }` — the provider's consent screen. Meet Dream's registered redirect URI finishes the exchange, then returns the browser to `returnTo?stripe=connected` (or `?stripe_error=…`). |
-| `POST /sites/connectors/stripe/token`             | `{ accessToken, expiresAt, accountId, accountName?, livemode?, publishableKey?, onBehalfOf? }`; `404 {code: "not_connected"}` when never connected.                                    |
-| `POST /sites/connectors/stripe/disconnect`        | `200` once revoked.                                                                                                                                                                    |
+| Call                                                     | Answer                                                                                                                                                                                                                                                                                     |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST /connect/stripe/start` `{ returnTo, mode }`        | `{ url }`: Stripe‑hosted onboarding (an Account Link) for the site's connected account, created on first use in test or live `mode`. Meet Dream's return URL sends the browser to `returnTo?stripe=connected` (or `?stripe_error=…`).                                                       |
+| `POST /sites/connectors/stripe/status`                   | `{ connection: { accountId, accountName?, livemode?, publishableKey?, ready, onboardingUrl? } }`. `publishableKey` is the platform's, used with `stripeAccount: accountId` in Stripe.js. `ready` is false until Stripe can take charges; then `onboardingUrl` resumes onboarding. `404 {code: "not_connected"}` when never connected. |
+| `<METHOD> /sites/connectors/stripe/api/v1/<path>`        | Meet Dream checks the path against the endpoints the adapter uses, adds `Stripe-Account` (and the site's application fee, if any), passes `Idempotency-Key` through, calls Stripe, and returns Stripe's status and body unchanged.                                                       |
+| `POST /sites/connectors/stripe/webhook-target` `{ url }` | `{ secret }`: the site's webhook URL is stored; events for its account are delivered there signed with `secret` (`Stripe-Signature: t=…,v1=…`), with retries.                                                                                                                             |
+| `POST /sites/connectors/stripe/disconnect`               | `200` once Meet Dream stops acting for the site. The Stripe account stays the merchant's.                                                                                                                                                                                                  |
 
-The adapter uses `accessToken` as its Stripe API key (with `Stripe-Account:
-onBehalfOf` when the broker returns platform credentials), and `publishableKey` for
-Elements. Stripe only redirects to pre‑registered URIs, which is why the redirect
-belongs to meetdream.com rather than each site.
+The adapter builds its Stripe client with stripe‑node's `createFetchHttpClient`,
+pointed at the forwarding endpoint (`src/stripe/client.ts`), so catalog sync,
+checkout, the portal, invoices and the webhook re‑fetch run unchanged on either
+source. The site never holds a Stripe secret: the platform key stays on meetdream.com.
 
-**Recommendation for the broker:** a **Stripe Apps OAuth install** (1‑hour access
-tokens, refresh tokens held by Meet Dream, scoped permissions — the list in §2.2)
-rather than classic Connect OAuth. Classic Connect's `access_token` and
-`stripe_publishable_key` are deprecated in favour of the platform key plus a
-`Stripe-Account` header; that would route every API call through Meet Dream or rely on
-a deprecated non‑expiring token. It would also make Meet Dream the platform of record,
-and accounts already controlled by another platform are asked to open a new Standard
-account. The kit contract above is the same either way (`onBehalfOf` covers the
-platform‑key model).
+**Fees.** The platform can add `application_fee_amount` / `application_fee_percent`
+to Checkout Sessions, PaymentIntents and subscriptions while forwarding; the default
+is none.
+
+**Outages.** API calls fail while meetdream.com is unreachable (checkout and the
+portal show an error and recover by themselves); webhook deliveries are retried. The
+status is cached for a minute, so the panel may lag a connection change by that much.
