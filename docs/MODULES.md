@@ -511,6 +511,17 @@ release. A migration that does contract must say so with a
 (files shipped before the rule are grandfathered), and `pnpm mod remove`
 marks its teardown migration.
 
+**Payload snapshots after parallel branches.** `payload-migrate` (like
+`pnpm cms:migrate:create`) diffs the Payload config against the **newest
+`.json` snapshot** in `apps/nextjs/src/payload/migrations/`, not against the
+database. When two branches each add a Payload migration, the later snapshot
+only knows its own branch's change. After the merge, the next migration then
+re-emits SQL the other branch already shipped. Don't commit that SQL a second
+time: it fails a fresh database with "already exists". Instead, generate a
+`sync_snapshot_*` core migration, check that its SQL is exactly what an
+existing migration ships, and empty its `up`/`down` so it carries only the
+merged snapshot (see `20261127_174251_sync_snapshot_after_billing_adapters`).
+
 Updates are a three-way merge (base = `refs/mod-base/<slug>` pinned in the
 lock, ours = your possibly-modified copy, theirs = upstream) — local edits
 survive clean updates; conflicts get standard markers + `--continue`.

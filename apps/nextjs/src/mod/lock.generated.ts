@@ -25,7 +25,8 @@ export const modulesLock = {
         "apps/nextjs/src/app/(frontend)/(public)/checkout/return/page.tsx",
         "apps/nextjs/src/app/(frontend)/(public)/pricing/layout.tsx",
         "apps/nextjs/src/app/(frontend)/(public)/pricing/page.tsx",
-        "apps/nextjs/src/payload/migrations/20260612_023534_ext_billing.ts"
+        "apps/nextjs/src/payload/migrations/20260612_023534_ext_billing.ts",
+        "apps/nextjs/src/payload/migrations/20261126_193316_billing_provider_adapters.ts"
       ],
       "edgeFunctions": []
     },

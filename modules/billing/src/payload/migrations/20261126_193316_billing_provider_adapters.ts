@@ -1,0 +1,135 @@
+import { MigrateDownArgs, MigrateUpArgs, sql } from "@payloadcms/db-postgres";
+
+export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
+  await db.execute(sql`
+   ALTER TABLE "cms"."mod_billing_subscriptions" ALTER COLUMN "stripe_subscription_i_d" DROP NOT NULL;
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_tags_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_tags_plan_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_tags_plan_template" varchar DEFAULT '{plan}';
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_tags_status_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_tags_status_template" varchar DEFAULT '{status}';
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_tags_cycle_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_tags_cycle_template" varchar DEFAULT 'Billing cycle: {cycle}';
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_tags_store_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_tags_store_template" varchar DEFAULT 'Store: {store}';
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_tags_resync_now" boolean DEFAULT false;
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_tags_last_resync" varchar;
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_adapter_stripe_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_adapter_stripe_hosted_checkout" boolean DEFAULT false;
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_adapter_stripe_express_wallets" boolean DEFAULT true;
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_adapter_stripe_allow_promotion_codes" boolean DEFAULT true;
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_adapter_stripe_automatic_tax" boolean DEFAULT false;
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_adapter_stripe_require_billing_address" boolean DEFAULT false;
+  ALTER TABLE "cms"."kit_modules" ADD COLUMN "mod_billing_adapter_stripe_phone_number_collection" boolean DEFAULT false;
+  ALTER TABLE "cms"."mod_billing_subscriptions" ADD COLUMN "provider" varchar DEFAULT 'stripe';
+  ALTER TABLE "cms"."mod_billing_subscriptions" ADD COLUMN "provider_subscription_id" varchar;
+  ALTER TABLE "cms"."mod_billing_subscriptions" ADD COLUMN "provider_customer_id" varchar;
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "tags_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "tags_plan_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "tags_plan_template" varchar DEFAULT '{plan}';
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "tags_status_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "tags_status_template" varchar DEFAULT '{status}';
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "tags_cycle_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "tags_cycle_template" varchar DEFAULT 'Billing cycle: {cycle}';
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "tags_store_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "tags_store_template" varchar DEFAULT 'Store: {store}';
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "tags_resync_now" boolean DEFAULT false;
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "tags_last_resync" varchar;
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "adapter_stripe_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "adapter_stripe_hosted_checkout" boolean DEFAULT false;
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "adapter_stripe_express_wallets" boolean DEFAULT true;
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "adapter_stripe_allow_promotion_codes" boolean DEFAULT true;
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "adapter_stripe_automatic_tax" boolean DEFAULT false;
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "adapter_stripe_require_billing_address" boolean DEFAULT false;
+  ALTER TABLE "cms"."mod_billing_settings" ADD COLUMN "adapter_stripe_phone_number_collection" boolean DEFAULT false;
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_tags_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_tags_plan_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_tags_plan_template" varchar DEFAULT '{plan}';
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_tags_status_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_tags_status_template" varchar DEFAULT '{status}';
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_tags_cycle_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_tags_cycle_template" varchar DEFAULT 'Billing cycle: {cycle}';
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_tags_store_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_tags_store_template" varchar DEFAULT 'Store: {store}';
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_tags_resync_now" boolean DEFAULT false;
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_tags_last_resync" varchar;
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_adapter_stripe_enabled" boolean DEFAULT true;
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_adapter_stripe_hosted_checkout" boolean DEFAULT false;
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_adapter_stripe_express_wallets" boolean DEFAULT true;
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_adapter_stripe_allow_promotion_codes" boolean DEFAULT true;
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_adapter_stripe_automatic_tax" boolean DEFAULT false;
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_adapter_stripe_require_billing_address" boolean DEFAULT false;
+  ALTER TABLE "cms"."_mod_billing_settings_v" ADD COLUMN "version_adapter_stripe_phone_number_collection" boolean DEFAULT false;
+  CREATE INDEX "mod_billing_subscriptions_provider_idx" ON "cms"."mod_billing_subscriptions" USING btree ("provider");
+  CREATE INDEX "mod_billing_subscriptions_provider_subscription_id_idx" ON "cms"."mod_billing_subscriptions" USING btree ("provider_subscription_id");
+  CREATE INDEX "mod_billing_subscriptions_provider_customer_id_idx" ON "cms"."mod_billing_subscriptions" USING btree ("provider_customer_id");`);
+}
+
+export async function down({
+  db,
+  payload,
+  req,
+}: MigrateDownArgs): Promise<void> {
+  await db.execute(sql`
+   DROP INDEX "cms"."mod_billing_subscriptions_provider_idx";
+  DROP INDEX "cms"."mod_billing_subscriptions_provider_subscription_id_idx";
+  DROP INDEX "cms"."mod_billing_subscriptions_provider_customer_id_idx";
+  ALTER TABLE "cms"."mod_billing_subscriptions" ALTER COLUMN "stripe_subscription_i_d" SET NOT NULL;
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_tags_enabled";
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_tags_plan_enabled";
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_tags_plan_template";
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_tags_status_enabled";
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_tags_status_template";
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_tags_cycle_enabled";
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_tags_cycle_template";
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_tags_store_enabled";
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_tags_store_template";
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_tags_resync_now";
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_tags_last_resync";
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_adapter_stripe_enabled";
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_adapter_stripe_hosted_checkout";
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_adapter_stripe_express_wallets";
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_adapter_stripe_allow_promotion_codes";
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_adapter_stripe_automatic_tax";
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_adapter_stripe_require_billing_address";
+  ALTER TABLE "cms"."kit_modules" DROP COLUMN "mod_billing_adapter_stripe_phone_number_collection";
+  ALTER TABLE "cms"."mod_billing_subscriptions" DROP COLUMN "provider";
+  ALTER TABLE "cms"."mod_billing_subscriptions" DROP COLUMN "provider_subscription_id";
+  ALTER TABLE "cms"."mod_billing_subscriptions" DROP COLUMN "provider_customer_id";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "tags_enabled";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "tags_plan_enabled";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "tags_plan_template";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "tags_status_enabled";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "tags_status_template";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "tags_cycle_enabled";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "tags_cycle_template";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "tags_store_enabled";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "tags_store_template";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "tags_resync_now";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "tags_last_resync";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "adapter_stripe_enabled";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "adapter_stripe_hosted_checkout";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "adapter_stripe_express_wallets";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "adapter_stripe_allow_promotion_codes";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "adapter_stripe_automatic_tax";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "adapter_stripe_require_billing_address";
+  ALTER TABLE "cms"."mod_billing_settings" DROP COLUMN "adapter_stripe_phone_number_collection";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_tags_enabled";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_tags_plan_enabled";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_tags_plan_template";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_tags_status_enabled";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_tags_status_template";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_tags_cycle_enabled";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_tags_cycle_template";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_tags_store_enabled";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_tags_store_template";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_tags_resync_now";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_tags_last_resync";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_adapter_stripe_enabled";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_adapter_stripe_hosted_checkout";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_adapter_stripe_express_wallets";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_adapter_stripe_allow_promotion_codes";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_adapter_stripe_automatic_tax";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_adapter_stripe_require_billing_address";
+  ALTER TABLE "cms"."_mod_billing_settings_v" DROP COLUMN "version_adapter_stripe_phone_number_collection";`);
+}
