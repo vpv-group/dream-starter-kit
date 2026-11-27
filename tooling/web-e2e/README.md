@@ -101,3 +101,24 @@ which wouldn't match a derived one).
 
 These are intentional module points, not bugs — the security-critical paths
 (auth, route protection, RLS isolation, CRUD) all run in CI on every PR.
+
+## Live check: Connect with Stripe on a deployed site
+
+`live/stripe-connect.live.spec.ts` runs the whole "Connect with Stripe" flow
+against a **deployed** kit site in Stripe test mode. It connects in test mode
+under Modules → Billing, finishes Stripe's onboarding, registers the webhook,
+saves a plan, buys it with `4242 4242 4242 4242` and checks `/billing`. It
+has its own config, so `pnpm test:e2e` and CI never run it. The site needs a
+Meet Dream license (set up on a public https domain) and no
+`STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`.
+
+```bash
+LIVE_SITE_URL=https://your-site.example \
+LIVE_ADMIN_EMAIL=admin@your-site.example LIVE_ADMIN_PASSWORD='…' \
+pnpm -F @acme/web-e2e exec playwright test -c live.config.ts --headed
+```
+
+Stripe's onboarding pages change often: the script presses its test-mode
+shortcuts, and in a headed run you can finish any step by hand. Screenshots of
+each step land in `test-results/live/`. `LIVE_DISCONNECT=1` disconnects at
+the end; `LIVE_PLAN` picks a plan by name.
