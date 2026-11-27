@@ -3,13 +3,16 @@
 // page.route can't intercept them: playwright.config.ts starts this as a
 // second webServer and points DREAM_REGISTRY_URL / DREAM_GITHUB_API_URL here.
 //
-//   /registry/*   the Dream registry routes the kit uses
+//   /registry/*   the Dream registry routes the kit uses (incl. the Stripe
+//                 connector — stub-stripe.mjs, for stripe-connect.spec.ts)
 //   /github/*     the GitHub REST routes the kit uses
 //   POST /__scenario {connected, hold, pausedReason, prs}   set the scene
 //   GET  /__log      what the app sent (settings saves, dispatches)
 //
 // Plain ESM JavaScript so it runs with `node` directly, no build step.
 import { createServer } from "node:http";
+
+import { stripeBroker, stripeControls } from "./stub-stripe.mjs";
 
 export const STUB_SITE_KEY = "dsk_e2e_site_key";
 const PORT = Number(process.env.STUB_SERVICES_PORT ?? 4010);
@@ -39,17 +42,19 @@ function send(res, status, body) {
   res.end(body === undefined ? "" : JSON.stringify(body));
 }
 
-async function readJson(req) {
-  let text = "";
-  for await (const chunk of req) text += chunk;
+async function readBody(req) {
+  let raw = "";
+  for await (const chunk of req) raw += chunk;
+  let json = null;
   try {
-    return text ? JSON.parse(text) : null;
+    json = raw ? JSON.parse(raw) : null;
   } catch {
-    return null;
+    json = null;
   }
+  return { raw, json };
 }
 
-function registry(req, res, path, body) {
+function registry(req, res, path, body, raw, search) {
   const key = req.headers["x-dream-license-key"];
   if (path === "/catalog") {
     return send(res, 200, {
@@ -69,6 +74,7 @@ function registry(req, res, path, body) {
   if (key !== STUB_SITE_KEY) {
     return send(res, 401, { code: "invalid_key", message: "Unknown key" });
   }
+  if (stripeBroker(req, res, send, path, search, raw, body)) return;
   if (path === "/entitlements") {
     return send(res, 200, { entitlements: ["crm"] });
   }
@@ -135,8 +141,10 @@ function github(req, res, path, body) {
 createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
   if (req.method === "OPTIONS") return send(res, 204);
-  const body = req.method === "GET" ? null : await readJson(req);
+  const { raw, json: body } =
+    req.method === "GET" ? { raw: "", json: null } : await readBody(req);
   if (url.pathname === "/health") return send(res, 200, { ok: true });
+  if (await stripeControls(req, res, send, url, body)) return;
   if (url.pathname === "/__scenario" && req.method === "POST") {
     scenario = {
       connected: body?.connected ?? true,
@@ -149,7 +157,14 @@ createServer(async (req, res) => {
   }
   if (url.pathname === "/__log") return send(res, 200, log);
   if (url.pathname.startsWith("/registry/")) {
-    return registry(req, res, url.pathname.slice("/registry".length), body);
+    return registry(
+      req,
+      res,
+      url.pathname.slice("/registry".length),
+      body,
+      raw,
+      url.search,
+    );
   }
   if (url.pathname.startsWith("/github/")) {
     return github(req, res, url.pathname.slice("/github".length), body);

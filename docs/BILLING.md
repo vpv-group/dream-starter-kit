@@ -302,6 +302,13 @@ Billing 2.0 needs kit ≥ 2.6. Everything moves over by itself:
 - The 2.0 migration adds the provider columns, the customer links (backfilled from
   `mod_billing_customers`), the entitlements view and the managed‑tags table, and
   adopts existing "Free" and plan‑name tags. It's expand‑only.
+- **billing-adapter-stripe 1.2:** a one‑time plan bought **on‑site** (the
+  Payment Element) is recorded from `payment_intent.succeeded`. Before 1.2 only
+  hosted Checkout recorded one‑time purchases, so on‑site Lifetime buyers paid but
+  weren't entitled. The PaymentIntent carries `purchase: one_time_on_site`, so
+  subscription invoices and hosted Checkout payments aren't recorded twice. With
+  your own Stripe keys, the hourly check adds the event to the endpoint; through
+  Meet Dream, meetdream.com's Connect endpoint must subscribe to it.
 - Stripe moves into `billing-adapter-stripe`. Its webhook path changes; billing
   forwards the old path for one release, and the adapter's hourly check registers the
   new endpoint and disables the old one (docs/STRIPE.md §5.3).

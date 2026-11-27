@@ -148,6 +148,26 @@ export async function fetchUserTagNames(userId: string): Promise<string[]> {
   return rows.flatMap((r) => (r.tags ? [r.tags.name] : [])).sort();
 }
 
+export interface BillingRow {
+  id: string;
+  status: string;
+  kind: string | null;
+  provider: string | null;
+  plan_id: string | null;
+  price_id: string | null;
+  store: string | null;
+}
+
+/** A user's purchases in billing's ledger (service role). */
+export async function fetchBillingRows(userId: string): Promise<BillingRow[]> {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/mod_billing_subscriptions?user_id=eq.${userId}&select=id,status,kind,provider,plan_id,price_id,store`,
+    { headers: serviceHeaders() },
+  );
+  if (!res.ok) throw new Error(`fetchBillingRows failed: ${res.status}`);
+  return (await res.json()) as BillingRow[];
+}
+
 /**
  * A confirmed email+password user, created through GoTrue's admin API (no
  * Mailpit round-trip) — for specs that need extra accounts, e.g. workspace

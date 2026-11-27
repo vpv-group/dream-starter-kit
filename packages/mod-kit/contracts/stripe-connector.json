@@ -1,0 +1,113 @@
+{
+  "$comment": "The 'Connect with Stripe' contract between a kit site and meetdream.com (docs/STRIPE.md §8). Both sides test against this file: the kit's connector client (apps/nextjs/src/lib/mod/connectors-core.test.ts) and fake (tooling/web-e2e/stub-stripe.mjs, whose E2E fails on any forwarded Stripe call not listed in stripeCalls), and meet-dream's broker (modules/modules tests). Change it only together with both sides. Paths are relative to the registry base (DREAM_REGISTRY_URL); every call carries X-Dream-License-Key.",
+  "version": 1,
+  "broker": {
+    "start": {
+      "method": "POST",
+      "path": "/connect/stripe/start",
+      "request": {
+        "returnTo": "https://site.example/admin/collections/kit-modules/1",
+        "mode": "test"
+      },
+      "response": {
+        "status": 200,
+        "body": { "url": "https://connect.stripe.com/setup/s/acct_123/abc" }
+      }
+    },
+    "status": {
+      "method": "POST",
+      "path": "/sites/connectors/stripe/status",
+      "responses": {
+        "ready": {
+          "status": 200,
+          "body": {
+            "accountId": "acct_123",
+            "accountName": "Example Inc.",
+            "livemode": false,
+            "publishableKey": "pk_test_platform",
+            "ready": true,
+            "onboardingUrl": null
+          }
+        },
+        "onboarding": {
+          "status": 200,
+          "body": {
+            "accountId": "acct_123",
+            "accountName": null,
+            "livemode": false,
+            "publishableKey": "pk_test_platform",
+            "ready": false,
+            "onboardingUrl": "https://connect.stripe.com/setup/s/acct_123/def"
+          }
+        },
+        "notConnected": {
+          "status": 404,
+          "body": {
+            "code": "not_connected",
+            "message": "This site isn't connected to Stripe"
+          }
+        }
+      }
+    },
+    "webhookTarget": {
+      "method": "POST",
+      "path": "/sites/connectors/stripe/webhook-target",
+      "request": {
+        "url": "https://site.example/api/mod/billing-adapter-stripe/webhook"
+      },
+      "response": {
+        "status": 200,
+        "body": { "secret": "whsec_site_secret" }
+      }
+    },
+    "disconnect": {
+      "method": "POST",
+      "path": "/sites/connectors/stripe/disconnect",
+      "response": { "status": 200, "body": {} }
+    },
+    "api": {
+      "$comment": "Stripe API calls: '<METHOD> /sites/connectors/stripe/api' + the Stripe path and query, body passed through, Stripe's status and body returned unchanged. The site never sends Authorization or Stripe-Account.",
+      "pathPrefix": "/sites/connectors/stripe/api"
+    }
+  },
+  "stripeCalls": [
+    "GET /v1/products",
+    "POST /v1/products",
+    "POST /v1/products/:id",
+    "GET /v1/prices/:id",
+    "POST /v1/prices",
+    "POST /v1/prices/:id",
+    "GET /v1/coupons/:id",
+    "POST /v1/coupons",
+    "POST /v1/coupons/:id",
+    "DELETE /v1/coupons/:id",
+    "POST /v1/promotion_codes",
+    "GET /v1/customers",
+    "GET /v1/customers/:id",
+    "POST /v1/customers",
+    "POST /v1/customers/:id",
+    "POST /v1/payment_intents",
+    "POST /v1/setup_intents",
+    "GET /v1/subscriptions",
+    "GET /v1/subscriptions/:id",
+    "POST /v1/subscriptions",
+    "POST /v1/subscriptions/:id",
+    "DELETE /v1/subscriptions/:id",
+    "POST /v1/checkout/sessions",
+    "GET /v1/checkout/sessions/:id/line_items",
+    "POST /v1/billing_portal/sessions",
+    "GET /v1/invoices",
+    "GET /v1/charges"
+  ],
+  "webhookEvents": [
+    "product.created",
+    "product.updated",
+    "price.created",
+    "price.updated",
+    "checkout.session.completed",
+    "customer.subscription.created",
+    "customer.subscription.updated",
+    "customer.subscription.deleted",
+    "payment_intent.succeeded"
+  ]
+}

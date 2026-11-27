@@ -122,3 +122,19 @@ Stripe's onboarding pages change often: the script presses its test-mode
 shortcuts, and in a headed run you can finish any step by hand. Screenshots of
 each step land in `test-results/live/`. `LIVE_DISCONNECT=1` disconnects at
 the end; `LIVE_PLAN` picks a plan by name.
+
+## Fake meetdream.com for "Connect with Stripe"
+
+`stub-stripe.mjs` (served by the stub server on :4010) is a fake meetdream.com
+Stripe broker with an in-memory fake Stripe API, following
+`packages/mod-kit/contracts/stripe-connector.json`. `src/stripe-connect.spec.ts`
+runs in its own `stripe-connect` project after the main suite. Test controls:
+
+| Endpoint                                                     | What it does                                                                           |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `GET /stripe-onboarding`                                     | "Stripe onboarding": marks the site connected, redirects back with `?stripe=connected` |
+| `POST /__stripe/scenario {ready?, down?}`                    | onboarding not finished / meetdream.com down                                           |
+| `POST /__stripe/pay {subscriptionId \| paymentIntentId}`     | stands in for Stripe.js: marks it paid and delivers the events, signed for the site    |
+| `POST /__stripe/emit {type, object, id?, created?, secret?}` | delivers any event (forged, replayed, old)                                             |
+| `GET /__stripe/log`, `GET /__stripe/state`                   | what the site sent; the fake Stripe objects                                            |
+| `POST /__stripe/reset`, `POST /__stripe/drain`               | forget everything; wait for queued deliveries                                          |

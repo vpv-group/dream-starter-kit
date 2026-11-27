@@ -209,3 +209,88 @@ describe("GitHub sync access", () => {
     expect(res.status).toBe("error");
   });
 });
+
+/**
+ * The shared contract with meetdream.com (packages/mod-kit/contracts): every
+ * answer it documents must parse here, so a change on either side fails a
+ * test instead of a customer's checkout. meet-dream tests its broker against
+ * the same file.
+ */
+describe("Stripe connector contract (packages/mod-kit/contracts)", async () => {
+  const { default: contract } =
+    (await import("../../../../../packages/mod-kit/contracts/stripe-connector.json")) as {
+      default: {
+        broker: {
+          start: {
+            path: string;
+            request: { returnTo: string; mode: "test" | "live" };
+            response: { status: number; body: unknown };
+          };
+          status: {
+            path: string;
+            responses: Record<string, { status: number; body: unknown }>;
+          };
+          webhookTarget: {
+            path: string;
+            request: { url: string };
+            response: { status: number; body: unknown };
+          };
+          disconnect: {
+            path: string;
+            response: { status: number; body: unknown };
+          };
+        };
+      };
+    };
+  const { broker } = contract;
+  const urlOf = (f: ReturnType<typeof fake>) => f.mock.calls[0]?.[0];
+
+  it("start", async () => {
+    const f = fake(broker.start.response.status, broker.start.response.body);
+    const res = await connectorStartUrl(
+      opts(f),
+      "stripe",
+      broker.start.request.returnTo,
+      broker.start.request.mode,
+    );
+    expect(res.status).toBe("ok");
+    expect(urlOf(f)).toBe(`${REGISTRY}${broker.start.path}`);
+  });
+
+  it("status: ready, onboarding and not connected", async () => {
+    for (const [name, answer] of Object.entries(broker.status.responses)) {
+      const f = fake(answer.status, answer.body);
+      const res = await connectorStatus(opts(f), "stripe");
+      expect(urlOf(f), name).toBe(`${REGISTRY}${broker.status.path}`);
+      expect(res.status, name).toBe(
+        name === "notConnected" ? "not_connected" : "ok",
+      );
+      if (res.status === "ok") {
+        expect(res.connection.ready, name).toBe(name === "ready");
+      }
+    }
+  });
+
+  it("webhook target", async () => {
+    const f = fake(
+      broker.webhookTarget.response.status,
+      broker.webhookTarget.response.body,
+    );
+    const res = await connectorWebhookTarget(
+      opts(f),
+      "stripe",
+      broker.webhookTarget.request.url,
+    );
+    expect(res).toEqual({ status: "ok", secret: "whsec_site_secret" });
+    expect(urlOf(f)).toBe(`${REGISTRY}${broker.webhookTarget.path}`);
+  });
+
+  it("disconnect", async () => {
+    const f = fake(
+      broker.disconnect.response.status,
+      broker.disconnect.response.body,
+    );
+    expect((await connectorDisconnect(opts(f), "stripe")).status).toBe("ok");
+    expect(urlOf(f)).toBe(`${REGISTRY}${broker.disconnect.path}`);
+  });
+});

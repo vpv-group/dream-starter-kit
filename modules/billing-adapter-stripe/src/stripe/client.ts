@@ -123,13 +123,62 @@ function forwardingFetch(): typeof fetch {
     new Headers(init?.headers).forEach((v, k) => {
       headers[k] = v;
     });
-    return broker.forward("stripe", `${url.pathname}${url.search}`, {
+    const res = await broker.forward("stripe", `${url.pathname}${url.search}`, {
       method: init?.method ?? "GET",
       headers,
       ...(typeof init?.body === "string" ? { body: init.body } : {}),
     });
+    return asStripeResponse(res);
   };
   return forward;
+}
+
+/**
+ * meetdream.com answers some forwarded calls itself (not connected, not
+ * allowed, unavailable…) with `{code, message}`. stripe-node only treats a
+ * body with an `error` key as a failure, so those would read as SUCCESS with
+ * every field missing. Re-shape them as Stripe errors; Stripe's own answers
+ * (already `{error}`) pass through untouched.
+ */
+interface BrokerAnswer {
+  error?: unknown;
+  code?: unknown;
+  message?: unknown;
+}
+
+function parseObject(text: string): BrokerAnswer | null {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function asStripeResponse(res: Response): Promise<Response> {
+  if (res.ok) return res;
+  const text = await res.text();
+  const body = parseObject(text);
+  const headers = new Headers(res.headers);
+  if (body?.error) {
+    return new Response(text, { status: res.status, headers });
+  }
+  headers.set("content-type", "application/json");
+  const code = typeof body?.code === "string" ? body.code : "meetdream_error";
+  const message =
+    typeof body?.message === "string"
+      ? body.message
+      : text.slice(0, 200) || res.statusText;
+  return new Response(
+    JSON.stringify({
+      error: {
+        type: res.status >= 500 ? "api_error" : "invalid_request_error",
+        code,
+        message: `Meet Dream: ${message}`,
+      },
+    }),
+    { status: res.status, headers },
+  );
 }
 
 /** A Stripe client for credentials. */
