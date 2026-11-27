@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment } from "react";
+import type { ComponentProps } from "react";
+import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Banner,
@@ -8,10 +9,16 @@ import {
   CopyToClipboard,
   Drawer,
   Pill,
+  useAuth,
   useModal,
+  ViewDescription,
 } from "@payloadcms/ui";
+import { createPortal } from "react-dom";
+
+import type { User } from "@acme/cms";
 
 import type { CatalogEntry } from "./use-modules-admin";
+import { hasStaffRole } from "../../access";
 import {
   dispatchModuleOp,
   isPaidEntry,
@@ -21,17 +28,57 @@ import {
 const DRAWER_SLUG = "install-module";
 
 /**
- * "Install module" — the Modules list's header action (collection
- * `views.list.actions`), standing in for Payload's "Create New" (modules
- * aren't created by hand). Opens a drawer with the Dream catalog. Every
- * install dispatches module-ops and lands as a PR that merges itself once its
- * checks pass (clicking Install is the approval). Installs from a GitHub URL
- * or a ZIP are CLI-only, for module authors. Admins only.
+ * The Modules collection's `Description` slot: renders the description as
+ * usual and puts "Install module" next to the list title, where other
+ * collections show Payload's "Create New" (modules aren't created by hand,
+ * and Payload has no custom slot there, so the button is portaled into the
+ * list header). On the module page there is no list header: description only.
+ */
+export function ModulesListDescription({
+  description,
+}: {
+  description?: ComponentProps<typeof ViewDescription>["description"];
+}) {
+  const anchor = useRef<HTMLSpanElement>(null);
+  const [titleRow, setTitleRow] = useState<Element | null>(null);
+  useLayoutEffect(() => {
+    setTitleRow(
+      anchor.current
+        ?.closest(".list-header")
+        ?.querySelector(".list-header__title-and-actions") ?? null,
+    );
+  }, []);
+  return (
+    <>
+      {description ? <ViewDescription description={description} /> : null}
+      <span ref={anchor} hidden />
+      {titleRow
+        ? createPortal(
+            <div className="list-header__title-actions">
+              <InstallModuleAction />
+            </div>,
+            titleRow,
+          )
+        : null}
+    </>
+  );
+}
+
+/**
+ * "Install module": opens a drawer with the Dream catalog. Every install
+ * dispatches module-ops and lands as a PR that merges itself once its checks
+ * pass (clicking Install is the approval). Installs from a GitHub URL or a
+ * ZIP are CLI-only, for module authors.
+ *
+ * Shown straight away to staff (the same gate as /api/modules/*: `is_staff`
+ * follows the CMS roles), from the signed-in user Payload already has, so it
+ * never waits on the registry, catalog or GitHub requests; the drawer shows
+ * their progress instead.
  */
 export function InstallModuleAction() {
-  const { registry } = useModulesAdmin();
+  const { user } = useAuth<User>();
   const { openModal } = useModal();
-  if (!registry) return null;
+  if (!hasStaffRole(user?.roles)) return null;
   return (
     <>
       <Button
@@ -50,8 +97,17 @@ export function InstallModuleAction() {
 }
 
 function InstallModuleDrawerBody() {
-  const { registry, visibleCatalog } = useModulesAdmin();
-  if (!registry) return null;
+  const { registry, registryLoaded, loaded, visibleCatalog } =
+    useModulesAdmin();
+  if (!registry) {
+    return (
+      <p className="kit-modules-install__hint">
+        {registryLoaded
+          ? "Modules couldn't be loaded right now. Try again in a minute."
+          : "Loading modules…"}
+      </p>
+    );
+  }
 
   return (
     <div className="kit-modules-install">
@@ -65,7 +121,9 @@ function InstallModuleDrawerBody() {
 
       <section className="kit-modules-install__section">
         <h3 className="kit-modules-install__title">Catalog</h3>
-        {visibleCatalog.length === 0 ? (
+        {!loaded ? (
+          <p className="kit-modules-install__hint">Loading the catalog…</p>
+        ) : visibleCatalog.length === 0 ? (
           <p className="kit-modules-install__hint">
             The catalog couldn&apos;t be loaded right now. Try again in a
             minute.

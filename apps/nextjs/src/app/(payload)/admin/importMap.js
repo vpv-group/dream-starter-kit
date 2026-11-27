@@ -35,9 +35,10 @@ import { ModuleVersionCell as ModuleVersionCell_7d6076d2d6d58c512a39eac69617f1e4
 import { ModuleSourceCell as ModuleSourceCell_7d6076d2d6d58c512a39eac69617f1e4 } from '~/payload/components/modules/ModuleCells'
 import { ModuleEnabledCell as ModuleEnabledCell_7d6076d2d6d58c512a39eac69617f1e4 } from '~/payload/components/modules/ModuleCells'
 import { ModuleInfoPanel as ModuleInfoPanel_e45f3c51844d1d1d2064cc8ddaea07fd } from '~/payload/components/modules/ModuleInfoPanel'
+import { ModuleAdminSettings as ModuleAdminSettings_6fc8f7dd5c1ebbd6556166b197418f34 } from '~/payload/components/ModuleAdminSettings'
 import { NoModuleSettings as NoModuleSettings_e45f3c51844d1d1d2064cc8ddaea07fd } from '~/payload/components/modules/ModuleInfoPanel'
 import { ModulesStatusBanner as ModulesStatusBanner_6258eb62fe74ca5100b8f18310328f15 } from '~/payload/components/modules/ModulesStatusBanner'
-import { InstallModuleAction as InstallModuleAction_16b4d481212f2700435b4ec764108e7d } from '~/payload/components/modules/InstallModuleAction'
+import { ModulesListDescription as ModulesListDescription_16b4d481212f2700435b4ec764108e7d } from '~/payload/components/modules/InstallModuleAction'
 import { NativeNavigationEditor as NativeNavigationEditor_5a350b9da14d67a63796be4eb41f7af6 } from '~/payload/components/navigation/NativeNavigationEditor'
 import { WebAppHeader as WebAppHeader_66737539b3b361a59dee52152c3bd3eb } from '~/payload/components/navigation/WebAppHeader'
 import { FolderTypeField as FolderTypeField_2b8867833a34864a02ddf429b0728a40 } from '@payloadcms/next/client'
@@ -56,7 +57,6 @@ import { ModAdminProviders as ModAdminProviders_bfad74fcff187972c1859f01cc8bd34b
 import { ModuleSettingsRedirect as ModuleSettingsRedirect_d8a20bc588dcf26827ccf79503f6bfcf } from '~/payload/components/ModuleSettingsRedirect'
 import { UpdatesView as UpdatesView_12eb572e6e090fae1d07aeebe9547c8d } from '~/payload/components/updates/UpdatesView'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
-import { ModuleAdminSettings as ModuleAdminSettings_6fc8f7dd5c1ebbd6556166b197418f34 } from '~/payload/components/ModuleAdminSettings'
 import { LabelRowLabel as LabelRowLabel_5eaf297a4b8a4736f5a55eb7cd0def54 } from '~/payload/components/LabelRowLabel'
 import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
 
@@ -99,9 +99,10 @@ export const importMap = {
   "~/payload/components/modules/ModuleCells#ModuleSourceCell": ModuleSourceCell_7d6076d2d6d58c512a39eac69617f1e4,
   "~/payload/components/modules/ModuleCells#ModuleEnabledCell": ModuleEnabledCell_7d6076d2d6d58c512a39eac69617f1e4,
   "~/payload/components/modules/ModuleInfoPanel#ModuleInfoPanel": ModuleInfoPanel_e45f3c51844d1d1d2064cc8ddaea07fd,
+  "~/payload/components/ModuleAdminSettings#ModuleAdminSettings": ModuleAdminSettings_6fc8f7dd5c1ebbd6556166b197418f34,
   "~/payload/components/modules/ModuleInfoPanel#NoModuleSettings": NoModuleSettings_e45f3c51844d1d1d2064cc8ddaea07fd,
   "~/payload/components/modules/ModulesStatusBanner#ModulesStatusBanner": ModulesStatusBanner_6258eb62fe74ca5100b8f18310328f15,
-  "~/payload/components/modules/InstallModuleAction#InstallModuleAction": InstallModuleAction_16b4d481212f2700435b4ec764108e7d,
+  "~/payload/components/modules/InstallModuleAction#ModulesListDescription": ModulesListDescription_16b4d481212f2700435b4ec764108e7d,
   "~/payload/components/navigation/NativeNavigationEditor#NativeNavigationEditor": NativeNavigationEditor_5a350b9da14d67a63796be4eb41f7af6,
   "~/payload/components/navigation/WebAppHeader#WebAppHeader": WebAppHeader_66737539b3b361a59dee52152c3bd3eb,
   "@payloadcms/next/client#FolderTypeField": FolderTypeField_2b8867833a34864a02ddf429b0728a40,
@@ -120,7 +121,6 @@ export const importMap = {
   "~/payload/components/ModuleSettingsRedirect#ModuleSettingsRedirect": ModuleSettingsRedirect_d8a20bc588dcf26827ccf79503f6bfcf,
   "~/payload/components/updates/UpdatesView#UpdatesView": UpdatesView_12eb572e6e090fae1d07aeebe9547c8d,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,
-  "~/payload/components/ModuleAdminSettings#ModuleAdminSettings": ModuleAdminSettings_6fc8f7dd5c1ebbd6556166b197418f34,
   "~/payload/components/LabelRowLabel#LabelRowLabel": LabelRowLabel_5eaf297a4b8a4736f5a55eb7cd0def54,
   "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24
 }

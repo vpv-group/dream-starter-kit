@@ -101,8 +101,8 @@ const hiddenInForm = () => false;
  *
  * This is THE Modules screen (docs/MODULES.md → Admin panel):
  * - list: version (+ update available), source/license, enabled/system
- *   cells; a status banner for module ops; "Install module" in the header
- *   (catalog, GitHub URL, ZIP) — installs dispatch module-ops and land as PRs.
+ *   cells; a status banner for module ops; "Install module" next to the
+ *   title (the Dream catalog) — installs dispatch module-ops and land as PRs.
  * - module page: its settings in the main column; Enabled + a "Module" panel
  *   (version, update, source, license, menu link, remove) in the sidebar.
  * `pnpm mod remove` (or Remove → PR) is the real uninstall; the Enabled
@@ -125,11 +125,8 @@ export const KitModules: CollectionConfig = {
       beforeListTable: [
         `${COMPONENTS}/ModulesStatusBanner#ModulesStatusBanner`,
       ],
-      views: {
-        list: {
-          actions: [`${COMPONENTS}/InstallModuleAction#InstallModuleAction`],
-        },
-      },
+      // Also puts "Install module" next to the list title (Create New's spot).
+      Description: `${COMPONENTS}/InstallModuleAction#ModulesListDescription`,
     },
   },
   access: {
