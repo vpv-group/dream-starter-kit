@@ -90,6 +90,11 @@
       "sha256": "e24967d4e760bae2b1f3f50de7c5c843ac765b9263c0014ee4d8817c6ea1a779",
       "target": "20261126214941_mod_feedback_005_autopilot.sql"
     },
+    "feedback/006_insights.sql": {
+      "version": "20261127030001",
+      "sha256": "4bea87e5de4aff637759be8a66ecde3c33039fad80841fab90c1f166b1921361",
+      "target": "20261127030001_mod_feedback_006_insights.sql"
+    },
     "notifications/001_initial.sql": {
       "version": "20260612011540",
       "sha256": "99010f69124c6d4b6ec8a303848d41501a74e5a3866d06bac399c30774ddebc0",

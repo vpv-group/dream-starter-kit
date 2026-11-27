@@ -1,5 +1,7 @@
 import type { z } from "zod/v4";
 
+import type { ModRouteContext } from "@acme/mod-kit/server";
+
 /** Small helpers shared by the feedback route handlers. */
 
 export const json = (status: number, body: unknown) =>
@@ -76,4 +78,22 @@ export function must<T>(res: {
 }): NonNullable<T> {
   if (res.error) throw Object.assign(new Error(res.error.message), res.error);
   return res.data as NonNullable<T>;
+}
+
+/** 403 unless the caller is feedback staff (checked in SQL, per request). */
+export async function requireStaff(ctx: {
+  supabase: ModRouteContext["supabase"];
+}): Promise<void> {
+  const { data } = await ctx.supabase.rpc("mod_feedback_is_staff");
+  if (!data) throw new HttpError(403, "Staff only.", "forbidden");
+}
+
+/** A staff-only route: `handle` + `requireStaff`. */
+export function staff(
+  fn: (req: Request, ctx: ModRouteContext) => Promise<Response>,
+): (req: Request, ctx: ModRouteContext) => Promise<Response> {
+  return handle(async (req: Request, ctx: ModRouteContext) => {
+    await requireStaff(ctx);
+    return fn(req, ctx);
+  });
 }

@@ -11,7 +11,15 @@ import { settings as settingsDef } from "../payload/settings";
 import { CHANGELOG_TYPE_META } from "../shared/changelog";
 import { effectiveAnon } from "../shared/config";
 import { createAdminClient } from "./admin-client";
-import { handle, HttpError, json, must, ok, parseBody } from "./http";
+import {
+  handle,
+  HttpError,
+  json,
+  must,
+  ok,
+  parseBody,
+  requireStaff,
+} from "./http";
 import { lexicalToHtml } from "./lexical-html";
 
 /**
@@ -266,19 +274,10 @@ export const changelogPublicRoutes: ModPublicRouteTable = {
   }),
 };
 
-async function requireStaffRoute(ctx: {
-  supabase: {
-    rpc: (fn: "mod_feedback_is_staff") => PromiseLike<{ data: unknown }>;
-  };
-}) {
-  const { data } = await ctx.supabase.rpc("mod_feedback_is_staff");
-  if (!data) throw new HttpError(403, "Staff only.", "forbidden");
-}
-
 export const changelogStaffRoutes: ModRouteTable = {
   /** Entries for the staff workspace + idea linking. */
   "GET /staff/changelog": handle(async (_req, ctx) => {
-    await requireStaffRoute(ctx);
+    await requireStaff(ctx);
     const payload = await ctx.getPayload();
     const res = await payload.find({
       collection: "mod-feedback-changelog",
@@ -302,7 +301,7 @@ export const changelogStaffRoutes: ModRouteTable = {
 
   /** Link / unlink an idea on an entry (shipped on the entry's first publish). */
   "POST /staff/changelog/link": handle(async (req, ctx) => {
-    await requireStaffRoute(ctx);
+    await requireStaff(ctx);
     const input = await parseBody(
       req,
       z.object({

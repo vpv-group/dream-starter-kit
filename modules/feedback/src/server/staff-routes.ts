@@ -3,7 +3,7 @@ import "server-only";
 import { after } from "next/server";
 
 import type { TablesUpdate } from "@acme/api";
-import type { ModRouteContext, ModRouteTable } from "@acme/mod-kit/server";
+import type { ModRouteTable } from "@acme/mod-kit/server";
 
 import {
   commentUpdateInput,
@@ -15,7 +15,7 @@ import {
 } from "../validators";
 import { createAdminClient } from "./admin-client";
 import { syncAllConfig } from "./full-sync";
-import { handle, HttpError, must, ok, parseBody } from "./http";
+import { HttpError, must, ok, parseBody, staff } from "./http";
 import { notifyAssigned, notifyStatusChange } from "./notify";
 
 /**
@@ -25,20 +25,6 @@ import { notifyAssigned, notifyStatusChange } from "./notify";
  * Postgres stays the authority (golden rule #1); the service role is used
  * only to notify other users.
  */
-
-async function requireStaff(ctx: ModRouteContext): Promise<void> {
-  const { data } = await ctx.supabase.rpc("mod_feedback_is_staff");
-  if (!data) throw new HttpError(403, "Staff only.", "forbidden");
-}
-
-function staff(
-  fn: (req: Request, ctx: ModRouteContext) => Promise<Response>,
-): (req: Request, ctx: ModRouteContext) => Promise<Response> {
-  return handle(async (req: Request, ctx: ModRouteContext) => {
-    await requireStaff(ctx);
-    return fn(req, ctx);
-  });
-}
 
 const POST_LIST_COLUMNS =
   "id, board_id, category_id, status_id, author_id, owner_id, title, details, slug, vote_count, comment_count, trend_score, trend_at, approval_state, pinned, merged_into_id, eta, eta_public, source, status_changed_at, created_at, deleted_at";

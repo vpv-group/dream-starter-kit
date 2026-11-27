@@ -25,7 +25,7 @@ import {
   resolveInboxItem,
   summarizePost,
 } from "./autopilot";
-import { handle, HttpError, json, must, ok, parseBody } from "./http";
+import { handle, HttpError, json, must, ok, parseBody, staff } from "./http";
 
 /**
  * Autopilot routes. AI runs only from the cron, staff routes, and the
@@ -39,17 +39,6 @@ async function loadAp(getPayload: () => Promise<BasePayload>) {
   );
   return autopilotSettings(s.ap);
 }
-
-async function requireStaff(ctx: ModRouteContext) {
-  const { data } = await ctx.supabase.rpc("mod_feedback_is_staff");
-  if (!data) throw new HttpError(403, "Staff only.", "forbidden");
-}
-
-const staff = (fn: (req: Request, ctx: ModRouteContext) => Promise<Response>) =>
-  handle(async (req: Request, ctx: ModRouteContext) => {
-    await requireStaff(ctx);
-    return fn(req, ctx);
-  });
 
 function requireAi() {
   if (!aiConfigured()) {

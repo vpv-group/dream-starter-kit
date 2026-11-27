@@ -7,6 +7,7 @@ import { useSupabase } from "@acme/api";
 import { ensureAnonSession } from "@acme/app";
 
 import type { Sort } from "../shared/config";
+import type { Insights } from "../shared/insights";
 import type { ScoreFactor } from "../shared/score";
 import type {
   CommentInput,
@@ -1000,5 +1001,26 @@ export function useRotateApiKey(apiBaseUrl = "") {
         apiBaseUrl,
       }),
     onSuccess: () => invalidateAll(qc),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Insights (staff)
+// ---------------------------------------------------------------------------
+
+export function useInsights(
+  days: number,
+  board: string | null,
+  apiBaseUrl = "",
+) {
+  const supabase = useSupabase();
+  return useQuery({
+    queryKey: [...feedbackKeys.staff(), "insights", days, board],
+    queryFn: () =>
+      feedbackApi<Insights & { days: number }>(
+        supabase,
+        `/staff/insights?days=${days}${board ? `&board=${encodeURIComponent(board)}` : ""}`,
+        { apiBaseUrl },
+      ),
   });
 }

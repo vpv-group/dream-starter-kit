@@ -9,6 +9,7 @@ import {
   changelogStaffRoutes,
 } from "./changelog-routes";
 import { ideaRoutes } from "./idea-routes";
+import { insightsRoutes } from "./insights-routes";
 import {
   integrationPublicRoutes,
   integrationRoutes,
@@ -36,4 +37,5 @@ export const routes = {
   ...changelogStaffRoutes,
   ...integrationRoutes,
   ...autopilotStaffRoutes,
+  ...insightsRoutes,
 };

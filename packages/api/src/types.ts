@@ -2643,6 +2643,10 @@ export type Database = {
           mine: boolean;
         }[];
       };
+      mod_feedback_changelog_reader_count: {
+        Args: { _since: string };
+        Returns: number;
+      };
       mod_feedback_idea_voter_stats: {
         Args: { _ideas: string[] };
         Returns: {
@@ -2653,6 +2657,10 @@ export type Database = {
           tags: Json;
           voters: number;
         }[];
+      };
+      mod_feedback_insights: {
+        Args: { _board?: string; _since: string };
+        Returns: Json;
       };
       mod_feedback_is_anon: { Args: never; Returns: boolean };
       mod_feedback_is_service: { Args: never; Returns: boolean };

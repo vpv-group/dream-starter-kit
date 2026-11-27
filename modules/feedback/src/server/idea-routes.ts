@@ -3,7 +3,7 @@ import "server-only";
 import { after } from "next/server";
 
 import type { TablesUpdate } from "@acme/api";
-import type { ModRouteContext, ModRouteTable } from "@acme/mod-kit/server";
+import type { ModRouteTable } from "@acme/mod-kit/server";
 import { getModuleSettings } from "@acme/mod-kit/payload";
 
 import type { FeedbackSettings } from "../payload/settings";
@@ -16,7 +16,7 @@ import {
   linkPostInput,
 } from "../validators";
 import { createAdminClient } from "./admin-client";
-import { handle, HttpError, json, must, ok, parseBody } from "./http";
+import { HttpError, json, must, ok, parseBody, staff } from "./http";
 import { notifyStatusChange } from "./notify";
 
 /**
@@ -25,17 +25,6 @@ import { notifyStatusChange } from "./notify";
  * one transaction (mod_feedback_set_idea_stage); voters of those posts are
  * notified when the stage says so.
  */
-
-async function requireStaff(ctx: ModRouteContext): Promise<void> {
-  const { data } = await ctx.supabase.rpc("mod_feedback_is_staff");
-  if (!data) throw new HttpError(403, "Staff only.", "forbidden");
-}
-
-const staff = (fn: (req: Request, ctx: ModRouteContext) => Promise<Response>) =>
-  handle(async (req: Request, ctx: ModRouteContext) => {
-    await requireStaff(ctx);
-    return fn(req, ctx);
-  });
 
 /** Notify voters for every status change a stage cascade made. */
 export function notifyCascade(

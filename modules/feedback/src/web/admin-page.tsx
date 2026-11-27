@@ -60,6 +60,7 @@ import { toneOf } from "../shared/tones";
 import { AutopilotInbox } from "./autopilot";
 import { ChangelogTab } from "./changelog-admin";
 import { IdeaSheet, IdeasTab, RoadmapBoard } from "./ideas";
+import { InsightsTab } from "./insights";
 
 const dateFmt = new Intl.DateTimeFormat(undefined, {
   month: "short",
@@ -159,7 +160,11 @@ export function FeedbackAdminPage() {
           <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
           <TabsTrigger value="posts">Posts</TabsTrigger>
           <TabsTrigger value="changelog">Changelog</TabsTrigger>
+          <TabsTrigger value="insights">Insights</TabsTrigger>
         </TabsList>
+        <TabsContent value="insights" className="pt-4">
+          <InsightsTab />
+        </TabsContent>
         <TabsContent value="changelog" className="pt-4">
           <ChangelogTab />
         </TabsContent>
