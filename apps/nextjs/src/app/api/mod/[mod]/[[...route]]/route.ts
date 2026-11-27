@@ -5,6 +5,7 @@ import { createClient as createBearerClient } from "@supabase/supabase-js";
 import type { Database } from "@acme/api";
 import type { ModRouteContext } from "@acme/mod-kit/server";
 import { slidingWindow } from "@acme/config";
+import { matchModRoute, MOD_HTTP_METHODS } from "@acme/mod-kit/server";
 
 import { env, supabaseAnonKey } from "~/env";
 import { isModuleEnabled } from "~/lib/mod/enabled";
@@ -110,12 +111,12 @@ async function dispatch(
   }
 
   const path = `/${(route ?? []).join("/")}`;
-  const key = `${req.method} ${path}`;
 
   // PUBLIC routes first (manifest server.publicRoutes — e.g. guest checkout):
   // no session required; rate-limited per user when present, per IP otherwise.
-  const publicHandler = publicTable?.[key];
-  if (publicHandler) {
+  // Keys are exact, or `"METHOD /prefix/*"` wildcards (matchModRoute).
+  const publicMatch = matchModRoute(publicTable, req.method, path);
+  if (publicMatch) {
     // Either session style; anonymous visitors are allowed here.
     const { user, supabase } = await authenticate(req, {
       allowAnonymous: true,
@@ -126,10 +127,10 @@ async function dispatch(
     if (!rateLimit(limiterKey)) {
       return json(429, { error: "Rate limit exceeded. Try again shortly." });
     }
-    return publicHandler(req, {
+    return publicMatch.handler(req, {
       user,
       supabase,
-      params: {},
+      params: publicMatch.params,
       getPayload: getPayloadLazy,
       host: hostServices,
     });
@@ -144,9 +145,11 @@ async function dispatch(
     return json(429, { error: "Rate limit exceeded. Try again shortly." });
   }
 
-  const handler = table[key];
-  if (!handler) {
-    const pathExists = Object.keys(table).some((k) => k.endsWith(` ${path}`));
+  const match = matchModRoute(table, req.method, path);
+  if (!match) {
+    const pathExists = MOD_HTTP_METHODS.some((m) =>
+      matchModRoute(table, m, path),
+    );
     return pathExists
       ? json(405, { error: "Method not allowed" })
       : json(404, { error: "Not found" });
@@ -155,13 +158,13 @@ async function dispatch(
   const ctx: ModRouteContext = {
     user: auth.user,
     supabase: auth.supabase,
-    params: {},
+    params: match.params,
     getPayload: getPayloadLazy,
     host: hostServices,
   };
 
   // Streaming responses pass through untouched.
-  return handler(req, ctx);
+  return match.handler(req, ctx);
 }
 
 export {

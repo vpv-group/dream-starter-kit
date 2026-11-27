@@ -58,8 +58,9 @@ export interface ModRouteContext {
   /** RLS-scoped client bound to the caller's session — queries run as the user. */
   supabase: SupabaseClient<Database>;
   /**
-   * Reserved for future route-pattern params; route keys are exact
-   * "METHOD /path" strings today.
+   * Route-pattern params. A wildcard key (`"GET /files/*"`, see
+   * matchModRoute) puts the rest of the path in `params["*"]`; exact keys
+   * get `{}`.
    */
   params: Record<string, string>;
   /**
@@ -77,9 +78,10 @@ export type ModRouteHandler = (
 ) => Response | Promise<Response>;
 
 /**
- * Keys are exact `"METHOD /path"` strings, e.g. `"POST /stream"`,
- * `"GET /ping"`. The index route is `"GET /"`. Streaming responses pass
- * through the dispatcher untouched.
+ * Keys are `"METHOD /path"` strings, e.g. `"POST /stream"`, `"GET /ping"`.
+ * The index route is `"GET /"`. A key ending in `/*` (`"GET /files/*"`)
+ * matches every deeper path under that prefix (matchModRoute). Streaming
+ * responses pass through the dispatcher untouched.
  */
 export type ModRouteTable = Record<string, ModRouteHandler>;
 
@@ -119,6 +121,40 @@ export const MOD_HTTP_METHODS = [
   "DELETE",
 ] as const;
 export type ModHttpMethod = (typeof MOD_HTTP_METHODS)[number];
+
+/**
+ * Find the handler for `METHOD path` in a route table: the exact key first,
+ * else the longest wildcard key (`"METHOD /prefix/*"`) whose prefix the path
+ * extends, with the rest of the path (decoded as the dispatcher received
+ * it) in `params["*"]`. A wildcard never matches the bare prefix itself.
+ * Used by the host's /api/mod dispatcher; pure, unit tested.
+ */
+export function matchModRoute<H>(
+  table: Record<string, H> | undefined,
+  method: string,
+  path: string,
+): { handler: H; params: Record<string, string> } | null {
+  if (!table) return null;
+  const exact = Object.hasOwn(table, `${method} ${path}`)
+    ? table[`${method} ${path}`]
+    : undefined;
+  if (exact) return { handler: exact, params: {} };
+  let best: { handler: H; prefix: string } | null = null;
+  for (const [key, handler] of Object.entries(table)) {
+    if (!key.startsWith(`${method} `) || !key.endsWith("/*")) continue;
+    const prefix = key.slice(method.length + 1, -1); // keeps the trailing "/"
+    if (
+      path.length > prefix.length &&
+      path.startsWith(prefix) &&
+      (!best || prefix.length > best.prefix.length)
+    ) {
+      best = { handler, prefix };
+    }
+  }
+  return best
+    ? { handler: best.handler, params: { "*": path.slice(best.prefix.length) } }
+    : null;
+}
 
 /* -------------------------------------------------------------------------- */
 /* Remote MCP server contributions (manifest `server.mcp: true`)               */
