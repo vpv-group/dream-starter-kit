@@ -586,8 +586,25 @@ tombstones the lock (pinned migration versions are never reused).
 
 ## Admin panel + automatic updates
 
-Three places in `/admin`, all admin-only:
+Four places in `/admin`, all admin-only:
 
+- **Updates available**, a bar above every admin page while the starter
+  kit or an installed module is behind its newest release (`header`
+  component `payload/components/updates/UpdatesAlert.tsx`, data from
+  `GET /api/modules/outdated`, rules in `lib/mod/outdated-core.ts`). It
+  lists each one (`2.5.0 → 2.6.0`, with its PR when one is open) and offers
+  **Update** (one item) or **Update all**, which sends one `module-ops.yml`
+  dispatch per item without an open PR, the kit first. As with Update on
+  the Modules screen, the click approves the module PRs; the kit PR follows
+  **Merge updates automatically**. The kit counts as behind when GitHub's
+  latest `dream-starter-kit` release (cached for an hour) is newer than
+  `KIT_VERSION`, which is the release `kit-update` would merge. Modules count
+  when installed from GitHub, or from the Dream registry while the license
+  covers them, and the catalog's `latest` is newer. Bundled and pinned
+  modules, paused slugs and skipped versions are left out. A module whose
+  newest release needs a newer kit (`kitCompat`) shows "after the kit
+  update" and waits for the kit PR. Dismissing hides the bar until a newer
+  version appears.
 - **Updates** (`/admin/updates`, in the sidebar): the starter kit and module
   updates in one list, two switches, the GitHub connection and the license.
 - **Modules** (`/admin/collections/kit-modules`): installed modules, their
