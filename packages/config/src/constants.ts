@@ -12,7 +12,7 @@ export const APP_NAME = "Dream";
  * test in this package asserts it). Bump the major for breaking changes to
  * the module API surface (@acme/mod-kit contracts, registry shapes).
  */
-export const KIT_VERSION = "2.6.0";
+export const KIT_VERSION = "2.6.1";
 
 /**
  * Default Dream module registry — the paid-module distribution endpoint
