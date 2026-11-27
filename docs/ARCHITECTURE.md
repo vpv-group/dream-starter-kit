@@ -30,20 +30,20 @@ Two ideas make it maintainable:
 
 ## 2. Stack at a glance
 
-| Layer                        | Choice                                                                                         |
-| ---------------------------- | ---------------------------------------------------------------------------------------------- |
-| Monorepo / build             | Turborepo + pnpm (one catalog pins every version)                                              |
-| Web app                      | Next.js (App Router) + shadcn/ui + Tailwind CSS                                                |
-| Mobile app                   | Expo + Expo Router + react-native-reusables + NativeWind                                       |
-| Backend                      | Supabase — Postgres, Auth, Storage, Edge Functions (Deno)                                      |
-| Authorization                | Postgres **Row-Level Security** on every app table                                             |
-| Data layer                   | `@supabase/supabase-js` typed client + react-query hooks                                       |
-| Content / CMS                | **Payload CMS v3** (web/server only) — own `cms` schema, admin at `/admin`, REST at `/cms-api` |
-| Payments                     | Stripe (web subscriptions) + one self-registering webhook (billing module route)               |
-| AI                           | Vercel AI SDK v6 through the **Vercel AI Gateway** (Claude default)                            |
-| Remote MCP                   | `@acme/mcp` server at `/mcp` — OAuth 2.1 (Supabase login), staff-only                          |
-| Mobile build / submit / push | Expo EAS + Expo Push                                                                           |
-| Web hosting                  | Vercel                                                                                         |
+| Layer                        | Choice                                                                                          |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- |
+| Monorepo / build             | Turborepo + pnpm (one catalog pins every version)                                               |
+| Web app                      | Next.js (App Router) + shadcn/ui + Tailwind CSS                                                 |
+| Mobile app                   | Expo + Expo Router + react-native-reusables + NativeWind                                        |
+| Backend                      | Supabase — Postgres, Auth, Storage, Edge Functions (Deno)                                       |
+| Authorization                | Postgres **Row-Level Security** on every app table                                              |
+| Data layer                   | `@supabase/supabase-js` typed client + react-query hooks                                        |
+| Content / CMS                | **Payload CMS v3** (web/server only) — own `cms` schema, admin at `/admin`, REST at `/cms-api`  |
+| Payments                     | Billing core module + payment-provider adapters; Stripe (web) with one self-registering webhook |
+| AI                           | Vercel AI SDK v6 through the **Vercel AI Gateway** (Claude default)                             |
+| Remote MCP                   | `@acme/mcp` server at `/mcp` — OAuth 2.1 (Supabase login), staff-only                           |
+| Mobile build / submit / push | Expo EAS + Expo Push                                                                            |
+| Web hosting                  | Vercel                                                                                          |
 
 ---
 
@@ -156,11 +156,13 @@ extend it with **new** migrations (append-only — never edit a shipped one).
 The kit ships no edge functions. Server-side work that needs the service-role
 key runs in the Next.js app:
 
-- **Stripe webhook** — the billing module's `POST /api/mod/billing/stripe/webhook`
-  verifies signatures and syncs billing state (§4.8).
+- **Stripe webhook** — the Stripe adapter's
+  `POST /api/mod/billing-adapter-stripe/webhook` verifies signatures and records
+  purchases through billing's core services (§4.7).
 - **Account deletion** — `POST /api/account/delete` verifies the caller, queues
-  the erasure job, cancels live Stripe subscriptions and deletes the auth user
-  (the database cascades clean-up).
+  the erasure job, has billing's payment providers cancel live subscriptions
+  (`modServices.billing.onAccountDelete`) and deletes the auth user (the
+  database cascades clean-up).
 - **Scheduled work** — Supabase Cron (pg_cron + pg_net) calls the app's Payload
   Jobs Queue and module cron routes, with a secret kept in Supabase Vault; SQL
   retention runs inside the database (`private.run_housekeeping()`).
@@ -185,35 +187,49 @@ This is the part a founder most needs to get right, so it's enforced structurall
   missing. `NEXT_PUBLIC_*` / `EXPO_PUBLIC_*` are public (compiled into the
   client) and hold only anon/publishable values; everything else is server-only.
 
-### 4.7 Payments — Stripe (web)
+### 4.7 Payments — billing core + payment providers (Stripe on the web)
 
-The billing catalog is **authored in Payload** (Commerce → Plans/Coupons), not the
-Stripe dashboard. Saving a plan or coupon syncs it to Stripe **automatically** via
-collection `afterChange` hooks (`payload/hooks/sync-*-to-stripe.ts` →
-`lib/stripe/sync.ts`) — creating a **new price and archiving the old** on any
-amount change, since Stripe prices are immutable (a per-doc `skipSync` checkbox
-opts out; sync failures are recorded on the doc, never failing the save).
-**Stripe → app** is one signature-verified webhook, the billing module's
-`POST /api/mod/billing/stripe/webhook`. It writes `public.mod_billing_*` (the
-source of truth that RLS clients read) and projects `customer.subscription.*`
-into the read-only CMS **`subscriptions`** collection for /admin. It records
-event ids (replays are no-ops) and skips events older than the stored state
-(out-of-order safe). The app registers the endpoint through the Stripe API and
-keeps its secret in Supabase Vault, so the only setup is `STRIPE_SECRET_KEY`.
+Billing is a **provider-neutral core module** (`modules/billing`); payment
+providers are **adapter modules** that plug into it (`billing-adapter-stripe`
+ships preinstalled). Reference: docs/BILLING.md; Stripe setup: docs/STRIPE.md.
 
-So: **Payload → Stripe** via hooks; **Stripe → `public.*`** (and the read-only
-CMS `subscriptions` projection) via that one webhook. Defaults: Example Monthly ($9.99/mo), Annual ($99.99/yr, 7-day trial)
-and Lifetime ($399 one-time).
+The catalog is **authored in Payload** (Commerce → Billing Plans/Coupons), not a
+provider's dashboard. Saving a plan or coupon runs billing's catalog hook, which
+hands it to each provider (`syncPlan`/`syncCoupon`): Stripe creates the product
+and, since Stripe prices are immutable, a **new price archiving the old** on any
+amount change (a per-doc `skipSync` opts out; failures are recorded on the doc,
+never failing the save). The provider ids live on the plan's **Stripe** tab.
 
-Subscriptions are sold on the **web** with Stripe Checkout (plan-driven, with
-guest checkout that provisions the account post-payment) + the customer portal;
-`/billing` is the self-serve hub (change/cancel, invoices). Intro offers use a
-`duration:once` coupon; promotion/coupon codes are supported at checkout.
+Purchases land in billing's **provider-neutral ledger** (`public.mod_billing_*`,
+every row carries `provider`, `store`, `kind`, `plan_id`, `entitlement`), the
+source of truth RLS clients read. Entitlements come from the
+`mod_billing_entitlements` view, whatever sold them — `usePremium` on web and
+native, and billing's `getViewerEntitlement` service on the server (premium
+fields are stripped server-side before they reach the client). Providers write
+only through billing's core services; billing calls out to them through the
+module adapter registry and never imports them.
 
-The mobile apps stay free to download and unlock premium by reading the
-`subscriptions` table (RLS read-own) — so **no in-app-purchase tooling is
-needed**. Selling digital goods _inside_ the iOS/Android apps is out of scope
-(Apple/Google require their own billing); add that yourself only if you need it.
+**Stripe → app** is one signature-verified webhook,
+`POST /api/mod/billing-adapter-stripe/webhook`. It claims event ids (replays and
+concurrent redeliveries are no-ops), skips events older than the stored state
+(out-of-order safe), syncs the buyer's billing tags and projects subscriptions
+into the read-only CMS **`subscriptions`** collection. The adapter registers the
+endpoint through the Stripe API and keeps its secret in Supabase Vault. Stripe is
+connected with **"Connect with Stripe"** (OAuth brokered by meetdream.com — the
+site stores no Stripe secret) or your own `STRIPE_SECRET_KEY`, which wins.
+
+Defaults: Example Monthly ($9.99/mo), Annual ($99.99/yr, 7-day trial) and Lifetime
+($399 one-time). Purchases happen on the **web**: on-site (the paywall and
+`/checkout`, rendering the provider's payment form — Stripe Elements with
+Apple/Google Pay) or on Stripe's hosted Checkout, with guest checkout that
+provisions the account post-payment; `/billing` is the self-serve hub (provider
+portal, invoices). Intro offers use a `duration:once` coupon.
+
+The mobile apps stay free to download and unlock premium by reading billing's
+entitlements (RLS read-own) — **no in-app purchase today**. Selling digital goods
+_inside_ the iOS/Android apps needs the stores' billing; billing is ready for an
+in-app purchase provider as another adapter (docs/BILLING.md §7, RevenueCat) —
+a team decision (golden rule #4).
 
 ### 4.8 AI assistant — Vercel AI SDK via the AI Gateway
 
@@ -276,14 +292,15 @@ The registry spans five admin groups:
   `feed-tokens`, `enrollments` and `reviews`. (Favorites are **not** a CMS
   collection — they live in the RLS table `public.content_favorites`, §identity.)
 - **Commerce** — `plans`, `coupons` and the webhook-written `subscriptions`
-  mirror (§4.7).
+  list (§4.7), owned by the billing module.
 - **Marketing** — block-based `pages`, `onboarding` slides, `banners`,
   `notifications`, and the Form Builder plugin's `forms`/`form-submissions`.
 
-Globals: `site-settings`, `pricing-settings`, `theme-settings` and
-`profile-fields` (admin-defined custom member fields validated into
-`users.customFields`). Plugins: SEO, Nested Docs (categories / pages /
-space-groups), Form Builder and Stripe (§4.7).
+Globals: `site-settings`, `theme-settings` and `profile-fields` (admin-defined
+custom member fields validated into `users.customFields`); module settings —
+e.g. billing's pricing page, billing tags and Stripe options — live on each
+module's page (Modules → …). Plugins: SEO, Nested Docs (categories / pages /
+space-groups) and Form Builder.
 
 Access control is **role-based**: `users.roles` is a multi-select of
 `admin | editor | author | member`. Staff (admin/editor, plus author for the
@@ -301,8 +318,8 @@ staff only**, so members reach this data through your own server routes for
 now; opening `/cms-api` to member sessions is a documented follow-up.
 
 Boundary with Supabase: security-critical per-user state that RLS clients
-consume directly (auth, `profiles`, billing entitlements in
-`public.subscriptions`, chat, reminders) stays in `public` under RLS.
+consume directly (auth, `profiles`, billing's ledger and entitlements in
+`public.mod_billing_*`, chat, reminders) stays in `public` under RLS.
 
 How the two backends stay separate:
 
@@ -445,7 +462,7 @@ notifications in natural language. Full reference: **[`docs/MCP.md`](./MCP.md)**
 | Supabase   | Database, Auth, Storage, Edge Functions | Yes           | Yes               |
 | Vercel     | Web hosting + the AI Gateway            | Yes (Hobby)   | Yes               |
 | Expo (EAS) | iOS/Android builds, submit, push        | Yes           | For mobile builds |
-| Stripe     | Web subscriptions                       | Yes (per-txn) | For monetization  |
+| Stripe     | Web payments (billing's Stripe adapter) | Yes (per-txn) | For monetization  |
 
 Core path is **four signups** + GitHub. AI runs through the Vercel AI Gateway
 under your Vercel account (billed pass-through at provider rates) — no separate

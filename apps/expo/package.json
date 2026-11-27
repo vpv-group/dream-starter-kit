@@ -20,6 +20,7 @@
     "@acme/cms": "workspace:*",
     "@acme/config": "workspace:*",
     "@acme/mod-billing": "workspace:*",
+    "@acme/mod-billing-adapter-stripe": "workspace:*",
     "@acme/mod-chat": "workspace:*",
     "@acme/mod-chat-adapter-sendblue": "workspace:*",
     "@acme/mod-chat-adapter-slack": "workspace:*",

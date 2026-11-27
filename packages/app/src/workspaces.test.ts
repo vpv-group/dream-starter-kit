@@ -7,6 +7,7 @@ import {
 } from "./validators/workspace";
 import {
   activeOnboardingSteps,
+  labelPlural,
   labelWithArticle,
   nextOnboardingStep,
   normalizeSlugInput,
@@ -198,5 +199,15 @@ describe("invitations helpers", () => {
     expect(parseAllowedDomains("gmail.com").ok).toBe(false);
     expect(parseAllowedDomains("not a domain").ok).toBe(false);
     expect(parseAllowedDomains("")).toEqual({ ok: true, domains: [] });
+  });
+});
+
+describe("labelPlural", () => {
+  it("pluralizes every founder label", () => {
+    expect(labelPlural("Workspace")).toBe("Workspaces");
+    expect(labelPlural("Organization")).toBe("Organizations");
+    expect(labelPlural("Team")).toBe("Teams");
+    expect(labelPlural("Practice")).toBe("Practices");
+    expect(labelPlural("Business")).toBe("Businesses");
   });
 });

@@ -67,6 +67,11 @@ const routeEntrySchema = z.object({
    * widgets, so server imports there would leak into client chunks.
    */
   rsc: z.boolean().default(false),
+  /**
+   * Web rsc pages: a named `Metadata` export from `./web-server` the page
+   * stub re-exports as `metadata` (title, robots …).
+   */
+  metadata: z.string().min(1).optional(),
 });
 
 export const moduleManifestSchema = z.object({
@@ -123,6 +128,13 @@ export const moduleManifestSchema = z.object({
       mcp: z.boolean().default(false),
       /** Edge function directory names — must be prefixed `<slug>-`. */
       edgeFunctions: z.array(z.string().min(1)).default([]),
+      /**
+       * `./server` also exports `services` — a plain object of functions the
+       * HOST calls through the generated `modServices[slug]` (e.g. billing's
+       * `getViewerEntitlement`, `onAccountDelete`, `onUserMerge`). The host
+       * never imports a module directly; this is its typed seam. Needs kit ≥ 2.6.
+       */
+      services: z.boolean().default(false),
     })
     .prefault({}),
   database: z
@@ -161,6 +173,45 @@ export const moduleManifestSchema = z.object({
        * exclusive with `hasSettings`. The target must be a `requires` dep.
        */
       settingsTabFor: z.string().min(1).optional(),
+      /**
+       * `./payload` exports `collectionTabs` (`defineAdapterCollectionTab`):
+       * unnamed tabs merged into collections of the module named by
+       * `settingsTabFor` (e.g. Stripe ids on billing's Plans). Unnamed tabs
+       * keep their fields at the document root, so DB columns don't move.
+       */
+      hasCollectionTabs: z.boolean().default(false),
+    })
+    .prefault({}),
+  /**
+   * Provider adapter: this module plugs into another module's extension
+   * point (e.g. `billing-adapter-stripe` → `billing`). The target calls OUT
+   * to its adapters through `getModAdapters(target)` (server) and
+   * `useModAdapters(target)` (client), which the generated registries fill —
+   * the target never imports its adapters. `for` must be in `requires`.
+   * Needs kit ≥ 2.6.
+   */
+  adapter: z
+    .object({
+      for: z.string().regex(SLUG_RE),
+      /** `./server` exports `adapter` (the target's server contract). */
+      server: z.boolean().default(false),
+      /** Named export from `./web` implementing the target's web contract. */
+      web: z.string().min(1).optional(),
+      /** Named export from `./native` implementing the target's native contract. */
+      native: z.string().min(1).optional(),
+    })
+    .optional(),
+  /**
+   * Web UI slots the HOST renders (generated `modSlots`), keyed by slot
+   * name → named export from `./web`. Lets host pages host module UI (e.g.
+   * billing's `premium-content` around premium post bodies) without importing
+   * the module; an absent slot renders its fallback. Needs kit ≥ 2.6.
+   */
+  slots: z
+    .object({
+      web: z
+        .record(z.string().regex(/^[a-z][a-z0-9-]*$/), z.string().min(1))
+        .default({}),
     })
     .prefault({}),
   /**
@@ -183,6 +234,21 @@ export const moduleManifestSchema = z.object({
        * in the module's own tables rather than Payload fields.
        */
       settingsComponent: z.boolean().default(false),
+    })
+    .prefault({}),
+  /**
+   * Native (Expo) packages: a module lists the `expo-*` / `react-native-*`
+   * packages it needs in its own package.json `dependencies`. Expo's
+   * autolinking follows dependencies recursively, so they're compiled into
+   * the app; sync records them in apps/expo/src/mod/native.generated.json
+   * and says when an install needs a new native build. Set `plugin: true`
+   * when the module ships a config plugin (`app.plugin.js` at the package
+   * root, exported as "./app.plugin.js") — e.g. to add iOS usage strings or
+   * Android permissions; sync adds it to the app's `plugins`.
+   */
+  native: z
+    .object({
+      plugin: z.boolean().default(false),
     })
     .prefault({}),
   env: z

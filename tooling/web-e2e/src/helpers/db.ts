@@ -136,3 +136,14 @@ export async function grantActiveSubscription(userId: string): Promise<void> {
     throw new Error(`grantActiveSubscription failed: ${res.status}`);
   }
 }
+
+/** The names of the tags linked to a user (service role, like the admin UI). */
+export async function fetchUserTagNames(userId: string): Promise<string[]> {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/user_tags?user_id=eq.${userId}&select=tags(name)`,
+    { headers: serviceHeaders() },
+  );
+  if (!res.ok) throw new Error(`fetchUserTagNames failed: ${res.status}`);
+  const rows = (await res.json()) as { tags: { name: string } | null }[];
+  return rows.flatMap((r) => (r.tags ? [r.tags.name] : [])).sort();
+}

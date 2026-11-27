@@ -394,11 +394,47 @@ export type Database = {
           },
         ];
       };
+      mod_billing_customer_links: {
+        Row: {
+          billing_email: string | null;
+          created_at: string;
+          provider: string;
+          provider_customer_id: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          billing_email?: string | null;
+          created_at?: string;
+          provider: string;
+          provider_customer_id: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          billing_email?: string | null;
+          created_at?: string;
+          provider?: string;
+          provider_customer_id?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mod_billing_customer_links_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       mod_billing_customers: {
         Row: {
           billing_email: string | null;
           created_at: string;
           id: string;
+          provider: string;
           stripe_customer_id: string;
           user_id: string;
         };
@@ -406,6 +442,7 @@ export type Database = {
           billing_email?: string | null;
           created_at?: string;
           id?: string;
+          provider?: string;
           stripe_customer_id: string;
           user_id: string;
         };
@@ -413,6 +450,7 @@ export type Database = {
           billing_email?: string | null;
           created_at?: string;
           id?: string;
+          provider?: string;
           stripe_customer_id?: string;
           user_id?: string;
         };
@@ -422,6 +460,70 @@ export type Database = {
             columns: ["user_id"];
             isOneToOne: true;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      mod_billing_managed_tags: {
+        Row: {
+          created_at: string;
+          tag_group: string;
+          tag_id: string;
+          value: string;
+        };
+        Insert: {
+          created_at?: string;
+          tag_group: string;
+          tag_id: string;
+          value: string;
+        };
+        Update: {
+          created_at?: string;
+          tag_group?: string;
+          tag_id?: string;
+          value?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mod_billing_managed_tags_tag_id_fkey";
+            columns: ["tag_id"];
+            isOneToOne: true;
+            referencedRelation: "tags";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      mod_billing_org_customer_links: {
+        Row: {
+          billing_email: string | null;
+          created_at: string;
+          org_id: string;
+          provider: string;
+          provider_customer_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          billing_email?: string | null;
+          created_at?: string;
+          org_id: string;
+          provider: string;
+          provider_customer_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          billing_email?: string | null;
+          created_at?: string;
+          org_id?: string;
+          provider?: string;
+          provider_customer_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mod_billing_org_customer_links_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
             referencedColumns: ["id"];
           },
         ];
@@ -436,6 +538,7 @@ export type Database = {
           interval_count: number | null;
           metadata: Json | null;
           product_id: string | null;
+          provider: string;
           type: string | null;
           unit_amount: number | null;
         };
@@ -448,6 +551,7 @@ export type Database = {
           interval_count?: number | null;
           metadata?: Json | null;
           product_id?: string | null;
+          provider?: string;
           type?: string | null;
           unit_amount?: number | null;
         };
@@ -460,6 +564,7 @@ export type Database = {
           interval_count?: number | null;
           metadata?: Json | null;
           product_id?: string | null;
+          provider?: string;
           type?: string | null;
           unit_amount?: number | null;
         };
@@ -482,6 +587,7 @@ export type Database = {
           image: string | null;
           metadata: Json | null;
           name: string | null;
+          provider: string;
         };
         Insert: {
           active?: boolean;
@@ -491,6 +597,7 @@ export type Database = {
           image?: string | null;
           metadata?: Json | null;
           name?: string | null;
+          provider?: string;
         };
         Update: {
           active?: boolean;
@@ -500,6 +607,7 @@ export type Database = {
           image?: string | null;
           metadata?: Json | null;
           name?: string | null;
+          provider?: string;
         };
         Relationships: [];
       };
@@ -508,10 +616,20 @@ export type Database = {
           cancel_at_period_end: boolean;
           created_at: string;
           current_period_end: string | null;
+          entitlement: string;
+          environment: string | null;
+          granted_by: string | null;
           id: string;
+          kind: string;
+          note: string | null;
+          org_id: string | null;
+          plan_id: string | null;
           price_id: string | null;
+          provider: string;
+          provider_event_at: string | null;
           quantity: number | null;
           status: string | null;
+          store: string;
           stripe_event_at: string | null;
           updated_at: string;
           user_id: string;
@@ -520,10 +638,20 @@ export type Database = {
           cancel_at_period_end?: boolean;
           created_at?: string;
           current_period_end?: string | null;
+          entitlement?: string;
+          environment?: string | null;
+          granted_by?: string | null;
           id: string;
+          kind?: string;
+          note?: string | null;
+          org_id?: string | null;
+          plan_id?: string | null;
           price_id?: string | null;
+          provider?: string;
+          provider_event_at?: string | null;
           quantity?: number | null;
           status?: string | null;
+          store?: string;
           stripe_event_at?: string | null;
           updated_at?: string;
           user_id: string;
@@ -532,15 +660,39 @@ export type Database = {
           cancel_at_period_end?: boolean;
           created_at?: string;
           current_period_end?: string | null;
+          entitlement?: string;
+          environment?: string | null;
+          granted_by?: string | null;
           id?: string;
+          kind?: string;
+          note?: string | null;
+          org_id?: string | null;
+          plan_id?: string | null;
           price_id?: string | null;
+          provider?: string;
+          provider_event_at?: string | null;
           quantity?: number | null;
           status?: string | null;
+          store?: string;
           stripe_event_at?: string | null;
           updated_at?: string;
           user_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "mod_billing_subscriptions_granted_by_fkey";
+            columns: ["granted_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "mod_billing_subscriptions_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "mod_billing_subscriptions_price_id_fkey";
             columns: ["price_id"];
@@ -561,6 +713,7 @@ export type Database = {
         Row: {
           claimed_at: string | null;
           id: string;
+          provider: string;
           received_at: string;
           status: string;
           type: string;
@@ -568,6 +721,7 @@ export type Database = {
         Insert: {
           claimed_at?: string | null;
           id: string;
+          provider?: string;
           received_at?: string;
           status?: string;
           type: string;
@@ -575,6 +729,7 @@ export type Database = {
         Update: {
           claimed_at?: string | null;
           id?: string;
+          provider?: string;
           received_at?: string;
           status?: string;
           type?: string;
@@ -2429,7 +2584,73 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      mod_billing_entitlements: {
+        Row: {
+          cancel_at_period_end: boolean | null;
+          entitlement: string | null;
+          expires_at: string | null;
+          kind: string | null;
+          org_id: string | null;
+          plan_id: string | null;
+          price_id: string | null;
+          provider: string | null;
+          status: string | null;
+          store: string | null;
+          subscription_id: string | null;
+          user_id: string | null;
+        };
+        Insert: {
+          cancel_at_period_end?: boolean | null;
+          entitlement?: string | null;
+          expires_at?: string | null;
+          kind?: string | null;
+          org_id?: string | null;
+          plan_id?: string | null;
+          price_id?: string | null;
+          provider?: string | null;
+          status?: string | null;
+          store?: string | null;
+          subscription_id?: string | null;
+          user_id?: string | null;
+        };
+        Update: {
+          cancel_at_period_end?: boolean | null;
+          entitlement?: string | null;
+          expires_at?: string | null;
+          kind?: string | null;
+          org_id?: string | null;
+          plan_id?: string | null;
+          price_id?: string | null;
+          provider?: string | null;
+          status?: string | null;
+          store?: string | null;
+          subscription_id?: string | null;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mod_billing_subscriptions_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "mod_billing_subscriptions_price_id_fkey";
+            columns: ["price_id"];
+            isOneToOne: false;
+            referencedRelation: "mod_billing_prices";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "mod_billing_subscriptions_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Functions: {
       accept_invitation: {
@@ -2653,13 +2874,29 @@ export type Database = {
         Args: { _module: string };
         Returns: undefined;
       };
+      mod_billing_adapter_stripe_set_webhook_secret: {
+        Args: { _secret: string };
+        Returns: undefined;
+      };
+      mod_billing_adapter_stripe_webhook_secret: {
+        Args: never;
+        Returns: string;
+      };
       mod_billing_apply_subscription: {
         Args: { _event_at: string; _row: Json };
         Returns: boolean;
       };
+      mod_billing_claim_event: {
+        Args: { _id: string; _provider: string; _type: string };
+        Returns: string;
+      };
       mod_billing_claim_webhook_event: {
         Args: { _id: string; _type: string };
         Returns: string;
+      };
+      mod_billing_finish_event: {
+        Args: { _id: string; _ok: boolean; _provider: string };
+        Returns: undefined;
       };
       mod_billing_purge: { Args: never; Returns: number };
       mod_billing_set_webhook_secret: {
@@ -3012,6 +3249,16 @@ export type Database = {
         Returns: undefined;
       };
       sha256_hex: { Args: { _value: string }; Returns: string };
+      staff_workspaces: {
+        Args: { _ids?: string[]; _limit?: number; _q?: string };
+        Returns: {
+          id: string;
+          logo_url: string;
+          member_count: number;
+          name: string;
+          slug: string;
+        }[];
+      };
       workspace_members: {
         Args: { _after?: string; _limit?: number; _org: string };
         Returns: {

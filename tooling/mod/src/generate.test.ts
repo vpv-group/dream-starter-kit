@@ -7,6 +7,8 @@ import {
   applyEnvExampleBlock,
   buildAllGeneratedFiles,
   buildEnvExampleBlock,
+  buildExpoNativeJson,
+  buildExpoPluginsJson,
   buildExpoRegistry,
   buildNextAdminRegistry,
   buildNextClientRegistry,
@@ -31,6 +33,7 @@ function loaded(
     envClientKeys,
     envServerKeys: [],
     payloadMigrations: [],
+    nativePackages: {},
   };
 }
 
@@ -427,5 +430,114 @@ describe("module access + admin settings", () => {
     expect(buildNextAdminRegistry([chat])).toContain(
       "modAdminComponents: Record<string, ComponentType> = {};",
     );
+  });
+});
+
+describe("adapters, services and slots", () => {
+  const core = loaded({
+    slug: "billing",
+    name: "Billing",
+    version: "2.0.0",
+    kitCompat: ">=2.0.0 <3",
+    server: { routes: true, services: true },
+    slots: { web: { "premium-content": "PremiumContent" } },
+    cms: { collections: ["mod-billing-plans"], hasSettings: true },
+  });
+  const stripe = loaded({
+    slug: "billing-adapter-stripe",
+    name: "Stripe",
+    version: "1.0.0",
+    kitCompat: ">=2.0.0 <3",
+    requires: ["billing"],
+    adapter: { for: "billing", server: true, web: "webProvider" },
+    admin: { settingsComponent: true },
+    server: { publicRoutes: true },
+    cms: { settingsTabFor: "billing", hasCollectionTabs: true },
+  });
+
+  it("emits services and lazy adapter loaders in the server registry", () => {
+    const server = buildNextServerRegistry([core, stripe]);
+    expect(server).toContain(
+      'import { routes as routes_billing, services as services_billing } from "@acme/mod-billing/server";',
+    );
+    expect(server).toContain('"billing": services_billing,');
+    expect(server).toContain(
+      '{ slug: "billing-adapter-stripe", load: () => import("@acme/mod-billing-adapter-stripe/server") },',
+    );
+    expect(server).toContain("registerModAdapters({");
+    // No adapters → no loader call and a type-only import.
+    const plain = buildNextServerRegistry([chat]);
+    expect(plain).not.toContain("registerModAdapters");
+    expect(plain).toContain("import type {");
+  });
+
+  it("composes adapter settings + collection tabs and registers loaders in the payload registry", () => {
+    const payload = buildNextPayloadRegistry([core, stripe]);
+    expect(payload).toContain(
+      "import { composeCollectionTabs, composeSettingsTabs } from",
+    );
+    expect(payload).toContain(
+      "...payload_billing_adapter_stripe.collectionTabs,",
+    );
+    expect(payload).toContain(
+      "const billingSettings = composeSettingsTabs(payload_billing.settings, [",
+    );
+    expect(payload).toContain("registerModAdapters({");
+    // The adapter's panel renders on billing's page.
+    expect(payload).toContain(
+      '{ slug: "billing-adapter-stripe", page: "billing" },',
+    );
+  });
+
+  it("emits client adapters and slots in the client registry", () => {
+    const client = buildNextClientRegistry([core, stripe]);
+    expect(client).toContain(
+      'import { webProvider as adapter_billing_adapter_stripe } from "@acme/mod-billing-adapter-stripe/web";',
+    );
+    expect(client).toContain(
+      '{ slug: "billing-adapter-stripe", target: "billing", adapter: adapter_billing_adapter_stripe },',
+    );
+    expect(client).toContain(
+      'import { PremiumContent as slot_billing_premium_content } from "@acme/mod-billing/web";',
+    );
+    expect(client).toContain('name: "premium-content"');
+    expect(buildNextClientRegistry([chat])).toContain(
+      "modClientAdapters: { slug: string; target: string; adapter: unknown }[] = [];",
+    );
+    expect(buildNextClientRegistry([chat])).toContain(
+      "modSlots: { slug: string; name: string; Component: React.ComponentType<Record<string, unknown>> }[] = [];",
+    );
+  });
+});
+
+describe("native packages and config plugins", () => {
+  const withNative = {
+    ...loaded({
+      slug: "projects",
+      name: "Projects",
+      version: "0.1.0",
+      kitCompat: ">=2.6.0 <3",
+      native: { plugin: true },
+    }),
+    nativePackages: { "expo-image-picker": "~58.0.4" },
+  };
+
+  it("lists modules that ship a config plugin", () => {
+    expect(JSON.parse(buildExpoPluginsJson([chat, withNative]))).toEqual([
+      "@acme/mod-projects",
+    ]);
+  });
+
+  it("records what each module adds to the native build", () => {
+    expect(JSON.parse(buildExpoNativeJson([chat, withNative]))).toEqual({
+      projects: { plugin: true, packages: { "expo-image-picker": "~58.0.4" } },
+    });
+    expect(buildExpoNativeJson([chat])).toBe("{}\n");
+  });
+
+  it("is part of the generated set", () => {
+    const paths = buildAllGeneratedFiles([withNative]).map((f) => f.path);
+    expect(paths).toContain("apps/expo/src/mod/plugins.generated.json");
+    expect(paths).toContain("apps/expo/src/mod/native.generated.json");
   });
 });

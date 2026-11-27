@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { notFound } from "next/navigation";
 
+import { PaywallJsonLd } from "~/components/content/paywall-jsonld";
 import { PostDetail } from "~/components/content/post-detail";
 import { PostLivePreview } from "~/components/content/post-live-preview";
-import { PaywallJsonLd } from "~/components/paywall/paywall-jsonld";
-import { getPremiumPlan } from "~/lib/billing-plan";
 import { toPublicMediaUrl } from "~/lib/cms/media-url";
+import { billingServiceContext, billingServices } from "~/lib/mod/billing";
 import { getPost } from "~/lib/payload";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +47,9 @@ export default async function PostPage({
   // the server). Its absence on a premium post is the signal to seed the paywall
   // + emit the paywalled-content markup.
   const withheld = post.accessLevel === "premium" && !post.body;
-  const premiumPlan = withheld ? await getPremiumPlan() : null;
+  const premiumPlan = withheld
+    ? await (await billingServices())?.getPremiumPlan(billingServiceContext)
+    : null;
 
   return (
     <>

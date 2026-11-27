@@ -40,7 +40,8 @@ export interface ModNavDefault {
 }
 
 export const modInstalled: ModInstalled[] = [
-  { slug: "billing", name: "Billing", version: "1.1.0", system: true },
+  { slug: "billing", name: "Billing", version: "2.2.0", system: true },
+  { slug: "billing-adapter-stripe", name: "Stripe", version: "1.0.0", system: false },
   { slug: "chat", name: "AI Chat", version: "1.1.0", system: false },
   { slug: "chat-adapter-sendblue", name: "Sendblue Adapter", version: "1.0.0", system: false },
   { slug: "chat-adapter-slack", name: "Slack Adapter", version: "1.0.0", system: false },
@@ -85,6 +86,9 @@ export const modWidgets: { slug: string; Widget: React.ComponentType }[] = [
   { slug: "notifications", Widget: widget_notifications },
   { slug: "reminders", Widget: widget_reminders },
 ];
+
+/** Native adapters (manifest adapter.native) — for ModAdaptersProvider. */
+export const modClientAdapters: { slug: string; target: string; adapter: unknown }[] = [];
 
 export function hasModule(slug: string): boolean {
   return modInstalled.some((e) => e.slug === slug);

@@ -4,13 +4,10 @@
 // `pnpm test` via apps/nextjs/src/mod/registry-drift.test.ts.
 import "server-only";
 
-import type {
-  ModMcpExtension,
-  ModPublicRouteTable,
-  ModRouteTable,
-} from "@acme/mod-kit/server";
+import { type ModMcpExtension, type ModPublicRouteTable, type ModRouteTable, type ModServices, registerModAdapters } from "@acme/mod-kit/server";
 
-import { routes as routes_billing, publicRoutes as publicRoutes_billing } from "@acme/mod-billing/server";
+import { routes as routes_billing, publicRoutes as publicRoutes_billing, services as services_billing } from "@acme/mod-billing/server";
+import { routes as routes_billing_adapter_stripe, publicRoutes as publicRoutes_billing_adapter_stripe } from "@acme/mod-billing-adapter-stripe/server";
 import { routes as routes_chat } from "@acme/mod-chat/server";
 import { publicRoutes as publicRoutes_chat_adapter_sendblue } from "@acme/mod-chat-adapter-sendblue/server";
 import { publicRoutes as publicRoutes_chat_adapter_slack } from "@acme/mod-chat-adapter-slack/server";
@@ -23,6 +20,7 @@ import { publicRoutes as publicRoutes_reminders } from "@acme/mod-reminders/serv
 /** slug → authed route table, dispatched by /api/mod/[mod]/[[...route]]. */
 export const modServerRoutes: Record<string, ModRouteTable> = {
   "billing": routes_billing,
+  "billing-adapter-stripe": routes_billing_adapter_stripe,
   "chat": routes_chat,
   "docs": routes_docs,
   "feedback": routes_feedback,
@@ -32,6 +30,7 @@ export const modServerRoutes: Record<string, ModRouteTable> = {
 /** slug → PUBLIC route table (no session required; still rate-limited). */
 export const modPublicRoutes: Record<string, ModPublicRouteTable> = {
   "billing": publicRoutes_billing,
+  "billing-adapter-stripe": publicRoutes_billing_adapter_stripe,
   "chat-adapter-sendblue": publicRoutes_chat_adapter_sendblue,
   "chat-adapter-slack": publicRoutes_chat_adapter_slack,
   "docs": publicRoutes_docs,
@@ -44,3 +43,19 @@ export const modPublicRoutes: Record<string, ModPublicRouteTable> = {
 export const modMcp: Record<string, ModMcpExtension> = {
   "feedback": mcp_feedback,
 };
+
+/**
+ * slug → the module's host-facing services (manifest server.services). Host
+ * code calls `modServices.<slug>?.fn(...)` instead of importing modules.
+ */
+export const modServices: Record<string, ModServices> = {
+  "billing": services_billing,
+};
+
+// Adapters (manifest adapter.for), loaded lazily on first use so the
+// Payload CLI never evaluates server-only adapter code.
+registerModAdapters({
+  billing: [
+    { slug: "billing-adapter-stripe", load: () => import("@acme/mod-billing-adapter-stripe/server") },
+  ],
+});

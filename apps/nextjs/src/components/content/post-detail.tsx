@@ -1,10 +1,8 @@
 import type { Post } from "@acme/cms";
+import { ModSlot } from "@acme/mod-kit/react";
 
-import type { PlanLite } from "~/lib/paywall-copy";
 import { DetailLayout } from "~/components/content/detail-layout";
 import { FavoriteButton } from "~/components/content/favorite-button";
-import { PaywallProvider } from "~/components/paywall/paywall-provider";
-import { PremiumGate } from "~/components/paywall/premium-gate";
 import { CmsRichText } from "~/components/rich-text";
 import { toPublicMediaUrl } from "~/lib/cms/media-url";
 
@@ -13,8 +11,8 @@ import { toPublicMediaUrl } from "~/lib/cms/media-url";
  * (published path) and the client `PostLivePreview` wrapper (draft path) so the
  * markup stays identical in both.
  *
- * Premium gating: when `accessLevel === "premium"` the body is wrapped in the
- * paywall gate — non-premium viewers see it blurred behind an on-page dock +
+ * Premium gating: when `accessLevel === "premium"` the body is wrapped in
+ * billing's `premium-content` slot (docs/BILLING.md) — the paywall gate — non-premium viewers see it blurred behind an on-page dock +
  * modal that reads the buyer's subscription (RLS read-own) and unlocks on
  * purchase. `premiumPlan` is the SSR-seeded plan so the modal has pricing with
  * no client fetch (omitted on the live-preview path, where it resolves
@@ -25,7 +23,8 @@ export function PostDetail({
   premiumPlan,
 }: {
   post: Post;
-  premiumPlan?: PlanLite | null;
+  /** Billing's plan for the paywall (opaque here; billing's slot reads it). */
+  premiumPlan?: unknown;
 }) {
   // Prefer an explicit featuredImage; otherwise fall back to the AI-generated
   // hero (its public URL is cached on `imageHeroUrl` by the syncImageUrls hook,
@@ -71,9 +70,15 @@ export function PostDetail({
       }
     >
       {gated ? (
-        <PaywallProvider initialPlan={premiumPlan}>
-          <PremiumGate>{body}</PremiumGate>
-        </PaywallProvider>
+        // Billing's paywall + gate; without billing, the (already withheld)
+        // teaser renders as-is.
+        <ModSlot
+          name="premium-content"
+          initialPlan={premiumPlan}
+          fallback={body}
+        >
+          {body}
+        </ModSlot>
       ) : (
         body
       )}

@@ -8,12 +8,14 @@ import { slidingWindow } from "@acme/config";
 
 import { env, supabaseAnonKey } from "~/env";
 import { isModuleEnabled } from "~/lib/mod/enabled";
-import { hostServices } from "~/lib/mod/host-services";
+import { hostServices } from "~/lib/mod/host-github";
 import { createClient as createCookieClient } from "~/lib/supabase/server";
 import {
   modPublicRoutes,
   modServerRoutes,
 } from "~/mod/registry.server.generated";
+// Side effect: lets modules use "Connect with …" (Meet Dream) connections.
+import "~/lib/mod/connector-broker";
 
 /**
  * The ONE server entry point for every module API route
@@ -24,8 +26,9 @@ import {
  * rule #6 (authed, rate-limited server routes) holds for every module
  * endpoint; modules write zero auth code.
  *
- * Public/signature-verified endpoints (Stripe webhooks) do NOT go through
- * here by design — they live in edge functions or Payload plugin endpoints.
+ * Modules' `publicRoutes` (no session required) are dispatched here too,
+ * still rate-limited and enablement-gated; those handlers verify their own
+ * caller (a webhook signature, `isCronRequest`, a guest-checkout proof).
  */
 
 // Shared budget across all of a user's module calls. In-memory per

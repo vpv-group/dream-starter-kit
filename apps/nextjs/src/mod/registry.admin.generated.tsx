@@ -6,5 +6,9 @@
 // `pnpm test` via apps/nextjs/src/mod/registry-drift.test.ts.
 import type { ComponentType } from "react";
 
+import { AdminSettings as admin_billing_adapter_stripe } from "@acme/mod-billing-adapter-stripe/admin";
+
 /** slug → the module's `./admin` AdminSettings component. */
-export const modAdminComponents: Record<string, ComponentType> = {};
+export const modAdminComponents: Record<string, ComponentType> = {
+  "billing-adapter-stripe": admin_billing_adapter_stripe,
+};

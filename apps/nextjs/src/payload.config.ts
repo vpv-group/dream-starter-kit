@@ -70,6 +70,10 @@ import {
 } from "./payload/hooks/revalidate-cache";
 import { coreTasks } from "./payload/jobs";
 import { migrations } from "./payload/migrations";
+// Side effect: module Payload hooks (e.g. billing's plan sync) may use a
+// "Connect with …" (Meet Dream) connection. Lazy inside — CLI-safe.
+import "./lib/mod/connector-broker";
+import "./lib/mod/host-services";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -149,6 +153,13 @@ export default buildConfig({
     dependencies: {
       moduleAdminSettings: {
         path: "~/payload/components/ModuleAdminSettings#ModuleAdminSettings",
+        type: "component",
+      },
+      // Generic array row label (label · key · archived), referenced by
+      // modules as ROW_LABEL_COMPONENT from @acme/mod-kit/payload. Pinned
+      // here because modules can't add import-map entries.
+      labelRowLabel: {
+        path: "~/payload/components/LabelRowLabel#LabelRowLabel",
         type: "component",
       },
     },

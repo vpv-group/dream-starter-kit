@@ -9,6 +9,8 @@ import { ChatWidget as widget_chat } from "@acme/mod-chat/web";
 import { FeedbackWidget as widget_feedback } from "@acme/mod-feedback/web";
 import { NotificationsWidget as widget_notifications } from "@acme/mod-notifications/web";
 import { RemindersWidget as widget_reminders } from "@acme/mod-reminders/web";
+import { webProvider as adapter_billing_adapter_stripe } from "@acme/mod-billing-adapter-stripe/web";
+import { PremiumContent as slot_billing_premium_content } from "@acme/mod-billing/web";
 
 // Plain data (installed set, nav defaults, hasModule) lives in the data
 // registry so server code can import it without the web UI below.
@@ -33,3 +35,16 @@ export const modIcons: Record<string, React.ComponentType<{ className?: string }
   IconInbox: IconInbox,
   IconMessageCircle: IconMessageCircle,
 };
+
+/**
+ * Client adapters (manifest adapter.web) — handed to ModAdaptersProvider
+ * (enabled modules only); the target reads them with useModAdapters().
+ */
+export const modClientAdapters: { slug: string; target: string; adapter: unknown }[] = [
+  { slug: "billing-adapter-stripe", target: "billing", adapter: adapter_billing_adapter_stripe },
+];
+
+/** Host-rendered UI slots (manifest slots.web) — see <ModSlot />. */
+export const modSlots: { slug: string; name: string; Component: React.ComponentType<Record<string, unknown>> }[] = [
+  { slug: "billing", name: "premium-content", Component: slot_billing_premium_content as unknown as React.ComponentType<Record<string, unknown>> },
+];

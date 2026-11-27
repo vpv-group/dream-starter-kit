@@ -4,6 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@acme/api/types";
 
+import { billingServiceContext, billingServices } from "~/lib/mod/billing";
+
 type Admin = SupabaseClient<Database>;
 
 /** Find an auth user id by email (paged scan — fine at starter-kit scale). */
@@ -26,42 +28,21 @@ export async function findUserIdByEmail(
  * Merge an anonymous user's data into an existing permanent account, then delete
  * the anonymous user. Used when a checkout/conversion email already belongs to an
  * account (the anon user can't take that email). Reassigns the rows that matter —
- * billing first (subscriptions + customer mapping cascade-delete with the anon
- * user, so they MUST move before deletion), then favorites/reminders.
- *
- * Stripe has no "merge customers" API: if the existing user already has a
- * customer mapping we keep theirs and drop the anon's (logged) — the subscription
- * row is still repointed so premium gating is correct. Service-role only.
+ * billing first (purchases + customer links cascade-delete with the anon user,
+ * so they MUST move before deletion; billing's `onUserMerge` service moves them
+ * and re-tags the account), then favorites/reminders. Service-role only.
  */
 export async function mergeAnonUser(
   admin: Admin,
   anonId: string,
   realId: string,
 ): Promise<void> {
-  // Subscriptions: PK is the Stripe id, so repointing user_id never collides.
-  await admin
-    .from("mod_billing_subscriptions")
-    .update({ user_id: realId })
-    .eq("user_id", anonId);
-
-  // Customer mapping (user_id is UNIQUE): move it unless the target already has
-  // one, in which case drop the anon's (it would cascade-delete anyway).
-  const { data: realCustomer } = await admin
-    .from("mod_billing_customers")
-    .select("user_id")
-    .eq("user_id", realId)
-    .maybeSingle();
-  if (realCustomer) {
-    console.warn(
-      `[merge-anon] ${realId} already has a Stripe customer; dropping anon ${anonId}'s mapping (manual review may be needed).`,
-    );
-    await admin.from("mod_billing_customers").delete().eq("user_id", anonId);
-  } else {
-    await admin
-      .from("mod_billing_customers")
-      .update({ user_id: realId })
-      .eq("user_id", anonId);
-  }
+  // Billing (when installed) moves its purchases + customer links.
+  const billing = await billingServices();
+  await billing?.onUserMerge(billingServiceContext, {
+    fromId: anonId,
+    toId: realId,
+  });
 
   // Favorites: copy across (ignore items the target already saved); the anon's
   // rows cascade-delete with the user below.
@@ -104,23 +85,11 @@ export async function mergeAnonUser(
   await admin.auth.admin.deleteUser(anonId);
 }
 
-/** Whether an anon user actually transacted (has a billing subscription or a
- *  customer mapping). Proof of a real prior purchase — see reconcileAnonByEmail. */
-async function anonHasBilling(admin: Admin, anonId: string): Promise<boolean> {
-  const [{ data: sub }, { data: cust }] = await Promise.all([
-    admin
-      .from("mod_billing_subscriptions")
-      .select("id")
-      .eq("user_id", anonId)
-      .limit(1)
-      .maybeSingle(),
-    admin
-      .from("mod_billing_customers")
-      .select("user_id")
-      .eq("user_id", anonId)
-      .maybeSingle(),
-  ]);
-  return Boolean(sub ?? cust);
+/** Whether an anon user actually transacted (a purchase or a customer link,
+ *  any provider). Proof of a real prior purchase — see reconcileAnonByEmail. */
+async function anonHasBilling(anonId: string): Promise<boolean> {
+  const billing = await billingServices();
+  return (await billing?.hasBillingRecord({ userId: anonId })) ?? false;
 }
 
 /**
@@ -167,7 +136,7 @@ export async function reconcileAnonByEmail(
   for (const anonId of candidates) {
     // Only reconcile anons that genuinely paid — an unverified new_email match
     // must not move an arbitrary anon's data onto this account.
-    if (await anonHasBilling(admin, anonId)) {
+    if (await anonHasBilling(anonId)) {
       await mergeAnonUser(admin, anonId, realId);
     }
   }

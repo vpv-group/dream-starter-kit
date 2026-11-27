@@ -4,12 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 
 import { useSession, useSupabase } from "@acme/api";
 
-const ACTIVE_STATUSES = ["active", "trialing"];
-
 /**
- * Premium gating — reads the user's subscription (RLS: read-own) and returns
- * whether they have an active/trialing plan. Identical on web + native; the
- * Stripe webhook is the only writer of the subscriptions table.
+ * Premium gating — reads the user's active entitlements (the
+ * mod_billing_entitlements view, RLS read-own) whatever sold them: web
+ * checkout, an app store, a promotion. Identical on web + native; payment
+ * providers' webhooks are the only writers of the ledger behind it.
  */
 export function usePremium() {
   const supabase = useSupabase();
@@ -20,10 +19,10 @@ export function usePremium() {
     enabled: !!user,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("mod_billing_subscriptions")
-        .select("status, price_id, current_period_end")
-        .in("status", ACTIVE_STATUSES)
-        .order("current_period_end", { ascending: false })
+        .from("mod_billing_entitlements")
+        .select("status, price_id, provider, store, expires_at")
+        .eq("entitlement", "premium")
+        .order("expires_at", { ascending: false, nullsFirst: true })
         .limit(1)
         .maybeSingle();
       if (error) throw error;
@@ -34,6 +33,8 @@ export function usePremium() {
   return {
     isPremium: !!query.data,
     subscription: query.data ?? null,
-    isLoading: query.isLoading,
+    isLoading: !!user && query.isLoading,
+    /** The signed-in viewer's email (prefills the paywall's buyer step). */
+    userEmail: user?.email ?? null,
   };
 }

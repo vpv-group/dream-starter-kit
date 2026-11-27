@@ -16,7 +16,7 @@ import { getMcpOAuthConfig, isMcpEnabled } from "~/lib/mcp/config";
 import { generateMediaAsset } from "~/lib/mcp/generate-media";
 import { corsPreflight, MCP_CORS_HEADERS } from "~/lib/mcp/http";
 import { isModuleEnabled } from "~/lib/mod/enabled";
-import { hostServices } from "~/lib/mod/host-services";
+import { hostServices } from "~/lib/mod/host-github";
 import { moduleMcpExtras } from "~/lib/mod/mcp-core";
 import { getSiteUrl } from "~/lib/site-url";
 import { createAdminClient } from "~/lib/supabase/admin";

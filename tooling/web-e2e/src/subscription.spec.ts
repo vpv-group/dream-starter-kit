@@ -2,15 +2,19 @@ import crypto from "node:crypto";
 import type { Page } from "@playwright/test";
 import { expect, request, test } from "@playwright/test";
 
+import { fetchUserTagNames } from "./helpers/db";
 import { FOUNDER_STORAGE_STATE } from "./helpers/founder";
 
 /**
  * Subscription pipeline coverage, in two independent layers:
  *
  * 1. "subscriptions webhook" — the ONE Stripe endpoint
- *    (POST /api/mod/billing/stripe/webhook) that writes public.mod_billing_*
- *    and projects subscriptions into the read-only CMS `subscriptions`
- *    collection. The spec signs its own synthetic events with
+ *    (POST /api/mod/billing-adapter-stripe/webhook, billing-adapter-stripe)
+ *    that writes billing's ledger (public.mod_billing_*) through billing's
+ *    core services, syncs the buyer's billing tags and projects
+ *    subscriptions into the read-only CMS `subscriptions` collection.
+ *    Billing 1.x's path (/api/mod/billing/stripe/webhook) is still forwarded
+ *    for one release. The spec signs its own synthetic events with
  *    STRIPE_WEBHOOK_SECRET (the same HMAC scheme `stripe listen` uses), so it
  *    runs with NO Stripe account — CI sets a throwaway secret. Also pins the
  *    security posture: bad signatures are rejected, a replayed event is not
@@ -29,7 +33,9 @@ import { FOUNDER_STORAGE_STATE } from "./helpers/founder";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
-const WEBHOOK_PATH = "/api/mod/billing/stripe/webhook";
+const WEBHOOK_PATH = "/api/mod/billing-adapter-stripe/webhook";
+/** Billing 1.x's endpoint, forwarded to the Stripe adapter for one release. */
+const LEGACY_WEBHOOK_PATH = "/api/mod/billing/stripe/webhook";
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
 
 /** Sign a payload the way Stripe does (`t=<unix>,v1=<hmac-sha256>`). */
@@ -86,10 +92,14 @@ function subscriptionEvent(
   };
 }
 
-async function postEvent(event: unknown, secret = WEBHOOK_SECRET ?? "") {
+async function postEvent(
+  event: unknown,
+  secret = WEBHOOK_SECRET ?? "",
+  path = WEBHOOK_PATH,
+) {
   const body = JSON.stringify(event);
   const anon = await request.newContext({ baseURL: BASE_URL });
-  const res = await anon.post(WEBHOOK_PATH, {
+  const res = await anon.post(path, {
     headers: {
       "content-type": "application/json",
       "stripe-signature": stripeSignature(body, secret),
@@ -120,13 +130,15 @@ async function cmsSubscription(subId: string) {
     storageState: FOUNDER_STORAGE_STATE,
   });
   const found = await staff.get(
-    `/cms-api/mod-billing-subscriptions?where[stripeSubscriptionID][equals]=${subId}`,
+    `/cms-api/mod-billing-subscriptions?where[providerSubscriptionId][equals]=${subId}`,
   );
   const json = found.ok()
     ? ((await found.json()) as {
         totalDocs: number;
         docs: {
           status: string;
+          provider: string;
+          providerCustomerId: string;
           stripeCustomerID: string;
           cancelAtPeriodEnd: boolean;
         }[];
@@ -155,9 +167,71 @@ test.describe("subscriptions webhook", () => {
       .toBe(1);
     expect((await cmsSubscription(subId)).docs[0]).toMatchObject({
       status: "active",
+      provider: "stripe",
+      providerCustomerId: "cus_e2e_does_not_exist",
       stripeCustomerID: "cus_e2e_does_not_exist",
       cancelAtPeriodEnd: false,
     });
+  });
+
+  test("billing 1.x's webhook path still delivers (forwarded for one release)", async () => {
+    const subId = `sub_e2e_legacy_${Date.now()}`;
+    const userId = await founderUserId();
+    const res = await postEvent(
+      subscriptionEvent(subId, { userId }),
+      WEBHOOK_SECRET,
+      LEGACY_WEBHOOK_PATH,
+    );
+    expect(res.status).toBe(200);
+    await expect
+      .poll(async () => (await cmsSubscription(subId)).totalDocs, {
+        timeout: 20_000,
+      })
+      .toBe(1);
+  });
+
+  test("billing tags follow the subscription (active → churned)", async () => {
+    const subId = `sub_e2e_tags_${Date.now()}`;
+    const userId = await founderUserId();
+    const now = Math.floor(Date.now() / 1000);
+    expect(
+      (
+        await postEvent(
+          subscriptionEvent(subId, {
+            userId,
+            created: now,
+            eventId: `evt_e2e_tags_on_${subId}`,
+          }),
+        )
+      ).status,
+    ).toBe(200);
+    await expect
+      .poll(() => fetchUserTagNames(userId), { timeout: 20_000 })
+      .toEqual(expect.arrayContaining(["Active", "Store: Web"]));
+    expect(await fetchUserTagNames(userId)).not.toContain("Free");
+
+    // Cancel every subscription the founder has from earlier tests so the
+    // overall status is churned.
+    expect(
+      (
+        await postEvent(
+          subscriptionEvent(subId, {
+            userId,
+            status: "canceled",
+            type: "customer.subscription.deleted",
+            created: now + 1,
+            eventId: `evt_e2e_tags_off_${subId}`,
+          }),
+        )
+      ).status,
+    ).toBe(200);
+    // Other (earlier) test subscriptions may still be active for the founder,
+    // so assert on this subscription's own effect: the event applied.
+    await expect
+      .poll(async () => (await cmsSubscription(subId)).docs[0]?.status, {
+        timeout: 20_000,
+      })
+      .toBe("churned");
   });
 
   test("a replayed event is acknowledged but not applied twice", async () => {

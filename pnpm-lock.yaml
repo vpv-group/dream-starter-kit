@@ -6,6 +6,18 @@ settings:
 
 catalogs:
   default:
+    '@daypicker/react':
+      specifier: ^10.0.2
+      version: 10.0.2
+    '@dnd-kit/core':
+      specifier: ^6.3.1
+      version: 6.3.1
+    '@dnd-kit/sortable':
+      specifier: ^10.0.0
+      version: 10.0.0
+    '@dnd-kit/utilities':
+      specifier: ^3.2.2
+      version: 3.2.2
     '@eslint/js':
       specifier: ^10.0.1
       version: 10.0.1
@@ -33,9 +45,6 @@ catalogs:
     '@payloadcms/plugin-seo':
       specifier: 3.92.1
       version: 3.92.1
-    '@payloadcms/plugin-stripe':
-      specifier: 3.92.1
-      version: 3.92.1
     '@payloadcms/richtext-lexical':
       specifier: 3.92.1
       version: 3.92.1
@@ -60,12 +69,18 @@ catalogs:
     '@tanstack/react-query':
       specifier: ^5.105.3
       version: 5.105.3
+    '@tanstack/react-table':
+      specifier: ^9.3.1
+      version: 9.3.1
     '@types/node':
       specifier: ^22.20.5
       version: 22.20.5
     ai:
       specifier: ^7.0.162
       version: 7.0.162
+    date-fns:
+      specifier: ^4.4.0
+      version: 4.4.0
     eslint:
       specifier: ^10.14.0
       version: 10.14.0
@@ -159,6 +174,9 @@ importers:
       '@acme/mod-billing':
         specifier: workspace:*
         version: link:../../modules/billing
+      '@acme/mod-billing-adapter-stripe':
+        specifier: workspace:*
+        version: link:../../modules/billing-adapter-stripe
       '@acme/mod-chat':
         specifier: workspace:*
         version: link:../../modules/chat
@@ -340,6 +358,9 @@ importers:
       '@acme/mod-billing':
         specifier: workspace:*
         version: link:../../modules/billing
+      '@acme/mod-billing-adapter-stripe':
+        specifier: workspace:*
+        version: link:../../modules/billing-adapter-stripe
       '@acme/mod-chat':
         specifier: workspace:*
         version: link:../../modules/chat
@@ -374,13 +395,13 @@ importers:
         specifier: workspace:*
         version: link:../../packages/ui
       '@dnd-kit/core':
-        specifier: ^6.3.1
+        specifier: 'catalog:'
         version: 6.3.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@dnd-kit/sortable':
-        specifier: ^10.0.0
+        specifier: 'catalog:'
         version: 10.0.0(@dnd-kit/core@6.3.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)
       '@dnd-kit/utilities':
-        specifier: ^3.2.2
+        specifier: 'catalog:'
         version: 3.2.2(react@19.3.0)
       '@hookform/resolvers':
         specifier: 'catalog:'
@@ -409,9 +430,6 @@ importers:
       '@payloadcms/plugin-seo':
         specifier: 'catalog:'
         version: 3.92.1(@types/react@19.3.0)(monaco-editor@0.55.1)(next@16.4.5(@opentelemetry/api@1.9.0)(@playwright/test@1.64.1)(@types/node@22.20.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.92.1(bufferutil@4.0.8)(graphql@16.14.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
-      '@payloadcms/plugin-stripe':
-        specifier: 'catalog:'
-        version: 3.92.1(@types/node@22.20.5)(@types/react@19.3.0)(monaco-editor@0.55.1)(next@16.4.5(@opentelemetry/api@1.9.0)(@playwright/test@1.64.1)(@types/node@22.20.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.92.1(bufferutil@4.0.8)(graphql@16.14.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
       '@payloadcms/richtext-lexical':
         specifier: 'catalog:'
         version: 3.92.1(@faceless-ui/modal@3.0.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@faceless-ui/scroll-info@2.0.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@payloadcms/next@3.92.1(@types/react@19.3.0)(graphql@16.14.1)(monaco-editor@0.55.1)(next@16.4.5(@opentelemetry/api@1.9.0)(@playwright/test@1.64.1)(@types/node@22.20.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.92.1(bufferutil@4.0.8)(graphql@16.14.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3))(@types/react@19.3.0)(bufferutil@4.0.8)(monaco-editor@0.55.1)(next@16.4.5(@opentelemetry/api@1.9.0)(@playwright/test@1.64.1)(@types/node@22.20.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.92.1(bufferutil@4.0.8)(graphql@16.14.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3)(yjs@13.6.31)
@@ -421,12 +439,6 @@ importers:
       '@payloadcms/ui':
         specifier: 'catalog:'
         version: 3.92.1(@types/react@19.3.0)(monaco-editor@0.55.1)(next@16.4.5(@opentelemetry/api@1.9.0)(@playwright/test@1.64.1)(@types/node@22.20.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.92.1(bufferutil@4.0.8)(graphql@16.14.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
-      '@stripe/react-stripe-js':
-        specifier: ^7.0.1
-        version: 7.0.1(@stripe/stripe-js@10.2.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@stripe/stripe-js':
-        specifier: ^10.2.1
-        version: 10.2.1
       '@supabase/ssr':
         specifier: 'catalog:'
         version: 0.12.7(@supabase/supabase-js@2.118.0(@opentelemetry/api@1.9.0))
@@ -445,9 +457,6 @@ importers:
       ai:
         specifier: 'catalog:'
         version: 7.0.162(zod@4.6.7)
-      canvas-confetti:
-        specifier: ^1.9.4
-        version: 1.9.4
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -496,9 +505,6 @@ importers:
       sonner:
         specifier: ^2.0.8
         version: 2.0.8(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      stripe:
-        specifier: ^23.1.0
-        version: 23.1.0(@types/node@22.20.5)
       vaul:
         specifier: ^1.1.2
         version: 1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -521,9 +527,6 @@ importers:
       '@acme/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/typescript
-      '@types/canvas-confetti':
-        specifier: ^1.9.0
-        version: 1.9.0
       '@types/node':
         specifier: 'catalog:'
         version: 22.20.5
@@ -566,6 +569,9 @@ importers:
       '@acme/api':
         specifier: workspace:*
         version: link:../../packages/api
+      '@acme/app':
+        specifier: workspace:*
+        version: link:../../packages/app
       '@acme/cms':
         specifier: workspace:*
         version: link:../../packages/cms
@@ -581,12 +587,106 @@ importers:
       '@supabase/supabase-js':
         specifier: 'catalog:'
         version: 2.118.0(@opentelemetry/api@1.9.0)
+      '@tabler/icons-react':
+        specifier: ^3.50.0
+        version: 3.50.0(react@19.3.0)
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.105.3(@types/react@19.3.0)(react@19.3.0)
+      canvas-confetti:
+        specifier: ^1.9.4
+        version: 1.9.4
       expo-router:
         specifier: ~58.0.30
         version: 58.0.30(a6255892e73e5c81bb9dec6875ddc712)
+      lucide-react:
+        specifier: ^1.67.0
+        version: 1.67.0(@types/react@19.3.0)(react@19.3.0)
+      next:
+        specifier: ^16.4.5
+        version: 16.4.5(@babel/core@7.29.7)(@opentelemetry/api@1.9.0)(@playwright/test@1.64.1)(@types/node@22.20.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4)
+      payload:
+        specifier: 'catalog:'
+        version: 3.92.1(bufferutil@4.0.8)(graphql@16.14.1)(typescript@6.0.3)
+      server-only:
+        specifier: ^0.0.1
+        version: 0.0.1
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
+    devDependencies:
+      '@acme/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint
+      '@acme/prettier-config':
+        specifier: workspace:*
+        version: link:../../tooling/prettier
+      '@acme/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@payloadcms/db-postgres':
+        specifier: 'catalog:'
+        version: 3.92.1(@opentelemetry/api@1.9.0)(payload@3.92.1(bufferutil@4.0.8)(graphql@16.14.1)(typescript@6.0.3))
+      '@types/canvas-confetti':
+        specifier: ^1.9.0
+        version: 1.9.0
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.20.5
+      '@types/react':
+        specifier: catalog:react19
+        version: 19.3.0
+      eslint:
+        specifier: 'catalog:'
+        version: 10.14.0(jiti@2.7.0)
+      prettier:
+        specifier: 'catalog:'
+        version: 3.9.10
+      react:
+        specifier: catalog:react19
+        version: 19.3.0
+      react-native:
+        specifier: 0.88.1
+        version: 0.88.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7)(bufferutil@4.0.8))(@types/react@19.3.0)(bufferutil@4.0.8)(react@19.3.0)
+      react-native-css:
+        specifier: 3.0.7
+        version: 3.0.7(@expo/metro-config@58.0.21(bufferutil@4.0.8)(expo@58.0.23)(typescript@6.0.3))(lightningcss@1.30.2)(react-native@0.88.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7)(bufferutil@4.0.8))(@types/react@19.3.0)(bufferutil@4.0.8)(react@19.3.0))(react@19.3.0)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.1.0(@opentelemetry/api@1.9.0)(@types/node@22.20.5)(happy-dom@20.9.0(bufferutil@4.0.8))(vite@7.1.12(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.30.2)(sass@1.77.4)(terser@5.44.0)(tsx@4.23.15)(yaml@2.8.1))
+
+  modules/billing-adapter-stripe:
+    dependencies:
+      '@acme/api':
+        specifier: workspace:*
+        version: link:../../packages/api
+      '@acme/cms':
+        specifier: workspace:*
+        version: link:../../packages/cms
+      '@acme/mod-billing':
+        specifier: workspace:*
+        version: link:../billing
+      '@acme/mod-kit':
+        specifier: workspace:*
+        version: link:../../packages/mod-kit
+      '@acme/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@stripe/react-stripe-js':
+        specifier: ^7.0.1
+        version: 7.0.1(@stripe/stripe-js@10.2.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@stripe/stripe-js':
+        specifier: ^10.2.1
+        version: 10.2.1
+      '@supabase/supabase-js':
+        specifier: 'catalog:'
+        version: 2.118.0(@opentelemetry/api@1.9.0)
+      '@tanstack/react-query':
+        specifier: 'catalog:'
+        version: 5.105.3(@types/react@19.3.0)(react@19.3.0)
       next:
         specifier: ^16.4.5
         version: 16.4.5(@babel/core@7.29.7)(@opentelemetry/api@1.9.0)(@playwright/test@1.64.1)(@types/node@22.20.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4)
@@ -630,18 +730,12 @@ importers:
       react:
         specifier: catalog:react19
         version: 19.3.0
-      react-native:
-        specifier: 0.88.1
-        version: 0.88.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7)(bufferutil@4.0.8))(@types/react@19.3.0)(bufferutil@4.0.8)(react@19.3.0)
-      react-native-css:
-        specifier: 3.0.7
-        version: 3.0.7(@expo/metro-config@58.0.21(bufferutil@4.0.8)(expo@58.0.23)(typescript@6.0.3))(lightningcss@1.30.2)(react-native@0.88.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7)(bufferutil@4.0.8))(@types/react@19.3.0)(bufferutil@4.0.8)(react@19.3.0))(react@19.3.0)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
       vitest:
         specifier: 'catalog:'
-        version: 5.1.0(@opentelemetry/api@1.9.0)(@types/node@22.20.5)(happy-dom@20.9.0(bufferutil@4.0.8))(vite@7.1.12(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.30.2)(sass@1.77.4)(terser@5.44.0)(tsx@4.23.15)(yaml@2.8.1))
+        version: 5.1.0(@opentelemetry/api@1.9.0)(@types/node@22.20.5)(happy-dom@20.9.0(bufferutil@4.0.8))(vite@7.1.12(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.30.1)(sass@1.77.4)(terser@5.44.0)(tsx@4.23.15)(yaml@2.8.1))
 
   modules/chat:
     dependencies:
@@ -718,7 +812,7 @@ importers:
         specifier: ^6.0.1
         version: 6.0.2
       date-fns:
-        specifier: ^4.4.0
+        specifier: 'catalog:'
         version: 4.4.0
       diff-match-patch:
         specifier: ^1.0.5
@@ -1651,6 +1745,9 @@ importers:
       '@acme/api':
         specifier: workspace:*
         version: link:../api
+      '@acme/app':
+        specifier: workspace:*
+        version: link:../app
       zod:
         specifier: 'catalog:'
         version: 4.6.7
@@ -1694,15 +1791,33 @@ importers:
 
   packages/ui:
     dependencies:
+      '@daypicker/react':
+        specifier: 'catalog:'
+        version: 10.0.2(@types/react@19.3.0)(react@19.3.0)
+      '@dnd-kit/core':
+        specifier: 'catalog:'
+        version: 6.3.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@dnd-kit/sortable':
+        specifier: 'catalog:'
+        version: 10.0.0(@dnd-kit/core@6.3.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)
+      '@dnd-kit/utilities':
+        specifier: 'catalog:'
+        version: 3.2.2(react@19.3.0)
       '@radix-ui/react-icons':
         specifier: ^1.3.2
         version: 1.3.2(react@19.3.0)
+      '@tanstack/react-table':
+        specifier: 'catalog:'
+        version: 9.3.1(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
       cmdk:
         specifier: ^1.1.1
         version: 1.1.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      date-fns:
+        specifier: 'catalog:'
+        version: 4.4.0
       lucide-react:
         specifier: ^1.67.0
         version: 1.67.0(@types/react@19.3.0)(react@19.3.0)
@@ -1743,6 +1858,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.1.0(@opentelemetry/api@1.9.0)(@types/node@24.9.1)(happy-dom@20.9.0(bufferutil@4.0.8))(vite@7.1.12(@types/node@24.9.1)(jiti@2.7.0)(lightningcss@1.30.1)(sass@1.77.4)(terser@5.44.0)(tsx@4.23.15)(yaml@2.8.1))
       zod:
         specifier: 'catalog:'
         version: 4.6.7
@@ -2812,6 +2930,19 @@ packages:
 
   '@date-fns/tz@1.2.0':
     resolution: {integrity: sha512-LBrd7MiJZ9McsOgxqWX7AaxrDjcFVjWH/tIKJd7pnR7McaslGYOP1QmmiBXdJH/H/yLCT+rcQ7FaPBUxRGUtrg==}
+
+  '@date-fns/tz@1.5.0':
+    resolution: {integrity: sha512-lwYN/vDPeNRULcepoE/LO2Pgx+7/RV+S9ARfbc9lr2DtGkOD7pAiruHvbR1RX3Qyf6ja47EWJDMsNK5vK08DJg==}
+
+  '@daypicker/react@10.0.2':
+    resolution: {integrity: sha512-Z/gvGXnc/xjRr5Z6l9OhIey00C7kwbIyJ85Pff9B9EWDkjTlkTQztB3qeylmGJDQ9xmxRJUV1W+02rskqarUBw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@types/react': '>=16.8.0'
+      react: '>=16.8.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
 
   '@dnd-kit/accessibility@3.1.1':
     resolution: {integrity: sha512-2P+YgaXF+gRsIihwwY1gCsQSYnu9Zyj2py8kY5fFvUM1qm2WA2u639R6YNVfU4GWr+ZM5mqEsfHZZLoRONbemw==}
@@ -4646,11 +4777,6 @@ packages:
       react: ^19.0.1 || ^19.1.2 || ^19.2.1
       react-dom: ^19.0.1 || ^19.1.2 || ^19.2.1
 
-  '@payloadcms/plugin-stripe@3.92.1':
-    resolution: {integrity: sha512-zuYB9xI8IpYwSD5q1sWh0TQL5AWIBL+M2YhXKW7A3u+uPzC47BxawIui18FgQuikn/qog3vd/0a2L8VbdYOegg==}
-    peerDependencies:
-      payload: 3.92.1
-
   '@payloadcms/richtext-lexical@3.92.1':
     resolution: {integrity: sha512-evb8SBoUlKf3B3ia4yrYNK1HiQanWVibu5yd7d3x8IBBVlXXxMqc2rfH2fNNKjCtN1S+/2sU6Youmt7MqKNwmg==}
     engines: {node: ^22.23.4 || >=24.22.1}
@@ -6097,6 +6223,29 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  '@tanstack/react-store@0.11.4':
+    resolution: {integrity: sha512-JAQz7LcABVRbxZ6qCd4u/KqDaqBc1qmcOWz7XBTdav1Ib363HQdihCQF1A755nDhoi9VEd6UqZ5thWVKTwIIXw==}
+    peerDependencies:
+      '@types/react': '*'
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+
+  '@tanstack/react-table@9.3.1':
+    resolution: {integrity: sha512-E6Ya5TnY6EaGyZYIUqig/29Lr/gJSAubQkLJFqiWkUl5nRCr0Xr9hvJot+NiRTtG+TzGxHTiqUW3bnLtQxlHug==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      react: '>=18'
+
+  '@tanstack/store@0.11.3':
+    resolution: {integrity: sha512-/Mt3h2Qe67HmRMc5SJ+8jM2Fp7O4fBbwOlS0ujUvx34KgAvkvdLSHrJatv0PJG5fbvlDsACTawMMY4ptCpVI8w==}
+
+  '@tanstack/table-core@9.3.1':
+    resolution: {integrity: sha512-zQvlxSNi2qGM3L4jh85Z6hqMfdIR5qOfD9KHOU32nuKFJGN0RlJ7UvV1lsPb1fPVhpFYI0VP3jJGxLdLDpTKjQ==}
+    engines: {node: '>=20'}
 
   '@tokenizer/inflate@0.4.1':
     resolution: {integrity: sha512-2mAv+8pkG6GIZiF1kNg1jAjh27IDxEPKwdGul3snfztFerfPGI1LjDezZp3i7BElXompqEtPmoPx6c2wgtWsOA==}
@@ -9006,10 +9155,6 @@ packages:
   lodash.debounce@4.0.8:
     resolution: {integrity: sha512-FT1yDzDYEoYWhnSGnpE/4Kj1fLZkDFyqRb7fNt6FdYOSxlUWAtp42Eh6Wb0rGIv/m9Bgo7x4GhQbm5Ys4SG5ow==}
 
-  lodash.get@4.4.2:
-    resolution: {integrity: sha512-z+Uw/vLuy6gQe8cfaFWD7p0wVv8fJl3mbzXh33RS+0oW2wvUqiRXiQ69gLWSLpgB5/6sU+r6BlQR0MBILadqTQ==}
-    deprecated: This package is deprecated. Use the optional chaining (?.) operator instead.
-
   lodash.throttle@4.1.1:
     resolution: {integrity: sha512-wIkUCfVKpVsWo3JSZlc+8MB5it+2AN5W8J7YVMST30UrvcQNZ1Okbj+rbVniijTWE6FGYy4XJq/rHkas8qJMLQ==}
 
@@ -10144,6 +10289,16 @@ packages:
     peerDependencies:
       react: ^16.9.0 || ^17 || ^18 || ^19 || ^19.0.0-rc
       react-dom: ^16.9.0 || ^17 || ^18 || ^19 || ^19.0.0-rc
+
+  react-day-picker@10.0.2:
+    resolution: {integrity: sha512-QetiKtZWE9Uaw/pM/SYNv6WPYOTRnSJ2puL0GgwkmUFMIwiY0dtjH1W4B7DOVXVNQM0ZOClGpH/heOfBSzWeiA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@types/react': '>=16.8.0'
+      react: '>=16.8.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
 
   react-devtools-core@6.1.5:
     resolution: {integrity: sha512-ePrwPfxAnB+7hgnEr8vpKxL9cmnp7F322t8oqcPshbIQQhDKgFDW4tjhF2wjVbdXF9O/nyuy3sQWd9JGpiLPvA==}
@@ -12625,6 +12780,15 @@ snapshots:
 
   '@date-fns/tz@1.2.0': {}
 
+  '@date-fns/tz@1.5.0': {}
+
+  '@daypicker/react@10.0.2(@types/react@19.3.0)(react@19.3.0)':
+    dependencies:
+      react: 19.3.0
+      react-day-picker: 10.0.2(@types/react@19.3.0)(react@19.3.0)
+    optionalDependencies:
+      '@types/react': 19.3.0
+
   '@dnd-kit/accessibility@3.1.1(react@19.3.0)':
     dependencies:
       react: 19.3.0
@@ -14481,24 +14645,6 @@ snapshots:
       - supports-color
       - typescript
 
-  '@payloadcms/plugin-stripe@3.92.1(@types/node@22.20.5)(@types/react@19.3.0)(monaco-editor@0.55.1)(next@16.4.5(@opentelemetry/api@1.9.0)(@playwright/test@1.64.1)(@types/node@22.20.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.92.1(bufferutil@4.0.8)(graphql@16.14.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3)':
-    dependencies:
-      '@payloadcms/translations': 3.92.1
-      '@payloadcms/ui': 3.92.1(@types/react@19.3.0)(monaco-editor@0.55.1)(next@16.4.5(@opentelemetry/api@1.9.0)(@playwright/test@1.64.1)(@types/node@22.20.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.92.1(bufferutil@4.0.8)(graphql@16.14.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
-      lodash.get: 4.4.2
-      payload: 3.92.1(bufferutil@4.0.8)(graphql@16.14.1)(typescript@6.0.3)
-      stripe: 23.1.0(@types/node@22.20.5)
-      uuid: 13.0.2
-    transitivePeerDependencies:
-      - '@types/node'
-      - '@types/react'
-      - monaco-editor
-      - next
-      - react
-      - react-dom
-      - supports-color
-      - typescript
-
   '@payloadcms/richtext-lexical@3.92.1(@faceless-ui/modal@3.0.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@faceless-ui/scroll-info@2.0.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@payloadcms/next@3.92.1(@types/react@19.3.0)(graphql@16.14.1)(monaco-editor@0.55.1)(next@16.4.5(@opentelemetry/api@1.9.0)(@playwright/test@1.64.1)(@types/node@22.20.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.92.1(bufferutil@4.0.8)(graphql@16.14.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3))(@types/react@19.3.0)(bufferutil@4.0.8)(monaco-editor@0.55.1)(next@16.4.5(@opentelemetry/api@1.9.0)(@playwright/test@1.64.1)(@types/node@22.20.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.92.1(bufferutil@4.0.8)(graphql@16.14.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3)(yjs@13.6.31)':
     dependencies:
       '@faceless-ui/modal': 3.0.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -16228,6 +16374,30 @@ snapshots:
       react: 19.3.0
     optionalDependencies:
       '@types/react': 19.3.0
+
+  '@tanstack/react-store@0.11.4(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+    dependencies:
+      '@tanstack/store': 0.11.3
+      react: 19.3.0
+      react-dom: 19.3.0(react@19.3.0)
+      use-sync-external-store: 1.6.0(react@19.3.0)
+    optionalDependencies:
+      '@types/react': 19.3.0
+
+  '@tanstack/react-table@9.3.1(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+    dependencies:
+      '@tanstack/react-store': 0.11.4(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@tanstack/table-core': 9.3.1
+      react: 19.3.0
+    transitivePeerDependencies:
+      - '@types/react'
+      - react-dom
+
+  '@tanstack/store@0.11.3': {}
+
+  '@tanstack/table-core@9.3.1':
+    dependencies:
+      '@tanstack/store': 0.11.3
 
   '@tokenizer/inflate@0.4.1':
     dependencies:
@@ -19492,8 +19662,6 @@ snapshots:
 
   lodash.debounce@4.0.8: {}
 
-  lodash.get@4.4.2: {}
-
   lodash.throttle@4.1.1: {}
 
   lodash@4.17.21: {}
@@ -21269,6 +21437,14 @@ snapshots:
       date-fns: 3.6.0
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
+
+  react-day-picker@10.0.2(@types/react@19.3.0)(react@19.3.0):
+    dependencies:
+      '@date-fns/tz': 1.5.0
+      date-fns: 4.4.0
+      react: 19.3.0
+    optionalDependencies:
+      '@types/react': 19.3.0
 
   react-devtools-core@6.1.5(bufferutil@4.0.8):
     dependencies:

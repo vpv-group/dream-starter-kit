@@ -5,6 +5,10 @@ packages:
   - modules/*
 
 catalog:
+  '@daypicker/react': ^10.0.2
+  '@dnd-kit/core': ^6.3.1
+  '@dnd-kit/sortable': ^10.0.0
+  '@dnd-kit/utilities': ^3.2.2
   '@eslint/js': ^10.0.1
   '@hookform/resolvers': ^7.0.2
   '@payloadcms/db-postgres': 3.92.1
@@ -14,7 +18,6 @@ catalog:
   '@payloadcms/plugin-form-builder': 3.92.1
   '@payloadcms/plugin-nested-docs': 3.92.1
   '@payloadcms/plugin-seo': 3.92.1
-  '@payloadcms/plugin-stripe': 3.92.1
   '@payloadcms/richtext-lexical': 3.92.1
   '@payloadcms/storage-s3': 3.92.1
   '@payloadcms/ui': 3.92.1
@@ -24,9 +27,11 @@ catalog:
   '@tailwindcss/postcss': ^4.3.4
   '@tailwindcss/vite': ^4.3.4
   '@tanstack/react-query': ^5.105.3
+  '@tanstack/react-table': ^9.3.1
   '@types/node': ^22.20.5
   '@vitejs/plugin-react': 5.1.0
   ai: ^7.0.162
+  date-fns: ^4.4.0
   eslint: ^10.14.0
   graphql: ^16.8.1
   payload: 3.92.1
@@ -62,9 +67,8 @@ onlyBuiltDependencies:
   - sharp
 
 overrides:
-  # plugin-stripe depends on stripe@^10, whose legacy ambient 'declare module'
-  # typings hijack every `import "stripe"` in the TS program. Force one modern
-  # stripe everywhere (the plugin's runtime usage is API-stable).
+  # One modern stripe everywhere (billing-adapter-stripe pins its webhook API
+  # version to the SDK's), so no stray older copy's typings leak in.
   stripe: ^23.1.0
   '@types/minimatch': 5.1.2
   # Held at 1.30.1 for NativeWind v5 / react-native-css (3.0.7): newer

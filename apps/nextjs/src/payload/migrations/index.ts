@@ -32,6 +32,7 @@ import * as migration_20261125_233209_indexes_and_counters from './20261125_2332
 import * as migration_20261125_234244_jobs_tasks_2 from './20261125_234244_jobs_tasks_2';
 import * as migration_20261126_024654_notifications_attempts_receipts from './20261126_024654_notifications_attempts_receipts';
 import * as migration_20261126_040551_nav_groups from './20261126_040551_nav_groups';
+import * as migration_20261126_193316_billing_provider_adapters from './20261126_193316_billing_provider_adapters';
 import * as migration_20261126_201522_mod_feedback_initial from './20261126_201522_mod_feedback_initial';
 import * as migration_20261126_203722_mod_feedback_ideas from './20261126_203722_mod_feedback_ideas';
 import * as migration_20261126_211703_mod_feedback_changelog from './20261126_211703_mod_feedback_changelog';
@@ -210,6 +211,11 @@ export const migrations = [
     up: migration_20261126_040551_nav_groups.up,
     down: migration_20261126_040551_nav_groups.down,
     name: '20261126_040551_nav_groups',
+  },
+  {
+    up: migration_20261126_193316_billing_provider_adapters.up,
+    down: migration_20261126_193316_billing_provider_adapters.down,
+    name: '20261126_193316_billing_provider_adapters',
   },
   {
     up: migration_20261126_201522_mod_feedback_initial.up,

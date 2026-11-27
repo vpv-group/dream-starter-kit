@@ -1,0 +1,69 @@
+"use client";
+
+// Step 2 of the Bloomberg-style checkout: the payment form, rendered INLINE on
+// the page. Provider-neutral — the form itself is the installed billing
+// payment provider's `PaymentForm` (e.g. Stripe Elements: Apple/Google Pay +
+// card + Link, with the purchase created at confirm time), found through the
+// module adapter registry. No provider SDK is imported here.
+import { useCallback } from "react";
+
+import { useSupabase } from "@acme/api";
+import { ensureAnonSession, useCaptcha } from "@acme/app";
+
+import type { PaywallCopy, PlanLite } from "../../paywall-copy";
+import type { PaidResult } from "../paywall/payment-provider";
+import { useWebPaymentProvider } from "../paywall/payment-provider";
+
+export type { PaidResult };
+
+export function CheckoutPayment({
+  planId,
+  orgId,
+  plan,
+  copy,
+  onPaid,
+}: {
+  planId: string | number;
+  /** Buying for this workspace (company billing). */
+  orgId?: string | null;
+  plan: PlanLite;
+  copy: PaywallCopy;
+  onPaid: (result: PaidResult) => void;
+}) {
+  const provider = useWebPaymentProvider();
+  const supabase = useSupabase();
+  const { token: captchaToken, reset: resetCaptcha } = useCaptcha();
+
+  // The buyer is already signed in by the Account step, so the purchase is
+  // stamped with their user id; the anon ensure is a no-op safety net for the
+  // rare logged-out edge. CAPTCHA tokens are single-use — reset after.
+  const beforeCreate = useCallback(async () => {
+    try {
+      await ensureAnonSession(supabase, { captchaToken });
+    } catch {
+      /* anon/CAPTCHA unavailable — the webhook fallback still links it */
+    } finally {
+      resetCaptcha();
+    }
+  }, [supabase, captchaToken, resetCaptcha]);
+
+  if (!provider) {
+    return (
+      <p className="text-muted-foreground text-sm">
+        Purchases aren’t available right now.
+      </p>
+    );
+  }
+  return (
+    <provider.PaymentForm
+      variant="checkout"
+      planId={planId}
+      orgId={orgId}
+      plan={plan}
+      cta="Purchase Subscription"
+      fineprint={copy.fineprint}
+      beforeCreate={beforeCreate}
+      onPaid={onPaid}
+    />
+  );
+}

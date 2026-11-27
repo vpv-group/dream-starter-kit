@@ -21,6 +21,7 @@ describe("defineModule", () => {
       publicRoutes: false,
       mcp: false,
       edgeFunctions: [],
+      services: false,
     });
     expect(m.database.tables).toEqual([]);
     expect(m.cms.hasSettings).toBe(false);

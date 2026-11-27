@@ -10,10 +10,11 @@ import {
 } from "@acme/app";
 
 import { reconcileAnonByEmail } from "~/lib/auth/merge-anon";
-import { ensureCmsUser, ensureFreeTag } from "~/lib/cms/mirror-user";
+import { ensureBillingTags, ensureCmsUser } from "~/lib/cms/mirror-user";
 import { getPayloadClient } from "~/lib/cms/payload-client";
 import { isCmsSeeded } from "~/lib/cms/seed-status";
 import { ensureDbProvisioned } from "~/lib/db/bootstrap-runner";
+import { billingServices } from "~/lib/mod/billing";
 import { getAuthSettings } from "~/lib/payload";
 import { getSiteUrl } from "~/lib/site-url";
 import { createAdminClient } from "~/lib/supabase/admin";
@@ -165,7 +166,7 @@ export async function GET(request: NextRequest) {
       (user.user_metadata.name as string | undefined),
     metadata: user.user_metadata,
   });
-  await ensureFreeTag(user.id);
+  await ensureBillingTags(user.id);
 
   // Reconciliation safety net: a paid anonymous buyer who never confirmed and
   // then signed up fresh would otherwise strand their subscription on the dead
@@ -174,12 +175,8 @@ export async function GET(request: NextRequest) {
   // listUsers scan for accounts that already have billing. Best-effort.
   if (!user.is_anonymous && user.email) {
     try {
-      const { data: customer } = await supabase
-        .from("mod_billing_customers")
-        .select("user_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (!customer) {
+      const billing = await billingServices();
+      if (billing && !(await billing.hasBillingRecord({ userId: user.id }))) {
         await reconcileAnonByEmail(createAdminClient(), user.id, user.email);
       }
     } catch (e) {

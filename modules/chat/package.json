@@ -42,7 +42,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "codemirror": "^6.0.1",
-    "date-fns": "^4.4.0",
+    "date-fns": "catalog:",
     "diff-match-patch": "^1.0.5",
     "expo-router": "~58.0.30",
     "fast-deep-equal": "^3.1.3",

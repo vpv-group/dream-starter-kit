@@ -112,17 +112,17 @@ caller's Supabase session and JIT-provisions a `cms.users` row (linked by
 
 ## Shared collection hooks (`payload/hooks/`)
 
-| Hook                                            | Effect                                                                                                                                |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `assignOwner(field)`                            | Forces the owner field to the requesting user on create (staff/Local API may override)                                                |
-| `requireCommentsEnabled`                        | Rejects comments whose target has `commentsEnabled: false`                                                                            |
-| `uniquePolymorphic(...)`                        | One row per owner + polymorphic target (open reports)                                                                                 |
-| `incrementReportCount`                          | Denormalizes `reportCount` onto the reported doc                                                                                      |
-| `invite-user`                                   | On staff-created Users rows: Supabase invite email + `is_staff` from the chosen roles                                                 |
-| `sync-user-to-supabase`                         | On admin Users updates: write email / display name / phone / job title through to Supabase Auth + `profiles`                          |
-| `notify-contact-change`                         | On Users updates (member sync or admin edit): email the member a masked "phone number changed" security notice (best-effort)          |
-| `sync-plan-to-stripe` / `sync-coupon-to-stripe` | afterChange → create/update Stripe product, **recreate + archive** immutable prices/coupons; status lands on `syncStatus`/`syncError` |
-| `validate-custom-fields`                        | Validates `users.customFields` against the `profile-fields` global                                                                    |
+| Hook                            | Effect                                                                                                                                                                                                    |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `assignOwner(field)`            | Forces the owner field to the requesting user on create (staff/Local API may override)                                                                                                                    |
+| `requireCommentsEnabled`        | Rejects comments whose target has `commentsEnabled: false`                                                                                                                                                |
+| `uniquePolymorphic(...)`        | One row per owner + polymorphic target (open reports)                                                                                                                                                     |
+| `incrementReportCount`          | Denormalizes `reportCount` onto the reported doc                                                                                                                                                          |
+| `invite-user`                   | On staff-created Users rows: Supabase invite email + `is_staff` from the chosen roles                                                                                                                     |
+| `sync-user-to-supabase`         | On admin Users updates: write email / display name / phone / job title through to Supabase Auth + `profiles`                                                                                              |
+| `notify-contact-change`         | On Users updates (member sync or admin edit): email the member a masked "phone number changed" security notice (best-effort)                                                                              |
+| `sync-with-providers` (billing) | afterChange on plans/coupons → each payment provider's `syncPlan`/`syncCoupon` (Stripe: create/update product, **recreate + archive** immutable prices/coupons); status lands on `syncStatus`/`syncError` |
+| `validate-custom-fields`        | Validates `users.customFields` against the `profile-fields` global                                                                                                                                        |
 
 ---
 
@@ -348,18 +348,23 @@ create any user; update/delete `ownsOrStaff("author")`. Trash.
 
 ## Commerce group
 
-### `plans` — billing catalog (authored here, synced to Stripe)
+### `plans` — billing catalog (authored here, pushed to the payment providers)
+
+`mod-billing-plans`, owned by the billing module (docs/BILLING.md). Tabs (unnamed
+— fields stay at the document root): **Plan**, **Subscribers**, plus one per
+payment provider adapter.
 
 **Fields:** `name`_, `active`, unique `slug`, `description`, `pricingType`_
 (`recurring`/`one_time`) → `interval`/`intervalCount`, `unitAmount`\*,
 `currency`, `trialDays`, `introOffer` group (enabled, introAmount,
-introInterval, introPeriods — implemented as an auto-applied Stripe coupon),
-`entitlement` (`members`/`premium`), `features[]`, `badge`, `highlighted`,
-`displayOrder`; read-only Stripe sync state (`skipSync`, `stripeProductId`,
-`stripePriceId`, `stripeIntroCouponId`, `syncStatus`, `syncError`,
-`lastSyncedAt`); join `subscriptions`. **Access:** read `anyone`; write
-`isAdmin`. Hook `syncPlanAfterChange` (prices are immutable — changed
-amount/interval recreates + archives).
+introInterval, introPeriods — an auto-applied coupon at web checkout),
+`entitlement` (`members`/`premium` — written onto each purchase),
+`features[]`, `badge`, `highlighted`, `displayOrder`; sidebar sync state
+(`skipSync`, `syncStatus`, `syncError`, `lastSyncedAt`); joins `subscriptions`,
+`coupons`. The **Stripe** tab (billing-adapter-stripe) holds the read-only
+`stripeProductId`, `stripePriceId`, `stripeIntroCouponId`. **Access:** read
+`anyone`; write `isAdmin`. Hook `syncPlanWithProviders` (Stripe prices are
+immutable — a changed amount/interval recreates + archives).
 
 ### `coupons` — discounts & promotion codes
 
@@ -367,21 +372,25 @@ amount/interval recreates + archives).
 `currency`, `duration`_ (`once`/`repeating`/`forever`) →
 `durationCount`/`durationUnit`, `maxRedemptions`, `redeemBy`, `minimumAmount`,
 read-only `timesRedeemed`, `active`, `appliesTo` (plans), customer-facing
-`code`, `isWelcomeOffer` (at most one active); read-only Stripe sync state.
-**Access:** read `anyone`; write `isAdmin`. Hook `syncCouponAfterChange`
+`code`, `isWelcomeOffer` (at most one active); sidebar sync state; the
+**Stripe** tab holds the read-only `stripeCouponId`, `stripePromotionCodeId`.
+**Access:** read `anyone`; write `isAdmin`. Hook `syncCouponWithProviders`
 (recreate-on-change, like prices).
 
-### `subscriptions` — read-only Stripe mirror
+### `subscriptions` — read-only copy of purchases
 
 A read-only projection of `public.mod_billing_subscriptions` (the source of
-truth), written only by the billing module's Stripe webhook
-(`POST /api/mod/billing/stripe/webhook`) after it applies a newer
-`customer.subscription.*` event; keyed by unique `stripeSubscriptionID`.
-**Fields (all read-only):** `user`, `plan`, `coupon`, `status`
-(`trialing`/`active`/`past_due`/`canceled`/`churned`/`paused`), period/trial
-dates, `cancelAtPeriodEnd`, `canceledAt`, `lastPaymentAt`/`lastPaymentAmount`,
-`stripeCustomerID`. **Access:** read `ownsOrStaff`; create/update/delete
-denied. (RLS clients use `public.subscriptions` instead — see `ERD.md`.)
+truth), written only by payment providers' webhooks through billing's
+`projectSubscriptionToCms` after they apply a newer event (Stripe:
+`POST /api/mod/billing-adapter-stripe/webhook`); keyed by (`provider`,
+`providerSubscriptionId`). **Fields (all read-only):** `user`, `plan`,
+`coupon`, `status` (`trialing`/`active`/`past_due`/`canceled`/`churned`/`paused`),
+period/trial dates, `cancelAtPeriodEnd`, `canceledAt`,
+`lastPaymentAt`/`lastPaymentAmount`, `provider`, `providerSubscriptionId`,
+`providerCustomerId` (billing 1.x's hidden `stripeSubscriptionID` /
+`stripeCustomerID` are still written for Stripe). **Access:** read
+`ownsOrStaff`; create/update/delete denied. (RLS clients read
+`mod_billing_entitlements` — see `ERD.md`.)
 
 ---
 
@@ -590,15 +599,15 @@ app release; a brand-new module's screens still ship in a build.
 
 ## Globals
 
-| Global                      | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Read               | Update    |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | --------- |
-| `site-settings`             | Site chrome: General (siteName, defaultMeta), Header nav + actions, Footer columns/policies/copyright, Social handles — consumed by the Launch UI navbar/footer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `anyone`           | `isStaff` |
-| `pricing-settings`          | `/pricing` page: heading/subheading, `billingToggleDefault`, up to 3 `featuredPlans`, optional `freeTier` group, disclaimer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `anyone`           | `isStaff` |
-| `theme-settings`            | The **front-end** shadcn theme (versioned, drafts→publish): Branding (appName, brandLink, appIcon, light/dark logos), Light/Dark color tokens, Typography (sans/serif/mono, letterSpacing), Other (radius, spacing, shadow). Serialized by `lib/theme/serialize.ts` into `<ThemeStyle />`; branding read by `getBranding()`. The `/admin` chrome uses a separate fixed palette (`lib/theme/admin-theme.ts`)                                                                                                                                                                                                                                                                                                                                                   | `publishedOrStaff` | `isStaff` |
-| `profile-fields`            | Admin-defined custom member fields (key, label, type, options, required, visibility, editableByMember, order) — drives `users.customFields` validation + profile UI                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `anyone`           | `isStaff` |
-| `image-generation-settings` | **System → Image Generation.** Workspace settings for AI image generation: `enabled` (kill switch), `model` (gateway image-model slug from the `@acme/config` catalog), `systemPrompt` (art direction). Resolution order at generation time: global → env → code default. Also a **post-generation audit** (`auditEnabled`, `auditMaxAttempts`, `auditFailureAction` publish/skip, `auditModel`, `auditInstructions`) and a **Regenerate all images** button (re-renders every image-enabled doc against the current settings; backed by the staff-only `/api/cms/regenerate-images` route)                                                                                                                                                                   | `isStaff`          | `isStaff` |
-| `authentication-settings`   | **System → Authentication.** Front-end auth config: an **orderable** login-method list (password · magic link · email OTP · Google · Apple · SAML SSO — drag to reorder, toggle on/off; first enabled = primary CTA), sign-up access (invite-only, email-domain allow/block, terms links + checkbox, post-login/signup redirects), security (min password length, Turnstile toggle), copy, and SAML SSO domain routing. A **UI + client-logic** layer — Supabase still gates what each method actually does. Read server-side via `getAuthSettings()` and over the public `GET /api/auth/config` (mobile). Drives `AuthFlow` (web) + the Expo auth screens. Full guide: [docs/AUTH.md](https://github.com/vpv-group/dream-starter-kit/blob/main/docs/AUTH.md) | `anyone`           | `isStaff` |
-| `native-navigation`         | **Hidden — edited from Navigation → iOS and Android App.** The native app tab bar: `tabCount` (3/4) and an ordered `items` array (`item` → `nav-items`, `hidden`, `sfSymbol`, `materialIcon`). Drafts → publish (`versions.drafts`); `GET /api/nav/native` and the web app's phone/tablet tab bar read the published version.                                                                                                                                                                                                                                                                                                                                                                                                                                 | `publishedOrStaff` | `isStaff` |
+| Global                                     | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Read                   | Update    |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | --------- |
+| `site-settings`                            | Site chrome: General (siteName, defaultMeta), Header nav + actions, Footer columns/policies/copyright, Social handles — consumed by the Launch UI navbar/footer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `anyone`               | `isStaff` |
+| `mod-billing-settings` (Modules → Billing) | Tabs: **Pricing page** (`/pricing`: heading/subheading, `billingToggleDefault`, up to 3 `featuredPlans`, Free/Enterprise tier cards, featured review, disclaimer — public read), **Tags** (billing tag groups + names, re-sync — staff), one tab per payment provider (e.g. **Stripe** checkout options — staff)                                                                                                                                                                                                                                                                                                                                                                                                                                              | `anyone` (pricing tab) | `isAdmin` |
+| `theme-settings`                           | The **front-end** shadcn theme (versioned, drafts→publish): Branding (appName, brandLink, appIcon, light/dark logos), Light/Dark color tokens, Typography (sans/serif/mono, letterSpacing), Other (radius, spacing, shadow). Serialized by `lib/theme/serialize.ts` into `<ThemeStyle />`; branding read by `getBranding()`. The `/admin` chrome uses a separate fixed palette (`lib/theme/admin-theme.ts`)                                                                                                                                                                                                                                                                                                                                                   | `publishedOrStaff`     | `isStaff` |
+| `profile-fields`                           | Admin-defined custom member fields (key, label, type, options, required, visibility, editableByMember, order) — drives `users.customFields` validation + profile UI                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `anyone`               | `isStaff` |
+| `image-generation-settings`                | **System → Image Generation.** Workspace settings for AI image generation: `enabled` (kill switch), `model` (gateway image-model slug from the `@acme/config` catalog), `systemPrompt` (art direction). Resolution order at generation time: global → env → code default. Also a **post-generation audit** (`auditEnabled`, `auditMaxAttempts`, `auditFailureAction` publish/skip, `auditModel`, `auditInstructions`) and a **Regenerate all images** button (re-renders every image-enabled doc against the current settings; backed by the staff-only `/api/cms/regenerate-images` route)                                                                                                                                                                   | `isStaff`              | `isStaff` |
+| `authentication-settings`                  | **System → Authentication.** Front-end auth config: an **orderable** login-method list (password · magic link · email OTP · Google · Apple · SAML SSO — drag to reorder, toggle on/off; first enabled = primary CTA), sign-up access (invite-only, email-domain allow/block, terms links + checkbox, post-login/signup redirects), security (min password length, Turnstile toggle), copy, and SAML SSO domain routing. A **UI + client-logic** layer — Supabase still gates what each method actually does. Read server-side via `getAuthSettings()` and over the public `GET /api/auth/config` (mobile). Drives `AuthFlow` (web) + the Expo auth screens. Full guide: [docs/AUTH.md](https://github.com/vpv-group/dream-starter-kit/blob/main/docs/AUTH.md) | `anyone`               | `isStaff` |
+| `native-navigation`                        | **Hidden — edited from Navigation → iOS and Android App.** The native app tab bar: `tabCount` (3/4) and an ordered `items` array (`item` → `nav-items`, `hidden`, `sfSymbol`, `materialIcon`). Drafts → publish (`versions.drafts`); `GET /api/nav/native` and the web app's phone/tablet tab bar read the published version.                                                                                                                                                                                                                                                                                                                                                                                                                                 | `publishedOrStaff`     | `isStaff` |
 
 ---
 

@@ -3,14 +3,14 @@ import type { CollectionConfig } from "payload";
 import { ownsOrStaff } from "@acme/mod-kit/payload";
 
 /**
- * CMS mirror of Stripe subscriptions, keyed by `stripeSubscriptionID` and
- * written EXCLUSIVELY by the Stripe webhook handler
- * (payload/stripe/webhooks.ts, registered via @payloadcms/plugin-stripe at
- * POST /cms-api/stripe/webhooks) — all client/admin writes are disabled, every
- * field is read-only in the UI. Members read their own rows.
+ * Read-only CMS copy of purchases from every payment provider, keyed by
+ * (provider, providerSubscriptionId) and written EXCLUSIVELY by the provider
+ * adapters' webhooks through `projectSubscriptionToCms` (../project.ts) — all
+ * client/admin writes are disabled, every field is read-only in the UI.
+ * Members read their own rows.
  *
- * This complements (does not replace) `public.subscriptions`, which the
- * Supabase edge webhook keeps for RLS clients and entitlement checks.
+ * public.mod_billing_subscriptions is the source of truth (RLS clients and
+ * entitlement checks read it); this is the admin's view of it.
  */
 export const Subscriptions: CollectionConfig = {
   slug: "mod-billing-subscriptions",
@@ -20,8 +20,8 @@ export const Subscriptions: CollectionConfig = {
     group: "Commerce",
     defaultColumns: ["user", "plan", "status", "currentPeriodEnd"],
     description:
-      "Read-only mirror written by the Stripe webhook. Manage billing in " +
-      "Stripe; author the catalog under Plans.",
+      "Read-only copy written by the payment providers' webhooks. Manage " +
+      "billing in the provider; author the catalog under Plans.",
     // Read-only mirror; surfaced inline on each Plan (the `subscriptions` join).
     // Every row has a plan, so hide the standalone list to keep Plans the
     // single Commerce entry point. A member's subscriptions also show on Users.
@@ -88,18 +88,37 @@ export const Subscriptions: CollectionConfig = {
       admin: { readOnly: true, description: "Cents." },
     },
     {
-      name: "stripeSubscriptionID",
+      name: "provider",
       type: "text",
-      required: true,
-      unique: true,
+      index: true,
+      defaultValue: "stripe",
+      admin: { readOnly: true, description: "Who sold it, e.g. stripe." },
+    },
+    {
+      name: "providerSubscriptionId",
+      type: "text",
       index: true,
       admin: { readOnly: true },
+    },
+    {
+      name: "providerCustomerId",
+      type: "text",
+      index: true,
+      admin: { readOnly: true },
+    },
+    {
+      // Billing 1.x key (Stripe only); providerSubscriptionId replaces it.
+      name: "stripeSubscriptionID",
+      type: "text",
+      unique: true,
+      index: true,
+      admin: { readOnly: true, hidden: true },
     },
     {
       name: "stripeCustomerID",
       type: "text",
       index: true,
-      admin: { readOnly: true },
+      admin: { readOnly: true, hidden: true },
     },
   ],
 };

@@ -7,7 +7,7 @@
  * Run with `pnpm cms:backfill-users` (needs SUPABASE_SERVICE_ROLE_KEY + the CMS
  * env). Idempotent — safe to re-run.
  */
-import { ensureCmsUser, ensureFreeTag } from "~/lib/cms/mirror-user";
+import { ensureBillingTags, ensureCmsUser } from "~/lib/cms/mirror-user";
 import { createAdminClient } from "~/lib/supabase/admin";
 
 async function main() {
@@ -26,7 +26,7 @@ async function main() {
           (user.user_metadata.name as string | undefined),
         metadata: user.user_metadata,
       });
-      await ensureFreeTag(user.id);
+      await ensureBillingTags(user.id);
       total++;
     }
     if (data.users.length < perPage) break;

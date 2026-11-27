@@ -2,19 +2,19 @@ import "server-only";
 
 import { cache } from "react";
 
+import { billingServices } from "~/lib/mod/billing";
 import { createClient } from "~/lib/supabase/server";
-
-const ACTIVE_STATUSES = ["active", "trialing"];
 
 /**
  * Server-side mirror of `usePremium`: whether the current viewer (resolved from
- * their Supabase session cookie) holds an active/trialing subscription —
- * read-own via RLS on `mod_billing_subscriptions`.
+ * their Supabase session cookie) holds a premium entitlement — from any payment
+ * provider — read-own via RLS (billing's `getViewerEntitlement` service over
+ * the mod_billing_entitlements view).
  *
  * Used to gate premium content in RSC *before* it reaches the client, so locked
  * content is never shipped to non-entitled viewers (the client paywall is
  * visual-only and otherwise leaks). Fails **closed** (returns false) on any
- * error — better to over-gate than to leak.
+ * error — better to over-gate than to leak — and when billing isn't installed.
  */
 export async function isViewerPremium(): Promise<boolean> {
   return (await getViewerEntitlement()).isPremium;
@@ -40,16 +40,15 @@ export const getViewerEntitlement = cache(
       } = await supabase.auth.getUser();
       if (!user || user.is_anonymous)
         return { isPremium: false, isLoggedIn: false, email: null };
-      const { data } = await supabase
-        .from("mod_billing_subscriptions")
-        .select("id")
-        .in("status", ACTIVE_STATUSES)
-        .limit(1);
-      return {
-        isPremium: Boolean(data && data.length > 0),
-        isLoggedIn: true,
-        email: user.email ?? null,
-      };
+      const billing = await billingServices();
+      if (!billing) {
+        return {
+          isPremium: false,
+          isLoggedIn: true,
+          email: user.email ?? null,
+        };
+      }
+      return await billing.getViewerEntitlement(supabase, user);
     } catch {
       return { isPremium: false, isLoggedIn: false, email: null };
     }

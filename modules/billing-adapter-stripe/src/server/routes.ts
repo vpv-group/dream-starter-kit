@@ -1,0 +1,580 @@
+import "server-only";
+
+import type Stripe from "stripe";
+import { z } from "zod/v4";
+
+import type {
+  ModPublicRouteContext,
+  ModPublicRouteTable,
+} from "@acme/mod-kit/server";
+import {
+  createAdminClient,
+  findUserCustomer,
+  findUserIdByEmail,
+  isWorkspaceAdmin,
+  linkCustomer,
+  recordSubscription,
+  siteUrl,
+} from "@acme/mod-billing/server";
+
+import { getStripeOrNull, stripeSettings } from "../stripe/client";
+import {
+  applyCustomerIdentity,
+  resolveCustomer,
+  resolveOrgCustomer,
+} from "./customers";
+import { normalizeSubscription } from "./mapping";
+
+/**
+ * The embedded (on-site) purchase flow — Stripe Elements on /checkout and the
+ * paywall — served at /api/mod/billing-adapter-stripe/*. PUBLIC because guest
+ * buyers have no session; each route proves ownership itself (see below).
+ * Hosted Checkout, the portal and invoices are billing's own routes, which
+ * call this adapter's provider (./provider.ts).
+ */
+
+const json = (status: number, body: Record<string, unknown>) =>
+  Response.json(body, { status });
+
+/** The Stripe client when Stripe is connected AND switched on. */
+async function stripeForCheckout(
+  ctx: ModPublicRouteContext,
+): Promise<Stripe | null> {
+  const settings = await stripeSettings(await ctx.getPayload());
+  if (!settings.enabled) return null;
+  return await getStripeOrNull();
+}
+
+const expressIntentSchema = z.object({
+  planId: z.union([z.string(), z.number()]),
+  // Buyer identity from the wallet sheet / card form — stamped onto the Stripe
+  // customer so every future invoice/receipt carries it (not just the first
+  // charge, which only the payment method carried).
+  email: z.string().email().optional(),
+  name: z.string().min(1).optional(),
+  /** Buy for this workspace (owners/admins only; signed in). */
+  orgId: z.uuid().optional(),
+});
+
+const upgradeAnnualSchema = z.object({
+  planId: z.union([z.string(), z.number()]),
+  // The just-created subscription (embedded flow) — lets the upgrade target it
+  // directly, before the webhook has written the customer mapping.
+  subscriptionId: z.string().optional(),
+  // Guest (no session) path: the wallet email, verified against the
+  // subscription's Stripe customer before upgrading the just-bought sub.
+  email: z.string().email().optional(),
+});
+
+const guestAccountSchema = z.object({
+  email: z.string().email(),
+  // Buyer identity from the wallet sheet — stored on the new account.
+  name: z.string().min(1).optional(),
+  phone: z.string().min(1).optional(),
+  // Wallet billing address (Stripe shape: line1/line2/city/state/postal_code/
+  // country). Carried into user_metadata so the cms.users mirror can populate
+  // its billing address (incl. zip) — profiles has no column for it.
+  address: z.record(z.string(), z.unknown()).nullish(),
+  // The just-completed embedded purchase — at least one is required, both to
+  // prove this is a real checkout and to find the Stripe customer to link.
+  subscriptionId: z.string().optional(),
+  customerId: z.string().optional(),
+});
+
+export const purchaseRoutes: ModPublicRouteTable = {
+  /**
+   * Create a payment/setup intent for the EMBEDDED Express Checkout Element
+   * (in-modal Apple Pay / Google Pay + card). Returns a `clientSecret` the
+   * client mounts via <Elements>. Recurring plans create a subscription
+   * (default_incomplete; intro coupon / trial applied) returning its first
+   * invoice's PaymentIntent — or a SetupIntent when a trial means no immediate
+   * charge; one-time plans return a PaymentIntent.
+   *
+   * Ties checkout to the session: `ensureAnonSession` runs client-side first, so
+   * a logged-out buyer arrives with an anonymous account and the intent stamps
+   * `supabase_user_id` in metadata — the webhook then links the subscription to
+   * that account (and converts/merges it to permanent once the email is known).
+   */
+  "POST /express-intent": async (req, ctx) => {
+    const stripe = await stripeForCheckout(ctx);
+    if (!stripe) return json(503, { error: "Billing not configured" });
+    const parsed = expressIntentSchema.safeParse(await req.json());
+    if (!parsed.success) return json(400, { error: "Invalid plan" });
+
+    const user = ctx.user;
+    const orgId = parsed.data.orgId ?? null;
+    if (orgId && (!user || !(await isWorkspaceAdmin(ctx.supabase, orgId)))) {
+      return json(403, {
+        error: "Only workspace owners and admins can buy for it",
+      });
+    }
+
+    try {
+      // A workspace pays on its own customer; a person on theirs (or a
+      // guest's fresh one).
+      const customerId =
+        orgId && user
+          ? await resolveOrgCustomer(stripe, orgId, user)
+          : await resolveCustomer(stripe, ctx.user);
+      const baseMeta: Record<string, string> = {
+        ...(user ? { supabase_user_id: user.id } : {}),
+        ...(orgId ? { org_id: orgId } : {}),
+      };
+
+      const payload = await ctx.getPayload();
+      const plan = await payload
+        .findByID({
+          collection: "mod-billing-plans",
+          id: parsed.data.planId,
+          depth: 0,
+        })
+        .catch(() => null);
+      if (!plan?.stripePriceId) {
+        return json(409, {
+          error: "This plan isn't available for purchase yet.",
+        });
+      }
+      const metadata = { ...baseMeta, plan_id: String(plan.id) };
+      const buyer = { email: parsed.data.email, name: parsed.data.name };
+
+      if (plan.pricingType !== "recurring") {
+        // Set identity on the customer when one exists; otherwise put the email
+        // on the PaymentIntent's receipt so the buyer still gets a receipt.
+        if (customerId) await applyCustomerIdentity(stripe, customerId, buyer);
+        const pi = await stripe.paymentIntents.create({
+          amount: Math.round(plan.unitAmount),
+          currency: plan.currency || "usd",
+          ...(customerId ? { customer: customerId } : {}),
+          ...(buyer.email ? { receipt_email: buyer.email } : {}),
+          automatic_payment_methods: { enabled: true },
+          metadata,
+        });
+        return Response.json({
+          clientSecret: pi.client_secret,
+          mode: "payment",
+        });
+      }
+
+      // A customer is required to open a subscription.
+      const subCustomer =
+        customerId ??
+        (
+          await stripe.customers.create({
+            metadata: baseMeta,
+            ...(buyer.email ? { email: buyer.email } : {}),
+            ...(buyer.name ? { name: buyer.name } : {}),
+          })
+        ).id;
+      // Stamp identity on a reused/existing customer too (fills in blanks).
+      await applyCustomerIdentity(stripe, subCustomer, buyer);
+      const sub = await stripe.subscriptions.create({
+        customer: subCustomer,
+        items: [{ price: plan.stripePriceId }],
+        metadata,
+        ...(plan.trialDays ? { trial_period_days: plan.trialDays } : {}),
+        ...(plan.stripeIntroCouponId
+          ? { discounts: [{ coupon: plan.stripeIntroCouponId }] }
+          : {}),
+        payment_behavior: "default_incomplete",
+        payment_settings: { save_default_payment_method: "on_subscription" },
+        // Stripe API version 2026-05-27.dahlia REMOVED `invoice.payment_intent`.
+        // The first invoice's PaymentIntent client secret now lives on
+        // `confirmation_secret` (whose `type` is always "payment_intent").
+        // Expanding the old field throws and crashed this route with an empty
+        // body (client saw "Unexpected end of JSON input").
+        expand: ["latest_invoice.confirmation_secret", "pending_setup_intent"],
+      });
+
+      const invoice =
+        sub.latest_invoice && typeof sub.latest_invoice === "object"
+          ? sub.latest_invoice
+          : null;
+      const paymentSecret = invoice?.confirmation_secret?.client_secret ?? null;
+      if (paymentSecret) {
+        return Response.json({
+          clientSecret: paymentSecret,
+          mode: "payment",
+          subscriptionId: sub.id,
+          customerId: subCustomer,
+        });
+      }
+
+      // Trial / $0-now subscription: collect a payment method via a SetupIntent.
+      const setup =
+        sub.pending_setup_intent && typeof sub.pending_setup_intent === "object"
+          ? sub.pending_setup_intent
+          : null;
+      if (setup?.client_secret) {
+        return Response.json({
+          clientSecret: setup.client_secret,
+          mode: "setup",
+          subscriptionId: sub.id,
+          customerId: subCustomer,
+        });
+      }
+      const si = await stripe.setupIntents.create({
+        customer: subCustomer,
+        automatic_payment_methods: { enabled: true },
+        metadata,
+      });
+      return Response.json({
+        clientSecret: si.client_secret,
+        mode: "setup",
+        subscriptionId: sub.id,
+        customerId: subCustomer,
+      });
+    } catch (err) {
+      // Never crash with an empty body — the client parses JSON and would
+      // otherwise surface a cryptic "Unexpected end of JSON input".
+      const message =
+        err instanceof Error ? err.message : "Could not start checkout.";
+      console.error("[stripe] express-intent failed:", message);
+      return json(502, { error: message });
+    }
+  },
+
+  /**
+   * Guest checkout, EMBEDDED-wallet path: a logged-out buyer just paid via the
+   * in-modal Express Checkout (Apple/Google Pay) WITHOUT an anonymous session
+   * (e.g. anon sign-in / Turnstile unavailable, so `ensureAnonSession` no-op'd).
+   * The modal calls this at "Continue"/"Maybe later" to GUARANTEE the account +
+   * invite email synchronously, instead of only showing "check your email" and
+   * banking on Stripe webhook timing/config. It:
+   *
+   *  - find-or-invites the Supabase account by the checkout email (a brand-new
+   *    account gets the set-password invite to /accept-invite),
+   *  - stamps supabase_user_id onto the Stripe customer + subscription (so the
+   *    webhook and the portal/upgrade routes resolve the user later), and
+   *  - links mod_billing_customers + mirrors the subscription row so premium
+   *    unlocks immediately for RLS clients.
+   *
+   * Abuse-safe: a real subscription/customer id is required and its Stripe
+   * customer email must match `email`, so this public route can't be used to
+   * spam invites or probe which emails have accounts. Idempotent with the
+   * webhook (still the backstop): an existing email links with no second email.
+   */
+  "POST /guest-account": async (req, ctx) => {
+    const stripe = await stripeForCheckout(ctx);
+    if (!stripe) return json(503, { error: "Billing not configured" });
+    const parsed = guestAccountSchema.safeParse(await req.json());
+    if (!parsed.success) return json(400, { error: "Invalid request" });
+    const { email, name, phone, address, subscriptionId, customerId } =
+      parsed.data;
+    if (!subscriptionId && !customerId) {
+      return json(400, { error: "Missing purchase reference" });
+    }
+    // Billing zip from the wallet address — profiles has no column for it, so it
+    // rides user_metadata into the cms.users mirror (which has an address group).
+    const postalCode =
+      address && typeof address.postal_code === "string"
+        ? address.postal_code
+        : undefined;
+
+    // A signed-in, non-anonymous caller already has an account — nothing to do.
+    if (ctx.user && !ctx.user.is_anonymous) {
+      return Response.json({ ok: true, existing: true });
+    }
+
+    try {
+      // Resolve + verify the purchase: the Stripe customer's email (stamped by
+      // express-intent from the wallet sheet) must match the requested email.
+      let sub: Stripe.Subscription | null = null;
+      let resolvedCustomerId = customerId ?? null;
+      if (subscriptionId) {
+        sub = await stripe.subscriptions
+          .retrieve(subscriptionId)
+          .catch(() => null);
+        if (sub) {
+          resolvedCustomerId =
+            typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+        }
+      }
+      if (!resolvedCustomerId)
+        return json(404, { error: "Purchase not found" });
+
+      const customer = await stripe.customers
+        .retrieve(resolvedCustomerId)
+        .catch(() => null);
+      if (
+        !customer ||
+        customer.deleted ||
+        (customer.email ?? "").toLowerCase() !== email.toLowerCase()
+      ) {
+        return json(403, { error: "Purchase does not match this email" });
+      }
+
+      const admin = createAdminClient();
+
+      // SECURITY (account-takeover guard): this route is PUBLIC and `email` is
+      // client-supplied and unverified (the caller also set it on the Stripe
+      // customer via /express-intent, which requires no payment). So it must
+      // never mutate — or mint a session for — an account it did not create in
+      // this same call:
+      //   * An EXISTING account is left completely untouched. Linking a paid
+      //     subscription to it is done only by the signature-verified Stripe
+      //     webhook (the trusted, server-authenticated path). Returning here
+      //     also can't leak whether the email has an account (the webhook is
+      //     the sole backstop either way).
+      //   * A NEW account is created + auto-logged-in only once the purchase is
+      //     confirmed PAID, so /express-intent's unpaid, arbitrary-email
+      //     subscriptions can't be used to farm accounts, spam invites, or
+      //     squat unregistered emails.
+      const paid =
+        !!sub && (sub.status === "active" || sub.status === "trialing");
+
+      const preexistingId = await findUserIdByEmail(admin, email);
+      if (preexistingId) {
+        // Never touch a pre-existing account from this unauthenticated route.
+        return Response.json({ ok: true, existing: true });
+      }
+      if (!paid) {
+        // Payment not confirmed yet — the webhook invites once the charge lands.
+        return Response.json({ ok: true, existing: false });
+      }
+
+      // The wallet identity, stored on the Supabase user. profiles is the RLS
+      // source for security-critical state (phone — "captured from wallet
+      // checkout"); user_metadata additionally carries the billing address/zip,
+      // which the cms.users mirror reads (per docs/ARCHITECTURE.md — one-way
+      // Supabase -> Payload sync; profiles has no address column).
+      const walletMeta: Record<string, unknown> = {
+        ...(name ? { display_name: name } : {}),
+        ...(phone ? { phone } : {}),
+        ...(postalCode ? { billing_postal_code: postalCode } : {}),
+        ...(address ? { billing_address: address } : {}),
+      };
+
+      // 1) Account: invite a brand-new one (sends the set-password email).
+      let userId: string | null = null;
+      const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
+        redirectTo: `${siteUrl()}/accept-invite`,
+        data: walletMeta,
+      });
+      if (error) {
+        // email_exists race → the account already exists, so (per the guard
+        // above) do NOT mutate it or mint a session; the webhook links it.
+        if (error.code === "email_exists" || /already/i.test(error.message)) {
+          return Response.json({ ok: true, existing: true });
+        }
+        console.error("[stripe] guest invite failed:", error.message);
+        return json(502, { error: "Could not create your account." });
+      }
+      userId = data.user.id;
+      if (!userId) {
+        return json(502, { error: "Could not resolve your account." });
+      }
+
+      // The handle_new_user trigger seeds profiles.display_name but NOT phone,
+      // so set it here for the brand-new account (profiles is the documented
+      // home for the wallet phone). Best-effort.
+      if (phone) {
+        const { error: phoneErr } = await admin
+          .from("profiles")
+          .update({ phone })
+          .eq("id", userId);
+        if (phoneErr) {
+          console.error(
+            "[stripe] guest profile phone update failed:",
+            phoneErr.message,
+          );
+        }
+      }
+
+      // 2) Stamp the user id onto Stripe so the webhook + portal/upgrade resolve
+      //    it (the embedded flow never wrote it). Best-effort.
+      await stripe.customers
+        .update(resolvedCustomerId, { metadata: { supabase_user_id: userId } })
+        .catch(() => undefined);
+      if (sub) {
+        await stripe.subscriptions
+          .update(sub.id, {
+            metadata: { ...sub.metadata, supabase_user_id: userId },
+          })
+          .catch(() => undefined);
+      }
+
+      // 3) Link billing for RLS clients (idempotent with the webhook).
+      await linkCustomer(admin, {
+        userId,
+        provider: "stripe",
+        customerId: resolvedCustomerId,
+      });
+      if (sub) {
+        // Best-effort: the webhook records this purchase regardless (and its
+        // ordering guard keeps the newest state), so don't block on it.
+        await recordSubscription(
+          admin,
+          normalizeSubscription(sub, userId, { livemode: sub.livemode }),
+          null,
+          { getPayload: ctx.getPayload },
+        ).catch((err: unknown) => {
+          console.error("[stripe] guest subscription record failed:", err);
+        });
+      }
+
+      // Auto-login the buyer in THEIR browser. The emailed invite link often
+      // opens in a different browser / in-app webview (Gmail, Mail), so don't
+      // make the buyer depend on it — mint a one-time magic-link token the
+      // client verifies locally (no CAPTCHA, no email send). Best-effort: the
+      // emailed invite stays the fallback. Safe here because this account was
+      // just created in THIS call for a confirmed-paid purchase (existing
+      // accounts returned early above and are never issued a token). Confirm the
+      // email first so magic-link generation succeeds.
+      let loginToken: string | undefined;
+      try {
+        await admin.auth.admin.updateUserById(userId, { email_confirm: true });
+        const { data: link } = await admin.auth.admin.generateLink({
+          type: "magiclink",
+          email,
+        });
+        loginToken = link.properties?.hashed_token ?? undefined;
+      } catch (err) {
+        console.error(
+          "[stripe] guest auto-login token failed:",
+          err instanceof Error ? err.message : err,
+        );
+      }
+
+      return Response.json({ ok: true, existing: false, loginToken });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Could not finish setup.";
+      console.error("[stripe] guest-account failed:", message);
+      return json(502, { error: message });
+    }
+  },
+
+  /**
+   * One-click upgrade-in-place from the active (monthly) subscription to the
+   * annual plan, using the payment method already on file. Powers the
+   * post-purchase upsell screen. The annual plan's intro coupon discounts the
+   * immediate invoice, and `proration_behavior: "none"` keeps the already-paid
+   * monthly charge intact so the buyer's first-year spend matches the displayed
+   * total. The Stripe webhook mirrors the price change into
+   * billing's ledger, flipping gating to the annual price.
+   *
+   * PUBLIC because the embedded-wallet GUEST upsell has no session (anon
+   * sign-in / Turnstile can be unavailable). Ownership is enforced two ways:
+   * a signed-in caller must own the subscription via its metadata user id; a
+   * guest may only upgrade a STILL-UNLINKED subscription whose Stripe customer
+   * email matches the wallet email they pass — i.e. exactly the subscription
+   * they just created. The guest-account route (called right after) then links
+   * the account; the webhook backstops both.
+   */
+  "POST /upgrade-annual": async (req, ctx) => {
+    const stripe = await stripeForCheckout(ctx);
+    if (!stripe) return json(503, { error: "Billing not configured" });
+    const parsed = upgradeAnnualSchema.safeParse(await req.json());
+    if (!parsed.success) return json(400, { error: "Invalid plan" });
+    const { subscriptionId, email } = parsed.data;
+    const userId = ctx.user?.id ?? null;
+
+    try {
+      const payload = await ctx.getPayload();
+      const plan = await payload
+        .findByID({
+          collection: "mod-billing-plans",
+          id: parsed.data.planId,
+          depth: 0,
+        })
+        .catch(() => null);
+      if (!plan?.stripePriceId) {
+        return json(409, {
+          error: "This plan isn't available for purchase yet.",
+        });
+      }
+
+      // Resolve the subscription to upgrade. Prefer the id the embedded flow
+      // just created — it works immediately, before the webhook has written the
+      // customer mapping. Fall back to the mapping + active-subscription scan
+      // (signed-in/portal path only).
+      let current: Stripe.Subscription | undefined;
+      if (subscriptionId) {
+        const sub = await stripe.subscriptions
+          .retrieve(subscriptionId)
+          .catch(() => null);
+        if (sub) {
+          // Ownership: a signed-in caller must own the sub via metadata; a guest
+          // may only upgrade a still-unlinked sub whose Stripe customer email
+          // matches the wallet email (proves this is their just-bought sub).
+          let owns = false;
+          if (userId) {
+            owns = sub.metadata.supabase_user_id === userId;
+          } else if (email && !sub.metadata.supabase_user_id) {
+            const custId =
+              typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+            const customer = await stripe.customers
+              .retrieve(custId)
+              .catch(() => null);
+            owns =
+              !!customer &&
+              !customer.deleted &&
+              (customer.email ?? "").toLowerCase() === email.toLowerCase();
+          }
+          if (owns) {
+            if (sub.items.data[0]?.price.id === plan.stripePriceId) {
+              return json(409, { error: "Already on the annual plan." });
+            }
+            if (sub.status === "active" || sub.status === "trialing") {
+              current = sub;
+            }
+          }
+        }
+      }
+
+      if (!current) {
+        // Mapping fallback needs a session (no user id → nothing to look up).
+        if (!userId) return json(404, { error: "No billing account" });
+        const stripeCustomerId = await findUserCustomer(
+          createAdminClient(),
+          userId,
+          "stripe",
+        );
+        if (!stripeCustomerId) {
+          return json(404, { error: "No billing account" });
+        }
+
+        // Find the user's active subscription to upgrade in place. Skip if it's
+        // already on the annual price (avoid a redundant charge).
+        const subs = await stripe.subscriptions.list({
+          customer: stripeCustomerId,
+          status: "active",
+          limit: 10,
+        });
+        current = subs.data.find(
+          (s) => s.items.data[0]?.price.id !== plan.stripePriceId,
+        );
+      }
+      if (!current) {
+        return json(409, { error: "Already on the annual plan." });
+      }
+      const itemId = current.items.data[0]?.id;
+      if (!itemId) {
+        return json(409, { error: "No subscription item to upgrade." });
+      }
+
+      // Stamp the user id only when known (guest: the guest-account route does
+      // it right after, once the account exists).
+      const metadata: Record<string, string> = {
+        plan_id: String(plan.id),
+        ...(userId ? { supabase_user_id: userId } : {}),
+      };
+      await stripe.subscriptions.update(current.id, {
+        items: [{ id: itemId, price: plan.stripePriceId }],
+        proration_behavior: "none",
+        // API 2026-09-30.endive+: the anchor is an object ({ type }), not a string.
+        billing_cycle_anchor: { type: "now" },
+        ...(plan.stripeIntroCouponId
+          ? { discounts: [{ coupon: plan.stripeIntroCouponId }] }
+          : { discounts: [] }),
+        metadata,
+      });
+      return Response.json({ ok: true });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Could not upgrade your plan.";
+      console.error("[stripe] upgrade-annual failed:", message);
+      return json(502, { error: message });
+    }
+  },
+};
