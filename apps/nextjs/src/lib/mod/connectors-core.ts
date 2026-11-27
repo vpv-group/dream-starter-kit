@@ -1,6 +1,11 @@
 import { z } from "zod/v4";
 
-import type { ConnectorResult, ConnectorToken } from "@acme/mod-kit/server";
+import type {
+  ConnectorResult,
+  ConnectorToken,
+  GithubSyncRepo,
+  GithubSyncToken,
+} from "@acme/mod-kit/server";
 
 import type { CallOpts, UpdatesProblem } from "./updates-core";
 import { call } from "./updates-core";
@@ -35,7 +40,7 @@ const tokenSchema = z.object({
 function problem(p: UpdatesProblem): ConnectorResult<never> {
   if (p.status === "no-site-key")
     return { status: "no_key", message: p.message };
-  if (p.code === "not_connected")
+  if (p.code === "not_connected" || p.code === "not_granted")
     return { status: "not_connected", message: p.message };
   return { status: "error", message: p.message };
 }
@@ -82,6 +87,91 @@ export async function connectorDisconnect(
   });
   if (!("ok" in res)) return problem(res);
   return { status: "ok" };
+}
+
+/* -------------------------------------------------------------------------- */
+/* GitHub issue sync (ConnectorBroker.githubSync). The site's owner grants     */
+/* repositories on meetdream.com; the site gets one-hour tokens for those      */
+/* repositories only, and meetdream.com forwards their webhooks.               */
+/* -------------------------------------------------------------------------- */
+
+const UNEXPECTED = {
+  status: "error",
+  message: "Unexpected answer from Meet Dream.",
+} as const;
+
+export async function githubSyncStart(
+  opts: CallOpts,
+  returnTo: string,
+  forwardPath: string,
+): Promise<ConnectorResult<{ url: string }>> {
+  const res = await call(opts, "/connect/github/sync/start", {
+    method: "POST",
+    body: { returnTo, forwardPath },
+  });
+  if (!("ok" in res)) return problem(res);
+  const parsed = z.object({ url: z.url() }).safeParse(res.body);
+  return parsed.success ? { status: "ok", url: parsed.data.url } : UNEXPECTED;
+}
+
+const syncAccessSchema = z.object({
+  repos: z.array(
+    z.object({
+      repo: z.string().min(1),
+      repoId: z.string().min(1),
+      installationId: z.string().min(1),
+    }),
+  ),
+  forwardPath: z.string().nullable().default(null),
+  forwardSecret: z.string().nullable().default(null),
+});
+
+export async function githubSyncAccess(opts: CallOpts): Promise<
+  ConnectorResult<{
+    repos: GithubSyncRepo[];
+    forwardPath: string | null;
+    forwardSecret: string | null;
+  }>
+> {
+  const res = await call(opts, "/sites/github/sync");
+  if (!("ok" in res)) return problem(res);
+  const parsed = syncAccessSchema.safeParse(res.body);
+  return parsed.success ? { status: "ok", ...parsed.data } : UNEXPECTED;
+}
+
+const syncTokenSchema = z.object({
+  token: z.string().min(1),
+  expiresAt: z.string().min(1),
+  repo: z.string().min(1),
+  permissions: z.record(z.string(), z.string()).default({}),
+});
+
+export async function githubSyncToken(
+  opts: CallOpts,
+  repo: string,
+): Promise<ConnectorResult<{ token: GithubSyncToken }>> {
+  const res = await call(opts, "/sites/github/sync-token", {
+    method: "POST",
+    body: { repo },
+  });
+  if (!("ok" in res)) return problem(res);
+  const parsed = syncTokenSchema.safeParse(res.body);
+  return parsed.success ? { status: "ok", token: parsed.data } : UNEXPECTED;
+}
+
+export async function githubSyncRevoke(
+  opts: CallOpts,
+  repo: string,
+): Promise<ConnectorResult<{ revoked: boolean }>> {
+  const res = await call(opts, "/sites/github/sync", {
+    method: "DELETE",
+    body: { repo },
+  });
+  if (!("ok" in res)) return problem(res);
+  const parsed = z.object({ revoked: z.boolean() }).safeParse(res.body);
+  return parsed.success
+    ? { status: "ok", revoked: parsed.data.revoked }
+    : UNEXPECTED;
 }
 
 /**
