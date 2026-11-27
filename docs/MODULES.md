@@ -226,6 +226,12 @@ get **401** on `routes`: a flow that must serve them goes in `publicRoutes`
 or IP. Callers that prove themselves — signature-verified webhooks (Stripe,
 Slack) and cron routes (`isCronRequest`) — are public routes too.
 
+Route keys are exact (`"GET /ping"`, index `"GET /"`) or **wildcards**: a key
+ending in `/*` (`"GET /files/*"`) matches every deeper path under that prefix,
+never the bare prefix, with the rest of the path in `ctx.params["*"]`. An
+exact key wins, then the longest matching prefix (`matchModRoute` in
+`@acme/mod-kit/server`). A path that matches under another method gets 405.
+
 **Embeddable pages.** A web route with `area: "embed"` mounts at
 `/embed/<slug>/…` in the bare `(frontend)/(embed)` group: no site header or
 footer and no app shell, so it fits an iframe on another site. Inside the
