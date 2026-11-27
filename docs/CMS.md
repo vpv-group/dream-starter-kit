@@ -28,8 +28,11 @@ see the recipe in [`CLAUDE.md`](../CLAUDE.md#how-to-add-a-payload-content-type).
   `cms-media` Supabase Storage bucket via the S3 adapter
 - **Config:** `apps/nextjs/src/payload.config.ts`; collections in
   `apps/nextjs/src/payload/collections/`, globals in `payload/globals/`
-- **Types:** generated into `packages/cms` (`@acme/cms`) by `pnpm cms:gen-types`;
-  schema changes need a committed migration (`pnpm cms:migrate:create`)
+- **Types:** generated into `packages/cms` (`@acme/cms`) by `pnpm cms:gen-types`
+  (Prettier-formatted). Payload's boot-time/hot-reload type generation is off
+  (`typescript.autoGenerate: false`), so run it yourself after changing a
+  collection or global; schema changes need a committed migration
+  (`pnpm cms:migrate:create`)
 - **Plugins:** SEO (posts/videos/audio/photos/pages/events/locations/series),
   Nested Docs (categories, pages, space-groups), Form Builder (forms +
   form-submissions), Stripe (signature-verified webhook only), S3 storage
