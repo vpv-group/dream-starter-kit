@@ -1,5 +1,3 @@
-import "server-only";
-
 import { registerHostServices } from "@acme/mod-kit/server";
 
 /**
@@ -7,7 +5,8 @@ import { registerHostServices } from "@acme/mod-kit/server";
  * the viewer's RLS session client, the auth settings and the branding.
  * Registered on load — imported for its side effect by the frontend layout
  * and payload.config (like the connector broker). Lazy imports keep this
- * file free of load-order cycles with the Payload config.
+ * file free of load-order cycles with the Payload config. No "server-only"
+ * import: payload.config loads it, and the Payload CLI runs outside Next.
  */
 registerHostServices({
   getSessionClient: async () => {
