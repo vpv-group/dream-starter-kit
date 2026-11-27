@@ -575,6 +575,18 @@ module back to GitHub (the next update goes registry-first again). `--from`
 never falls back. In `module-ops.yml`,
 put the origin in the `source` input of an `update` run.
 
+**Dependencies install together.** `pnpm mod add <source>…` takes several
+sources, and any module a source `requires` that isn't installed is fetched
+from the Dream catalog and installed in the same run, first
+(`tooling/mod/src/install-set.ts`): `pnpm mod add dream:projects-adapter-github`
+on a site without Projects installs both. Nothing is copied when a dependency
+can't be fetched (not in the plan, no release for this kit), and the error
+names it. From /admin it is one pull request; its marker lists the extra
+modules (`also`) and its title says "(with projects)". If another update
+merges first and the install PR stops merging cleanly, the merge job starts
+the same install again from the latest code and closes the stale PR
+(`refreshable` in `ops/merge.ts`; registry installs only).
+
 **Install order across dependent modules.** `requires` names a slug, not a
 version, so a module that uses tables a dependency added in a later release
 (e.g. client-portal → CRM Cases, `crm` ≥ 1.2.0) fails validation with

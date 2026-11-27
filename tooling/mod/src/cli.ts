@@ -36,12 +36,14 @@ Commands:
   sync                       Regenerate registries, stubs, migrations and env
                              from modules/* (run after any change there).
   create <slug>              Scaffold a new local module.
-  add <url[#vX.Y.Z]|.zip|dream:<slug>[@x.y.z]|<slug>>
-                             Vendor a module from GitHub, a zip, or the Dream
-                             registry (paid modules: set DREAM_TOKEN; in
-                             module-ops.yml the run signs in by itself).
+  add <source>…              Vendor modules (each url[#vX.Y.Z] | .zip |
+                             dream:<slug>[@x.y.z] | <slug>) from GitHub, a
+                             zip, or the Dream registry (paid modules: set
+                             DREAM_TOKEN; in module-ops.yml the run signs
+                             in by itself).
                              Registry-first: modules the registry lists come
-                             from it, with GitHub as fallback.
+                             from it, with GitHub as fallback. Modules they
+                             require that aren't installed come along.
   update <slug> [--to vX.Y.Z] [--from <url|dream:<slug>>] [--continue]
                              Three-way merge a new upstream version over your
                              (possibly modified) vendored copy. --from switches
@@ -73,6 +75,7 @@ Commands:
                              token for a one-hour repo token + the owner's
                              update settings (appended to <path>).
   ops describe --op <add|update|remove> --before <lock.json> [--slug <slug>]
+                [--requested "<source…>"]
                              The PR marker for a module op (key=value lines).
   ops baseline [--upstream <url>] [--apply]
                              A repo with no history shared with the kit: record
@@ -105,8 +108,8 @@ async function main(): Promise<void> {
       await create(root, args[0]);
       return;
     case "add":
-      if (!args[0]) throw new Error("usage: pnpm mod add <url|zip|slug>");
-      await add(root, args[0]);
+      if (!args[0]) throw new Error("usage: pnpm mod add <url|zip|slug>…");
+      await add(root, args);
       applyLocal(root, { noApply: flags.has("--no-apply") });
       return;
     case "update":
@@ -196,6 +199,7 @@ async function main(): Promise<void> {
           before.modules ?? {},
           readLock(root).modules,
           flagValue("--slug"),
+          (flagValue("--requested") ?? "").split(/\s+/).filter(Boolean),
         );
         process.stdout.write(describeOutput(meta));
         return;
@@ -268,6 +272,16 @@ main().catch((err: unknown) => {
     console.error(`\nmod: validation failed — ${err.message}\n`);
   } else {
     console.error(err instanceof Error ? `mod: ${err.message}` : err);
+  }
+  // In module-ops.yml: the run's annotation says why, not just "exit code 1"
+  // (/admin links to it).
+  // eslint-disable-next-line turbo/no-undeclared-env-vars
+  if (process.env.GITHUB_ACTIONS === "true") {
+    const msg = (err instanceof Error ? err.message : String(err))
+      .replace(/%/g, "%25")
+      .replace(/\r/g, "%0D")
+      .replace(/\n/g, "%0A");
+    console.log(`::error title=Module operation failed::${msg}`);
   }
   process.exitCode = 1;
 });

@@ -65,6 +65,33 @@ describe("describeModuleOp", () => {
     ).toMatchObject({ op: "remove", from: "1.0.0", verified: true });
   });
 
+  it("names the requested module and lists the dependencies it brought", () => {
+    const meta = describeModuleOp(
+      "add",
+      { crm: entry("1.0.0", registry) },
+      {
+        crm: entry("1.0.0", registry),
+        projects: entry("0.1.0", registry),
+        "projects-adapter-github": entry("0.1.0", registry),
+      },
+      "",
+      ["dream:projects-adapter-github"],
+    );
+    expect(meta).toMatchObject({
+      slug: "projects-adapter-github",
+      to: "0.1.0",
+      also: ["projects"],
+    });
+    const out = describeOutput(meta);
+    expect(out).toContain("also=projects\n");
+    expect(parsePrMeta(/^marker=(.*)$/m.exec(out)?.[1] ?? "")).toEqual(meta);
+  });
+
+  it("leaves also out when one module was added", () => {
+    const meta = describeModuleOp("add", {}, { crm: entry("1.0.0", registry) });
+    expect(meta).not.toHaveProperty("also");
+  });
+
   it("writes a marker the merge step can read back", () => {
     const meta = describeModuleOp("add", {}, { crm: entry("1.0.0", registry) });
     const out = describeOutput(meta);

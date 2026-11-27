@@ -56,6 +56,10 @@ export interface GitHubClient {
   addLabels(number: number, labels: string[]): Promise<void>;
   comment(number: number, body: string): Promise<void>;
   deploymentStates(sha: string): Promise<string[]>;
+  /** Close a PR without merging it. */
+  closePull(number: number): Promise<void>;
+  /** Start module-ops.yml on `ref` with these inputs (workflow_dispatch). */
+  dispatchModuleOps(ref: string, inputs: Record<string, string>): Promise<void>;
 }
 
 interface RawPull {
@@ -190,6 +194,18 @@ export function githubClient(opts: {
       await call(`/issues/${number}/comments`, {
         method: "POST",
         body: { body },
+      });
+    },
+    async closePull(number) {
+      await call(`/pulls/${number}`, {
+        method: "PATCH",
+        body: { state: "closed" },
+      });
+    },
+    async dispatchModuleOps(ref, inputs) {
+      await call(`/actions/workflows/module-ops.yml/dispatches`, {
+        method: "POST",
+        body: { ref, inputs },
       });
     },
     async deploymentStates(sha) {

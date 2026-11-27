@@ -31,6 +31,7 @@ import {
   writeModuleTree,
 } from "./git";
 import { installWorkspace } from "./install";
+import { readRequiresFromConfig, resolveInstallSet } from "./install-set";
 import { readLock, readPins, writeLock } from "./lock";
 import { loadModules } from "./manifests";
 import { nextVersion } from "./migrations";
@@ -249,55 +250,100 @@ async function validateAndSync(repoRoot: string): Promise<void> {
 }
 
 /**
- * `pnpm mod add <github-url[#vX.Y.Z] | path.zip | dream:<slug>[@x.y.z] | <slug>>`
+ * `pnpm mod add <source…>` — each source is a github-url[#vX.Y.Z],
+ * path.zip, dream:<slug>[@x.y.z] or <slug>.
  *
  * Registry-first: a GitHub URL the registry lists installs from the registry
  * (falling back to the repo); `dream:<slug>` falls back to the module's
  * public repo when the registry can't serve it.
+ *
+ * Dependencies: any module a source `requires` that isn't installed is
+ * fetched from the Dream catalog and installed in the same run, first
+ * (install-set.ts). If one can't be (not in the plan, no release for this
+ * kit), nothing is copied and the error names it.
  */
-export async function add(repoRoot: string, sourceArg: string): Promise<void> {
-  const src = parseSource(sourceArg);
-  const catalog = src.kind === "zip" ? null : await registryCatalog();
-  const plan = planAdd(src, catalog, { registryFirst: true });
-  const { fetched, used } = await fetchPlanned(repoRoot, plan);
-  const { slug, version } = readManifestBasics(fetched.dir);
-  if (fetched.registry && fetched.registry.slug !== slug) {
-    throw new Error(
-      `the registry sent "${slug}" when "${fetched.registry.slug}" was requested — aborting`,
+export async function add(
+  repoRoot: string,
+  sources: string | string[],
+): Promise<{ added: string[] }> {
+  const list = [...new Set(typeof sources === "string" ? [sources] : sources)];
+  if (list.length === 0) throw new Error("nothing to add");
+
+  interface Fetched {
+    fetched: Awaited<ReturnType<typeof fetchSource>>;
+    used: Source;
+    plan: SourcePlan;
+    catalog: CatalogModule[] | null;
+    version: string;
+  }
+  const fetchOne = async (sourceArg: string) => {
+    const src = parseSource(sourceArg);
+    const catalog = src.kind === "zip" ? null : await registryCatalog();
+    const plan = planAdd(src, catalog, { registryFirst: true });
+    const { fetched, used } = await fetchPlanned(repoRoot, plan);
+    const { slug, version } = readManifestBasics(fetched.dir);
+    if (fetched.registry && fetched.registry.slug !== slug) {
+      throw new Error(
+        `the registry sent "${slug}" when "${fetched.registry.slug}" was requested — aborting`,
+      );
+    }
+    const requires = readRequiresFromConfig(
+      readFileSync(path.join(fetched.dir, "module.config.ts"), "utf8"),
     );
-  }
+    const payload: Fetched = { fetched, used, plan, catalog, version };
+    return { slug, requires, payload };
+  };
 
-  const dest = toAbs(repoRoot, `modules/${slug}`);
-  if (existsSync(dest)) {
-    throw new Error(`modules/${slug} already exists — use \`mod update\``);
-  }
+  const set = await resolveInstallSet(list, {
+    isInstalled: (slug) => existsSync(toAbs(repoRoot, `modules/${slug}`)),
+    fetch: fetchOne,
+  });
 
-  cpSync(fetched.dir, dest, { recursive: true });
+  // Copy every module in (dependencies first), then ONE pnpm install + sync.
+  const copied: string[] = [];
   try {
+    for (const mod of set) {
+      const dest = toAbs(repoRoot, `modules/${mod.slug}`);
+      cpSync(mod.payload.fetched.dir, dest, { recursive: true });
+      copied.push(dest);
+    }
     await validateAndSync(repoRoot);
   } catch (err) {
-    rmSync(dest, { recursive: true, force: true });
+    for (const dest of copied) rmSync(dest, { recursive: true, force: true });
     throw err;
   }
 
-  const baseCommit = snapshotModule(repoRoot, slug, version);
   const lock = readLock(repoRoot);
-  const entry = lock.modules[slug];
-  if (entry) {
+  for (const mod of set) {
+    const { fetched, used, plan, catalog, version } = mod.payload;
+    const baseCommit = snapshotModule(repoRoot, mod.slug, version);
+    const entry = lock.modules[mod.slug];
+    if (!entry) continue;
     entry.baseCommit = baseCommit;
     entry.installedVia = "cli";
     entry.source = lockSource(
       used,
       fetched,
-      fallbackRepo(plan, undefined, findInCatalog(catalog, { slug })?.repo),
+      fallbackRepo(
+        plan,
+        undefined,
+        findInCatalog(catalog, { slug: mod.slug })?.repo,
+      ),
     );
-    writeLock(repoRoot, lock);
   }
+  writeLock(repoRoot, lock);
 
+  const added = set.map((m) => m.slug);
+  const extra = added.slice(0, -1);
   console.log(
-    `\nInstalled ${slug}@${version}. Next: pnpm db:reset && pnpm db:gen-types` +
+    `\nInstalled ${set.map((m) => `${m.slug}@${m.payload.version}`).join(", ")}` +
+      (extra.length > 0 && list.length === 1
+        ? ` (${extra.join(", ")} ${extra.length === 1 ? "is" : "are"} required by ${added.at(-1)})`
+        : "") +
+      `. Next: pnpm db:reset && pnpm db:gen-types` +
       ` (and pnpm cms:gen-types if it has CMS surface), pnpm typecheck, commit.`,
   );
+  return { added };
 }
 
 function sha256File(file: string): string {

@@ -56,6 +56,8 @@ export interface PrOutcome {
   pr: number;
   slug: string;
   decision: MergeDecision;
+  /** An install PR that no longer merged was replaced by a fresh run. */
+  refreshed?: boolean;
   merged?: boolean;
   deploy?: "ok" | "failed" | "unknown";
 }
@@ -183,6 +185,22 @@ export async function runMerge(deps: MergeDeps): Promise<PrOutcome[]> {
       gh.listCheckRuns(pr.headSha),
       gh.listStatuses(pr.headSha),
     ]);
+    // An install from the Dream catalog that no longer merges cleanly:
+    // another update merged first and changed the shared generated files
+    // (lockfiles, registries). An install PR adds only new module files plus
+    // those, so nothing in it needs a person — start the same install again
+    // from the current base and close this one.
+    if (refreshable(pr, meta)) {
+      await refreshInstall(gh, pr, meta);
+      outcomes.push({
+        pr: pr.number,
+        slug: meta.slug,
+        decision: { action: "wait", reason: "one-at-a-time" },
+        refreshed: true,
+      });
+      log(`#${pr.number} ${meta.slug}: conflicts after main moved — refreshed`);
+      continue;
+    }
     const facts = prFacts(pr, meta, files);
     if (meta.op === "remove" && !facts.labels.includes(REMOVE_LABEL)) {
       facts.labels.push(REMOVE_LABEL);
@@ -266,6 +284,44 @@ export async function runMerge(deps: MergeDeps): Promise<PrOutcome[]> {
     }
   }
   return outcomes;
+}
+
+/**
+ * Refresh only registry installs (`verified`) whose branch GitHub says no
+ * longer merges. Updates and removals touch files a person may have edited,
+ * and committed conflict markers (the conflicts label) are already a
+ * person's job.
+ */
+export function refreshable(pr: PullRequest, meta: PrMeta): boolean {
+  return (
+    meta.kind === "module" &&
+    meta.op === "add" &&
+    meta.verified &&
+    pr.mergeableState === "dirty" &&
+    !pr.labels.includes(CONFLICTS_LABEL)
+  );
+}
+
+async function refreshInstall(
+  gh: GitHubClient,
+  pr: PullRequest,
+  meta: PrMeta,
+): Promise<void> {
+  const source = [meta.slug, ...(meta.also ?? [])]
+    .map((slug) => `dream:${slug}`)
+    .join(" ");
+  await gh.dispatchModuleOps(pr.baseRef, {
+    op: "add",
+    source,
+    approved: pr.labels.includes(APPROVED_LABEL) ? "true" : "false",
+  });
+  await gh.comment(
+    pr.number,
+    "Another update merged first, so this install no longer merges cleanly. " +
+      "A fresh install of the same modules has started from the latest " +
+      "code; its pull request replaces this one.",
+  );
+  await gh.closePull(pr.number);
 }
 
 /** Were the base commit's own checks already failing? */

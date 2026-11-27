@@ -13,17 +13,26 @@ export function describeModuleOp(
   before: Record<string, ModLockEntry>,
   after: Record<string, ModLockEntry>,
   slugHint?: string,
+  /** add: what was asked for (`dream:<slug>` sources or slugs), in order. */
+  requested: string[] = [],
 ): PrMeta | null {
-  // An empty hint (add: the workflow doesn't know the slug yet) means
-  // "the module that appeared".
+  const added =
+    op === "add" ? Object.keys(after).filter((s) => !(s in before)) : [];
+  // An empty hint (add: the workflow doesn't know the slug yet) means the
+  // first requested module that appeared, else the first that appeared.
+  const requestedSlugs = requested.map((r) =>
+    r.replace(/^dream:/, "").replace(/@.*$/, ""),
+  );
   let slug = slugHint;
   if (!slug && op === "add") {
-    slug = Object.keys(after).find((s) => !(s in before));
+    slug =
+      requestedSlugs.find((s) => added.includes(s)) ?? [...added].sort()[0];
   }
   if (!slug) return null;
   const prev = before[slug];
   const next = after[slug];
   const source = (op === "remove" ? prev : next)?.source;
+  const also = added.filter((s) => s !== slug).sort();
   return {
     kind: "module",
     op,
@@ -31,6 +40,7 @@ export function describeModuleOp(
     ...(prev?.version ? { from: prev.version } : {}),
     ...(op !== "remove" && next?.version ? { to: next.version } : {}),
     verified: typeof source === "object" && source.type === "registry",
+    ...(also.length > 0 ? { also } : {}),
   };
 }
 
@@ -40,6 +50,7 @@ export function describeOutput(meta: PrMeta | null): string {
     `marker=${prMarker(meta)}\n` +
     `slug=${meta.slug}\n` +
     `from=${meta.from ?? ""}\n` +
-    `to=${meta.to ?? ""}\n`
+    `to=${meta.to ?? ""}\n` +
+    `also=${(meta.also ?? []).join(" ")}\n`
   );
 }

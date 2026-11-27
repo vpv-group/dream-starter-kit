@@ -38,6 +38,14 @@ const metaSchema = z.object({
   verified: z.boolean(),
   /** When the release was published (kit: the tag's date), if known. */
   publishedAt: z.string().optional(),
+  /**
+   * add: the other modules this PR installs with `slug` — modules it
+   * requires that weren't installed, or the rest of a batch from /admin.
+   */
+  also: z
+    .array(z.string().regex(/^[a-z][a-z0-9-]{0,63}$/))
+    .max(20)
+    .optional(),
 });
 
 export type PrMeta = z.infer<typeof metaSchema>;
