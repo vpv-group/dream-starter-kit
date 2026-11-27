@@ -89,51 +89,6 @@
       ],
       "edgeFunctions": []
     },
-    "feedback": {
-      "version": "1.0.0",
-      "kitCompat": ">=2.5.0 <3",
-      "source": "local",
-      "installedVia": "preinstalled",
-      "stubs": [
-        "apps/expo/src/app/(app)/a/feedback/index.tsx",
-        "apps/nextjs/src/app/(frontend)/(app)/a/feedback/layout.tsx",
-        "apps/nextjs/src/app/(frontend)/(app)/a/feedback/page.tsx",
-        "apps/nextjs/src/app/(frontend)/(embed)/embed/feedback/changelog/page.tsx",
-        "apps/nextjs/src/app/(frontend)/(embed)/embed/feedback/layout.tsx",
-        "apps/nextjs/src/app/(frontend)/(embed)/embed/feedback/p/[post]/page.tsx",
-        "apps/nextjs/src/app/(frontend)/(embed)/embed/feedback/page.tsx",
-        "apps/nextjs/src/app/(frontend)/(embed)/embed/feedback/roadmap/page.tsx",
-        "apps/nextjs/src/app/(frontend)/(public)/changelog/[slug]/page.tsx",
-        "apps/nextjs/src/app/(frontend)/(public)/changelog/layout.tsx",
-        "apps/nextjs/src/app/(frontend)/(public)/changelog/page.tsx",
-        "apps/nextjs/src/app/(frontend)/(public)/feedback/[board]/create/page.tsx",
-        "apps/nextjs/src/app/(frontend)/(public)/feedback/[board]/p/[post]/page.tsx",
-        "apps/nextjs/src/app/(frontend)/(public)/feedback/[board]/page.tsx",
-        "apps/nextjs/src/app/(frontend)/(public)/feedback/layout.tsx",
-        "apps/nextjs/src/app/(frontend)/(public)/feedback/page.tsx",
-        "apps/nextjs/src/app/(frontend)/(public)/feedback/search/page.tsx",
-        "apps/nextjs/src/app/(frontend)/(public)/roadmap/layout.tsx",
-        "apps/nextjs/src/app/(frontend)/(public)/roadmap/page.tsx",
-        "apps/nextjs/src/payload/migrations/20261126_201522_mod_feedback_initial.ts",
-        "apps/nextjs/src/payload/migrations/20261126_203722_mod_feedback_ideas.ts",
-        "apps/nextjs/src/payload/migrations/20261126_211703_mod_feedback_changelog.ts",
-        "apps/nextjs/src/payload/migrations/20261126_213738_mod_feedback_integrations.ts",
-        "apps/nextjs/src/payload/migrations/20261126_215221_mod_feedback_autopilot.ts",
-        "apps/nextjs/src/payload/migrations/20261127_025940_mod_feedback_digest.ts",
-        "apps/nextjs/src/payload/migrations/20261127_030754_mod_feedback_widget.ts"
-      ],
-      "edgeFunctions": []
-    },
-    "feedback-source-chat": {
-      "version": "1.0.0",
-      "kitCompat": ">=2.5.0 <3",
-      "source": "local",
-      "installedVia": "preinstalled",
-      "stubs": [
-        "apps/nextjs/src/payload/migrations/20261126_220015_mod_feedback_source_chat_initial.ts"
-      ],
-      "edgeFunctions": []
-    },
     "notifications": {
       "version": "1.4.0",
       "kitCompat": ">=2.3.0 <3",

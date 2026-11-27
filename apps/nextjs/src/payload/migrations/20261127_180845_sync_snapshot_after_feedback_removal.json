@@ -23530,648 +23530,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "cms.kit_modules_mod_feedback_portal_tabs": {
-      "name": "kit_modules_mod_feedback_portal_tabs",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "tab": {
-          "name": "tab",
-          "type": "enum_kit_modules_mod_feedback_portal_tabs_tab",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "label": {
-          "name": "label",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "enabled": {
-          "name": "enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        }
-      },
-      "indexes": {
-        "kit_modules_mod_feedback_portal_tabs_order_idx": {
-          "name": "kit_modules_mod_feedback_portal_tabs_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "kit_modules_mod_feedback_portal_tabs_parent_id_idx": {
-          "name": "kit_modules_mod_feedback_portal_tabs_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "kit_modules_mod_feedback_portal_tabs_parent_id_fk": {
-          "name": "kit_modules_mod_feedback_portal_tabs_parent_id_fk",
-          "tableFrom": "kit_modules_mod_feedback_portal_tabs",
-          "tableTo": "kit_modules",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.kit_modules_mod_feedback_statuses": {
-      "name": "kit_modules_mod_feedback_statuses",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "key": {
-          "name": "key",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "type": {
-          "name": "type",
-          "type": "enum_kit_modules_mod_feedback_statuses_type",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'active'"
-        },
-        "tone": {
-          "name": "tone",
-          "type": "enum_kit_modules_mod_feedback_statuses_tone",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'info'"
-        },
-        "show_on_roadmap": {
-          "name": "show_on_roadmap",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "is_default": {
-          "name": "is_default",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "notify_voters_by_default": {
-          "name": "notify_voters_by_default",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        }
-      },
-      "indexes": {
-        "kit_modules_mod_feedback_statuses_order_idx": {
-          "name": "kit_modules_mod_feedback_statuses_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "kit_modules_mod_feedback_statuses_parent_id_idx": {
-          "name": "kit_modules_mod_feedback_statuses_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "kit_modules_mod_feedback_statuses_parent_id_fk": {
-          "name": "kit_modules_mod_feedback_statuses_parent_id_fk",
-          "tableFrom": "kit_modules_mod_feedback_statuses",
-          "tableTo": "kit_modules",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.kit_modules_mod_feedback_idea_stages": {
-      "name": "kit_modules_mod_feedback_idea_stages",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "key": {
-          "name": "key",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "type": {
-          "name": "type",
-          "type": "enum_kit_modules_mod_feedback_idea_stages_type",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'active'"
-        },
-        "tone": {
-          "name": "tone",
-          "type": "enum_kit_modules_mod_feedback_idea_stages_tone",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'info'"
-        },
-        "portal_status": {
-          "name": "portal_status",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "notify_voters": {
-          "name": "notify_voters",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        }
-      },
-      "indexes": {
-        "kit_modules_mod_feedback_idea_stages_order_idx": {
-          "name": "kit_modules_mod_feedback_idea_stages_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "kit_modules_mod_feedback_idea_stages_parent_id_idx": {
-          "name": "kit_modules_mod_feedback_idea_stages_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "kit_modules_mod_feedback_idea_stages_parent_id_fk": {
-          "name": "kit_modules_mod_feedback_idea_stages_parent_id_fk",
-          "tableFrom": "kit_modules_mod_feedback_idea_stages",
-          "tableTo": "kit_modules",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.kit_modules_mod_feedback_score_factors": {
-      "name": "kit_modules_mod_feedback_score_factors",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "key": {
-          "name": "key",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "kind": {
-          "name": "kind",
-          "type": "enum_kit_modules_mod_feedback_score_factors_kind",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'impact'"
-        },
-        "weight": {
-          "name": "weight",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 1
-        },
-        "source": {
-          "name": "source",
-          "type": "enum_kit_modules_mod_feedback_score_factors_source",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'manual'"
-        },
-        "scale": {
-          "name": "scale",
-          "type": "enum_kit_modules_mod_feedback_score_factors_scale",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'0-10'"
-        }
-      },
-      "indexes": {
-        "kit_modules_mod_feedback_score_factors_order_idx": {
-          "name": "kit_modules_mod_feedback_score_factors_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "kit_modules_mod_feedback_score_factors_parent_id_idx": {
-          "name": "kit_modules_mod_feedback_score_factors_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "kit_modules_mod_feedback_score_factors_parent_id_fk": {
-          "name": "kit_modules_mod_feedback_score_factors_parent_id_fk",
-          "tableFrom": "kit_modules_mod_feedback_score_factors",
-          "tableTo": "kit_modules",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.kit_modules_mod_feedback_tags": {
-      "name": "kit_modules_mod_feedback_tags",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "key": {
-          "name": "key",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "tone": {
-          "name": "tone",
-          "type": "enum_kit_modules_mod_feedback_tags_tone",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'neutral'"
-        }
-      },
-      "indexes": {
-        "kit_modules_mod_feedback_tags_order_idx": {
-          "name": "kit_modules_mod_feedback_tags_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "kit_modules_mod_feedback_tags_parent_id_idx": {
-          "name": "kit_modules_mod_feedback_tags_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "kit_modules_mod_feedback_tags_parent_id_fk": {
-          "name": "kit_modules_mod_feedback_tags_parent_id_fk",
-          "tableFrom": "kit_modules_mod_feedback_tags",
-          "tableTo": "kit_modules",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.kit_modules_mod_feedback_vote_milestones": {
-      "name": "kit_modules_mod_feedback_vote_milestones",
-      "schema": "cms",
-      "columns": {
-        "order": {
-          "name": "order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "parent_id": {
-          "name": "parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "value": {
-          "name": "value",
-          "type": "enum_kit_modules_mod_feedback_vote_milestones",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "kit_modules_mod_feedback_vote_milestones_order_idx": {
-          "name": "kit_modules_mod_feedback_vote_milestones_order_idx",
-          "columns": [
-            {
-              "expression": "order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "kit_modules_mod_feedback_vote_milestones_parent_idx": {
-          "name": "kit_modules_mod_feedback_vote_milestones_parent_idx",
-          "columns": [
-            {
-              "expression": "parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "kit_modules_mod_feedback_vote_milestones_parent_fk": {
-          "name": "kit_modules_mod_feedback_vote_milestones_parent_fk",
-          "tableFrom": "kit_modules_mod_feedback_vote_milestones",
-          "tableTo": "kit_modules",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "cms.kit_modules": {
       "name": "kit_modules",
       "schema": "cms",
@@ -24343,6 +23701,131 @@
           "primaryKey": false,
           "notNull": false
         },
+        "mod_billing_tags_enabled": {
+          "name": "mod_billing_tags_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "mod_billing_tags_plan_enabled": {
+          "name": "mod_billing_tags_plan_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "mod_billing_tags_plan_template": {
+          "name": "mod_billing_tags_plan_template",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{plan}'"
+        },
+        "mod_billing_tags_status_enabled": {
+          "name": "mod_billing_tags_status_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "mod_billing_tags_status_template": {
+          "name": "mod_billing_tags_status_template",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{status}'"
+        },
+        "mod_billing_tags_cycle_enabled": {
+          "name": "mod_billing_tags_cycle_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "mod_billing_tags_cycle_template": {
+          "name": "mod_billing_tags_cycle_template",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'Billing cycle: {cycle}'"
+        },
+        "mod_billing_tags_store_enabled": {
+          "name": "mod_billing_tags_store_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "mod_billing_tags_store_template": {
+          "name": "mod_billing_tags_store_template",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'Store: {store}'"
+        },
+        "mod_billing_tags_resync_now": {
+          "name": "mod_billing_tags_resync_now",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "mod_billing_tags_last_resync": {
+          "name": "mod_billing_tags_last_resync",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mod_billing_adapter_stripe_enabled": {
+          "name": "mod_billing_adapter_stripe_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "mod_billing_adapter_stripe_hosted_checkout": {
+          "name": "mod_billing_adapter_stripe_hosted_checkout",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "mod_billing_adapter_stripe_express_wallets": {
+          "name": "mod_billing_adapter_stripe_express_wallets",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "mod_billing_adapter_stripe_allow_promotion_codes": {
+          "name": "mod_billing_adapter_stripe_allow_promotion_codes",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "mod_billing_adapter_stripe_automatic_tax": {
+          "name": "mod_billing_adapter_stripe_automatic_tax",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "mod_billing_adapter_stripe_require_billing_address": {
+          "name": "mod_billing_adapter_stripe_require_billing_address",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "mod_billing_adapter_stripe_phone_number_collection": {
+          "name": "mod_billing_adapter_stripe_phone_number_collection",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
         "mod_chat_max_history_messages": {
           "name": "mod_chat_max_history_messages",
           "type": "numeric",
@@ -24474,146 +23957,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "mod_feedback_portal_title": {
-          "name": "mod_feedback_portal_title",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'Feedback'"
-        },
-        "mod_feedback_feedback_intro": {
-          "name": "mod_feedback_feedback_intro",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'Tell us what would make the product better.'"
-        },
-        "mod_feedback_search_all_boards": {
-          "name": "mod_feedback_search_all_boards",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "mod_feedback_stale_after_weeks": {
-          "name": "mod_feedback_stale_after_weeks",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 4
-        },
-        "mod_feedback_eta_public_by_default": {
-          "name": "mod_feedback_eta_public_by_default",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "mod_feedback_vote_priorities": {
-          "name": "mod_feedback_vote_priorities",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "mod_feedback_changelog_title": {
-          "name": "mod_feedback_changelog_title",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'Changelog'"
-        },
-        "mod_feedback_changelog_subtitle": {
-          "name": "mod_feedback_changelog_subtitle",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'Follow the latest improvements and updates.'"
-        },
-        "mod_feedback_changelog_subscriptions": {
-          "name": "mod_feedback_changelog_subscriptions",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "mod_feedback_changelog_rss": {
-          "name": "mod_feedback_changelog_rss",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "mod_feedback_changelog_reactions": {
-          "name": "mod_feedback_changelog_reactions",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "mod_feedback_changelog_share": {
-          "name": "mod_feedback_changelog_share",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "mod_feedback_changelog_ship_stage": {
-          "name": "mod_feedback_changelog_ship_stage",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'shipped'"
-        },
-        "mod_feedback_anon_votes": {
-          "name": "mod_feedback_anon_votes",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "mod_feedback_anon_posts": {
-          "name": "mod_feedback_anon_posts",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "mod_feedback_anon_comments": {
-          "name": "mod_feedback_anon_comments",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "mod_feedback_posts_per_hour": {
-          "name": "mod_feedback_posts_per_hour",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 10
-        },
-        "mod_feedback_comments_per_hour": {
-          "name": "mod_feedback_comments_per_hour",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 30
-        },
-        "mod_feedback_notify_staff_on_new_post": {
-          "name": "mod_feedback_notify_staff_on_new_post",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "mod_feedback_notify_voters_on_staff_comment": {
-          "name": "mod_feedback_notify_voters_on_staff_comment",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp(3) with time zone",
@@ -24704,86 +24047,6 @@
             "id"
           ],
           "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.kit_modules_texts": {
-      "name": "kit_modules_texts",
-      "schema": "cms",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "order": {
-          "name": "order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "parent_id": {
-          "name": "parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "path": {
-          "name": "path",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "text": {
-          "name": "text",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "kit_modules_texts_order_parent": {
-          "name": "kit_modules_texts_order_parent",
-          "columns": [
-            {
-              "expression": "order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "kit_modules_texts_parent_fk": {
-          "name": "kit_modules_texts_parent_fk",
-          "tableFrom": "kit_modules_texts",
-          "tableTo": "kit_modules",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -25328,6 +24591,41 @@
           "primaryKey": true,
           "notNull": true
         },
+        "entitlement": {
+          "name": "entitlement",
+          "type": "enum_mod_billing_plans_entitlement",
+          "typeSchema": "cms",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'premium'"
+        },
+        "skip_sync": {
+          "name": "skip_sync",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "sync_status": {
+          "name": "sync_status",
+          "type": "enum_mod_billing_plans_sync_status",
+          "typeSchema": "cms",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'unsynced'"
+        },
+        "sync_error": {
+          "name": "sync_error",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_synced_at": {
+          "name": "last_synced_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "varchar",
@@ -25423,14 +24721,6 @@
           "notNull": false,
           "default": 1
         },
-        "entitlement": {
-          "name": "entitlement",
-          "type": "enum_mod_billing_plans_entitlement",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'premium'"
-        },
         "badge": {
           "name": "badge",
           "type": "varchar",
@@ -25451,13 +24741,6 @@
           "notNull": false,
           "default": 0
         },
-        "skip_sync": {
-          "name": "skip_sync",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
         "stripe_product_id": {
           "name": "stripe_product_id",
           "type": "varchar",
@@ -25473,26 +24756,6 @@
         "stripe_intro_coupon_id": {
           "name": "stripe_intro_coupon_id",
           "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "sync_status": {
-          "name": "sync_status",
-          "type": "enum_mod_billing_plans_sync_status",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'unsynced'"
-        },
-        "sync_error": {
-          "name": "sync_error",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_synced_at": {
-          "name": "last_synced_at",
-          "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -25575,6 +24838,47 @@
           "primaryKey": true,
           "notNull": true
         },
+        "times_redeemed": {
+          "name": "times_redeemed",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "skip_sync": {
+          "name": "skip_sync",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "sync_status": {
+          "name": "sync_status",
+          "type": "enum_mod_billing_coupons_sync_status",
+          "typeSchema": "cms",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'unsynced'"
+        },
+        "sync_error": {
+          "name": "sync_error",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_synced_at": {
+          "name": "last_synced_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "varchar",
@@ -25643,20 +24947,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "times_redeemed": {
-          "name": "times_redeemed",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "active": {
-          "name": "active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
         "code": {
           "name": "code",
           "type": "varchar",
@@ -25665,13 +24955,6 @@
         },
         "is_welcome_offer": {
           "name": "is_welcome_offer",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "skip_sync": {
-          "name": "skip_sync",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
@@ -25686,26 +24969,6 @@
         "stripe_promotion_code_id": {
           "name": "stripe_promotion_code_id",
           "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "sync_status": {
-          "name": "sync_status",
-          "type": "enum_mod_billing_coupons_sync_status",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'unsynced'"
-        },
-        "sync_error": {
-          "name": "sync_error",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_synced_at": {
-          "name": "last_synced_at",
-          "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -25980,11 +25243,30 @@
           "primaryKey": false,
           "notNull": false
         },
+        "provider": {
+          "name": "provider",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'stripe'"
+        },
+        "provider_subscription_id": {
+          "name": "provider_subscription_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider_customer_id": {
+          "name": "provider_customer_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
         "stripe_subscription_i_d": {
           "name": "stripe_subscription_i_d",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "stripe_customer_i_d": {
           "name": "stripe_customer_i_d",
@@ -26058,6 +25340,51 @@
           "columns": [
             {
               "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "mod_billing_subscriptions_provider_idx": {
+          "name": "mod_billing_subscriptions_provider_idx",
+          "columns": [
+            {
+              "expression": "provider",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "mod_billing_subscriptions_provider_subscription_id_idx": {
+          "name": "mod_billing_subscriptions_provider_subscription_id_idx",
+          "columns": [
+            {
+              "expression": "provider_subscription_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "mod_billing_subscriptions_provider_customer_id_idx": {
+          "name": "mod_billing_subscriptions_provider_customer_id_idx",
+          "columns": [
+            {
+              "expression": "provider_customer_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -26811,1668 +26138,6 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.mod_feedback_boards_custom_fields": {
-      "name": "mod_feedback_boards_custom_fields",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "label": {
-          "name": "label",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "required": {
-          "name": "required",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "type": {
-          "name": "type",
-          "type": "enum_mod_feedback_boards_custom_fields_type",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'text'"
-        },
-        "placeholder": {
-          "name": "placeholder",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "mod_feedback_boards_custom_fields_order_idx": {
-          "name": "mod_feedback_boards_custom_fields_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_boards_custom_fields_parent_id_idx": {
-          "name": "mod_feedback_boards_custom_fields_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "mod_feedback_boards_custom_fields_parent_id_fk": {
-          "name": "mod_feedback_boards_custom_fields_parent_id_fk",
-          "tableFrom": "mod_feedback_boards_custom_fields",
-          "tableTo": "mod_feedback_boards",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.mod_feedback_boards_categories_subcategories": {
-      "name": "mod_feedback_boards_categories_subcategories",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "mod_feedback_boards_categories_subcategories_order_idx": {
-          "name": "mod_feedback_boards_categories_subcategories_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_boards_categories_subcategories_parent_id_idx": {
-          "name": "mod_feedback_boards_categories_subcategories_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "mod_feedback_boards_categories_subcategories_parent_id_fk": {
-          "name": "mod_feedback_boards_categories_subcategories_parent_id_fk",
-          "tableFrom": "mod_feedback_boards_categories_subcategories",
-          "tableTo": "mod_feedback_boards_categories",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.mod_feedback_boards_categories": {
-      "name": "mod_feedback_boards_categories",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "mod_feedback_boards_categories_order_idx": {
-          "name": "mod_feedback_boards_categories_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_boards_categories_parent_id_idx": {
-          "name": "mod_feedback_boards_categories_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "mod_feedback_boards_categories_parent_id_fk": {
-          "name": "mod_feedback_boards_categories_parent_id_fk",
-          "tableFrom": "mod_feedback_boards_categories",
-          "tableTo": "mod_feedback_boards",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.mod_feedback_boards": {
-      "name": "mod_feedback_boards",
-      "schema": "cms",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "_order": {
-          "name": "_order",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "slug": {
-          "name": "slug",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "access": {
-          "name": "access",
-          "type": "enum_mod_feedback_boards_access",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'staff'"
-        },
-        "show_on_portal_home": {
-          "name": "show_on_portal_home",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "search_indexing": {
-          "name": "search_indexing",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "allow_new_posts": {
-          "name": "allow_new_posts",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "anon_votes": {
-          "name": "anon_votes",
-          "type": "enum_mod_feedback_boards_anon_votes",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'inherit'"
-        },
-        "anon_posts": {
-          "name": "anon_posts",
-          "type": "enum_mod_feedback_boards_anon_posts",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'inherit'"
-        },
-        "anon_comments": {
-          "name": "anon_comments",
-          "type": "enum_mod_feedback_boards_anon_comments",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'inherit'"
-        },
-        "require_approval": {
-          "name": "require_approval",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "show_vote_counts": {
-          "name": "show_vote_counts",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "show_voters": {
-          "name": "show_voters",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "show_dates": {
-          "name": "show_dates",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "show_comments_publicly": {
-          "name": "show_comments_publicly",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "disable_votes_when_done": {
-          "name": "disable_votes_when_done",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "disable_comments_when_done": {
-          "name": "disable_comments_when_done",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "title_label": {
-          "name": "title_label",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'Title'"
-        },
-        "title_placeholder": {
-          "name": "title_placeholder",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'Short, descriptive title'"
-        },
-        "details_label": {
-          "name": "details_label",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'Details'"
-        },
-        "details_placeholder": {
-          "name": "details_placeholder",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'Any additional details…'"
-        },
-        "submit_label": {
-          "name": "submit_label",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'Create Post'"
-        },
-        "allow_attachments": {
-          "name": "allow_attachments",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "mod_feedback_boards__order_idx": {
-          "name": "mod_feedback_boards__order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_boards_slug_idx": {
-          "name": "mod_feedback_boards_slug_idx",
-          "columns": [
-            {
-              "expression": "slug",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_boards_updated_at_idx": {
-          "name": "mod_feedback_boards_updated_at_idx",
-          "columns": [
-            {
-              "expression": "updated_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_boards_created_at_idx": {
-          "name": "mod_feedback_boards_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.mod_feedback_boards_texts": {
-      "name": "mod_feedback_boards_texts",
-      "schema": "cms",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "order": {
-          "name": "order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "parent_id": {
-          "name": "parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "path": {
-          "name": "path",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "text": {
-          "name": "text",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "mod_feedback_boards_texts_order_parent": {
-          "name": "mod_feedback_boards_texts_order_parent",
-          "columns": [
-            {
-              "expression": "order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "mod_feedback_boards_texts_parent_fk": {
-          "name": "mod_feedback_boards_texts_parent_fk",
-          "tableFrom": "mod_feedback_boards_texts",
-          "tableTo": "mod_feedback_boards",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.mod_feedback_changelog": {
-      "name": "mod_feedback_changelog",
-      "schema": "cms",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "title": {
-          "name": "title",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "slug": {
-          "name": "slug",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "type": {
-          "name": "type",
-          "type": "enum_mod_feedback_changelog_type",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'new'"
-        },
-        "excerpt": {
-          "name": "excerpt",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "body": {
-          "name": "body",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "hero_image_id": {
-          "name": "hero_image_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "audience": {
-          "name": "audience",
-          "type": "enum_mod_feedback_changelog_audience",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'everyone'"
-        },
-        "notify_subscribers": {
-          "name": "notify_subscribers",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "published_at": {
-          "name": "published_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "announced_at": {
-          "name": "announced_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "_status": {
-          "name": "_status",
-          "type": "enum_mod_feedback_changelog_status",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'draft'"
-        }
-      },
-      "indexes": {
-        "mod_feedback_changelog_slug_idx": {
-          "name": "mod_feedback_changelog_slug_idx",
-          "columns": [
-            {
-              "expression": "slug",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_changelog_hero_image_idx": {
-          "name": "mod_feedback_changelog_hero_image_idx",
-          "columns": [
-            {
-              "expression": "hero_image_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_changelog_updated_at_idx": {
-          "name": "mod_feedback_changelog_updated_at_idx",
-          "columns": [
-            {
-              "expression": "updated_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_changelog_created_at_idx": {
-          "name": "mod_feedback_changelog_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_changelog__status_idx": {
-          "name": "mod_feedback_changelog__status_idx",
-          "columns": [
-            {
-              "expression": "_status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "mod_feedback_changelog_hero_image_id_media_id_fk": {
-          "name": "mod_feedback_changelog_hero_image_id_media_id_fk",
-          "tableFrom": "mod_feedback_changelog",
-          "tableTo": "media",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "hero_image_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.mod_feedback_changelog_texts": {
-      "name": "mod_feedback_changelog_texts",
-      "schema": "cms",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "order": {
-          "name": "order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "parent_id": {
-          "name": "parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "path": {
-          "name": "path",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "text": {
-          "name": "text",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "mod_feedback_changelog_texts_order_parent": {
-          "name": "mod_feedback_changelog_texts_order_parent",
-          "columns": [
-            {
-              "expression": "order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "mod_feedback_changelog_texts_parent_fk": {
-          "name": "mod_feedback_changelog_texts_parent_fk",
-          "tableFrom": "mod_feedback_changelog_texts",
-          "tableTo": "mod_feedback_changelog",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.mod_feedback_changelog_rels": {
-      "name": "mod_feedback_changelog_rels",
-      "schema": "cms",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "order": {
-          "name": "order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "parent_id": {
-          "name": "parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "path": {
-          "name": "path",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "mod_feedback_changelog_labels_id": {
-          "name": "mod_feedback_changelog_labels_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "mod_feedback_changelog_rels_order_idx": {
-          "name": "mod_feedback_changelog_rels_order_idx",
-          "columns": [
-            {
-              "expression": "order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_changelog_rels_parent_idx": {
-          "name": "mod_feedback_changelog_rels_parent_idx",
-          "columns": [
-            {
-              "expression": "parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_changelog_rels_path_idx": {
-          "name": "mod_feedback_changelog_rels_path_idx",
-          "columns": [
-            {
-              "expression": "path",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_changelog_rels_mod_feedback_changelog_label_idx": {
-          "name": "mod_feedback_changelog_rels_mod_feedback_changelog_label_idx",
-          "columns": [
-            {
-              "expression": "mod_feedback_changelog_labels_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "mod_feedback_changelog_rels_parent_fk": {
-          "name": "mod_feedback_changelog_rels_parent_fk",
-          "tableFrom": "mod_feedback_changelog_rels",
-          "tableTo": "mod_feedback_changelog",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "mod_feedback_changelog_rels_mod_feedback_changelog_labels_fk": {
-          "name": "mod_feedback_changelog_rels_mod_feedback_changelog_labels_fk",
-          "tableFrom": "mod_feedback_changelog_rels",
-          "tableTo": "mod_feedback_changelog_labels",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "mod_feedback_changelog_labels_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms._mod_feedback_changelog_v": {
-      "name": "_mod_feedback_changelog_v",
-      "schema": "cms",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "parent_id": {
-          "name": "parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "version_title": {
-          "name": "version_title",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "version_slug": {
-          "name": "version_slug",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "version_type": {
-          "name": "version_type",
-          "type": "enum__mod_feedback_changelog_v_version_type",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'new'"
-        },
-        "version_excerpt": {
-          "name": "version_excerpt",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "version_body": {
-          "name": "version_body",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "version_hero_image_id": {
-          "name": "version_hero_image_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "version_audience": {
-          "name": "version_audience",
-          "type": "enum__mod_feedback_changelog_v_version_audience",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'everyone'"
-        },
-        "version_notify_subscribers": {
-          "name": "version_notify_subscribers",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "version_published_at": {
-          "name": "version_published_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "version_announced_at": {
-          "name": "version_announced_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "version_updated_at": {
-          "name": "version_updated_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "version_created_at": {
-          "name": "version_created_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "version__status": {
-          "name": "version__status",
-          "type": "enum__mod_feedback_changelog_v_version_status",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'draft'"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "latest": {
-          "name": "latest",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "_mod_feedback_changelog_v_parent_idx": {
-          "name": "_mod_feedback_changelog_v_parent_idx",
-          "columns": [
-            {
-              "expression": "parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_changelog_v_version_version_slug_idx": {
-          "name": "_mod_feedback_changelog_v_version_version_slug_idx",
-          "columns": [
-            {
-              "expression": "version_slug",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_changelog_v_version_version_hero_image_idx": {
-          "name": "_mod_feedback_changelog_v_version_version_hero_image_idx",
-          "columns": [
-            {
-              "expression": "version_hero_image_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_changelog_v_version_version_updated_at_idx": {
-          "name": "_mod_feedback_changelog_v_version_version_updated_at_idx",
-          "columns": [
-            {
-              "expression": "version_updated_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_changelog_v_version_version_created_at_idx": {
-          "name": "_mod_feedback_changelog_v_version_version_created_at_idx",
-          "columns": [
-            {
-              "expression": "version_created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_changelog_v_version_version__status_idx": {
-          "name": "_mod_feedback_changelog_v_version_version__status_idx",
-          "columns": [
-            {
-              "expression": "version__status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_changelog_v_created_at_idx": {
-          "name": "_mod_feedback_changelog_v_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_changelog_v_updated_at_idx": {
-          "name": "_mod_feedback_changelog_v_updated_at_idx",
-          "columns": [
-            {
-              "expression": "updated_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_changelog_v_latest_idx": {
-          "name": "_mod_feedback_changelog_v_latest_idx",
-          "columns": [
-            {
-              "expression": "latest",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "_mod_feedback_changelog_v_parent_id_mod_feedback_changelog_id_fk": {
-          "name": "_mod_feedback_changelog_v_parent_id_mod_feedback_changelog_id_fk",
-          "tableFrom": "_mod_feedback_changelog_v",
-          "tableTo": "mod_feedback_changelog",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "_mod_feedback_changelog_v_version_hero_image_id_media_id_fk": {
-          "name": "_mod_feedback_changelog_v_version_hero_image_id_media_id_fk",
-          "tableFrom": "_mod_feedback_changelog_v",
-          "tableTo": "media",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "version_hero_image_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms._mod_feedback_changelog_v_texts": {
-      "name": "_mod_feedback_changelog_v_texts",
-      "schema": "cms",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "order": {
-          "name": "order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "parent_id": {
-          "name": "parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "path": {
-          "name": "path",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "text": {
-          "name": "text",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "_mod_feedback_changelog_v_texts_order_parent": {
-          "name": "_mod_feedback_changelog_v_texts_order_parent",
-          "columns": [
-            {
-              "expression": "order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "_mod_feedback_changelog_v_texts_parent_fk": {
-          "name": "_mod_feedback_changelog_v_texts_parent_fk",
-          "tableFrom": "_mod_feedback_changelog_v_texts",
-          "tableTo": "_mod_feedback_changelog_v",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms._mod_feedback_changelog_v_rels": {
-      "name": "_mod_feedback_changelog_v_rels",
-      "schema": "cms",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "order": {
-          "name": "order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "parent_id": {
-          "name": "parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "path": {
-          "name": "path",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "mod_feedback_changelog_labels_id": {
-          "name": "mod_feedback_changelog_labels_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "_mod_feedback_changelog_v_rels_order_idx": {
-          "name": "_mod_feedback_changelog_v_rels_order_idx",
-          "columns": [
-            {
-              "expression": "order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_changelog_v_rels_parent_idx": {
-          "name": "_mod_feedback_changelog_v_rels_parent_idx",
-          "columns": [
-            {
-              "expression": "parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_changelog_v_rels_path_idx": {
-          "name": "_mod_feedback_changelog_v_rels_path_idx",
-          "columns": [
-            {
-              "expression": "path",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_changelog_v_rels_mod_feedback_changelog_la_idx": {
-          "name": "_mod_feedback_changelog_v_rels_mod_feedback_changelog_la_idx",
-          "columns": [
-            {
-              "expression": "mod_feedback_changelog_labels_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "_mod_feedback_changelog_v_rels_parent_fk": {
-          "name": "_mod_feedback_changelog_v_rels_parent_fk",
-          "tableFrom": "_mod_feedback_changelog_v_rels",
-          "tableTo": "_mod_feedback_changelog_v",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "_mod_feedback_changelog_v_rels_mod_feedback_changelog_lab_fk": {
-          "name": "_mod_feedback_changelog_v_rels_mod_feedback_changelog_lab_fk",
-          "tableFrom": "_mod_feedback_changelog_v_rels",
-          "tableTo": "mod_feedback_changelog_labels",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "mod_feedback_changelog_labels_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.mod_feedback_changelog_labels": {
-      "name": "mod_feedback_changelog_labels",
-      "schema": "cms",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "_order": {
-          "name": "_order",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tone": {
-          "name": "tone",
-          "type": "enum_mod_feedback_changelog_labels_tone",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'neutral'"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "mod_feedback_changelog_labels__order_idx": {
-          "name": "mod_feedback_changelog_labels__order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_changelog_labels_name_idx": {
-          "name": "mod_feedback_changelog_labels_name_idx",
-          "columns": [
-            {
-              "expression": "name",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_changelog_labels_updated_at_idx": {
-          "name": "mod_feedback_changelog_labels_updated_at_idx",
-          "columns": [
-            {
-              "expression": "updated_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_changelog_labels_created_at_idx": {
-          "name": "mod_feedback_changelog_labels_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -35196,6 +32861,131 @@
           "primaryKey": false,
           "notNull": false
         },
+        "tags_enabled": {
+          "name": "tags_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "tags_plan_enabled": {
+          "name": "tags_plan_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "tags_plan_template": {
+          "name": "tags_plan_template",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{plan}'"
+        },
+        "tags_status_enabled": {
+          "name": "tags_status_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "tags_status_template": {
+          "name": "tags_status_template",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{status}'"
+        },
+        "tags_cycle_enabled": {
+          "name": "tags_cycle_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "tags_cycle_template": {
+          "name": "tags_cycle_template",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'Billing cycle: {cycle}'"
+        },
+        "tags_store_enabled": {
+          "name": "tags_store_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "tags_store_template": {
+          "name": "tags_store_template",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'Store: {store}'"
+        },
+        "tags_resync_now": {
+          "name": "tags_resync_now",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "tags_last_resync": {
+          "name": "tags_last_resync",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "adapter_stripe_enabled": {
+          "name": "adapter_stripe_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "adapter_stripe_hosted_checkout": {
+          "name": "adapter_stripe_hosted_checkout",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "adapter_stripe_express_wallets": {
+          "name": "adapter_stripe_express_wallets",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "adapter_stripe_allow_promotion_codes": {
+          "name": "adapter_stripe_allow_promotion_codes",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "adapter_stripe_automatic_tax": {
+          "name": "adapter_stripe_automatic_tax",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "adapter_stripe_require_billing_address": {
+          "name": "adapter_stripe_require_billing_address",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "adapter_stripe_phone_number_collection": {
+          "name": "adapter_stripe_phone_number_collection",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp(3) with time zone",
@@ -35698,6 +33488,131 @@
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
+        },
+        "version_tags_enabled": {
+          "name": "version_tags_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "version_tags_plan_enabled": {
+          "name": "version_tags_plan_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "version_tags_plan_template": {
+          "name": "version_tags_plan_template",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{plan}'"
+        },
+        "version_tags_status_enabled": {
+          "name": "version_tags_status_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "version_tags_status_template": {
+          "name": "version_tags_status_template",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{status}'"
+        },
+        "version_tags_cycle_enabled": {
+          "name": "version_tags_cycle_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "version_tags_cycle_template": {
+          "name": "version_tags_cycle_template",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'Billing cycle: {cycle}'"
+        },
+        "version_tags_store_enabled": {
+          "name": "version_tags_store_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "version_tags_store_template": {
+          "name": "version_tags_store_template",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'Store: {store}'"
+        },
+        "version_tags_resync_now": {
+          "name": "version_tags_resync_now",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "version_tags_last_resync": {
+          "name": "version_tags_last_resync",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version_adapter_stripe_enabled": {
+          "name": "version_adapter_stripe_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "version_adapter_stripe_hosted_checkout": {
+          "name": "version_adapter_stripe_hosted_checkout",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "version_adapter_stripe_express_wallets": {
+          "name": "version_adapter_stripe_express_wallets",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "version_adapter_stripe_allow_promotion_codes": {
+          "name": "version_adapter_stripe_allow_promotion_codes",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "version_adapter_stripe_automatic_tax": {
+          "name": "version_adapter_stripe_automatic_tax",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "version_adapter_stripe_require_billing_address": {
+          "name": "version_adapter_stripe_require_billing_address",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "version_adapter_stripe_phone_number_collection": {
+          "name": "version_adapter_stripe_phone_number_collection",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
         },
         "version_updated_at": {
           "name": "version_updated_at",
@@ -36750,1867 +34665,6 @@
         }
       },
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.mod_feedback_settings_portal_tabs": {
-      "name": "mod_feedback_settings_portal_tabs",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "tab": {
-          "name": "tab",
-          "type": "enum_mod_feedback_settings_portal_tabs_tab",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "label": {
-          "name": "label",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "enabled": {
-          "name": "enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        }
-      },
-      "indexes": {
-        "mod_feedback_settings_portal_tabs_order_idx": {
-          "name": "mod_feedback_settings_portal_tabs_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_settings_portal_tabs_parent_id_idx": {
-          "name": "mod_feedback_settings_portal_tabs_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "mod_feedback_settings_portal_tabs_parent_id_fk": {
-          "name": "mod_feedback_settings_portal_tabs_parent_id_fk",
-          "tableFrom": "mod_feedback_settings_portal_tabs",
-          "tableTo": "mod_feedback_settings",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.mod_feedback_settings_statuses": {
-      "name": "mod_feedback_settings_statuses",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "type": {
-          "name": "type",
-          "type": "enum_mod_feedback_settings_statuses_type",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'active'"
-        },
-        "tone": {
-          "name": "tone",
-          "type": "enum_mod_feedback_settings_statuses_tone",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'info'"
-        },
-        "show_on_roadmap": {
-          "name": "show_on_roadmap",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "is_default": {
-          "name": "is_default",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "notify_voters_by_default": {
-          "name": "notify_voters_by_default",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        }
-      },
-      "indexes": {
-        "mod_feedback_settings_statuses_order_idx": {
-          "name": "mod_feedback_settings_statuses_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_settings_statuses_parent_id_idx": {
-          "name": "mod_feedback_settings_statuses_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "mod_feedback_settings_statuses_parent_id_fk": {
-          "name": "mod_feedback_settings_statuses_parent_id_fk",
-          "tableFrom": "mod_feedback_settings_statuses",
-          "tableTo": "mod_feedback_settings",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.mod_feedback_settings_idea_stages": {
-      "name": "mod_feedback_settings_idea_stages",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "type": {
-          "name": "type",
-          "type": "enum_mod_feedback_settings_idea_stages_type",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'active'"
-        },
-        "tone": {
-          "name": "tone",
-          "type": "enum_mod_feedback_settings_idea_stages_tone",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'info'"
-        },
-        "portal_status": {
-          "name": "portal_status",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "notify_voters": {
-          "name": "notify_voters",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        }
-      },
-      "indexes": {
-        "mod_feedback_settings_idea_stages_order_idx": {
-          "name": "mod_feedback_settings_idea_stages_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_settings_idea_stages_parent_id_idx": {
-          "name": "mod_feedback_settings_idea_stages_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "mod_feedback_settings_idea_stages_parent_id_fk": {
-          "name": "mod_feedback_settings_idea_stages_parent_id_fk",
-          "tableFrom": "mod_feedback_settings_idea_stages",
-          "tableTo": "mod_feedback_settings",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.mod_feedback_settings_score_factors": {
-      "name": "mod_feedback_settings_score_factors",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "kind": {
-          "name": "kind",
-          "type": "enum_mod_feedback_settings_score_factors_kind",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'impact'"
-        },
-        "weight": {
-          "name": "weight",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "source": {
-          "name": "source",
-          "type": "enum_mod_feedback_settings_score_factors_source",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'manual'"
-        },
-        "scale": {
-          "name": "scale",
-          "type": "enum_mod_feedback_settings_score_factors_scale",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'0-10'"
-        }
-      },
-      "indexes": {
-        "mod_feedback_settings_score_factors_order_idx": {
-          "name": "mod_feedback_settings_score_factors_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_settings_score_factors_parent_id_idx": {
-          "name": "mod_feedback_settings_score_factors_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "mod_feedback_settings_score_factors_parent_id_fk": {
-          "name": "mod_feedback_settings_score_factors_parent_id_fk",
-          "tableFrom": "mod_feedback_settings_score_factors",
-          "tableTo": "mod_feedback_settings",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.mod_feedback_settings_tags": {
-      "name": "mod_feedback_settings_tags",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "tone": {
-          "name": "tone",
-          "type": "enum_mod_feedback_settings_tags_tone",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'neutral'"
-        }
-      },
-      "indexes": {
-        "mod_feedback_settings_tags_order_idx": {
-          "name": "mod_feedback_settings_tags_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_settings_tags_parent_id_idx": {
-          "name": "mod_feedback_settings_tags_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "mod_feedback_settings_tags_parent_id_fk": {
-          "name": "mod_feedback_settings_tags_parent_id_fk",
-          "tableFrom": "mod_feedback_settings_tags",
-          "tableTo": "mod_feedback_settings",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.mod_feedback_settings_vote_milestones": {
-      "name": "mod_feedback_settings_vote_milestones",
-      "schema": "cms",
-      "columns": {
-        "order": {
-          "name": "order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "parent_id": {
-          "name": "parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "value": {
-          "name": "value",
-          "type": "enum_mod_feedback_settings_vote_milestones",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "mod_feedback_settings_vote_milestones_order_idx": {
-          "name": "mod_feedback_settings_vote_milestones_order_idx",
-          "columns": [
-            {
-              "expression": "order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mod_feedback_settings_vote_milestones_parent_idx": {
-          "name": "mod_feedback_settings_vote_milestones_parent_idx",
-          "columns": [
-            {
-              "expression": "parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "mod_feedback_settings_vote_milestones_parent_fk": {
-          "name": "mod_feedback_settings_vote_milestones_parent_fk",
-          "tableFrom": "mod_feedback_settings_vote_milestones",
-          "tableTo": "mod_feedback_settings",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.mod_feedback_settings": {
-      "name": "mod_feedback_settings",
-      "schema": "cms",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "portal_title": {
-          "name": "portal_title",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'Feedback'"
-        },
-        "feedback_intro": {
-          "name": "feedback_intro",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'Tell us what would make the product better.'"
-        },
-        "search_all_boards": {
-          "name": "search_all_boards",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "stale_after_weeks": {
-          "name": "stale_after_weeks",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 4
-        },
-        "eta_public_by_default": {
-          "name": "eta_public_by_default",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "vote_priorities": {
-          "name": "vote_priorities",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "changelog_title": {
-          "name": "changelog_title",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'Changelog'"
-        },
-        "changelog_subtitle": {
-          "name": "changelog_subtitle",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'Follow the latest improvements and updates.'"
-        },
-        "changelog_subscriptions": {
-          "name": "changelog_subscriptions",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "changelog_rss": {
-          "name": "changelog_rss",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "changelog_reactions": {
-          "name": "changelog_reactions",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "changelog_share": {
-          "name": "changelog_share",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "changelog_ship_stage": {
-          "name": "changelog_ship_stage",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'shipped'"
-        },
-        "anon_votes": {
-          "name": "anon_votes",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "anon_posts": {
-          "name": "anon_posts",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "anon_comments": {
-          "name": "anon_comments",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "posts_per_hour": {
-          "name": "posts_per_hour",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 10
-        },
-        "comments_per_hour": {
-          "name": "comments_per_hour",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 30
-        },
-        "notify_staff_on_new_post": {
-          "name": "notify_staff_on_new_post",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "notify_voters_on_staff_comment": {
-          "name": "notify_voters_on_staff_comment",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms.mod_feedback_settings_texts": {
-      "name": "mod_feedback_settings_texts",
-      "schema": "cms",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "order": {
-          "name": "order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "parent_id": {
-          "name": "parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "path": {
-          "name": "path",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "text": {
-          "name": "text",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "mod_feedback_settings_texts_order_parent": {
-          "name": "mod_feedback_settings_texts_order_parent",
-          "columns": [
-            {
-              "expression": "order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "mod_feedback_settings_texts_parent_fk": {
-          "name": "mod_feedback_settings_texts_parent_fk",
-          "tableFrom": "mod_feedback_settings_texts",
-          "tableTo": "mod_feedback_settings",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms._mod_feedback_settings_v_version_portal_tabs": {
-      "name": "_mod_feedback_settings_v_version_portal_tabs",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "tab": {
-          "name": "tab",
-          "type": "enum__mod_feedback_settings_v_version_portal_tabs_tab",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "label": {
-          "name": "label",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "enabled": {
-          "name": "enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "_uuid": {
-          "name": "_uuid",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "_mod_feedback_settings_v_version_portal_tabs_order_idx": {
-          "name": "_mod_feedback_settings_v_version_portal_tabs_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_settings_v_version_portal_tabs_parent_id_idx": {
-          "name": "_mod_feedback_settings_v_version_portal_tabs_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "_mod_feedback_settings_v_version_portal_tabs_parent_id_fk": {
-          "name": "_mod_feedback_settings_v_version_portal_tabs_parent_id_fk",
-          "tableFrom": "_mod_feedback_settings_v_version_portal_tabs",
-          "tableTo": "_mod_feedback_settings_v",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms._mod_feedback_settings_v_version_statuses": {
-      "name": "_mod_feedback_settings_v_version_statuses",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "type": {
-          "name": "type",
-          "type": "enum__mod_feedback_settings_v_version_statuses_type",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'active'"
-        },
-        "tone": {
-          "name": "tone",
-          "type": "enum__mod_feedback_settings_v_version_statuses_tone",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'info'"
-        },
-        "show_on_roadmap": {
-          "name": "show_on_roadmap",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "is_default": {
-          "name": "is_default",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "notify_voters_by_default": {
-          "name": "notify_voters_by_default",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "_uuid": {
-          "name": "_uuid",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "_mod_feedback_settings_v_version_statuses_order_idx": {
-          "name": "_mod_feedback_settings_v_version_statuses_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_settings_v_version_statuses_parent_id_idx": {
-          "name": "_mod_feedback_settings_v_version_statuses_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "_mod_feedback_settings_v_version_statuses_parent_id_fk": {
-          "name": "_mod_feedback_settings_v_version_statuses_parent_id_fk",
-          "tableFrom": "_mod_feedback_settings_v_version_statuses",
-          "tableTo": "_mod_feedback_settings_v",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms._mod_feedback_settings_v_version_idea_stages": {
-      "name": "_mod_feedback_settings_v_version_idea_stages",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "type": {
-          "name": "type",
-          "type": "enum__mod_feedback_settings_v_version_idea_stages_type",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'active'"
-        },
-        "tone": {
-          "name": "tone",
-          "type": "enum__mod_feedback_settings_v_version_idea_stages_tone",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'info'"
-        },
-        "portal_status": {
-          "name": "portal_status",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "notify_voters": {
-          "name": "notify_voters",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "_uuid": {
-          "name": "_uuid",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "_mod_feedback_settings_v_version_idea_stages_order_idx": {
-          "name": "_mod_feedback_settings_v_version_idea_stages_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_settings_v_version_idea_stages_parent_id_idx": {
-          "name": "_mod_feedback_settings_v_version_idea_stages_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "_mod_feedback_settings_v_version_idea_stages_parent_id_fk": {
-          "name": "_mod_feedback_settings_v_version_idea_stages_parent_id_fk",
-          "tableFrom": "_mod_feedback_settings_v_version_idea_stages",
-          "tableTo": "_mod_feedback_settings_v",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms._mod_feedback_settings_v_version_score_factors": {
-      "name": "_mod_feedback_settings_v_version_score_factors",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "kind": {
-          "name": "kind",
-          "type": "enum__mod_feedback_settings_v_version_score_factors_kind",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'impact'"
-        },
-        "weight": {
-          "name": "weight",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "source": {
-          "name": "source",
-          "type": "enum__mod_feedback_settings_v_version_score_factors_source",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'manual'"
-        },
-        "scale": {
-          "name": "scale",
-          "type": "enum__mod_feedback_settings_v_version_score_factors_scale",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'0-10'"
-        },
-        "_uuid": {
-          "name": "_uuid",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "_mod_feedback_settings_v_version_score_factors_order_idx": {
-          "name": "_mod_feedback_settings_v_version_score_factors_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_settings_v_version_score_factors_parent_id_idx": {
-          "name": "_mod_feedback_settings_v_version_score_factors_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "_mod_feedback_settings_v_version_score_factors_parent_id_fk": {
-          "name": "_mod_feedback_settings_v_version_score_factors_parent_id_fk",
-          "tableFrom": "_mod_feedback_settings_v_version_score_factors",
-          "tableTo": "_mod_feedback_settings_v",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms._mod_feedback_settings_v_version_tags": {
-      "name": "_mod_feedback_settings_v_version_tags",
-      "schema": "cms",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "tone": {
-          "name": "tone",
-          "type": "enum__mod_feedback_settings_v_version_tags_tone",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'neutral'"
-        },
-        "_uuid": {
-          "name": "_uuid",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "_mod_feedback_settings_v_version_tags_order_idx": {
-          "name": "_mod_feedback_settings_v_version_tags_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_settings_v_version_tags_parent_id_idx": {
-          "name": "_mod_feedback_settings_v_version_tags_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "_mod_feedback_settings_v_version_tags_parent_id_fk": {
-          "name": "_mod_feedback_settings_v_version_tags_parent_id_fk",
-          "tableFrom": "_mod_feedback_settings_v_version_tags",
-          "tableTo": "_mod_feedback_settings_v",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "_parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms._mod_feedback_settings_v_version_vote_milestones": {
-      "name": "_mod_feedback_settings_v_version_vote_milestones",
-      "schema": "cms",
-      "columns": {
-        "order": {
-          "name": "order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "parent_id": {
-          "name": "parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "value": {
-          "name": "value",
-          "type": "enum__mod_feedback_settings_v_version_vote_milestones",
-          "typeSchema": "cms",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "_mod_feedback_settings_v_version_vote_milestones_order_idx": {
-          "name": "_mod_feedback_settings_v_version_vote_milestones_order_idx",
-          "columns": [
-            {
-              "expression": "order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_settings_v_version_vote_milestones_parent_idx": {
-          "name": "_mod_feedback_settings_v_version_vote_milestones_parent_idx",
-          "columns": [
-            {
-              "expression": "parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "_mod_feedback_settings_v_version_vote_milestones_parent_fk": {
-          "name": "_mod_feedback_settings_v_version_vote_milestones_parent_fk",
-          "tableFrom": "_mod_feedback_settings_v_version_vote_milestones",
-          "tableTo": "_mod_feedback_settings_v",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms._mod_feedback_settings_v": {
-      "name": "_mod_feedback_settings_v",
-      "schema": "cms",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "version_portal_title": {
-          "name": "version_portal_title",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'Feedback'"
-        },
-        "version_feedback_intro": {
-          "name": "version_feedback_intro",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'Tell us what would make the product better.'"
-        },
-        "version_search_all_boards": {
-          "name": "version_search_all_boards",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "version_stale_after_weeks": {
-          "name": "version_stale_after_weeks",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 4
-        },
-        "version_eta_public_by_default": {
-          "name": "version_eta_public_by_default",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "version_vote_priorities": {
-          "name": "version_vote_priorities",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "version_changelog_title": {
-          "name": "version_changelog_title",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'Changelog'"
-        },
-        "version_changelog_subtitle": {
-          "name": "version_changelog_subtitle",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'Follow the latest improvements and updates.'"
-        },
-        "version_changelog_subscriptions": {
-          "name": "version_changelog_subscriptions",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "version_changelog_rss": {
-          "name": "version_changelog_rss",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "version_changelog_reactions": {
-          "name": "version_changelog_reactions",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "version_changelog_share": {
-          "name": "version_changelog_share",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "version_changelog_ship_stage": {
-          "name": "version_changelog_ship_stage",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'shipped'"
-        },
-        "version_anon_votes": {
-          "name": "version_anon_votes",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "version_anon_posts": {
-          "name": "version_anon_posts",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "version_anon_comments": {
-          "name": "version_anon_comments",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "version_posts_per_hour": {
-          "name": "version_posts_per_hour",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 10
-        },
-        "version_comments_per_hour": {
-          "name": "version_comments_per_hour",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 30
-        },
-        "version_notify_staff_on_new_post": {
-          "name": "version_notify_staff_on_new_post",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "version_notify_voters_on_staff_comment": {
-          "name": "version_notify_voters_on_staff_comment",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "version_updated_at": {
-          "name": "version_updated_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "version_created_at": {
-          "name": "version_created_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "_mod_feedback_settings_v_created_at_idx": {
-          "name": "_mod_feedback_settings_v_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_mod_feedback_settings_v_updated_at_idx": {
-          "name": "_mod_feedback_settings_v_updated_at_idx",
-          "columns": [
-            {
-              "expression": "updated_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "cms._mod_feedback_settings_v_texts": {
-      "name": "_mod_feedback_settings_v_texts",
-      "schema": "cms",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "order": {
-          "name": "order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "parent_id": {
-          "name": "parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "path": {
-          "name": "path",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "text": {
-          "name": "text",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "_mod_feedback_settings_v_texts_order_parent": {
-          "name": "_mod_feedback_settings_v_texts_order_parent",
-          "columns": [
-            {
-              "expression": "order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "_mod_feedback_settings_v_texts_parent_fk": {
-          "name": "_mod_feedback_settings_v_texts_parent_fk",
-          "tableFrom": "_mod_feedback_settings_v_texts",
-          "tableTo": "_mod_feedback_settings_v",
-          "schemaTo": "cms",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -39826,113 +35880,6 @@
         "linear"
       ]
     },
-    "cms.enum_kit_modules_mod_feedback_portal_tabs_tab": {
-      "name": "enum_kit_modules_mod_feedback_portal_tabs_tab",
-      "schema": "cms",
-      "values": [
-        "roadmap",
-        "feedback",
-        "changelog"
-      ]
-    },
-    "cms.enum_kit_modules_mod_feedback_statuses_type": {
-      "name": "enum_kit_modules_mod_feedback_statuses_type",
-      "schema": "cms",
-      "values": [
-        "open",
-        "active",
-        "complete",
-        "closed"
-      ]
-    },
-    "cms.enum_kit_modules_mod_feedback_statuses_tone": {
-      "name": "enum_kit_modules_mod_feedback_statuses_tone",
-      "schema": "cms",
-      "values": [
-        "neutral",
-        "info",
-        "warning",
-        "success",
-        "destructive"
-      ]
-    },
-    "cms.enum_kit_modules_mod_feedback_idea_stages_type": {
-      "name": "enum_kit_modules_mod_feedback_idea_stages_type",
-      "schema": "cms",
-      "values": [
-        "open",
-        "active",
-        "complete",
-        "closed"
-      ]
-    },
-    "cms.enum_kit_modules_mod_feedback_idea_stages_tone": {
-      "name": "enum_kit_modules_mod_feedback_idea_stages_tone",
-      "schema": "cms",
-      "values": [
-        "neutral",
-        "info",
-        "warning",
-        "success",
-        "destructive"
-      ]
-    },
-    "cms.enum_kit_modules_mod_feedback_score_factors_kind": {
-      "name": "enum_kit_modules_mod_feedback_score_factors_kind",
-      "schema": "cms",
-      "values": [
-        "impact",
-        "effort"
-      ]
-    },
-    "cms.enum_kit_modules_mod_feedback_score_factors_source": {
-      "name": "enum_kit_modules_mod_feedback_score_factors_source",
-      "schema": "cms",
-      "values": [
-        "manual",
-        "votes",
-        "priority",
-        "tagVoters"
-      ]
-    },
-    "cms.enum_kit_modules_mod_feedback_score_factors_scale": {
-      "name": "enum_kit_modules_mod_feedback_score_factors_scale",
-      "schema": "cms",
-      "values": [
-        "0-10",
-        "0-100",
-        "fibonacci",
-        "stars",
-        "checkbox",
-        "percentage",
-        "number"
-      ]
-    },
-    "cms.enum_kit_modules_mod_feedback_tags_tone": {
-      "name": "enum_kit_modules_mod_feedback_tags_tone",
-      "schema": "cms",
-      "values": [
-        "neutral",
-        "info",
-        "warning",
-        "success",
-        "destructive"
-      ]
-    },
-    "cms.enum_kit_modules_mod_feedback_vote_milestones": {
-      "name": "enum_kit_modules_mod_feedback_vote_milestones",
-      "schema": "cms",
-      "values": [
-        "5",
-        "10",
-        "25",
-        "50",
-        "100",
-        "250",
-        "500",
-        "1000"
-      ]
-    },
     "cms.enum_kit_modules_mod_billing_billing_toggle_default": {
       "name": "enum_kit_modules_mod_billing_billing_toggle_default",
       "schema": "cms",
@@ -39975,6 +35922,23 @@
         "members"
       ]
     },
+    "cms.enum_mod_billing_plans_entitlement": {
+      "name": "enum_mod_billing_plans_entitlement",
+      "schema": "cms",
+      "values": [
+        "members",
+        "premium"
+      ]
+    },
+    "cms.enum_mod_billing_plans_sync_status": {
+      "name": "enum_mod_billing_plans_sync_status",
+      "schema": "cms",
+      "values": [
+        "unsynced",
+        "synced",
+        "error"
+      ]
+    },
     "cms.enum_mod_billing_plans_pricing_type": {
       "name": "enum_mod_billing_plans_pricing_type",
       "schema": "cms",
@@ -40001,16 +35965,8 @@
         "year"
       ]
     },
-    "cms.enum_mod_billing_plans_entitlement": {
-      "name": "enum_mod_billing_plans_entitlement",
-      "schema": "cms",
-      "values": [
-        "members",
-        "premium"
-      ]
-    },
-    "cms.enum_mod_billing_plans_sync_status": {
-      "name": "enum_mod_billing_plans_sync_status",
+    "cms.enum_mod_billing_coupons_sync_status": {
+      "name": "enum_mod_billing_coupons_sync_status",
       "schema": "cms",
       "values": [
         "unsynced",
@@ -40041,15 +35997,6 @@
       "values": [
         "month",
         "year"
-      ]
-    },
-    "cms.enum_mod_billing_coupons_sync_status": {
-      "name": "enum_mod_billing_coupons_sync_status",
-      "schema": "cms",
-      "values": [
-        "unsynced",
-        "synced",
-        "error"
       ]
     },
     "cms.enum_mod_billing_subscriptions_status": {
@@ -40103,113 +36050,6 @@
       "values": [
         "draft",
         "published"
-      ]
-    },
-    "cms.enum_mod_feedback_boards_custom_fields_type": {
-      "name": "enum_mod_feedback_boards_custom_fields_type",
-      "schema": "cms",
-      "values": [
-        "text",
-        "textarea",
-        "select"
-      ]
-    },
-    "cms.enum_mod_feedback_boards_access": {
-      "name": "enum_mod_feedback_boards_access",
-      "schema": "cms",
-      "values": [
-        "staff",
-        "public",
-        "members",
-        "segment"
-      ]
-    },
-    "cms.enum_mod_feedback_boards_anon_votes": {
-      "name": "enum_mod_feedback_boards_anon_votes",
-      "schema": "cms",
-      "values": [
-        "inherit",
-        "allow",
-        "deny"
-      ]
-    },
-    "cms.enum_mod_feedback_boards_anon_posts": {
-      "name": "enum_mod_feedback_boards_anon_posts",
-      "schema": "cms",
-      "values": [
-        "inherit",
-        "allow",
-        "deny"
-      ]
-    },
-    "cms.enum_mod_feedback_boards_anon_comments": {
-      "name": "enum_mod_feedback_boards_anon_comments",
-      "schema": "cms",
-      "values": [
-        "inherit",
-        "allow",
-        "deny"
-      ]
-    },
-    "cms.enum_mod_feedback_changelog_type": {
-      "name": "enum_mod_feedback_changelog_type",
-      "schema": "cms",
-      "values": [
-        "new",
-        "improved",
-        "fixed"
-      ]
-    },
-    "cms.enum_mod_feedback_changelog_audience": {
-      "name": "enum_mod_feedback_changelog_audience",
-      "schema": "cms",
-      "values": [
-        "everyone",
-        "members"
-      ]
-    },
-    "cms.enum_mod_feedback_changelog_status": {
-      "name": "enum_mod_feedback_changelog_status",
-      "schema": "cms",
-      "values": [
-        "draft",
-        "published"
-      ]
-    },
-    "cms.enum__mod_feedback_changelog_v_version_type": {
-      "name": "enum__mod_feedback_changelog_v_version_type",
-      "schema": "cms",
-      "values": [
-        "new",
-        "improved",
-        "fixed"
-      ]
-    },
-    "cms.enum__mod_feedback_changelog_v_version_audience": {
-      "name": "enum__mod_feedback_changelog_v_version_audience",
-      "schema": "cms",
-      "values": [
-        "everyone",
-        "members"
-      ]
-    },
-    "cms.enum__mod_feedback_changelog_v_version_status": {
-      "name": "enum__mod_feedback_changelog_v_version_status",
-      "schema": "cms",
-      "values": [
-        "draft",
-        "published"
-      ]
-    },
-    "cms.enum_mod_feedback_changelog_labels_tone": {
-      "name": "enum_mod_feedback_changelog_labels_tone",
-      "schema": "cms",
-      "values": [
-        "neutral",
-        "info",
-        "warning",
-        "success",
-        "destructive"
       ]
     },
     "cms.enum_forms_confirmation_type": {
@@ -40567,220 +36407,6 @@
         "anthropic/claude-opus-4.1",
         "anthropic/claude-haiku-4.5"
       ]
-    },
-    "cms.enum_mod_feedback_settings_portal_tabs_tab": {
-      "name": "enum_mod_feedback_settings_portal_tabs_tab",
-      "schema": "cms",
-      "values": [
-        "roadmap",
-        "feedback",
-        "changelog"
-      ]
-    },
-    "cms.enum_mod_feedback_settings_statuses_type": {
-      "name": "enum_mod_feedback_settings_statuses_type",
-      "schema": "cms",
-      "values": [
-        "open",
-        "active",
-        "complete",
-        "closed"
-      ]
-    },
-    "cms.enum_mod_feedback_settings_statuses_tone": {
-      "name": "enum_mod_feedback_settings_statuses_tone",
-      "schema": "cms",
-      "values": [
-        "neutral",
-        "info",
-        "warning",
-        "success",
-        "destructive"
-      ]
-    },
-    "cms.enum_mod_feedback_settings_idea_stages_type": {
-      "name": "enum_mod_feedback_settings_idea_stages_type",
-      "schema": "cms",
-      "values": [
-        "open",
-        "active",
-        "complete",
-        "closed"
-      ]
-    },
-    "cms.enum_mod_feedback_settings_idea_stages_tone": {
-      "name": "enum_mod_feedback_settings_idea_stages_tone",
-      "schema": "cms",
-      "values": [
-        "neutral",
-        "info",
-        "warning",
-        "success",
-        "destructive"
-      ]
-    },
-    "cms.enum_mod_feedback_settings_score_factors_kind": {
-      "name": "enum_mod_feedback_settings_score_factors_kind",
-      "schema": "cms",
-      "values": [
-        "impact",
-        "effort"
-      ]
-    },
-    "cms.enum_mod_feedback_settings_score_factors_source": {
-      "name": "enum_mod_feedback_settings_score_factors_source",
-      "schema": "cms",
-      "values": [
-        "manual",
-        "votes",
-        "priority",
-        "tagVoters"
-      ]
-    },
-    "cms.enum_mod_feedback_settings_score_factors_scale": {
-      "name": "enum_mod_feedback_settings_score_factors_scale",
-      "schema": "cms",
-      "values": [
-        "0-10",
-        "0-100",
-        "fibonacci",
-        "stars",
-        "checkbox",
-        "percentage",
-        "number"
-      ]
-    },
-    "cms.enum_mod_feedback_settings_tags_tone": {
-      "name": "enum_mod_feedback_settings_tags_tone",
-      "schema": "cms",
-      "values": [
-        "neutral",
-        "info",
-        "warning",
-        "success",
-        "destructive"
-      ]
-    },
-    "cms.enum_mod_feedback_settings_vote_milestones": {
-      "name": "enum_mod_feedback_settings_vote_milestones",
-      "schema": "cms",
-      "values": [
-        "5",
-        "10",
-        "25",
-        "50",
-        "100",
-        "250",
-        "500",
-        "1000"
-      ]
-    },
-    "cms.enum__mod_feedback_settings_v_version_portal_tabs_tab": {
-      "name": "enum__mod_feedback_settings_v_version_portal_tabs_tab",
-      "schema": "cms",
-      "values": [
-        "roadmap",
-        "feedback",
-        "changelog"
-      ]
-    },
-    "cms.enum__mod_feedback_settings_v_version_statuses_type": {
-      "name": "enum__mod_feedback_settings_v_version_statuses_type",
-      "schema": "cms",
-      "values": [
-        "open",
-        "active",
-        "complete",
-        "closed"
-      ]
-    },
-    "cms.enum__mod_feedback_settings_v_version_statuses_tone": {
-      "name": "enum__mod_feedback_settings_v_version_statuses_tone",
-      "schema": "cms",
-      "values": [
-        "neutral",
-        "info",
-        "warning",
-        "success",
-        "destructive"
-      ]
-    },
-    "cms.enum__mod_feedback_settings_v_version_idea_stages_type": {
-      "name": "enum__mod_feedback_settings_v_version_idea_stages_type",
-      "schema": "cms",
-      "values": [
-        "open",
-        "active",
-        "complete",
-        "closed"
-      ]
-    },
-    "cms.enum__mod_feedback_settings_v_version_idea_stages_tone": {
-      "name": "enum__mod_feedback_settings_v_version_idea_stages_tone",
-      "schema": "cms",
-      "values": [
-        "neutral",
-        "info",
-        "warning",
-        "success",
-        "destructive"
-      ]
-    },
-    "cms.enum__mod_feedback_settings_v_version_score_factors_kind": {
-      "name": "enum__mod_feedback_settings_v_version_score_factors_kind",
-      "schema": "cms",
-      "values": [
-        "impact",
-        "effort"
-      ]
-    },
-    "cms.enum__mod_feedback_settings_v_version_score_factors_source": {
-      "name": "enum__mod_feedback_settings_v_version_score_factors_source",
-      "schema": "cms",
-      "values": [
-        "manual",
-        "votes",
-        "priority",
-        "tagVoters"
-      ]
-    },
-    "cms.enum__mod_feedback_settings_v_version_score_factors_scale": {
-      "name": "enum__mod_feedback_settings_v_version_score_factors_scale",
-      "schema": "cms",
-      "values": [
-        "0-10",
-        "0-100",
-        "fibonacci",
-        "stars",
-        "checkbox",
-        "percentage",
-        "number"
-      ]
-    },
-    "cms.enum__mod_feedback_settings_v_version_tags_tone": {
-      "name": "enum__mod_feedback_settings_v_version_tags_tone",
-      "schema": "cms",
-      "values": [
-        "neutral",
-        "info",
-        "warning",
-        "success",
-        "destructive"
-      ]
-    },
-    "cms.enum__mod_feedback_settings_v_version_vote_milestones": {
-      "name": "enum__mod_feedback_settings_v_version_vote_milestones",
-      "schema": "cms",
-      "values": [
-        "5",
-        "10",
-        "25",
-        "50",
-        "100",
-        "250",
-        "500",
-        "1000"
-      ]
     }
   },
   "schemas": {
@@ -40795,6 +36421,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "f837ccb9-d6ff-4b9c-b599-34de8e2fb464",
+  "id": "f2d06714-c3b1-43e6-8891-dad1607d8eac",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

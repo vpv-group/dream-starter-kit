@@ -33,15 +33,8 @@ import * as migration_20261125_234244_jobs_tasks_2 from './20261125_234244_jobs_
 import * as migration_20261126_024654_notifications_attempts_receipts from './20261126_024654_notifications_attempts_receipts';
 import * as migration_20261126_040551_nav_groups from './20261126_040551_nav_groups';
 import * as migration_20261126_193316_billing_provider_adapters from './20261126_193316_billing_provider_adapters';
-import * as migration_20261126_201522_mod_feedback_initial from './20261126_201522_mod_feedback_initial';
-import * as migration_20261126_203722_mod_feedback_ideas from './20261126_203722_mod_feedback_ideas';
-import * as migration_20261126_211703_mod_feedback_changelog from './20261126_211703_mod_feedback_changelog';
-import * as migration_20261126_213738_mod_feedback_integrations from './20261126_213738_mod_feedback_integrations';
-import * as migration_20261126_215221_mod_feedback_autopilot from './20261126_215221_mod_feedback_autopilot';
-import * as migration_20261126_220015_mod_feedback_source_chat_initial from './20261126_220015_mod_feedback_source_chat_initial';
-import * as migration_20261127_025940_mod_feedback_digest from './20261127_025940_mod_feedback_digest';
-import * as migration_20261127_030754_mod_feedback_widget from './20261127_030754_mod_feedback_widget';
 import * as migration_20261127_174251_sync_snapshot_after_billing_adapters from './20261127_174251_sync_snapshot_after_billing_adapters';
+import * as migration_20261127_180845_sync_snapshot_after_feedback_removal from './20261127_180845_sync_snapshot_after_feedback_removal';
 
 export const migrations = [
   {
@@ -220,48 +213,13 @@ export const migrations = [
     name: '20261126_193316_billing_provider_adapters',
   },
   {
-    up: migration_20261126_201522_mod_feedback_initial.up,
-    down: migration_20261126_201522_mod_feedback_initial.down,
-    name: '20261126_201522_mod_feedback_initial',
-  },
-  {
-    up: migration_20261126_203722_mod_feedback_ideas.up,
-    down: migration_20261126_203722_mod_feedback_ideas.down,
-    name: '20261126_203722_mod_feedback_ideas',
-  },
-  {
-    up: migration_20261126_211703_mod_feedback_changelog.up,
-    down: migration_20261126_211703_mod_feedback_changelog.down,
-    name: '20261126_211703_mod_feedback_changelog',
-  },
-  {
-    up: migration_20261126_213738_mod_feedback_integrations.up,
-    down: migration_20261126_213738_mod_feedback_integrations.down,
-    name: '20261126_213738_mod_feedback_integrations',
-  },
-  {
-    up: migration_20261126_215221_mod_feedback_autopilot.up,
-    down: migration_20261126_215221_mod_feedback_autopilot.down,
-    name: '20261126_215221_mod_feedback_autopilot',
-  },
-  {
-    up: migration_20261126_220015_mod_feedback_source_chat_initial.up,
-    down: migration_20261126_220015_mod_feedback_source_chat_initial.down,
-    name: '20261126_220015_mod_feedback_source_chat_initial',
-  },
-  {
-    up: migration_20261127_025940_mod_feedback_digest.up,
-    down: migration_20261127_025940_mod_feedback_digest.down,
-    name: '20261127_025940_mod_feedback_digest',
-  },
-  {
-    up: migration_20261127_030754_mod_feedback_widget.up,
-    down: migration_20261127_030754_mod_feedback_widget.down,
-    name: '20261127_030754_mod_feedback_widget',
-  },
-  {
     up: migration_20261127_174251_sync_snapshot_after_billing_adapters.up,
     down: migration_20261127_174251_sync_snapshot_after_billing_adapters.down,
-    name: '20261127_174251_sync_snapshot_after_billing_adapters'
+    name: '20261127_174251_sync_snapshot_after_billing_adapters',
+  },
+  {
+    up: migration_20261127_180845_sync_snapshot_after_feedback_removal.up,
+    down: migration_20261127_180845_sync_snapshot_after_feedback_removal.down,
+    name: '20261127_180845_sync_snapshot_after_feedback_removal',
   },
 ];
