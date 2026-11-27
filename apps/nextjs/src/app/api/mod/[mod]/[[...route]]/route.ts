@@ -5,7 +5,12 @@ import { createClient as createBearerClient } from "@supabase/supabase-js";
 import type { Database } from "@acme/api";
 import type { ModRouteContext } from "@acme/mod-kit/server";
 import { slidingWindow } from "@acme/config";
-import { matchModRoute, MOD_HTTP_METHODS } from "@acme/mod-kit/server";
+import {
+  matchModRoute,
+  MOD_HTTP_METHODS,
+  modRateLimitBucket,
+  routeRateLimit,
+} from "@acme/mod-kit/server";
 
 import { env, supabaseAnonKey } from "~/env";
 import { isModuleEnabled } from "~/lib/mod/enabled";
@@ -32,12 +37,11 @@ import "~/lib/mod/connector-broker";
  * caller (a webhook signature, `isCronRequest`, a guest-checkout proof).
  */
 
-// Shared budget across all of a user's module calls. In-memory per
+// Shared budget across all of a user's module calls (60/min), unless a route
+// sets its own with withRateLimit (@acme/mod-kit/server). In-memory per
 // instance, same trade-off as /api/chat — swap for Redis/Upstash in prod
 // if you need a global limit.
-const RATE_LIMIT = 60;
-const RATE_WINDOW_MS = 60_000;
-const hitsByUser = new Map<string, number[]>();
+const hitsByBucket = new Map<string, number[]>();
 
 const json = (status: number, body: Record<string, unknown>) =>
   NextResponse.json(body, { status });
@@ -86,15 +90,33 @@ const getPayloadLazy = async () => {
   return getPayloadClient();
 };
 
-function rateLimit(key: string): boolean {
-  const now = Date.now();
-  const { allowed, hits } = slidingWindow(
-    hitsByUser.get(key) ?? [],
-    now,
-    RATE_WINDOW_MS,
-    RATE_LIMIT,
+const clientIp = (req: NextRequest) =>
+  req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+
+/** Spend one request from the route's budget; false once it's used up. */
+function rateLimit(
+  req: NextRequest,
+  mod: string,
+  match: { handler: unknown; key: string } | null,
+  userId: string | null,
+): boolean {
+  const budget = modRateLimitBucket(
+    match ? routeRateLimit(match.handler) : undefined,
+    {
+      route: `${mod} ${match?.key ?? ""}`,
+      userId,
+      ip: clientIp(req),
+      req,
+    },
   );
-  hitsByUser.set(key, hits);
+  if (!budget) return true;
+  const { allowed, hits } = slidingWindow(
+    hitsByBucket.get(budget.bucket) ?? [],
+    Date.now(),
+    budget.windowMs,
+    budget.limit,
+  );
+  hitsByBucket.set(budget.bucket, hits);
   return allowed;
 }
 
@@ -113,7 +135,8 @@ async function dispatch(
   const path = `/${(route ?? []).join("/")}`;
 
   // PUBLIC routes first (manifest server.publicRoutes — e.g. guest checkout):
-  // no session required; rate-limited per user when present, per IP otherwise.
+  // no session required; rate-limited per user when present, per IP otherwise
+  // (or by the route's own withRateLimit).
   // Keys are exact, or `"METHOD /prefix/*"` wildcards (matchModRoute).
   const publicMatch = matchModRoute(publicTable, req.method, path);
   if (publicMatch) {
@@ -121,10 +144,7 @@ async function dispatch(
     const { user, supabase } = await authenticate(req, {
       allowAnonymous: true,
     });
-    const limiterKey =
-      user?.id ??
-      `ip:${req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"}`;
-    if (!rateLimit(limiterKey)) {
+    if (!rateLimit(req, mod, publicMatch, user?.id ?? null)) {
       return json(429, { error: "Rate limit exceeded. Try again shortly." });
     }
     return publicMatch.handler(req, {
@@ -141,11 +161,10 @@ async function dispatch(
   const auth = await authenticate(req);
   if (!auth.user) return json(401, { error: "Unauthorized" });
 
-  if (!rateLimit(auth.user.id)) {
+  const match = matchModRoute(table, req.method, path);
+  if (!rateLimit(req, mod, match, auth.user.id)) {
     return json(429, { error: "Rate limit exceeded. Try again shortly." });
   }
-
-  const match = matchModRoute(table, req.method, path);
   if (!match) {
     const pathExists = MOD_HTTP_METHODS.some((m) =>
       matchModRoute(table, m, path),

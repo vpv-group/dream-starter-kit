@@ -133,13 +133,13 @@ export function matchModRoute<H>(
   table: Record<string, H> | undefined,
   method: string,
   path: string,
-): { handler: H; params: Record<string, string> } | null {
+): { handler: H; params: Record<string, string>; key: string } | null {
   if (!table) return null;
   const exact = Object.hasOwn(table, `${method} ${path}`)
     ? table[`${method} ${path}`]
     : undefined;
-  if (exact) return { handler: exact, params: {} };
-  let best: { handler: H; prefix: string } | null = null;
+  if (exact) return { handler: exact, params: {}, key: `${method} ${path}` };
+  let best: { handler: H; prefix: string; key: string } | null = null;
   for (const [key, handler] of Object.entries(table)) {
     if (!key.startsWith(`${method} `) || !key.endsWith("/*")) continue;
     const prefix = key.slice(method.length + 1, -1); // keeps the trailing "/"
@@ -148,12 +148,104 @@ export function matchModRoute<H>(
       path.startsWith(prefix) &&
       (!best || prefix.length > best.prefix.length)
     ) {
-      best = { handler, prefix };
+      best = { handler, prefix, key };
     }
   }
   return best
-    ? { handler: best.handler, params: { "*": path.slice(best.prefix.length) } }
+    ? {
+        handler: best.handler,
+        params: { "*": path.slice(best.prefix.length) },
+        key: best.key,
+      }
     : null;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Per-route rate limits                                                        */
+/* -------------------------------------------------------------------------- */
+
+/** The dispatcher's default: one shared budget per user (or IP), 60/min. */
+export const MOD_DEFAULT_RATE_LIMIT = { limit: 60, windowMs: 60_000 } as const;
+
+/** A route's own rate limit (see withRateLimit). */
+export interface ModRateLimit {
+  /** Requests allowed per window. */
+  limit: number;
+  /** Window length in ms (default 60 s). */
+  windowMs?: number;
+  /**
+   * Whose budget a request spends: `"user"` (default: the signed-in user,
+   * else the IP), `"ip"`, or a function of the request — e.g. a hash of an
+   * API key the handler verifies. A function returning null falls back to
+   * `"user"`.
+   */
+  key?: "user" | "ip" | ((req: Request) => string | null);
+}
+
+const RATE_LIMIT = Symbol.for("acme.mod-kit.rate-limit");
+
+/**
+ * Give one route its own rate limit instead of the shared 60/min budget:
+ * `"POST /webhook": withRateLimit(handler, false)` (no dispatcher limit — only
+ * for callers the handler verifies itself, like a signed webhook) or
+ * `withRateLimit(handler, { limit: 300, key: (req) => … })`. Returns a new
+ * handler; the original is unchanged.
+ */
+export function withRateLimit<A extends unknown[], R>(
+  handler: (...args: A) => R,
+  rateLimit: ModRateLimit | false,
+): (...args: A) => R {
+  if (
+    rateLimit &&
+    (!Number.isInteger(rateLimit.limit) ||
+      rateLimit.limit < 1 ||
+      (rateLimit.windowMs !== undefined &&
+        (!Number.isInteger(rateLimit.windowMs) || rateLimit.windowMs < 1)))
+  ) {
+    throw new Error(
+      "withRateLimit: limit and windowMs must be positive integers",
+    );
+  }
+  const wrapped = (...args: A) => handler(...args);
+  Object.defineProperty(wrapped, RATE_LIMIT, { value: rateLimit });
+  return wrapped;
+}
+
+/** The limit a route set with withRateLimit (undefined: the shared default). */
+export function routeRateLimit(
+  handler: unknown,
+): ModRateLimit | false | undefined {
+  if (typeof handler !== "function") return undefined;
+  return (
+    handler as unknown as Record<symbol, ModRateLimit | false | undefined>
+  )[RATE_LIMIT];
+}
+
+/**
+ * Which budget a request spends, for the dispatcher. null: no limit. A route
+ * with its own limit gets its own bucket (`<route>|<who>`), so it neither
+ * spends nor is starved by the shared budget.
+ */
+export function modRateLimitBucket(
+  rateLimit: ModRateLimit | false | undefined,
+  who: { route: string; userId: string | null; ip: string; req: Request },
+): { bucket: string; limit: number; windowMs: number } | null {
+  if (rateLimit === false) return null;
+  const byUser = who.userId ?? `ip:${who.ip}`;
+  if (!rateLimit) return { bucket: byUser, ...MOD_DEFAULT_RATE_LIMIT };
+  const custom =
+    typeof rateLimit.key === "function" ? rateLimit.key(who.req) : null;
+  const id =
+    custom !== null
+      ? `key:${custom}`
+      : rateLimit.key === "ip"
+        ? `ip:${who.ip}`
+        : byUser;
+  return {
+    bucket: `${who.route}|${id}`,
+    limit: rateLimit.limit,
+    windowMs: rateLimit.windowMs ?? MOD_DEFAULT_RATE_LIMIT.windowMs,
+  };
 }
 
 /* -------------------------------------------------------------------------- */
