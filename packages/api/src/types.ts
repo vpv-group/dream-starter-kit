@@ -1200,6 +1200,24 @@ export type Database = {
           },
         ];
       };
+      mod_feedback_digest_runs: {
+        Row: {
+          period_key: string;
+          recipients: number;
+          sent_at: string;
+        };
+        Insert: {
+          period_key: string;
+          recipients?: number;
+          sent_at?: string;
+        };
+        Update: {
+          period_key?: string;
+          recipients?: number;
+          sent_at?: string;
+        };
+        Relationships: [];
+      };
       mod_feedback_idea_stages: {
         Row: {
           archived: boolean;
@@ -1762,6 +1780,32 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [];
+      };
+      mod_feedback_staff_prefs: {
+        Row: {
+          digest: boolean;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          digest?: boolean;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          digest?: boolean;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mod_feedback_staff_prefs_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       mod_feedback_status_changes: {
         Row: {

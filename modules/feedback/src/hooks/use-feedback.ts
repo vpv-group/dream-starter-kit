@@ -1024,3 +1024,30 @@ export function useInsights(
       ),
   });
 }
+
+export function useStaffPrefs(apiBaseUrl = "") {
+  const supabase = useSupabase();
+  return useQuery({
+    queryKey: [...feedbackKeys.staff(), "prefs"],
+    queryFn: () =>
+      feedbackApi<{ digest: boolean; cadence: "weekly" | "daily" | "never" }>(
+        supabase,
+        "/staff/prefs",
+        { apiBaseUrl },
+      ),
+  });
+}
+
+export function useSetStaffPrefs(apiBaseUrl = "") {
+  const supabase = useSupabase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { digest: boolean }) =>
+      feedbackApi<{ digest: boolean }>(supabase, "/staff/prefs", {
+        body: args,
+        apiBaseUrl,
+      }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: [...feedbackKeys.staff(), "prefs"] }),
+  });
+}

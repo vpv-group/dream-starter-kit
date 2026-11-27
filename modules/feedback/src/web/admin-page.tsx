@@ -59,6 +59,7 @@ import {
 import { toneOf } from "../shared/tones";
 import { AutopilotInbox } from "./autopilot";
 import { ChangelogTab } from "./changelog-admin";
+import { DigestToggle } from "./digest-toggle";
 import { IdeaSheet, IdeasTab, RoadmapBoard } from "./ideas";
 import { InsightsTab } from "./insights";
 
@@ -121,7 +122,8 @@ export function FeedbackAdminPage() {
         <h1 className="text-xl font-bold tracking-tight lg:text-2xl">
           Feedback
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <DigestToggle />
           <Button
             variant="ghost"
             size="sm"

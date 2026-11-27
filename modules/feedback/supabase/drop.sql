@@ -2,9 +2,12 @@
 select public.kit_unregister_app_schedule('mod-feedback-config-sync');
 select public.kit_unregister_app_schedule('mod-feedback-integrations-sync');
 select public.kit_unregister_app_schedule('mod-feedback-autopilot');
+select public.kit_unregister_app_schedule('mod-feedback-digest');
 select public.kit_unregister_anon_data('feedback');
 select public.mod_notifications_unregister_module('feedback');
 
+drop table if exists public.mod_feedback_digest_runs cascade;
+drop table if exists public.mod_feedback_staff_prefs cascade;
 drop table if exists public.mod_feedback_api_keys cascade;
 drop table if exists public.mod_feedback_inbox cascade;
 drop table if exists public.mod_feedback_sync_outbox cascade;

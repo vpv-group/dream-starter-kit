@@ -838,6 +838,21 @@ export const settings = defineModuleSettings({
                   "Tell staff when a post reaches these vote counts.",
               },
             },
+            {
+              name: "digest",
+              label: "Staff digest email",
+              type: "select",
+              defaultValue: "weekly",
+              options: [
+                { label: "Weekly (Mondays)", value: "weekly" },
+                { label: "Daily", value: "daily" },
+                { label: "Off", value: "never" },
+              ],
+              admin: {
+                description:
+                  "A summary of new posts, votes, the inbox and what shipped, emailed to staff around 14:00 UTC. Each staff member can opt out in /a/feedback. Needs email (SMTP) to be set up.",
+              },
+            },
           ],
         },
       ],
@@ -939,4 +954,5 @@ export interface FeedbackSettings extends Record<string, unknown> {
   notifyStaffOnNewPost?: boolean | null;
   notifyVotersOnStaffComment?: boolean | null;
   voteMilestones?: string[] | null;
+  digest?: "weekly" | "daily" | "never" | null;
 }

@@ -111,7 +111,8 @@ export const modulesLock = {
         "apps/nextjs/src/payload/migrations/20261126_203722_mod_feedback_ideas.ts",
         "apps/nextjs/src/payload/migrations/20261126_211703_mod_feedback_changelog.ts",
         "apps/nextjs/src/payload/migrations/20261126_213738_mod_feedback_integrations.ts",
-        "apps/nextjs/src/payload/migrations/20261126_215221_mod_feedback_autopilot.ts"
+        "apps/nextjs/src/payload/migrations/20261126_215221_mod_feedback_autopilot.ts",
+        "apps/nextjs/src/payload/migrations/20261127_025940_mod_feedback_digest.ts"
       ],
       "edgeFunctions": []
     },
