@@ -213,6 +213,20 @@ get **401** on `routes`: a flow that must serve them goes in `publicRoutes`
 or IP. Signature-verified webhooks (billing's Stripe endpoint) and cron
 endpoints (`isCronRequest`) are public routes too.
 
+**Embeddable pages.** A web route with `area: "embed"` mounts at
+`/embed/<slug>/…` in the bare `(frontend)/(embed)` group: no site header or
+footer and no app shell, so it fits an iframe on another site. Inside the
+frame, third-party cookies are blocked, so the layout provides its own
+Supabase client with a localStorage session (sign in inside the frame with an
+email code; module hooks already send it as a bearer token). `proxy.ts`
+answers these paths with `Content-Security-Policy: frame-ancestors 'self'
+<origins>`, where the origins are the module's rows in
+`public.kit_embed_origins`. With no rows, only the app itself can frame the
+page. A module sets its list from its own /admin settings with
+`kit_set_embed_origins(slug, origins[])` (service role only; plain `https://`
+origins, or `http://localhost` for development). The proxy caches the list
+for a minute. Serve any loader script (e.g. `embed.js`) from a public route.
+
 **MCP tools.** With `server.mcp: true`, `./server` also exports
 `mcp: ModMcpExtension` (tools built with `defineMcpTool`, optional Payload
 collections and an instructions sentence). The remote MCP server at `/mcp`

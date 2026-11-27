@@ -183,7 +183,28 @@ export function validateManifest(m: ModuleManifest): string[] {
   // Mount overrides: web mounts are absolute paths outside the reserved list;
   // native mounts come from the short NATIVE_MOUNTS list.
   for (const r of m.routes.web) {
+    // /embed is the iframe namespace: only `area: "embed"` routes live there,
+    // each module under its own /embed/<slug>.
+    const embedBase = `/embed/${m.slug}`;
+    if (r.area === "embed") {
+      if (
+        r.mount !== undefined &&
+        r.mount !== embedBase &&
+        !r.mount.startsWith(`${embedBase}/`)
+      ) {
+        errors.push(
+          `[${m.slug}] embed route mount "${r.mount}" must be ${embedBase} or below it`,
+        );
+      }
+      continue;
+    }
     if (r.mount === undefined) continue;
+    if (r.mount === "/embed" || r.mount.startsWith("/embed/")) {
+      errors.push(
+        `[${m.slug}] web mount "${r.mount}" is in the /embed namespace — use area: "embed"`,
+      );
+      continue;
+    }
     if (!r.mount.startsWith("/")) {
       errors.push(`[${m.slug}] web mount "${r.mount}" must start with "/"`);
       continue;

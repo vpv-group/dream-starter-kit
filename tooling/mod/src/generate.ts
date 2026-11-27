@@ -634,8 +634,14 @@ export function buildStubs(mods: LoadedModule[]): GeneratedFile[] {
         const group =
           r.area === "public"
             ? MOD_PATHS.nextPublicGroup
-            : MOD_PATHS.nextAppGroup;
-        const base = r.mount ? r.mount.replace(/^\//, "") : `a/${slug}`;
+            : r.area === "embed"
+              ? MOD_PATHS.nextEmbedGroup
+              : MOD_PATHS.nextAppGroup;
+        const base = r.mount
+          ? r.mount.replace(/^\//, "")
+          : r.area === "embed"
+            ? `embed/${slug}`
+            : `a/${slug}`;
         bases.add(`${group}/${base}`);
         const seg = r.path ? `/${r.path}` : "";
         const entry = r.rsc ? "web-server" : "web";

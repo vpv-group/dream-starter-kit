@@ -1,8 +1,18 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+import { env, supabaseAnonKey } from "~/env";
 import { cmsConfigStatus, cmsNotConfiguredMessage } from "~/lib/cms/env-status";
+import {
+  cachedOrigins,
+  embedSlug,
+  frameAncestors,
+  restOriginFetcher,
+} from "~/lib/embed/frame-policy";
 import { updateSession } from "~/lib/supabase/middleware";
+
+// Allowed framing origins per module, read lazily (first embed request).
+let embedOrigins: ((slug: string) => Promise<string[]>) | null = null;
 
 // Routes that require a session (route groups like (app) don't appear in the URL).
 // Defense-in-depth: the (app) layout also enforces a server-side session guard.
@@ -43,6 +53,23 @@ export async function proxy(request: NextRequest) {
     pathname === "/oauth/token"
   ) {
     return NextResponse.next();
+  }
+
+  // Embeddable module pages (/embed/<slug>/…) are framed by other sites, so
+  // they get a per-module frame-ancestors allowlist and NO cookie session
+  // refresh (a third-party Set-Cookie is pointless; embed pages keep their
+  // own localStorage session and call module routes with a bearer token).
+  const embedModule = embedSlug(pathname);
+  if (embedModule) {
+    embedOrigins ??= cachedOrigins(
+      restOriginFetcher(env.NEXT_PUBLIC_SUPABASE_URL, supabaseAnonKey()),
+    );
+    const res = NextResponse.next();
+    res.headers.set(
+      "Content-Security-Policy",
+      frameAncestors(await embedOrigins(embedModule)),
+    );
+    return res;
   }
 
   const { response, user, supabase } = await updateSession(request);

@@ -193,6 +193,24 @@ export type Database = {
           },
         ];
       };
+      kit_embed_origins: {
+        Row: {
+          created_at: string;
+          module: string;
+          origin: string;
+        };
+        Insert: {
+          created_at?: string;
+          module: string;
+          origin: string;
+        };
+        Update: {
+          created_at?: string;
+          module?: string;
+          origin?: string;
+        };
+        Relationships: [];
+      };
       mcp_authorization_codes: {
         Row: {
           client_id: string;
@@ -2575,6 +2593,10 @@ export type Database = {
         Returns: undefined;
       };
       kit_scheduler_status: { Args: never; Returns: Json };
+      kit_set_embed_origins: {
+        Args: { _module: string; _origins: string[] };
+        Returns: undefined;
+      };
       kit_unregister_anon_data: {
         Args: { _module: string };
         Returns: undefined;

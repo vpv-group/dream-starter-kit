@@ -41,6 +41,7 @@ export const MOD_PATHS = {
   // Stub roots (machine-owned subtrees, wiped + regenerated every sync).
   nextAppGroup: "apps/nextjs/src/app/(frontend)/(app)",
   nextPublicGroup: "apps/nextjs/src/app/(frontend)/(public)",
+  nextEmbedGroup: "apps/nextjs/src/app/(frontend)/(embed)",
   expoAppGroup: "apps/expo/src/app/(app)",
 } as const;
 

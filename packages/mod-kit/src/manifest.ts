@@ -45,8 +45,14 @@ const routeEntrySchema = z.object({
   path: z.string(),
   /** Named export from the `./web` (or `./native`) entry to mount. */
   component: z.string().min(1),
-  /** Web layout group for the generated stub: authed shell (default) or public. */
-  area: z.enum(["app", "public"]).default("app"),
+  /**
+   * Web layout group for the generated stub: authed shell (default), public
+   * site chrome, or `embed` — a bare page meant for an iframe on another
+   * site (no header/footer/shell, its own localStorage session). Embed pages
+   * mount under /embed/<slug> and may only be framed by the origins in
+   * `kit_embed_origins` for that module (proxy.ts sets frame-ancestors).
+   */
+  area: z.enum(["app", "public", "embed"]).default("app"),
   /**
    * Absolute mount override instead of /a/<slug>/<path> (e.g. billing claims
    * "/billing", dashboard claims "/a"). Validated against the reserved core

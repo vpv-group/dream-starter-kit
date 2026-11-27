@@ -139,6 +139,42 @@ describe("validateManifest", () => {
     );
   });
 
+  it("keeps /embed for embed routes, each under its own /embed/<slug>", () => {
+    const ok = defineModule({
+      ...base,
+      slug: "demo",
+      routes: {
+        web: [
+          { path: "", component: "C", area: "embed" },
+          { path: "", component: "D", area: "embed", mount: "/embed/demo/x" },
+        ],
+      },
+    });
+    expect(validateManifest(ok)).toEqual([]);
+    const wrongSlug = defineModule({
+      ...base,
+      slug: "demo",
+      routes: {
+        web: [
+          { path: "", component: "C", area: "embed", mount: "/embed/other" },
+        ],
+      },
+    });
+    expect(
+      validateManifest(wrongSlug).some((e) =>
+        e.includes("must be /embed/demo"),
+      ),
+    ).toBe(true);
+    const notEmbed = defineModule({
+      ...base,
+      slug: "demo",
+      routes: { web: [{ path: "", component: "C", mount: "/embed/demo" }] },
+    });
+    expect(
+      validateManifest(notEmbed).some((e) => e.includes('use area: "embed"')),
+    ).toBe(true);
+  });
+
   it("rejects mounts inside the /a default namespace but allows bare /a", () => {
     const inside = defineModule({
       ...base,
