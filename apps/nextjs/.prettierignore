@@ -12,6 +12,7 @@ src/payload/migrations/
 # Module framework outputs, regenerated wholesale by `pnpm mod sync` —
 # machine-owned, byte-compared by the registry drift test, never hand-edited.
 src/mod/*.generated.ts
+src/mod/*.generated.tsx
 mod-packages.generated.json
 src/app/(frontend)/(app)/x/
 src/app/(frontend)/(public)/x/
