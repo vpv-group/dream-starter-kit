@@ -6,6 +6,10 @@ import {
   connectorStartUrl,
   connectorStatus,
   connectorWebhookTarget,
+  githubSyncAccess,
+  githubSyncRevoke,
+  githubSyncStart,
+  githubSyncToken,
 } from "./connectors-core";
 
 const REGISTRY = "https://www.meetdream.com/api/mod/modules/v1";
@@ -125,5 +129,83 @@ describe("Meet Dream connectors", () => {
     expect(JSON.parse(init?.body as string)).toEqual({
       url: "https://app.example.com/api/mod/billing-adapter-stripe/webhook",
     });
+  });
+});
+
+describe("GitHub sync access", () => {
+  it("starts a grant with the return URL and the forward route", async () => {
+    const fetcher = fake(200, { url: "https://github.com/login/oauth/x" });
+    const res = await githubSyncStart(
+      opts(fetcher),
+      "https://app.example.com/admin/collections/kit-modules/7",
+      "/api/mod/projects-adapter-github/webhook",
+    );
+    expect(res).toEqual({
+      status: "ok",
+      url: "https://github.com/login/oauth/x",
+    });
+    const [url, init] = fetcher.mock.calls[0] ?? [];
+    expect(url).toBe(`${REGISTRY}/connect/github/sync/start`);
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(init?.body as string)).toEqual({
+      returnTo: "https://app.example.com/admin/collections/kit-modules/7",
+      forwardPath: "/api/mod/projects-adapter-github/webhook",
+    });
+  });
+
+  it("lists granted repositories and the forwarding secret", async () => {
+    const fetcher = fake(200, {
+      repos: [{ repo: "acme/web", repoId: "11", installationId: "5" }],
+      forwardPath: "/api/mod/projects-adapter-github/webhook",
+      forwardSecret: "s3cret",
+    });
+    const res = await githubSyncAccess(opts(fetcher));
+    expect(res).toEqual({
+      status: "ok",
+      repos: [{ repo: "acme/web", repoId: "11", installationId: "5" }],
+      forwardPath: "/api/mod/projects-adapter-github/webhook",
+      forwardSecret: "s3cret",
+    });
+    expect(fetcher.mock.calls[0]?.[0]).toBe(`${REGISTRY}/sites/github/sync`);
+  });
+
+  it("mints a token for one repository", async () => {
+    const fetcher = fake(200, {
+      token: "ghs_x",
+      expiresAt: "2030-01-01T00:00:00.000Z",
+      repo: "acme/web",
+      permissions: { issues: "write", metadata: "read" },
+    });
+    const res = await githubSyncToken(opts(fetcher), "acme/web");
+    expect(res.status).toBe("ok");
+    if (res.status === "ok") expect(res.token.token).toBe("ghs_x");
+    const [url, init] = fetcher.mock.calls[0] ?? [];
+    expect(url).toBe(`${REGISTRY}/sites/github/sync-token`);
+    expect(JSON.parse(init?.body as string)).toEqual({ repo: "acme/web" });
+  });
+
+  it("reports an ungranted repository as not connected", async () => {
+    const fetcher = fake(403, {
+      code: "not_granted",
+      message: "This repository isn't granted to the site",
+    });
+    const res = await githubSyncToken(opts(fetcher), "acme/other");
+    expect(res).toEqual({
+      status: "not_connected",
+      message: "This repository isn't granted to the site",
+    });
+  });
+
+  it("revokes a grant with DELETE", async () => {
+    const fetcher = fake(200, { ok: true, revoked: true });
+    const res = await githubSyncRevoke(opts(fetcher), "acme/web");
+    expect(res).toEqual({ status: "ok", revoked: true });
+    expect(fetcher.mock.calls[0]?.[1]?.method).toBe("DELETE");
+  });
+
+  it("rejects a malformed answer", async () => {
+    const fetcher = fake(200, { repos: "nope" });
+    const res = await githubSyncAccess(opts(fetcher));
+    expect(res.status).toBe("error");
   });
 });

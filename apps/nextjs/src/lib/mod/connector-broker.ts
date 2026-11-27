@@ -1,4 +1,8 @@
-import type { ConnectorBroker, ConnectorStatus } from "@acme/mod-kit/server";
+import type {
+  ConnectorBroker,
+  ConnectorStatus,
+  GithubSyncToken,
+} from "@acme/mod-kit/server";
 import { registerConnectorBroker } from "@acme/mod-kit/server";
 
 /**
@@ -16,6 +20,10 @@ import { registerConnectorBroker } from "@acme/mod-kit/server";
 /** Connection status is read on most billing requests: keep it 60 s. */
 const STATUS_TTL_MS = 60_000;
 const statusCache = new Map<string, { at: number; value: ConnectorStatus }>();
+/** GitHub sync tokens, keyed by lowercased `owner/repo`. */
+const syncTokens = new Map<string, GithubSyncToken>();
+const fresh = (t: GithubSyncToken) =>
+  Date.parse(t.expiresAt) - Date.now() > 5 * 60_000;
 
 async function opts() {
   const { connectorCallOpts } = await import("./connectors");
@@ -71,6 +79,39 @@ export const connectorBroker: ConnectorBroker = {
     if (!call) return NO_KEY;
     const { connectorDisconnect } = await import("./connectors-core");
     return connectorDisconnect(call, target);
+  },
+  githubSync: {
+    async startGrant(returnTo, forwardPath) {
+      const call = await opts();
+      if (!call) return NO_KEY;
+      const { githubSyncStart } = await import("./connectors-core");
+      return githubSyncStart(call, returnTo, forwardPath);
+    },
+    async access() {
+      const call = await opts();
+      if (!call) return NO_KEY;
+      const { githubSyncAccess } = await import("./connectors-core");
+      return githubSyncAccess(call);
+    },
+    async token(repo) {
+      const key = repo.toLowerCase();
+      const hit = syncTokens.get(key);
+      if (hit && fresh(hit)) return { status: "ok", token: hit };
+      const call = await opts();
+      if (!call) return NO_KEY;
+      const { githubSyncToken } = await import("./connectors-core");
+      const res = await githubSyncToken(call, repo);
+      if (res.status === "ok") syncTokens.set(key, res.token);
+      else syncTokens.delete(key);
+      return res;
+    },
+    async revoke(repo) {
+      syncTokens.delete(repo.toLowerCase());
+      const call = await opts();
+      if (!call) return NO_KEY;
+      const { githubSyncRevoke } = await import("./connectors-core");
+      return githubSyncRevoke(call, repo);
+    },
   },
 };
 
