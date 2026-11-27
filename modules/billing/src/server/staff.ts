@@ -270,8 +270,11 @@ export const staffRoutes: ModRouteTable = {
     }
     const now = Date.now();
     const purchases = (rows ?? []).map((r) => {
+      // A grant that ran out while still active reads "expired" (the daily
+      // sweep then cancels it); a revoked one keeps its "canceled" status.
       const expiredGrant =
         r.provider === "manual" &&
+        (r.status === "active" || r.status === "trialing") &&
         r.current_period_end !== null &&
         Date.parse(r.current_period_end) <= now;
       return {
