@@ -499,8 +499,9 @@ One row per installed module, created and updated only by the boot reconcile
 (`lib/mod/reconcile-nav.ts`). This collection is the whole **Modules** screen
 (docs/MODULES.md → Admin panel + automatic updates): its list adds Version
 (update available), Source and Enabled/System cells, a module-ops status
-banner and an **Install module** drawer; each module's page adds a sidebar
-**Module** panel with Update and Remove. They live in
+banner and an **Install module** button beside the title (where other
+collections show Create New) that opens the catalog drawer; each module's page
+adds a sidebar **Module** panel with Update and Remove. They live in
 `payload/components/modules/` and dispatch module-ops through
 `/api/modules/*` (admin only). The old `/admin/modules` view redirects here.
 

@@ -86,7 +86,10 @@ export interface OpsResponse {
 }
 
 interface State {
+  /** Everything (registry, catalog, entitlements, ops) has arrived. */
   loaded: boolean;
+  /** `/api/modules/registry` has answered (`registry` is final). */
+  registryLoaded: boolean;
   registry: RegistryResponse | null;
   catalog: CatalogEntry[];
   entitlements: EntitlementsState | null;
@@ -142,6 +145,7 @@ export const sourceLabel = (source: string): string =>
 
 let state: State = {
   loaded: false,
+  registryLoaded: false,
   registry: null,
   catalog: [],
   entitlements: null,
@@ -171,25 +175,32 @@ const getJson = async <T>(url: string): Promise<T | null> => {
 };
 
 async function load(): Promise<void> {
+  // Entitlements don't depend on the registry: start them now. Then publish
+  // the registry the moment it answers, so the list's cells and banners don't
+  // wait on the slower catalog (meetdream.com) and GitHub ops requests.
+  // License/entitlement state for paid modules — proxied server-side so the
+  // key never reaches the browser.
+  const entitlementsReq = getJson<EntitlementsState>(
+    "/api/modules/entitlements",
+  );
   const registry = await getJson<RegistryResponse>("/api/modules/registry");
   if (!registry) {
-    setState({ loaded: true, registry: null });
+    setState({ loaded: true, registryLoaded: true, registry: null });
     return;
   }
+  setState({ registryLoaded: true, registry });
   const [catalog, entitlements, ops] = await Promise.all([
     registry.catalogUrl
       ? getJson<{ modules?: CatalogEntry[] }>(registry.catalogUrl).then(
           (c) => c?.modules ?? [],
         )
       : Promise.resolve([]),
-    // License/entitlement state for paid modules — proxied server-side so the
-    // key never reaches the browser.
-    getJson<EntitlementsState>("/api/modules/entitlements"),
+    entitlementsReq,
     registry.githubConnected
       ? getJson<OpsResponse>("/api/modules/ops")
       : Promise.resolve(null),
   ]);
-  setState({ loaded: true, registry, catalog, entitlements, ops });
+  setState({ loaded: true, catalog, entitlements, ops });
 }
 
 /** Load once per page; `force` re-fetches (after a dispatch). */
