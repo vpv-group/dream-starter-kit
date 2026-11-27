@@ -29,6 +29,8 @@ const PREMIUM_POST = "/posts/premium-preview";
 let ownerId = "";
 let memberId = "";
 let orgId = "";
+/** The member's signed-in session, reused after the first sign-in. */
+const MEMBER_STATE = `test-results/.auth/billing-member-${STAMP}.json`;
 
 test.describe.configure({ mode: "serial" });
 
@@ -100,6 +102,7 @@ test("every member of the workspace gets premium", async ({ browser }) => {
   // A plain member doesn't manage the workspace's billing.
   await page.goto(`/billing?account=org:${orgId}`);
   await expect(page.getByText(/manage billing for this account/)).toBeVisible();
+  await page.context().storageState({ path: MEMBER_STATE });
 });
 
 test("the owner sees the complimentary workspace plan", async ({ browser }) => {
@@ -128,7 +131,9 @@ test.describe("revoking", () => {
     await expect(page.getByText("Grant revoked")).toBeVisible();
     await expect(page.getByText("canceled", { exact: true })).toBeVisible();
 
-    const member = await signedIn(browser, MEMBER);
+    const member = await (
+      await browser.newContext({ storageState: MEMBER_STATE })
+    ).newPage();
     await member.goto(PREMIUM_POST);
     await expect(member.locator(".premium-gate")).toBeVisible();
   });
