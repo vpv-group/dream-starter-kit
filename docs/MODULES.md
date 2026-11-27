@@ -259,12 +259,13 @@ rule. See docs/MCP.md → Module tools and collections.
   `github_not_connected`, so modules must keep working without it.
 
 **Extending another module.** A module can be built to be extended by
-adapter modules, the way `chat` takes channel adapters and `feedback` takes
-issue trackers: the core exports a typed contract plus a route factory from
-a server-only entry (`@acme/mod-feedback/integrations`), adapters declare
-`requires: ["<core>"]`, mount the factory's routes, register themselves in
-the core's table from a migration (`mod_feedback_register_provider(...)`),
-and contribute a settings tab with `defineAdapterSettings({ target })`.
+adapter modules, the way `chat` takes channel adapters (or the paid
+`dream:feedback` module takes issue trackers): the core exports a typed
+contract plus a route factory from a server-only entry (e.g.
+`@acme/mod-feedback/integrations`), adapters declare `requires: ["<core>"]`,
+mount the factory's routes, register themselves in the core's table from a
+migration (e.g. `mod_feedback_register_provider(...)`), and contribute a
+settings tab with `defineAdapterSettings({ target })`.
 
 **Anonymous-user data.** A module that lets anonymous users own rows
 registers two SQL functions from a migration:
@@ -715,6 +716,7 @@ meet-dream's `docs/MODULES.md`) instead of a public GitHub repo, addressed as
 
 ```bash
 pnpm mod add dream:crm         # latest version compatible with this kit
+pnpm mod add dream:feedback    # Canny-style feedback, roadmap and changelog
 pnpm mod add dream:crm@1.2.0   # a specific version
 pnpm mod update crm            # same refs/mod-base three-way merge as GitHub
 pnpm mod status --check        # update + license state per module

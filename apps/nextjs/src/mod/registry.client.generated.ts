@@ -3,10 +3,9 @@
 // Recomputed from modules/*/module.config.ts; a stale copy fails
 // `pnpm test` via apps/nextjs/src/mod/registry-drift.test.ts.
 import type * as React from "react";
-import { IconBell, IconBulb, IconClock, IconCreditCard, IconDashboard, IconInbox, IconMessageCircle } from "@tabler/icons-react";
+import { IconBell, IconClock, IconCreditCard, IconDashboard, IconMessageCircle } from "@tabler/icons-react";
 import { BillingWidget as widget_billing } from "@acme/mod-billing/web";
 import { ChatWidget as widget_chat } from "@acme/mod-chat/web";
-import { FeedbackWidget as widget_feedback } from "@acme/mod-feedback/web";
 import { NotificationsWidget as widget_notifications } from "@acme/mod-notifications/web";
 import { RemindersWidget as widget_reminders } from "@acme/mod-reminders/web";
 import { webProvider as adapter_billing_adapter_stripe } from "@acme/mod-billing-adapter-stripe/web";
@@ -20,7 +19,6 @@ export * from "./registry.data.generated";
 export const modWidgets: { slug: string; Widget: React.ComponentType }[] = [
   { slug: "billing", Widget: widget_billing },
   { slug: "chat", Widget: widget_chat },
-  { slug: "feedback", Widget: widget_feedback },
   { slug: "notifications", Widget: widget_notifications },
   { slug: "reminders", Widget: widget_reminders },
 ];
@@ -28,11 +26,9 @@ export const modWidgets: { slug: string; Widget: React.ComponentType }[] = [
 /** Icon names referenced by module nav defaults → components. */
 export const modIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   IconBell: IconBell,
-  IconBulb: IconBulb,
   IconClock: IconClock,
   IconCreditCard: IconCreditCard,
   IconDashboard: IconDashboard,
-  IconInbox: IconInbox,
   IconMessageCircle: IconMessageCircle,
 };
 
