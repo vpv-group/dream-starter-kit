@@ -7,6 +7,7 @@ import {
   STATUS_TYPES,
   VOTE_MILESTONES,
 } from "../shared/config";
+import { parseEmbedOrigins } from "../shared/embed";
 import {
   DEFAULT_IDEA_STAGES,
   DEFAULT_SCORE_FACTORS,
@@ -226,14 +227,18 @@ export const settings = defineModuleSettings({
                 description:
                   "Drag to reorder. New ideas start in the first stage. Several stages may map to one status.",
               },
-              validate: (rows: unknown, { data }: { data: unknown }) => {
+              validate: (
+                rows: unknown,
+                { siblingData }: { siblingData: unknown },
+              ) => {
                 const unique = uniqueKeys("stages")(rows);
                 if (unique !== true) return unique;
-                const statusKeys = new Set(
-                  ((data as { statuses?: StatusSetting[] }).statuses ?? []).map(
-                    (st) => st.key ?? "",
-                  ),
-                );
+                // Sibling data, not `data`: on the Modules row these settings
+                // sit inside a group, so `data.statuses` would be undefined.
+                const statuses = (siblingData as { statuses?: StatusSetting[] })
+                  .statuses;
+                if (!statuses?.length) return true;
+                const statusKeys = new Set(statuses.map((st) => st.key ?? ""));
                 for (const row of (rows ?? []) as {
                   name?: string;
                   portalStatus?: string | null;
@@ -477,6 +482,36 @@ export const settings = defineModuleSettings({
               admin: {
                 description:
                   "An idea stage key (Ideas & Roadmap tab). Its posts move to the mapped status; voters get one “shipped” notification. Empty = don't move ideas.",
+              },
+            },
+          ],
+        },
+        {
+          label: "Widget",
+          description:
+            "Show the feedback portal inside your own website or docs (an iframe added with one script tag). Only the sites listed here can show it; the snippet is in /a/feedback.",
+          fields: [
+            {
+              name: "embedEnabled",
+              label: "Allow the feedback widget on other sites",
+              type: "checkbox",
+              defaultValue: false,
+            },
+            {
+              name: "embedOrigins",
+              label: "Allowed sites",
+              type: "textarea",
+              admin: {
+                description:
+                  "One site per line, e.g. https://www.example.com (https only; http://localhost for testing). Paths are ignored.",
+              },
+              validate: (value: unknown) => {
+                const { invalid } = parseEmbedOrigins(
+                  typeof value === "string" ? value : "",
+                );
+                return invalid.length
+                  ? `Not a valid site: ${invalid.join(", ")}`
+                  : true;
               },
             },
           ],
@@ -955,4 +990,6 @@ export interface FeedbackSettings extends Record<string, unknown> {
   notifyVotersOnStaffComment?: boolean | null;
   voteMilestones?: string[] | null;
   digest?: "weekly" | "daily" | "never" | null;
+  embedEnabled?: boolean | null;
+  embedOrigins?: string | null;
 }

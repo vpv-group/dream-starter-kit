@@ -4,10 +4,12 @@ import { getModuleSettings } from "@acme/mod-kit/payload";
 
 import type { FeedbackSettings } from "../payload/settings";
 import { settings } from "../payload/settings";
+import { parseEmbedOrigins } from "../shared/embed";
 import { DEFAULT_IDEA_STAGES } from "../shared/score";
 import { createAdminClient } from "./admin-client";
 import {
   writeAllBoards,
+  writeEmbedOrigins,
   writeIdeaStages,
   writeStatuses,
   writeTags,
@@ -42,6 +44,11 @@ export async function syncAllConfig(payload: BasePayload): Promise<{
     s.statuses,
   );
   await writeTags(db, s.tags);
+  await writeEmbedOrigins(
+    db,
+    s.embedEnabled,
+    parseEmbedOrigins(s.embedOrigins).origins,
+  );
   await writeAllBoards(db, boards.docs);
   return {
     boards: boards.docs.length,

@@ -25,7 +25,9 @@ import {
  * kit's own sign-up / sign-in (whose methods come from /admin → System →
  * Authentication) and brings them back to this page afterwards.
  */
-const AuthPromptContext = createContext<{ open: (reason?: string) => void }>({
+export const AuthPromptContext = createContext<{
+  open: (reason?: string) => void;
+}>({
   open: () => undefined,
 });
 

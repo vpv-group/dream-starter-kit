@@ -13,10 +13,12 @@ import type {
 import { createAdminClient } from "../../server/admin-client";
 import {
   writeAllBoards,
+  writeEmbedOrigins,
   writeIdeaStages,
   writeStatuses,
   writeTags,
 } from "../../server/config-sync";
+import { parseEmbedOrigins } from "../../shared/embed";
 import { DEFAULT_IDEA_STAGES } from "../../shared/score";
 
 /**
@@ -74,6 +76,8 @@ export const syncSettingsAfterChange: GlobalAfterChangeHook = async ({
     statuses?: StatusInput[];
     ideaStages?: IdeaStageInput[];
     tags?: { key?: string | null; name: string }[];
+    embedEnabled?: boolean | null;
+    embedOrigins?: string | null;
   };
   try {
     const db = createAdminClient();
@@ -86,6 +90,11 @@ export const syncSettingsAfterChange: GlobalAfterChangeHook = async ({
       );
     }
     await writeTags(db, settings.tags ?? []);
+    await writeEmbedOrigins(
+      db,
+      settings.embedEnabled,
+      parseEmbedOrigins(settings.embedOrigins).origins,
+    );
   } catch (err) {
     req.payload.logger.error(
       `[feedback] settings sync failed: ${(err as Error).message}`,

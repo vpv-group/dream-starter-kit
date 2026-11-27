@@ -60,6 +60,7 @@ import { toneOf } from "../shared/tones";
 import { AutopilotInbox } from "./autopilot";
 import { ChangelogTab } from "./changelog-admin";
 import { DigestToggle } from "./digest-toggle";
+import { EmbedDialog } from "./embed-dialog";
 import { IdeaSheet, IdeasTab, RoadmapBoard } from "./ideas";
 import { InsightsTab } from "./insights";
 
@@ -124,6 +125,7 @@ export function FeedbackAdminPage() {
         </h1>
         <div className="flex flex-wrap items-center gap-2">
           <DigestToggle />
+          <EmbedDialog />
           <Button
             variant="ghost"
             size="sm"
@@ -156,7 +158,10 @@ export function FeedbackAdminPage() {
         </div>
       </header>
       <Tabs value={tab} onValueChange={(v) => setParam("tab", v)}>
-        <TabsList variant="line">
+        <TabsList
+          variant="line"
+          className="max-w-full justify-start overflow-x-auto"
+        >
           <TabsTrigger value="inbox">Inbox</TabsTrigger>
           <TabsTrigger value="ideas">Ideas</TabsTrigger>
           <TabsTrigger value="roadmap">Roadmap</TabsTrigger>

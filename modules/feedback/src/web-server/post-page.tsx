@@ -15,6 +15,7 @@ import {
   getVoters,
   listCategories,
 } from "../data";
+import { feedEntries } from "../shared/feed";
 import { AiSummary } from "../web/autopilot";
 import { ActivityFeed, PersonLockup } from "../web/components/activity-feed";
 import { StaffPostMenu, StaffSidebar } from "../web/components/staff-panel";
@@ -127,30 +128,7 @@ export async function FeedbackPostPage({
   const total = voters[0]?.total ?? 0;
 
   const people: Record<string, FeedPerson> = Object.fromEntries(feed.people);
-  const entries: FeedEntry[] = feed.items.map((i) =>
-    i.kind === "comment"
-      ? {
-          kind: "comment",
-          id: i.comment.id,
-          at: i.at,
-          authorId: i.comment.author_id,
-          body: i.comment.body,
-          parentId: i.comment.parent_id,
-          internal: i.comment.is_internal,
-          pinned: i.comment.pinned,
-          edited: Boolean(i.comment.edited_at),
-        }
-      : {
-          kind: "status",
-          id: i.change.id,
-          at: i.at,
-          authorId: i.change.changed_by,
-          toStatus: i.change.to_status_id
-            ? (statusById.get(i.change.to_status_id) ?? null)
-            : null,
-          message: i.change.message,
-        },
-  );
+  const entries: FeedEntry[] = feedEntries(feed, statusById);
   const reactions = Object.fromEntries(feed.reactions);
   const authorPerson = post.author_id ? author.get(post.author_id) : undefined;
   const owner = post.owner_id ? author.get(post.owner_id) : undefined;

@@ -363,3 +363,21 @@ export async function writeTags(
     : stale.neq("id", "");
   await check(stale, "archive tags");
 }
+
+/**
+ * Which sites may frame /embed/feedback (the Widget tab). Disabled or empty
+ * → none, so only the app itself can show the embed pages.
+ */
+export async function writeEmbedOrigins(
+  db: Db,
+  enabled: boolean | null | undefined,
+  origins: string[],
+): Promise<void> {
+  await check(
+    db.rpc("kit_set_embed_origins", {
+      _module: "feedback",
+      _origins: enabled ? origins : [],
+    }),
+    "embed origins",
+  );
+}

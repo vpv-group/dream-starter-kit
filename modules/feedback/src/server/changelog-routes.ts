@@ -229,7 +229,11 @@ export const changelogPublicRoutes: ModPublicRouteTable = {
   }),
 
   /** Latest entries + whether there's anything new since the last read. */
-  "GET /changelog/unread": handle(async (_req, ctx) => {
+  "GET /changelog/unread": handle(async (req, ctx) => {
+    const limit = Math.min(
+      Math.max(Number(new URL(req.url).searchParams.get("limit") ?? 5) || 5, 1),
+      20,
+    );
     const payload = await ctx.getPayload();
     const members = Boolean(ctx.user && !ctx.user.is_anonymous);
     const res = await payload.find({
@@ -241,7 +245,7 @@ export const changelogPublicRoutes: ModPublicRouteTable = {
         ],
       },
       sort: "-publishedAt",
-      limit: 5,
+      limit,
       depth: 0,
       overrideAccess: true,
       select: {

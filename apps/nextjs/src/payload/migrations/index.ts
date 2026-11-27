@@ -38,6 +38,7 @@ import * as migration_20261126_211703_mod_feedback_changelog from './20261126_21
 import * as migration_20261126_213738_mod_feedback_integrations from './20261126_213738_mod_feedback_integrations';
 import * as migration_20261126_215221_mod_feedback_autopilot from './20261126_215221_mod_feedback_autopilot';
 import * as migration_20261126_220015_mod_feedback_source_chat_initial from './20261126_220015_mod_feedback_source_chat_initial';
+import * as migration_20261127_025940_mod_feedback_digest from './20261127_025940_mod_feedback_digest';
 
 export const migrations = [
   {
@@ -239,5 +240,10 @@ export const migrations = [
     up: migration_20261126_220015_mod_feedback_source_chat_initial.up,
     down: migration_20261126_220015_mod_feedback_source_chat_initial.down,
     name: '20261126_220015_mod_feedback_source_chat_initial',
+  },
+  {
+    up: migration_20261127_025940_mod_feedback_digest.up,
+    down: migration_20261127_025940_mod_feedback_digest.down,
+    name: '20261127_025940_mod_feedback_digest',
   },
 ];

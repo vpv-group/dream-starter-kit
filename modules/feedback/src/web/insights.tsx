@@ -286,7 +286,7 @@ function StatTile({
 }) {
   const change = delta(total);
   return (
-    <Card variant="framed">
+    <Card>
       <CardHeader>
         <CardDescription>{label}</CardDescription>
         <CardAction>
@@ -294,28 +294,30 @@ function StatTile({
             <Icon className="size-4" aria-hidden />
           </span>
         </CardAction>
-        <CardTitle className="text-2xl font-semibold tabular-nums lg:text-3xl">
-          {total.current.toLocaleString()}
-        </CardTitle>
       </CardHeader>
-      <CardContent className="text-muted-foreground pb-4 text-sm">
-        {change === null ? (
-          <>New vs the {compare}</>
-        ) : (
-          <>
-            <span
-              className={cn(
-                "font-medium",
-                change > 0 && "text-success",
-                change < 0 && "text-destructive",
-              )}
-            >
-              {change > 0 ? "+" : ""}
-              {change}%
-            </span>{" "}
-            vs the {compare}
-          </>
-        )}
+      <CardContent className="flex flex-col gap-1">
+        <span className="text-2xl font-semibold tabular-nums lg:text-3xl">
+          {total.current.toLocaleString()}
+        </span>
+        <span className="text-muted-foreground text-sm">
+          {change === null ? (
+            <>New vs the {compare}</>
+          ) : (
+            <>
+              <span
+                className={cn(
+                  "font-medium",
+                  change > 0 && "text-success",
+                  change < 0 && "text-destructive",
+                )}
+              >
+                {change > 0 ? "+" : ""}
+                {change}%
+              </span>{" "}
+              vs the {compare}
+            </>
+          )}
+        </span>
       </CardContent>
     </Card>
   );
@@ -379,6 +381,7 @@ function SeriesCard({
               fill={`var(--color-${metric})`}
               radius={[4, 4, 0, 0]}
               maxBarSize={24}
+              isAnimationActive={false}
             />
           </BarChart>
         </ChartContainer>

@@ -175,6 +175,15 @@ export async function getPost(
   return data ?? null;
 }
 
+export async function getPostById(db: Db, id: string): Promise<Post | null> {
+  const { data } = await db
+    .from("mod_feedback_posts")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  return data ?? null;
+}
+
 export interface Person {
   id: string;
   display_name: string | null;

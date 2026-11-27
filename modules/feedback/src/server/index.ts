@@ -9,6 +9,7 @@ import {
   changelogStaffRoutes,
 } from "./changelog-routes";
 import { digestPublicRoutes, digestStaffRoutes } from "./digest-routes";
+import { embedPublicRoutes, embedRoutes } from "./embed-routes";
 import { ideaRoutes } from "./idea-routes";
 import { insightsRoutes } from "./insights-routes";
 import {
@@ -30,6 +31,7 @@ export const publicRoutes = {
   ...integrationPublicRoutes,
   ...autopilotPublicRoutes,
   ...digestPublicRoutes,
+  ...embedPublicRoutes,
 };
 
 /** Authed (non-anonymous) routes: staff triage, ideas, changelog, trackers. */
@@ -41,4 +43,5 @@ export const routes = {
   ...autopilotStaffRoutes,
   ...insightsRoutes,
   ...digestStaffRoutes,
+  ...embedRoutes,
 };

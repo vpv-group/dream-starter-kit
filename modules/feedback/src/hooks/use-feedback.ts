@@ -18,6 +18,7 @@ import type {
 } from "../validators";
 import {
   getMyVotes,
+  getPostById,
   getPostFeed,
   getVoters,
   isStaffViewer,
@@ -185,6 +186,15 @@ export function useBoardPosts(args: {
   return useQuery({
     queryKey: feedbackKeys.posts(args),
     queryFn: () => listPosts(supabase, args),
+  });
+}
+
+export function usePost(postId: string) {
+  const supabase = useSupabase();
+  return useQuery({
+    queryKey: [...feedbackKeys.feed(postId), "post"],
+    enabled: Boolean(postId),
+    queryFn: () => getPostById(supabase, postId),
   });
 }
 
@@ -736,12 +746,14 @@ export interface WhatsNew {
   unread: number;
 }
 
-export function useWhatsNew(apiBaseUrl = "") {
+export function useWhatsNew(apiBaseUrl = "", limit = 5) {
   const supabase = useSupabase();
   return useQuery({
-    queryKey: ["feedback", "whats-new"],
+    queryKey: ["feedback", "whats-new", limit],
     queryFn: () =>
-      feedbackApi<WhatsNew>(supabase, "/changelog/unread", { apiBaseUrl }),
+      feedbackApi<WhatsNew>(supabase, `/changelog/unread?limit=${limit}`, {
+        apiBaseUrl,
+      }),
     staleTime: 60_000,
   });
 }
@@ -1049,5 +1061,18 @@ export function useSetStaffPrefs(apiBaseUrl = "") {
       }),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: [...feedbackKeys.staff(), "prefs"] }),
+  });
+}
+
+export function useWidgetStatus(apiBaseUrl = "") {
+  const supabase = useSupabase();
+  return useQuery({
+    queryKey: [...feedbackKeys.staff(), "widget"],
+    queryFn: () =>
+      feedbackApi<{ enabled: boolean; origins: string[] }>(
+        supabase,
+        "/staff/widget",
+        { apiBaseUrl },
+      ),
   });
 }

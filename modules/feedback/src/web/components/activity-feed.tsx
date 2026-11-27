@@ -20,6 +20,7 @@ import { Label } from "@acme/ui/label";
 import { Switch } from "@acme/ui/switch";
 import { Textarea } from "@acme/ui/textarea";
 
+import type { FeedEntry } from "../../shared/feed";
 import {
   isAuthRequired,
   useCreateComment,
@@ -36,26 +37,7 @@ export interface FeedPerson {
   is_staff: boolean;
 }
 
-export type FeedEntry =
-  | {
-      kind: "comment";
-      id: string;
-      at: string;
-      authorId: string | null;
-      body: string;
-      parentId: string | null;
-      internal: boolean;
-      pinned: boolean;
-      edited: boolean;
-    }
-  | {
-      kind: "status";
-      id: string;
-      at: string;
-      authorId: string | null;
-      toStatus: { name: string; tone: string } | null;
-      message: string | null;
-    };
+export type { FeedEntry } from "../../shared/feed";
 
 const dateFmt = new Intl.DateTimeFormat(undefined, {
   month: "long",

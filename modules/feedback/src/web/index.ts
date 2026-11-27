@@ -6,3 +6,9 @@
 export { FeedbackAdminPage } from "./admin-page";
 export { FeedbackWidget } from "./widget";
 export { VoteButton } from "./components/vote-button";
+export {
+  EmbedChangelogPage,
+  EmbedFeedbackPage,
+  EmbedPostPage,
+  EmbedRoadmapPage,
+} from "./embed";

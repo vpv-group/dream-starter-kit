@@ -37,6 +37,12 @@ export default defineModule({
   routes: {
     web: [
       { path: "", component: "FeedbackAdminPage" },
+      // The embeddable widget: /embed/feedback… (bare layout, iframe-only;
+      // framing limited to Settings → Widget → Allowed sites).
+      { path: "", component: "EmbedFeedbackPage", area: "embed" },
+      { path: "p/[post]", component: "EmbedPostPage", area: "embed" },
+      { path: "roadmap", component: "EmbedRoadmapPage", area: "embed" },
+      { path: "changelog", component: "EmbedChangelogPage", area: "embed" },
       {
         path: "",
         component: "RoadmapPage",

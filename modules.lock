@@ -86,6 +86,11 @@
         "apps/expo/src/app/(app)/a/feedback/index.tsx",
         "apps/nextjs/src/app/(frontend)/(app)/a/feedback/layout.tsx",
         "apps/nextjs/src/app/(frontend)/(app)/a/feedback/page.tsx",
+        "apps/nextjs/src/app/(frontend)/(embed)/embed/feedback/changelog/page.tsx",
+        "apps/nextjs/src/app/(frontend)/(embed)/embed/feedback/layout.tsx",
+        "apps/nextjs/src/app/(frontend)/(embed)/embed/feedback/p/[post]/page.tsx",
+        "apps/nextjs/src/app/(frontend)/(embed)/embed/feedback/page.tsx",
+        "apps/nextjs/src/app/(frontend)/(embed)/embed/feedback/roadmap/page.tsx",
         "apps/nextjs/src/app/(frontend)/(public)/changelog/[slug]/page.tsx",
         "apps/nextjs/src/app/(frontend)/(public)/changelog/layout.tsx",
         "apps/nextjs/src/app/(frontend)/(public)/changelog/page.tsx",
@@ -102,7 +107,8 @@
         "apps/nextjs/src/payload/migrations/20261126_211703_mod_feedback_changelog.ts",
         "apps/nextjs/src/payload/migrations/20261126_213738_mod_feedback_integrations.ts",
         "apps/nextjs/src/payload/migrations/20261126_215221_mod_feedback_autopilot.ts",
-        "apps/nextjs/src/payload/migrations/20261127_025940_mod_feedback_digest.ts"
+        "apps/nextjs/src/payload/migrations/20261127_025940_mod_feedback_digest.ts",
+        "apps/nextjs/src/payload/migrations/20261127_030754_mod_feedback_widget.ts"
       ],
       "edgeFunctions": []
     },
