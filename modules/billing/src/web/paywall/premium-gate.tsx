@@ -44,7 +44,7 @@ export function PremiumGate({ children }: { children: ReactNode }) {
       {!isOpen && (
         <div className="paywall-root">
           <div className="dr-dock">
-            <div className="drawer dock">
+            <div className="dr-sheet dock">
               <PaywallOffer
                 headline={copy.headline}
                 sub={copy.sub}

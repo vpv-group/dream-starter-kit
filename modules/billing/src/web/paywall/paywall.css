@@ -28,7 +28,7 @@
     opacity: 1;
   }
 }
-.drawer {
+.dr-sheet {
   position: relative;
   width: 100%;
   max-width: 560px;
@@ -412,7 +412,7 @@
   pointer-events: none;
   background: linear-gradient(180deg, transparent, var(--background));
 }
-.drawer.dock {
+.dr-sheet.dock {
   max-width: 600px;
   margin: 0 auto;
   background: none;

@@ -58,7 +58,7 @@ test("the update switches save to Meet Dream", async ({ page }) => {
   await openUpdates(page);
   await expect(page.getByText("Connected to acme/e2e-app")).toBeVisible();
 
-  const merge = page.getByRole("switch", {
+  const merge = page.getByRole("checkbox", {
     name: "Merge updates automatically",
   });
   await expect(merge).toBeChecked();
@@ -125,15 +125,15 @@ test("not connected: Connect GitHub, and only catalog installs", async ({
   });
 
   // Connected: Install from the catalog dispatches catalog slugs only,
-  // approved (it merges once its checks pass). App Store style: each Install
-  // turns into a progress ring at once, the drawer stays open, and clicks a
-  // few seconds apart go out as one run.
+  // approved (it merges once its checks pass). Each Install turns into a
+  // spinner with the install's stage at once, the drawer stays open, and
+  // clicks a few seconds apart go out as one run.
   await scene({ connected: true });
   await page.goto("/admin/collections/kit-modules");
   await page.getByRole("button", { name: "Install module" }).click();
   const row = (name: string) =>
     page
-      .locator(".kit-modules-catalog__row")
+      .locator(".kit-modules-catalog__card")
       .filter({ has: page.getByText(name, { exact: true }) });
 
   // A module whose requirement isn't installed says it brings it along.
@@ -146,7 +146,7 @@ test("not connected: Connect GitHub, and only catalog installs", async ({
     .getByRole("button", { name: "Install" })
     .click();
   for (const name of ["CRM", "Projects · GitHub", "Projects"]) {
-    await expect(row(name).getByRole("progressbar")).toBeVisible();
+    await expect(row(name).getByText("Starting…")).toBeVisible();
     // Once requested, a module can't be requested again.
     await expect(
       row(name).getByRole("button", { name: "Install" }),

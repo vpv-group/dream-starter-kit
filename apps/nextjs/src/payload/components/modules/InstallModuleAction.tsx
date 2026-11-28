@@ -1,12 +1,13 @@
 "use client";
 
 import type { ComponentProps } from "react";
-import { useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Banner,
   Button,
   Drawer,
+  Pill,
   useAuth,
   useModal,
   ViewDescription,
@@ -61,9 +62,10 @@ export function ModulesListDescription({
 }
 
 /**
- * "Install module": opens a drawer with the Dream catalog, App Store style:
- * each row's Install turns into a progress ring (preparing → checks →
- * deploying) and then "Installed", and the drawer stays open, so several
+ * "Install module": opens a drawer with the Dream catalog (two columns of
+ * cards). Each card's Install turns into a spinner with the install's stage
+ * (preparing → checks → deploying) and then "Installed", and the drawer stays
+ * open, so several
  * modules can be installed at once (clicks a few seconds apart go out as one
  * run and one PR). Modules a row requires that aren't installed install with
  * it. Every install dispatches module-ops and lands as a PR that merges
@@ -129,11 +131,11 @@ function InstallModuleDrawerBody() {
             minute.
           </p>
         ) : (
-          <ul className="kit-modules-catalog">
+          <div className="kit-modules-catalog">
             {visibleCatalog.map((entry) => (
-              <CatalogRow key={entry.slug} entry={entry} />
+              <CatalogCard key={entry.slug} entry={entry} />
             ))}
-          </ul>
+          </div>
         )}
         <p className="kit-modules-install__hint">
           Building your own module? Install it from a repository or a ZIP with
@@ -144,7 +146,7 @@ function InstallModuleDrawerBody() {
   );
 }
 
-function CatalogRow({ entry }: { entry: CatalogEntry }) {
+function CatalogCard({ entry }: { entry: CatalogEntry }) {
   const { registry, installedSlugs, isEntitled, installState, nameOf } =
     useModulesAdmin();
   if (!registry) return null;
@@ -152,6 +154,11 @@ function CatalogRow({ entry }: { entry: CatalogEntry }) {
   // Everything installs as `dream:<slug>`: the registry serves it, falling
   // back to a free module's public repo (registry-first).
   const paid = isPaidEntry(entry);
+  // One pill per plan. Older registries only send `plan`, the names joined
+  // with " or " — split it back up.
+  const plans = entry.plans?.length
+    ? entry.plans
+    : (entry.plan?.split(" or ").filter(Boolean) ?? []);
   const installable = !paid || isEntitled(entry.slug);
   const state = installState(entry.slug);
 
@@ -163,36 +170,43 @@ function CatalogRow({ entry }: { entry: CatalogEntry }) {
     .map(nameOf);
   const bringsAlong = missing.filter((s) => !isBusy(installState(s)));
 
-  const meta: string[] = [];
-  if (paid) meta.push(installable ? "Included in your plan" : "Paid");
-  if (missing.length > 0 && state.stage !== "installed") {
-    meta.push(
-      bringsAlong.length > 0 && waitingFor.length === 0
-        ? `Also installs ${bringsAlong.map(nameOf).join(", ")}`
-        : `Requires ${missing.map(nameOf).join(", ")}`,
-    );
-  }
-
   return (
-    <li className="kit-modules-catalog__row">
-      <span className="kit-modules-catalog__tile" aria-hidden>
-        {(entry.name || entry.slug).charAt(0).toUpperCase()}
-      </span>
-      <div className="kit-modules-catalog__body">
-        <div className="kit-modules-catalog__head">
-          <strong>{entry.name || entry.slug}</strong>
-          {entry.latest ? (
-            <span className="kit-modules-catalog__version">{entry.latest}</span>
-          ) : null}
+    <article className="kit-modules-catalog__card">
+      <header className="kit-modules-catalog__head">
+        <strong>{entry.name || entry.slug}</strong>
+        {entry.latest ? (
+          <span className="kit-modules-catalog__version">{entry.latest}</span>
+        ) : null}
+        {paid && plans.length === 0 ? (
+          <Pill pillStyle="light" size="small">
+            Paid
+          </Pill>
+        ) : null}
+      </header>
+      {paid && plans.length > 0 ? (
+        <div className="kit-modules-catalog__plans">
+          Included in{" "}
+          {plans.map((plan, i) => (
+            <Fragment key={plan}>
+              {i > 0 ? (i === plans.length - 1 ? " and " : ", ") : null}
+              <Pill pillStyle="light" size="small">
+                {plan}
+              </Pill>
+            </Fragment>
+          ))}
         </div>
-        {entry.description ? (
-          <p className="kit-modules-catalog__desc">{entry.description}</p>
-        ) : null}
-        {meta.length > 0 ? (
-          <p className="kit-modules-catalog__meta">{meta.join(" · ")}</p>
-        ) : null}
-      </div>
-      <div className="kit-modules-catalog__action">
+      ) : null}
+      {entry.description ? (
+        <p className="kit-modules-catalog__desc">{entry.description}</p>
+      ) : null}
+      {missing.length > 0 && state.stage !== "installed" ? (
+        <p className="kit-modules-install__hint">
+          {bringsAlong.length > 0 && waitingFor.length === 0
+            ? `Also installs ${bringsAlong.map(nameOf).join(", ")}`
+            : `Requires ${missing.map(nameOf).join(", ")}`}
+        </p>
+      ) : null}
+      <footer className="kit-modules-catalog__foot">
         <ModuleInstallButton
           slug={entry.slug}
           state={state}
@@ -203,7 +217,7 @@ function CatalogRow({ entry }: { entry: CatalogEntry }) {
           waitingFor={waitingFor}
           {...(entry.pricingUrl ? { pricingUrl: entry.pricingUrl } : {})}
         />
-      </div>
-    </li>
+      </footer>
+    </article>
   );
 }

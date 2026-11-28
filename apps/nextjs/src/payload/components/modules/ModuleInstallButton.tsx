@@ -1,18 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import { CopyToClipboard } from "@payloadcms/ui";
+import { Button, CopyToClipboard, Pill, Spinner } from "@payloadcms/ui";
 
 import type { InstallState } from "~/lib/mod/install-state";
-import { ProgressRing } from "~/components/ui/progress-ring";
 import { isBusy } from "~/lib/mod/install-state";
 import { requestInstall } from "./use-modules-admin";
 
 /**
- * The right-hand button of a catalog row, App Store style: a capsule
- * "Install" → a ring that fills as the install moves (preparing, checks,
- * deploying) → "Installed". Once an install is on its way the button can't
- * start it again; the stage under the ring links to the run or the PR.
+ * A catalog card's action, in Payload's own components: Install → a spinner
+ * with the install's stage (Preparing, Running checks, Deploying; it links to
+ * the run or PR) → an "Installed" pill. Once an install is on its way the
+ * button is gone, so it can't be started twice.
  */
 export function ModuleInstallButton({
   slug,
@@ -38,57 +36,42 @@ export function ModuleInstallButton({
 }) {
   if (state.stage === "installed") {
     return (
-      <Link
-        className="kit-capsule kit-capsule--done"
-        href={`/admin/module-settings/${slug}`}
-        title="Open the module's page"
-      >
+      <Pill pillStyle="success" size="small">
         Installed
-      </Link>
+      </Pill>
     );
   }
 
   if (isBusy(state)) {
     const label = state.label ?? "Installing";
     return (
-      <span className="kit-install-progress">
-        <ProgressRing
-          value={state.progress}
-          size={30}
-          aria-label={`Installing: ${label}`}
-        >
-          <span className="kit-install-progress__stop" aria-hidden />
-        </ProgressRing>
+      <span className="kit-modules-catalog__progress">
+        <Spinner size="sm" loadingText={label} />
         {state.url ? (
-          <a
-            className="kit-install-progress__label"
-            href={state.url}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {label}
+          <a href={state.url} target="_blank" rel="noreferrer">
+            Details
           </a>
-        ) : (
-          <span className="kit-install-progress__label">{label}</span>
-        )}
+        ) : null}
       </span>
     );
   }
 
   if (!installable) {
     return pricingUrl ? (
-      <a
-        className="kit-capsule"
-        href={pricingUrl}
-        target="_blank"
-        rel="noreferrer"
+      <Button
+        el="anchor"
+        url={pricingUrl}
+        newTab
+        buttonStyle="secondary"
+        size="small"
+        margin={false}
       >
-        Get
-      </a>
+        Get access
+      </Button>
     ) : (
-      <span className="kit-install-progress__label">
+      <span className="kit-modules-install__hint">
         {licenseConfigured
-          ? "Not in your plan"
+          ? "Not included in your plan"
           : "Available once this site has its license key"}
       </span>
     );
@@ -106,11 +89,11 @@ export function ModuleInstallButton({
 
   if (waitingFor.length > 0) {
     return (
-      <span className="kit-install-progress">
-        <button type="button" className="kit-capsule" disabled>
+      <span className="kit-modules-catalog__progress">
+        <Button size="small" margin={false} disabled>
           Install
-        </button>
-        <span className="kit-install-progress__label">
+        </Button>
+        <span className="kit-modules-install__hint">
           Waiting for {waitingFor.join(", ")}
         </span>
       </span>
@@ -119,22 +102,23 @@ export function ModuleInstallButton({
 
   const failed = state.stage === "failed";
   return (
-    <span className="kit-install-progress">
-      <button
-        type="button"
-        className={failed ? "kit-capsule kit-capsule--retry" : "kit-capsule"}
+    <span className="kit-modules-catalog__progress">
+      <Button
+        size="small"
+        margin={false}
+        buttonStyle={failed ? "secondary" : "primary"}
         onClick={() => requestInstall(slug, missingDeps)}
       >
         {failed ? "Retry" : "Install"}
-      </button>
+      </Button>
+      {failed ? (
+        <Pill pillStyle="error" size="small">
+          {state.label ?? "Failed"}
+        </Pill>
+      ) : null}
       {failed && state.url ? (
-        <a
-          className="kit-install-progress__label kit-install-progress__label--error"
-          href={state.url}
-          target="_blank"
-          rel="noreferrer"
-        >
-          {state.label ?? "Failed"} · See why
+        <a href={state.url} target="_blank" rel="noreferrer">
+          See why
         </a>
       ) : null}
     </span>
