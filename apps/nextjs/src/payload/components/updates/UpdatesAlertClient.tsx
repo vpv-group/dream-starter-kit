@@ -1,12 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { toast } from "@payloadcms/ui";
-import { ArrowUpCircle, X } from "lucide-react";
+import { Banner, Button, toast } from "@payloadcms/ui";
 
 import type { OutdatedState, UpdateOp } from "~/lib/mod/outdated-core";
-import { Button } from "~/components/ui/button";
 import { refreshModulesAdmin } from "../modules/use-modules-admin";
 
 /**
@@ -144,82 +141,74 @@ export function UpdatesAlertClient() {
     setDismissed(sig);
   };
 
+  const link = (label: string) => (
+    <Button
+      el="link"
+      url="/admin/updates"
+      buttonStyle="secondary"
+      size="small"
+      margin={false}
+    >
+      {label}
+    </Button>
+  );
   const action = !data.githubConnected ? (
-    <Button asChild size="sm" variant="outline" className="border-border">
-      <Link href="/admin/updates">Connect GitHub to update</Link>
-    </Button>
+    link("Connect GitHub to update")
   ) : started || data.running ? (
-    <Button asChild size="sm" variant="outline" className="border-border">
-      <Link href="/admin/updates">
-        {started
-          ? "Update started · View progress"
-          : "Updating · View progress"}
-      </Link>
-    </Button>
+    link(
+      started ? "Update started · View progress" : "Updating · View progress",
+    )
   ) : data.ops.length > 0 ? (
     <Button
-      size="sm"
-      className="border-0"
+      size="small"
+      margin={false}
       disabled={busy}
       onClick={() => void updateAll()}
     >
       {busy ? "Starting…" : data.ops.length === 1 ? "Update" : "Update all"}
     </Button>
   ) : (
-    <Button asChild size="sm" variant="outline" className="border-border">
-      <Link href="/admin/updates">Review updates</Link>
-    </Button>
+    link("Review updates")
   );
 
   return (
-    <div
-      role="status"
-      className="updates-alert bg-primary/10 text-foreground border-border border-0 border-b border-solid px-4 py-2.5 text-sm"
-    >
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <ArrowUpCircle className="text-primary size-4 shrink-0" aria-hidden />
-        <div className="min-w-0 flex-1">
-          <strong className="font-medium">
+    <Banner type="info" className="kit-updates-alert">
+      <div role="status" className="kit-updates-alert__content">
+        <div className="kit-updates-alert__text">
+          <strong>
             {items.length === 1 ? "Update available" : "Updates available"}
           </strong>
-          <span className="text-muted-foreground">: </span>
+          {": "}
           {items.map((item, i) => (
             <span key={item.key}>
-              {i > 0 ? (
-                <span className="text-muted-foreground"> · </span>
-              ) : null}
+              {i > 0 ? " · " : null}
               {item.label}
               {item.pr ? (
                 <>
                   {" "}
-                  <a
-                    href={item.pr.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-muted-foreground underline"
-                  >
+                  <a href={item.pr.url} target="_blank" rel="noreferrer">
                     (PR #{item.pr.number})
                   </a>
                 </>
               ) : item.note ? (
-                <span className="text-muted-foreground"> ({item.note})</span>
+                <> ({item.note})</>
               ) : null}
             </span>
           ))}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="kit-updates-alert__actions">
           {action}
           <Button
-            size="icon"
-            variant="ghost"
-            className="size-8 border-0"
+            buttonStyle="icon-label"
+            icon={["x"]}
+            size="small"
+            margin={false}
             aria-label="Dismiss until the next update"
+            tooltip="Dismiss until the next update"
             onClick={dismiss}
-          >
-            <X className="size-4" aria-hidden />
-          </Button>
+          />
         </div>
       </div>
-    </div>
+    </Banner>
   );
 }

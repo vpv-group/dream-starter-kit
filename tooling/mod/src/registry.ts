@@ -298,6 +298,8 @@ const catalogModuleSchema = z.object({
   pricingUrl: z.string().optional(),
   /** Free modules' public GitHub repo (registry-first's fallback origin). */
   repo: z.string().optional(),
+  /** Modules the latest release requires (installed with it if missing). */
+  requires: z.array(z.string()).optional(),
 });
 const catalogSchema = z.object({
   modules: z.array(catalogModuleSchema).optional(),

@@ -74,6 +74,8 @@ function fakeGitHub(prs: FakePr[]) {
   const merged: { number: number; method: string }[] = [];
   const labeled: { number: number; labels: string[] }[] = [];
   const comments: { number: number; body: string }[] = [];
+  const closed: number[] = [];
+  const dispatched: { ref: string; inputs: Record<string, string> }[] = [];
   const gh: GitHubClient = {
     listOpenPulls: () =>
       Promise.resolve(
@@ -113,8 +115,16 @@ function fakeGitHub(prs: FakePr[]) {
       return Promise.resolve();
     },
     deploymentStates: () => Promise.resolve(["success"]),
+    closePull: (n) => {
+      closed.push(n);
+      return Promise.resolve();
+    },
+    dispatchModuleOps: (ref, inputs) => {
+      dispatched.push({ ref, inputs });
+      return Promise.resolve();
+    },
   };
-  return { gh, merged, labeled, comments };
+  return { gh, merged, labeled, comments, closed, dispatched };
 }
 
 const moduleUpdate = (over: Partial<PrMeta> = {}): PrMeta => ({
@@ -163,6 +173,57 @@ describe("runMerge", () => {
       expect.objectContaining({ slug: "crm" }),
       1,
     );
+  });
+
+  it("re-runs a registry install that no longer merges, then closes it", async () => {
+    const install = moduleUpdate({
+      op: "add",
+      slug: "projects-adapter-github",
+      from: undefined,
+      to: "0.1.0",
+      also: ["projects"],
+    });
+    const { merged, closed, dispatched, comments, outcomes } = await run([
+      {
+        number: 9,
+        meta: install,
+        mergeableState: "dirty",
+        labels: ["dream-update", "dream-approved"],
+      },
+    ]);
+    expect(merged).toEqual([]);
+    expect(dispatched).toEqual([
+      {
+        ref: "main",
+        inputs: {
+          op: "add",
+          source: "dream:projects-adapter-github dream:projects",
+          approved: "true",
+        },
+      },
+    ]);
+    expect(closed).toEqual([9]);
+    expect(comments[0]?.body).toContain("fresh install");
+    expect(outcomes[0]?.refreshed).toBe(true);
+  });
+
+  it("leaves conflicted updates and non-registry installs for a person", async () => {
+    const { dispatched, closed } = await run([
+      { number: 10, meta: moduleUpdate(), mergeableState: "dirty" },
+      {
+        number: 11,
+        meta: moduleUpdate({ op: "add", verified: false }),
+        mergeableState: "dirty",
+      },
+      {
+        number: 12,
+        meta: moduleUpdate({ op: "add" }),
+        mergeableState: "dirty",
+        labels: ["dream-update", "dream-update-conflicts"],
+      },
+    ]);
+    expect(dispatched).toEqual([]);
+    expect(closed).toEqual([]);
   });
 
   it("merges kit updates with a merge commit", async () => {

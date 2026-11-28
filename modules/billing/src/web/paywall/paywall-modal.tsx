@@ -320,7 +320,7 @@ export function PaywallModal({
   const isDock = variant === "dock";
   const isFull = variant === "full";
   const panelClass =
-    (isFull ? "co-panel" : isDock ? "drawer dock" : "drawer") +
+    (isFull ? "co-panel" : isDock ? "dr-sheet dock" : "dr-sheet") +
     (step === "terms" && !paid ? " is-terms" : "");
 
   async function finishPayment({ intentId, details, ...ref }: PaidResult) {

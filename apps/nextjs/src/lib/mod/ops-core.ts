@@ -20,6 +20,8 @@ export interface GithubPr {
   body?: string | null;
   labels: { name: string }[];
   head: { ref: string };
+  /** Closed PRs only: when it merged (null = closed without merging). */
+  merged_at?: string | null;
 }
 
 export interface OpsPr {
@@ -36,27 +38,56 @@ export interface OpsPr {
   /** From the PR's hidden marker: `kit` or the module slug, and versions. */
   slug: string | null;
   to: string | null;
+  /** Other modules the PR installs with `slug` (its dependencies, a batch). */
+  also: string[];
 }
 
 const MARKER = /<!--\s*dream-update\s+(\{[\s\S]*?\})\s*-->/;
 
-/** The slug and target version module-ops.yml wrote into the PR body. */
+/** The slug, target version and extra modules module-ops.yml wrote into the PR body. */
 export function prTarget(body: string | null | undefined): {
   slug: string | null;
   to: string | null;
+  also: string[];
 } {
   const match = body ? MARKER.exec(body) : null;
   try {
     const meta = match?.[1]
-      ? (JSON.parse(match[1]) as { slug?: unknown; to?: unknown })
+      ? (JSON.parse(match[1]) as {
+          slug?: unknown;
+          to?: unknown;
+          also?: unknown;
+        })
       : {};
     return {
       slug: typeof meta.slug === "string" ? meta.slug : null,
       to: typeof meta.to === "string" ? meta.to : null,
+      also: Array.isArray(meta.also)
+        ? meta.also.filter((s): s is string => typeof s === "string")
+        : [],
     };
   } catch {
-    return { slug: null, to: null };
+    return { slug: null, to: null, also: [] };
   }
+}
+
+/**
+ * What a module-ops run is doing, from its run-name
+ * (`Module ops · add dream:a dream:b`, module-ops.yml). Null for runs that
+ * don't name their op (older workflows, schedules).
+ */
+export function runTarget(
+  title: string | null | undefined,
+): { op: string; slugs: string[] } | null {
+  const match = title
+    ? /^Module ops · ([a-z-]+)(?: (.+))?$/.exec(title.trim())
+    : null;
+  if (!match?.[1]) return null;
+  const slugs = (match[2] ?? "")
+    .split(/\s+/)
+    .map((s) => s.replace(/^dream:/, "").replace(/@.*$/, ""))
+    .filter((s) => /^[a-z][a-z0-9-]*$/.test(s));
+  return { op: match[1], slugs };
 }
 
 /** Which kind of update PR this is, or null when it isn't one of ours. */
@@ -111,6 +142,8 @@ export interface OpInput {
   op: OpName;
   /** add: `dream:<slug>[@x.y.z]`; update: optional new origin. */
   source?: string;
+  /** add: several catalog sources installed together (one run, one PR). */
+  sources?: string[];
   slug?: string;
   version?: string;
   keepData?: boolean;
@@ -133,7 +166,11 @@ export function dispatchBody(input: OpInput, defaultBranch: string | null) {
     ref: defaultBranch ?? "main",
     inputs: {
       op: input.op,
-      source: mod ? (input.source ?? "") : "",
+      source: mod
+        ? input.op === "add" && input.sources?.length
+          ? [...new Set(input.sources)].join(" ")
+          : (input.source ?? "")
+        : "",
       slug: mod ? (input.slug ?? "") : "",
       version: mod ? (input.version ?? "") : "",
       keep_data: mod && input.keepData ? "true" : "false",

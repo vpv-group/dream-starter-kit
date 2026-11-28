@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   Banner,
   Button,
-  CopyToClipboard,
   Drawer,
   Pill,
   useAuth,
@@ -18,12 +17,10 @@ import { createPortal } from "react-dom";
 import type { User } from "@acme/cms";
 
 import type { CatalogEntry } from "./use-modules-admin";
+import { isBusy } from "~/lib/mod/install-state";
 import { hasStaffRole } from "../../access";
-import {
-  dispatchModuleOp,
-  isPaidEntry,
-  useModulesAdmin,
-} from "./use-modules-admin";
+import { ModuleInstallButton } from "./ModuleInstallButton";
+import { isPaidEntry, useModulesAdmin } from "./use-modules-admin";
 
 const DRAWER_SLUG = "install-module";
 
@@ -65,10 +62,15 @@ export function ModulesListDescription({
 }
 
 /**
- * "Install module": opens a drawer with the Dream catalog. Every install
- * dispatches module-ops and lands as a PR that merges itself once its checks
- * pass (clicking Install is the approval). Installs from a GitHub URL or a
- * ZIP are CLI-only, for module authors.
+ * "Install module": opens a drawer with the Dream catalog (two columns of
+ * cards). Each card's Install turns into a spinner with the install's stage
+ * (preparing → checks → deploying) and then "Installed", and the drawer stays
+ * open, so several
+ * modules can be installed at once (clicks a few seconds apart go out as one
+ * run and one PR). Modules a row requires that aren't installed install with
+ * it. Every install dispatches module-ops and lands as a PR that merges
+ * itself once its checks pass (clicking Install is the approval). Installs
+ * from a GitHub URL or a ZIP are CLI-only, for module authors.
  *
  * Shown straight away to staff (the same gate as /api/modules/*: `is_staff`
  * follows the CMS roles), from the signed-in user Payload already has, so it
@@ -145,8 +147,8 @@ function InstallModuleDrawerBody() {
 }
 
 function CatalogCard({ entry }: { entry: CatalogEntry }) {
-  const { registry, installedSlugs, isEntitled, busy } = useModulesAdmin();
-  const { closeModal } = useModal();
+  const { registry, installedSlugs, isEntitled, installState, nameOf } =
+    useModulesAdmin();
   if (!registry) return null;
 
   // Everything installs as `dream:<slug>`: the registry serves it, falling
@@ -157,64 +159,21 @@ function CatalogCard({ entry }: { entry: CatalogEntry }) {
   const plans = entry.plans?.length
     ? entry.plans
     : (entry.plan?.split(" or ").filter(Boolean) ?? []);
-  const source = `dream:${entry.slug}`;
   const installable = !paid || isEntitled(entry.slug);
+  const state = installState(entry.slug);
 
-  let action: React.ReactNode;
-  if (installedSlugs.has(entry.slug)) {
-    action = (
-      <Pill pillStyle="success" size="small">
-        Installed
-      </Pill>
-    );
-  } else if (!installable) {
-    action = entry.pricingUrl ? (
-      <Button
-        el="anchor"
-        url={entry.pricingUrl}
-        newTab
-        buttonStyle="secondary"
-        size="small"
-        margin={false}
-      >
-        Get access
-      </Button>
-    ) : (
-      <span className="kit-modules-install__hint">
-        {registry.licenseConfigured
-          ? "Not included in your plan"
-          : "Available once this site has its license key"}
-      </span>
-    );
-  } else if (registry.githubConnected) {
-    action = (
-      <Button
-        size="small"
-        margin={false}
-        disabled={busy}
-        onClick={() =>
-          void dispatchModuleOp({ op: "add", source }).then((ok) => {
-            if (ok) closeModal(DRAWER_SLUG);
-          })
-        }
-      >
-        Install
-      </Button>
-    );
-  } else {
-    const command = `pnpm mod add ${source}`;
-    action = (
-      <span className="kit-modules-catalog__command">
-        <code>{command}</code>
-        <CopyToClipboard value={command} />
-      </span>
-    );
-  }
+  // Required modules: missing ones install with this one, unless one is
+  // already installing on its own — then this waits for it.
+  const missing = (entry.requires ?? []).filter((s) => !installedSlugs.has(s));
+  const waitingFor = missing
+    .filter((s) => isBusy(installState(s)) && !isBusy(state))
+    .map(nameOf);
+  const bringsAlong = missing.filter((s) => !isBusy(installState(s)));
 
   return (
     <article className="kit-modules-catalog__card">
       <header className="kit-modules-catalog__head">
-        <strong>{entry.name}</strong>
+        <strong>{entry.name || entry.slug}</strong>
         {entry.latest ? (
           <span className="kit-modules-catalog__version">{entry.latest}</span>
         ) : null}
@@ -240,7 +199,25 @@ function CatalogCard({ entry }: { entry: CatalogEntry }) {
       {entry.description ? (
         <p className="kit-modules-catalog__desc">{entry.description}</p>
       ) : null}
-      <footer className="kit-modules-catalog__foot">{action}</footer>
+      {missing.length > 0 && state.stage !== "installed" ? (
+        <p className="kit-modules-install__hint">
+          {bringsAlong.length > 0 && waitingFor.length === 0
+            ? `Also installs ${bringsAlong.map(nameOf).join(", ")}`
+            : `Requires ${missing.map(nameOf).join(", ")}`}
+        </p>
+      ) : null}
+      <footer className="kit-modules-catalog__foot">
+        <ModuleInstallButton
+          slug={entry.slug}
+          state={state}
+          installable={installable}
+          githubConnected={registry.githubConnected}
+          licenseConfigured={registry.licenseConfigured}
+          missingDeps={bringsAlong}
+          waitingFor={waitingFor}
+          {...(entry.pricingUrl ? { pricingUrl: entry.pricingUrl } : {})}
+        />
+      </footer>
     </article>
   );
 }

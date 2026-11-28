@@ -3,6 +3,13 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { toast } from "@payloadcms/ui";
 
+import type { InstallState } from "~/lib/mod/install-state";
+import {
+  installStateFor,
+  isBusy,
+  PENDING_TTL_MS,
+} from "~/lib/mod/install-state";
+
 /**
  * Shared client state for the Modules screen (/admin/collections/kit-modules):
  * install state, catalog, license entitlements and in-flight module ops. The
@@ -57,6 +64,8 @@ export interface CatalogEntry {
   plans?: string[];
   /** Where to buy access when not entitled. */
   pricingUrl?: string;
+  /** Modules the latest release requires (installed with it if missing). */
+  requires?: string[];
 }
 
 interface EntitlementsState {
@@ -66,6 +75,20 @@ interface EntitlementsState {
   entitlements: { slug: string; plan?: string }[];
 }
 
+interface OpsPrView {
+  number: number;
+  title: string;
+  url: string;
+  kind: "module" | "kit";
+  conflicts: boolean;
+  needsReview: boolean;
+  approved: boolean;
+  /** From the PR marker: the module, its version and what it brings along. */
+  slug: string | null;
+  to: string | null;
+  also: string[];
+}
+
 export interface OpsResponse {
   runs: {
     id: number;
@@ -73,16 +96,13 @@ export interface OpsResponse {
     conclusion: string | null;
     url: string;
     title: string;
+    createdAt: string;
+    /** From the run-name: the op and the modules it names. */
+    target: { op: string; slugs: string[] } | null;
   }[];
-  prs: {
-    number: number;
-    title: string;
-    url: string;
-    kind: "module" | "kit";
-    conflicts: boolean;
-    needsReview: boolean;
-    approved: boolean;
-  }[];
+  prs: OpsPrView[];
+  /** Module PRs merged in the last two hours (deploys may be running). */
+  merged?: OpsPrView[];
 }
 
 interface State {
@@ -94,7 +114,10 @@ interface State {
   catalog: CatalogEntry[];
   entitlements: EntitlementsState | null;
   ops: OpsResponse | null;
+  /** An update/remove/merge request is on its way (installs don't block). */
   busy: boolean;
+  /** Installs this browser asked for: slug → when (ms). */
+  pending: Map<string, number>;
 }
 
 export type ModuleOp =
@@ -143,6 +166,32 @@ export const sourceLabel = (source: string): string =>
 
 /* ── store ───────────────────────────────────────────────────────────────── */
 
+// Installs asked for in this tab survive a reload until GitHub shows them.
+const PENDING_KEY = "dream:module-installs";
+
+function readPending(): Map<string, number> {
+  try {
+    if (typeof window === "undefined") return new Map();
+    const raw = window.sessionStorage.getItem(PENDING_KEY);
+    const entries = raw ? (JSON.parse(raw) as [string, number][]) : [];
+    const now = Date.now();
+    return new Map(entries.filter(([, at]) => now - at < PENDING_TTL_MS));
+  } catch {
+    return new Map();
+  }
+}
+
+function writePending(pending: Map<string, number>): void {
+  try {
+    window.sessionStorage.setItem(
+      PENDING_KEY,
+      JSON.stringify([...pending.entries()]),
+    );
+  } catch {
+    // Private window: pending installs last for this page only.
+  }
+}
+
 let state: State = {
   loaded: false,
   registryLoaded: false,
@@ -151,6 +200,7 @@ let state: State = {
   entitlements: null,
   ops: null,
   busy: false,
+  pending: readPending(),
 };
 let inflight: Promise<void> | null = null;
 const listeners = new Set<() => void>();
@@ -201,6 +251,7 @@ async function load(): Promise<void> {
       : Promise.resolve(null),
   ]);
   setState({ loaded: true, catalog, entitlements, ops });
+  if (anyInFlight()) startPolling();
 }
 
 /** Load once per page; `force` re-fetches (after a dispatch). */
@@ -224,6 +275,166 @@ const DISPATCHED: Record<ModuleOp["op"], string> = {
   check: "Checking for updates — pull requests open shortly for anything new.",
   merge: "Merging the updates that are ready.",
 };
+
+/* ── installs (App Store–style: Install → ring → Installed) ─────────────── */
+
+/** Clicks this close together become one run and one pull request. */
+const BATCH_MS = 2_500;
+let batch: string[] = [];
+let batchTimer: ReturnType<typeof setTimeout> | null = null;
+
+function setPending(update: (pending: Map<string, number>) => void): void {
+  const next = new Map(state.pending);
+  update(next);
+  writePending(next);
+  setState({ pending: next });
+}
+
+/**
+ * Start installing `slug` (and the modules it requires that aren't
+ * installed, which install with it). The button turns into a ring at once;
+ * the request goes out with any other clicks from the next few seconds.
+ */
+export function requestInstall(slug: string, alsoInstalls: string[] = []) {
+  const now = Date.now();
+  setPending((p) => {
+    for (const s of [slug, ...alsoInstalls]) p.set(s, now);
+  });
+  if (!batch.includes(slug)) batch.push(slug);
+  if (batchTimer) clearTimeout(batchTimer);
+  batchTimer = setTimeout(() => void flushInstalls(), BATCH_MS);
+  startPolling();
+}
+
+async function flushInstalls(): Promise<void> {
+  batchTimer = null;
+  const slugs = batch;
+  batch = [];
+  if (slugs.length === 0) return;
+  try {
+    const res = await fetch("/api/modules/ops", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        op: "add",
+        sources: slugs.map((s) => `dream:${s}`),
+      }),
+    });
+    const json = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      inFlight?: string[];
+    };
+    if (res.status === 409) {
+      // Already on its way (another tab, another admin): show its progress.
+      toast.info(json.error ?? "Already being installed.");
+    } else if (!res.ok) {
+      toast.error(
+        json.error ?? `Install failed to start (HTTP ${res.status}).`,
+      );
+      dropPending(slugs);
+      return;
+    }
+  } catch {
+    toast.error(
+      "Install failed to start. Check your connection and try again.",
+    );
+    dropPending(slugs);
+    return;
+  }
+  await refreshOps();
+}
+
+function dropPending(slugs: string[]): void {
+  setPending((p) => {
+    for (const s of slugs) p.delete(s);
+  });
+}
+
+async function refreshOps(): Promise<void> {
+  if (!state.registry?.githubConnected) return;
+  const ops = await getJson<OpsResponse>("/api/modules/ops");
+  if (ops) setState({ ops });
+}
+
+// Poll GitHub while an install is in flight and the tab is visible; stop
+// when nothing is.
+const POLL_MS = 10_000;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+function anyInFlight(): boolean {
+  const slugs = new Set([
+    ...state.pending.keys(),
+    ...(state.ops?.prs ?? []).flatMap((p) =>
+      p.kind === "module" ? [p.slug ?? "", ...p.also] : [],
+    ),
+    ...(state.ops?.merged ?? []).flatMap((p) => [p.slug ?? "", ...p.also]),
+    ...(state.ops?.runs ?? []).flatMap((r) =>
+      r.status !== "completed" ? (r.target?.slugs ?? []) : [],
+    ),
+  ]);
+  slugs.delete("");
+  return [...slugs].some((s) => isBusy(moduleInstallState(s)));
+}
+
+function startPolling(): void {
+  if (pollTimer || typeof window === "undefined") return;
+  pollTimer = setInterval(() => {
+    if (!anyInFlight()) {
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = null;
+      return;
+    }
+    if (document.visibilityState !== "visible") return;
+    void refreshOps().then(() => {
+      // Deploying installs finish when the app redeploys with them: the
+      // registry route reports the new build's modules.
+      const deploying = (state.ops?.merged ?? []).some(
+        (p) =>
+          p.slug && !state.registry?.installed.some((m) => m.slug === p.slug),
+      );
+      if (deploying) void refreshRegistry();
+    });
+  }, POLL_MS);
+}
+
+async function refreshRegistry(): Promise<void> {
+  const registry = await getJson<RegistryResponse>("/api/modules/registry");
+  if (registry) setState({ registry });
+}
+
+/** Where `slug`'s install is (see lib/mod/install-state.ts). */
+export function moduleInstallState(slug: string): InstallState {
+  const toPr = (p: OpsPrView) => ({
+    url: p.url,
+    slug: p.slug,
+    also: p.also,
+    conflicts: p.conflicts,
+    needsReview: p.needsReview,
+  });
+  const result = installStateFor(slug, {
+    installed: new Set(state.registry?.installed.map((m) => m.slug) ?? []),
+    openPrs: (state.ops?.prs ?? [])
+      .filter((p) => p.kind === "module")
+      .map(toPr),
+    mergedPrs: (state.ops?.merged ?? []).map(toPr),
+    runs: (state.ops?.runs ?? []).map((r) => ({
+      status: r.status,
+      conclusion: r.conclusion,
+      url: r.url,
+      createdAt: r.createdAt,
+      target: r.target,
+    })),
+    pending: state.pending,
+    now: Date.now(),
+  });
+  // GitHub has caught up (or it's done): the optimistic click can go.
+  if (result.stage !== "requested" && state.pending.has(slug)) {
+    queueMicrotask(() => {
+      if (state.pending.has(slug)) dropPending([slug]);
+    });
+  }
+  return result;
+}
 
 /** Dispatch a module op (module-ops.yml → PR). Resolves true on success. */
 export async function dispatchModuleOp(body: ModuleOp): Promise<boolean> {
@@ -324,11 +535,16 @@ export function useModulesAdmin() {
     };
   };
 
+  /** Display names from the catalog (requires lists slugs). */
+  const nameOf = (slug: string) => catalogBySlug.get(slug)?.name ?? slug;
+
   return {
     ...snap,
     visibleCatalog,
     installedSlugs,
     isEntitled,
     statusFor,
+    installState: moduleInstallState,
+    nameOf,
   };
 }

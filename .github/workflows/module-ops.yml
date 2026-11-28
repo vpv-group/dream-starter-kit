@@ -21,6 +21,13 @@
 # The logic lives in tested TypeScript (`pnpm mod ops …`); this file only
 # wires it to GitHub.
 name: Module ops
+# Names what each dispatched run does ("Module ops · add dream:crm"), so
+# /admin can show an install's progress before its pull request exists
+# (apps/nextjs/src/lib/mod/ops-core.ts → runTarget).
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch'
+  && format('Module ops · {0} {1}', inputs.op, inputs.source || inputs.slug)
+  || 'Module ops' }}
 
 on:
   workflow_dispatch:
@@ -116,9 +123,16 @@ jobs:
           ACTOR: ${{ github.triggering_actor }}
           SOURCE: ${{ inputs.source }}
         run: |
-          if [[ "$ACTOR" == *"[bot]" && -n "$SOURCE" && ! "$SOURCE" =~ ^dream:[a-z][a-z0-9-]*(@v?[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?)?$ ]]; then
-            echo "::error title=Catalog modules only::Installs started from /admin must come from the Dream catalog (dream:<slug>). Got: $SOURCE"
-            exit 1
+          # One source, or several separated by spaces (a batch from /admin:
+          # one run, one pull request).
+          if [[ "$ACTOR" == *"[bot]" && -n "$SOURCE" ]]; then
+            read -ra ITEMS <<< "$SOURCE"
+            for item in "${ITEMS[@]}"; do
+              if [[ ! "$item" =~ ^dream:[a-z][a-z0-9-]*(@v?[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?)?$ ]]; then
+                echo "::error title=Catalog modules only::Installs started from /admin must come from the Dream catalog (dream:<slug>). Got: $item"
+                exit 1
+              fi
+            done
           fi
 
       - name: Sign git in as Meet Dream AI
@@ -145,7 +159,10 @@ jobs:
           set -euo pipefail
           case "$OP" in
             add)
-              pnpm mod add "$SOURCE" | tee /tmp/mod-op.log
+              # Several sources install together; modules they require that
+              # aren't installed come along (tooling/mod/src/install-set.ts).
+              read -ra SOURCES <<< "$SOURCE"
+              pnpm mod add "${SOURCES[@]}" | tee /tmp/mod-op.log
               ;;
             update)
               ARGS=()
@@ -167,7 +184,7 @@ jobs:
               pnpm mod remove "$SLUG" "${ARGS[@]}" | tee /tmp/mod-op.log
               ;;
           esac
-          pnpm --silent mod ops describe --op "$OP" --before /tmp/lock-before.json --slug "$SLUG" >> "$GITHUB_OUTPUT"
+          pnpm --silent mod ops describe --op "$OP" --before /tmp/lock-before.json --slug "$SLUG" --requested "$SOURCE" >> "$GITHUB_OUTPUT"
 
       # An op can change nothing, e.g. `update` when the newest tag is the
       # version already installed. End with a notice instead of an empty PR.
@@ -197,6 +214,7 @@ jobs:
         if: steps.changes.outputs.changed == 'true' && steps.cli.outputs.conflicts != 'true'
         env:
           SLUG: ${{ steps.cli.outputs.slug }}
+          ALSO: ${{ steps.cli.outputs.also }}
           OP: ${{ inputs.op }}
         run: |
           set -euo pipefail
@@ -208,7 +226,9 @@ jobs:
           # The PR's own CI typechecks the whole workspace; this only catches
           # a module that doesn't compile against this kit, quickly.
           if [ "$OP" != "remove" ] && [ -n "$SLUG" ]; then
-            pnpm -F "@acme/mod-$SLUG" --if-present typecheck
+            for mod in $SLUG $ALSO; do
+              pnpm -F "@acme/mod-$mod" --if-present typecheck
+            done
           fi
 
       - name: Path confinement check
@@ -241,6 +261,7 @@ jobs:
           SOURCE: ${{ inputs.source }}
           FROM: ${{ steps.cli.outputs.from }}
           TO: ${{ steps.cli.outputs.to }}
+          ALSO: ${{ steps.cli.outputs.also }}
           MARKER: ${{ steps.cli.outputs.marker }}
           CONFLICTS: ${{ steps.cli.outputs.conflicts == 'true' }}
           APPROVED: ${{ inputs.approved == 'true' }}
@@ -253,11 +274,18 @@ jobs:
           git push origin 'refs/mod-base/*:refs/mod-base/*' || true
 
           case "$OP" in
-            add) TITLE="Install ${SLUG:-$SOURCE}${TO:+ $TO}" ;;
+            add)
+              TITLE="Install ${SLUG:-$SOURCE}${TO:+ $TO}"
+              # Modules it required (or the rest of a batch) come in this PR.
+              [ -n "$ALSO" ] && TITLE="$TITLE (with ${ALSO// /, })"
+              ;;
             update) TITLE="Update $SLUG${FROM:+ $FROM →}${TO:+ $TO}" ;;
             remove) TITLE="Remove $SLUG" ;;
           esac
           BODY="Automated \`pnpm mod $OP\` run by Meet Dream AI. Review the full diff: module code runs server-side with env access (docs/MODULES-PLAN.md §7)."
+          if [ "$OP" = "add" ] && [ -n "$ALSO" ]; then
+            BODY="$BODY"$'\n\n'"Also installs: ${ALSO// /, } (required by the module, or requested in the same batch)."
+          fi
           LABELS=(dream-update)
           if [ "$OP" = "remove" ]; then
             BODY="$BODY"$'\n\n'"⚠️ **Data loss:** this PR includes a drop migration for the module's tables (unless kept). It never merges itself."

@@ -220,6 +220,106 @@ html[data-theme="dark"] {
   display: block;
 }
 
+/* ── /admin/updates (payload/components/updates/UpdatesPanel.tsx) ───────── */
+.kit-updates {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--base) * 1.5);
+  max-width: 768px;
+  padding: calc(var(--base) * 1.5) 0 calc(var(--base) * 3);
+}
+.kit-updates__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--base);
+}
+.kit-updates__header h1 {
+  margin: 0;
+}
+.kit-updates__muted {
+  margin: 0;
+  color: var(--theme-elevation-500);
+}
+.kit-updates__section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(var(--base) * 0.5);
+  padding: var(--base);
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: var(--style-radius-m);
+  background: var(--theme-elevation-0);
+}
+.kit-updates__section h3 {
+  margin: 0;
+}
+.kit-updates__setting {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--base) * 0.25);
+  margin-top: calc(var(--base) * 0.5);
+}
+.kit-updates__setting .kit-updates__muted {
+  padding-left: calc(var(--base) * 1.5);
+}
+.kit-updates__banner-action {
+  margin-top: calc(var(--base) * 0.5);
+}
+.kit-updates__list {
+  align-self: stretch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kit-updates__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--base) * 0.75);
+  padding: calc(var(--base) * 0.75) 0;
+  border-top: 1px solid var(--theme-elevation-100);
+}
+.kit-updates__row:first-child {
+  border-top: 0;
+}
+.kit-updates__row-main {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--base) * 0.25);
+  min-width: 0;
+}
+.kit-updates__pills,
+.kit-updates__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--base) * 0.4);
+}
+
+/* "Updates available" above every admin page (UpdatesAlert.tsx). */
+.kit-updates-alert {
+  margin: 0;
+  border-radius: 0;
+}
+.kit-updates-alert__content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--base) * 0.5) var(--base);
+}
+.kit-updates-alert__text {
+  flex: 1;
+  min-width: 0;
+}
+.kit-updates-alert__actions {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--base) * 0.4);
+}
+
 /* ── 4. Modules screen (/admin/collections/kit-modules) ─────────────────────── */
 /*
  * payload/components/modules/*: list cells, the status banner, the "Install
@@ -273,10 +373,16 @@ html[data-theme="dark"] {
   margin-top: calc(var(--base) * 0.25);
 }
 
+/* Two columns of cards; one on narrow screens. */
 .kit-modules-catalog {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--base);
+}
+@media (max-width: 640px) {
+  .kit-modules-catalog {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .kit-modules-catalog__card {
   display: flex;
@@ -320,6 +426,13 @@ html[data-theme="dark"] {
   display: flex;
   align-items: center;
   min-height: calc(var(--base) * 1.6);
+}
+/* The action: a button, or Payload's spinner with the install's stage. */
+.kit-modules-catalog__progress {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--base) * 0.5);
 }
 .kit-modules-catalog__command {
   display: inline-flex;

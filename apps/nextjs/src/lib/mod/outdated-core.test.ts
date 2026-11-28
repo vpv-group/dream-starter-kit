@@ -38,6 +38,7 @@ const pr = (over: Partial<OpsPr>): OpsPr => ({
   approved: false,
   slug: null,
   to: null,
+  also: [],
   ...over,
 });
 

@@ -68,6 +68,23 @@ function registry(req, res, path, body, raw, search) {
           access: "free",
           repo: "https://github.com/vpv-group/dream-mod-crm",
         },
+        {
+          slug: "projects",
+          name: "Projects",
+          description: "Projects, milestones and tasks.",
+          latest: "0.1.0",
+          access: "free",
+          repo: "https://github.com/vpv-group/dream-mod-projects",
+        },
+        {
+          slug: "projects-adapter-github",
+          name: "Projects · GitHub",
+          description: "Sync Projects tasks with GitHub issues.",
+          latest: "0.1.0",
+          access: "free",
+          repo: "https://github.com/vpv-group/dream-mod-projects-adapter-github",
+          requires: ["projects"],
+        },
       ],
     });
   }
