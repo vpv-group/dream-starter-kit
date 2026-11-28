@@ -137,15 +137,11 @@ test("not connected: Connect GitHub, and only catalog installs", async ({
       .filter({ has: page.getByText(name, { exact: true }) });
 
   // A module whose requirement isn't installed says it brings it along.
-  await expect(row("Projects · GitHub")).toContainText(
-    "Also installs Projects",
-  );
+  await expect(row("E2E Add-on")).toContainText("Also installs E2E Base");
 
-  await row("CRM").getByRole("button", { name: "Install" }).click();
-  await row("Projects · GitHub")
-    .getByRole("button", { name: "Install" })
-    .click();
-  for (const name of ["CRM", "Projects · GitHub", "Projects"]) {
+  await row("E2E Sample").getByRole("button", { name: "Install" }).click();
+  await row("E2E Add-on").getByRole("button", { name: "Install" }).click();
+  for (const name of ["E2E Sample", "E2E Add-on", "E2E Base"]) {
     await expect(row(name).getByText("Starting…")).toBeVisible();
     // Once requested, a module can't be requested again.
     await expect(
@@ -159,7 +155,7 @@ test("not connected: Connect GitHub, and only catalog installs", async ({
     .toMatchObject({
       inputs: {
         op: "add",
-        source: "dream:crm dream:projects-adapter-github",
+        source: "dream:e2e-sample dream:e2e-addon",
         approved: "true",
       },
     });
