@@ -14,7 +14,7 @@
     "test:e2e:install": "playwright install --with-deps chromium"
   },
   "dependencies": {
-    "@playwright/test": "^1.64.1"
+    "@playwright/test": "^1.65.1"
   },
   "devDependencies": {
     "@acme/eslint-config": "workspace:*",
