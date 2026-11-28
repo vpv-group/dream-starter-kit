@@ -85,8 +85,10 @@ deleted doc to each provider's `deletePlan` / `deleteCoupon` so it can't be boug
 redeemed any more. Stripe archives the plan's product and price (and deletes its
 intro coupon), and deactivates the coupon's promotion code and deletes the coupon.
 Existing subscriptions keep their price and their discount. The row is gone, so a
-failure here can't land on **Sync status**: it is logged with the provider ids, for
-cleanup in the provider's dashboard.
+failure here can't land on **Sync status**: it is logged with the provider ids. Stripe
+retries on the connector panel's **Sync everything now**, which also retires this
+site's Stripe objects whose plan or coupon no longer exists (docs/STRIPE.md §3);
+otherwise clean up in the provider's dashboard.
 
 Store products (App Store / Play) are created in the stores' consoles, not pushed
 from the kit; an in‑app provider maps them to plans in its tab instead (§7).

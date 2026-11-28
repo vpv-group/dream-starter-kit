@@ -260,7 +260,7 @@ const routes = [
       const product = get(id, "product");
       if (!product) return missing(id);
       for (const k of ["name", "description", "default_price"])
-        if (p[k] !== undefined) product[k] = p[k];
+        if (p[k] !== undefined) product[k] = p[k] === "" ? null : p[k];
       if (p.active !== undefined) product.active = bool(p.active);
       if (p.metadata) product.metadata = { ...product.metadata, ...p.metadata };
       emit("product.updated", product);
@@ -290,6 +290,7 @@ const routes = [
       return ok(price);
     },
   ],
+  ["GET /v1/coupons", (q) => list(all("coupon").slice(0, num(q.limit) ?? 10))],
   [
     "GET /v1/coupons/:id",
     (_q, _p, id) => (get(id, "coupon") ? ok(get(id, "coupon")) : missing(id)),
@@ -331,6 +332,31 @@ const routes = [
     },
   ],
   [
+    "GET /v1/promotion_codes",
+    (q) =>
+      list(
+        all("promotion_code")
+          .filter((c) => !q.coupon || c.promotion.coupon === q.coupon)
+          .filter((c) => q.active === undefined || c.active === bool(q.active))
+          .slice(0, num(q.limit) ?? 10),
+      ),
+  ],
+  [
+    "GET /v1/promotion_codes/:id",
+    (_q, _p, id) =>
+      get(id, "promotion_code") ? ok(get(id, "promotion_code")) : missing(id),
+  ],
+  [
+    "POST /v1/promotion_codes/:id",
+    (_q, p, id) => {
+      const promo = get(id, "promotion_code");
+      if (!promo) return missing(id);
+      if (p.active !== undefined) promo.active = bool(p.active);
+      if (p.metadata) promo.metadata = { ...promo.metadata, ...p.metadata };
+      return ok(promo);
+    },
+  ],
+  [
     "POST /v1/promotion_codes",
     (_q, p) =>
       ok(
@@ -338,7 +364,7 @@ const routes = [
           id: nextId("promo"),
           object: "promotion_code",
           code: p.code,
-          active: true,
+          active: bool(p.active) ?? true,
           promotion: {
             type: p.promotion?.type ?? "coupon",
             coupon: p.promotion?.coupon ?? null,

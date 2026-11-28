@@ -147,7 +147,16 @@ redeploy, verify, then revoke the old key.
   (Vault or `STRIPE_WEBHOOK_SECRET`), the last event received; **Register now**
   instead of waiting for the hourly check.
 - **Catalog** — how many plans/coupons are synced, failed or not yet synced;
-  **Sync everything now** (useful right after connecting).
+  **Sync everything now** (useful right after connecting). It also retires what
+  deleted plans and coupons left in Stripe (a delete whose Stripe call failed has no
+  sync status to show it): products, prices, coupons and promotion codes tagged
+  with this site (`metadata.payloadSite`, the Supabase project's host) whose plan or
+  coupon no longer exists. Another site on the same Stripe account keeps its
+  catalog. Objects synced before billing-adapter-stripe 1.3 get the tag on their
+  next sync; ones whose plan/coupon was deleted before then are left for the
+  Dashboard. Local copies sharing one test-mode account and the same local Supabase
+  URL count as one site: a resync in one can retire another's catalog, and the next
+  sync recreates it.
 
 All of it goes through admin‑only routes (`/api/mod/billing-adapter-stripe/admin/*`);
 no secret reaches the browser.

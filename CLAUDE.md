@@ -545,7 +545,14 @@ ships preinstalled. Full reference: **docs/BILLING.md**; Stripe setup: docs/STRI
   ids show on the plan's **Stripe** tab (an adapter collection tab). `skipSync`
   opts out; failures land on `syncStatus`/`syncError`; a provider that isn't
   configured skips the sync, so seeded plans stay `unsynced` until Stripe is
-  connected.
+  connected. A coupon's `active` drives its Stripe promotion code (off = turned
+  off; a changed/cleared code retires the old one). **Deletes** reach providers
+  through billing's `afterDelete` hook (`deletePlan`/`deleteCoupon`): Stripe
+  archives the product + price, or turns the code off and deletes the coupon.
+  The doc is gone, so failures are logged (never fail the delete) and the
+  connector panel's resync retires this site's leftovers
+  (`metadata.payloadSite`). Applied discounts and live subscriptions are never
+  touched.
 - **The ledger is provider-neutral**: `public.mod_billing_*` rows carry `provider`
   (+ `store`, `kind`, `plan_id`, `entitlement`); entitlements are read from the
   `mod_billing_entitlements` view (security_invoker, read-own) by `usePremium` (web +

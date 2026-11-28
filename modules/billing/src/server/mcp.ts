@@ -1003,7 +1003,9 @@ const updateCoupon = defineMcpTool({
     "Changing its terms (discountType, value, currency, duration, " +
     "durationCount, durationUnit) makes the provider replace the coupon " +
     "and mint a new promotion code — discounts already applied to " +
-    "subscriptions are unaffected. `appliesTo` replaces the plan list " +
+    "subscriptions are unaffected. `active: false` turns its promotion " +
+    "code off at checkout (true turns it back on); changing or clearing " +
+    "`code` retires the old code. `appliesTo` replaces the plan list " +
     "([] = all plans). Send null to clear code, redeemBy, maxRedemptions " +
     "or minimumAmount.",
   inputSchema: {
@@ -1088,7 +1090,8 @@ const deleteCoupon = defineMcpTool({
   description:
     "Permanently delete a coupon from the catalog (admins only). Prefer " +
     "billing_update_coupon active=false to retire one; delete is for " +
-    "mistakes. Subscriptions that already got the discount keep it.",
+    "mistakes. The provider turns its promotion code off and deletes its " +
+    "coupon; subscriptions that already got the discount keep it.",
   inputSchema: { id: idSchema },
   run: async ({ id }, ctx) => {
     const coupon = await readCoupon(ctx, id);

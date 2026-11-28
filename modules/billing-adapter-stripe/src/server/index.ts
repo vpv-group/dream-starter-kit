@@ -247,7 +247,11 @@ export const routes: ModRouteTable = {
     );
   }),
 
-  /** Re-push every plan and coupon to Stripe (e.g. after connecting). */
+  /**
+   * Re-push every plan and coupon to Stripe (e.g. after connecting), then
+   * retire what deleted plans/coupons left behind (a delete has no
+   * `syncStatus`, so a failed Stripe cleanup is retried here).
+   */
   "POST /admin/resync": adminOnly(async (_req, ctx) => {
     const payload = await ctx.getPayload();
     const resynced = { plans: 0, coupons: 0 };
@@ -273,6 +277,15 @@ export const routes: ModRouteTable = {
         resynced[key] += 1;
       }
     }
-    return Response.json({ ok: true, ...resynced });
+    let retired = { plans: 0, coupons: 0 };
+    let retireError: string | null = null;
+    try {
+      const { retireOrphans } = await import("./catalog");
+      retired = await retireOrphans(payload);
+    } catch (err) {
+      retireError = err instanceof Error ? err.message : String(err);
+      payload.logger.error({ err }, "stripe: retiring deleted catalog failed");
+    }
+    return Response.json({ ok: true, ...resynced, retired, retireError });
   }),
 };

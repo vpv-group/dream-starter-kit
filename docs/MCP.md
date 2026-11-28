@@ -250,7 +250,7 @@ Amounts are in **cents**. Reads work for any staff role; writes need `admin`
 | `billing_get_coupon`    | `id` or `code`                                         | One coupon: all fields and provider ids.                                                            |
 | `billing_create_coupon` | `name`, `value`, + any coupon field                    | Create a coupon (percent off, once by default), optionally with a promotion `code`.                 |
 | `billing_update_coupon` | `id` + fields to change (`null` clears)                | Edit a coupon; changing its terms makes the provider replace the coupon and promotion code.         |
-| `billing_delete_coupon` | `id`                                                   | Delete a coupon (retire one with `active: false` instead).                                          |
+| `billing_delete_coupon` | `id`                                                   | Delete a coupon: the provider turns its code off and deletes it (retire with `active: false`).      |
 | `billing_resync`        | `target` (`plans`/`coupons`), `id?`                    | Push one doc, or every one not yet `synced`, to the providers again (e.g. after connecting Stripe). |
 
 Subscriptions stay read‑only (written by the providers' webhooks); `billing_get_plan`

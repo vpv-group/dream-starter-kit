@@ -1,3 +1,5 @@
+import type { BasePayload } from "payload";
+
 import type {
   ModBillingCoupon as Coupon,
   ModBillingPlan as Plan,
@@ -6,11 +8,14 @@ import type {
   CatalogDeleteArgs,
   CatalogSyncArgs,
 } from "@acme/mod-billing/server";
+import { siteUrl } from "@acme/mod-billing/server";
 
+import type { OrphanSweepResult } from "../stripe/sync";
 import { getStripeOrNull, stripeSettings } from "../stripe/client";
 import {
   retireCouponInStripe,
   retirePlanInStripe,
+  retireStripeOrphans,
   syncCouponToStripe,
   syncPlanToStripe,
 } from "../stripe/sync";
@@ -30,10 +35,26 @@ import {
  *
  * Skipped when Stripe is switched off or not connected. A failure is recorded
  * on `syncStatus`/`syncError` instead of failing the save; a failed retire is
- * logged with the Stripe ids (the doc is gone) for cleanup in the Dashboard.
+ * logged with the Stripe ids (the doc is gone), and the connector panel's
+ * "Sync everything now" retires the leftover later (`retireOrphans`).
  */
 
 const SKIP = { skipProviderSync: true, skipStripeSync: true };
+
+/**
+ * This site's tag on the Stripe objects it creates (`metadata.payloadSite`):
+ * the host of its Supabase project — the database the CMS ids live in — so
+ * sites sharing a Stripe account never retire each other's catalog. Falls
+ * back to the site's own host.
+ */
+export function catalogSiteTag(): string {
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL ?? siteUrl();
+  try {
+    return new URL(raw).host;
+  } catch {
+    return raw;
+  }
+}
 
 async function stripeForSync(args: CatalogSyncArgs | CatalogDeleteArgs) {
   const settings = await stripeSettings(args.req.payload, args.req);
@@ -65,6 +86,7 @@ export async function syncPlan(args: CatalogSyncArgs): Promise<unknown> {
       stripeProductId: doc.stripeProductId,
       stripePriceId: doc.stripePriceId,
       stripeIntroCouponId: doc.stripeIntroCouponId,
+      site: catalogSiteTag(),
     });
     return await req.payload.update({
       collection: "mod-billing-plans",
@@ -135,6 +157,7 @@ export async function syncCoupon(args: CatalogSyncArgs): Promise<unknown> {
       appliesToProductIds: resolveProductIds(populated.appliesTo),
       stripeCouponId: doc.stripeCouponId,
       stripePromotionCodeId: doc.stripePromotionCodeId,
+      site: catalogSiteTag(),
     });
     return await req.payload.update({
       collection: "mod-billing-coupons",
@@ -193,7 +216,7 @@ async function retire(
     req.payload.logger.error(
       { err, ...ids },
       `${what}s: Stripe cleanup failed for deleted ${what} ${id} — ` +
-        `archive it in the Stripe Dashboard`,
+        `"Sync everything now" retries it, or archive it in the Stripe Dashboard`,
     );
   }
 }
@@ -217,4 +240,38 @@ export async function deleteCoupon(args: CatalogDeleteArgs): Promise<void> {
   await retire(args, "coupon", ids, (stripe) =>
     retireCouponInStripe(stripe, ids),
   );
+}
+
+/** Ids of every doc in a catalog collection (synced or not, any state). */
+async function allIds(
+  payload: BasePayload,
+  collection: "mod-billing-plans" | "mod-billing-coupons",
+): Promise<Set<string>> {
+  const { docs } = await payload.find({
+    collection,
+    pagination: false,
+    depth: 0,
+    select: { name: true },
+    overrideAccess: true,
+  });
+  return new Set(docs.map((d) => String(d.id)));
+}
+
+/**
+ * Retire what this site left in Stripe for plans/coupons deleted from the CMS
+ * (a delete whose Stripe cleanup failed). Run by the connector panel's
+ * "Sync everything now" after it re-pushes the catalog.
+ */
+export async function retireOrphans(
+  payload: BasePayload,
+): Promise<OrphanSweepResult> {
+  const none = { plans: 0, coupons: 0 };
+  if (!(await stripeSettings(payload)).enabled) return none;
+  const stripe = await getStripeOrNull();
+  if (!stripe) return none;
+  return await retireStripeOrphans(stripe, {
+    site: catalogSiteTag(),
+    planIds: await allIds(payload, "mod-billing-plans"),
+    couponIds: await allIds(payload, "mod-billing-coupons"),
+  });
 }
