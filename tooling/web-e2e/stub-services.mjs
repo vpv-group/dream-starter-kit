@@ -68,22 +68,33 @@ function registry(req, res, path, body, raw, search) {
           access: "free",
           repo: "https://github.com/vpv-group/dream-mod-crm",
         },
+        // updates.spec.ts installs these. Made-up slugs, so the catalog
+        // never names a module the app under test already has installed
+        // (an installed card has no Install button).
         {
-          slug: "projects",
-          name: "Projects",
-          description: "Projects, milestones and tasks.",
-          latest: "0.1.0",
+          slug: "e2e-sample",
+          name: "E2E Sample",
+          description: "A module this app doesn't have installed.",
+          latest: "1.0.0",
           access: "free",
-          repo: "https://github.com/vpv-group/dream-mod-projects",
+          repo: "https://github.com/vpv-group/dream-mod-e2e-sample",
         },
         {
-          slug: "projects-adapter-github",
-          name: "Projects · GitHub",
-          description: "Sync Projects tasks with GitHub issues.",
+          slug: "e2e-base",
+          name: "E2E Base",
+          description: "A module another one requires.",
           latest: "0.1.0",
           access: "free",
-          repo: "https://github.com/vpv-group/dream-mod-projects-adapter-github",
-          requires: ["projects"],
+          repo: "https://github.com/vpv-group/dream-mod-e2e-base",
+        },
+        {
+          slug: "e2e-addon",
+          name: "E2E Add-on",
+          description: "A module that requires E2E Base.",
+          latest: "0.1.0",
+          access: "free",
+          repo: "https://github.com/vpv-group/dream-mod-e2e-addon",
+          requires: ["e2e-base"],
         },
       ],
     });
