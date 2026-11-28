@@ -1169,7 +1169,7 @@ export interface ModBillingSubscription {
   createdAt: string;
 }
 /**
- * Discounts synced to your payment providers on save. Changing amount/duration creates a new Stripe coupon (they're immutable) and archives the old one.
+ * Discounts synced to your payment providers on save. Changing amount/duration creates a new Stripe coupon (they're immutable) and archives the old one. Deleting a coupon stops new redemptions; existing subscriptions keep their discount.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "mod-billing-coupons".
@@ -1180,6 +1180,9 @@ export interface ModBillingCoupon {
    * Mirrored from Stripe.
    */
   timesRedeemed?: number | null;
+  /**
+   * Off = the promotion code stops working at checkout (deactivated at Stripe); turn back on to reactivate it.
+   */
   active?: boolean | null;
   /**
    * Don't push this coupon to Stripe on save.

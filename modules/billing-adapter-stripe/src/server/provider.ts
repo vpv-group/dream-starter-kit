@@ -20,7 +20,7 @@ import {
   stripeCredentials,
   stripeSettings,
 } from "../stripe/client";
-import { syncCoupon, syncPlan } from "./catalog";
+import { deleteCoupon, deletePlan, syncCoupon, syncPlan } from "./catalog";
 import { resolveCustomer, resolveOrgCustomer } from "./customers";
 import { legacyRoutes } from "./legacy";
 
@@ -184,6 +184,8 @@ export const adapter: BillingProvider = {
 
   syncPlan,
   syncCoupon,
+  deletePlan,
+  deleteCoupon,
 
   /** Cancel what the user still pays for (account deletion). */
   async onAccountDelete({ userId }) {

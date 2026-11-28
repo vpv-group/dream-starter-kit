@@ -21,7 +21,9 @@ The kit is **plan‑driven from the CMS**, not from the Stripe dashboard:
   plan, a **Coupon** (+ promotion code) for a coupon. **You never create products
   or prices in the Stripe dashboard by hand.** Stripe prices are immutable, so
   changing an amount creates a new price and archives the old one. Each plan's
-  **Stripe** tab shows the ids.
+  **Stripe** tab shows the ids. Unticking a coupon's **Active** deactivates its
+  promotion code; deleting a plan or coupon archives it in Stripe (existing
+  subscriptions keep their price and discount).
 - Buyers pay **on your site** — the paywall on premium content and the two‑step
   `/checkout` page, with card, Link, Apple Pay and Google Pay (Stripe Elements) — or,
   if you prefer, on **Stripe's hosted Checkout page** (a setting, §4). Guests can pay
