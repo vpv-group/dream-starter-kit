@@ -1,6 +1,6 @@
 # Admin navigation, pages and theme: a Shopify-style, module-driven `/admin`
 
-Status: **plan v2, ready for wireframes** · Kit 2.7.2 · Payload 3.94 · Owner: kit core (Vincent)
+Status: **plan v2.1, decisions applied, ready for wireframes** · Kit 2.7.2 · Payload 3.94 · Owner: kit core (Vincent)
 
 This is the handoff to **Claude Design** for wireframes of the Payload `/admin`
 panel, and the build brief that follows them. It covers:
@@ -39,6 +39,10 @@ component, styled by Payload and colored and typed by the site's theme.
 - **Mobile** (§15).
 - Facts from Payload's docs at v3.94.2 corrected several v1 details (for
   example `admin.group: false` versus `admin.hidden`, §17.2).
+- **Decisions Q1–Q15 applied** (Nov 28, 2026; §29): none of the extracted
+  content modules is preinstalled, slug renames go ahead, comment moderation,
+  an AI Assistant on Home connected to `/mcp`, View as User in v1, module
+  pinning, theme through Payload variables only, content-only CSV import.
 - Mislabeled field labels on Users and five other entities are **already fixed**
   (commit "fix(cms): correct mislabeled admin field labels").
 
@@ -556,9 +560,8 @@ Reviews hidden (nothing reviewable).
 
 ```
 Home · Browse by Folder
-Content     Posts · Videos · Audio · Photos · Series · Events · Locations ·
-            Docs · Ideas · Categories · Media        (Q1: which media modules stay)
-Community   Space Groups · Community Posts · Comments · Reviews · Reports
+Content     Posts · Series · Docs · Ideas · Categories · Media
+Community   Comments · Reports
 People      Users · Workspaces · Licensed Sites
 Commerce    Plans · Coupons · Subscriptions · Module Catalog · Billing Settings
 Marketing   Push Notifications · Banners · Forms
@@ -654,7 +657,7 @@ A admin, E editor, Au author (until Roles & Permissions replaces them, §25).
 | 10    | Space Groups    | `space-groups`    | `community`*    | A E   |              | Spaces                     | Spaces were `community-spaces`, hidden |
 | 20    | Community Posts | `community-posts` | `community`*    | A E   |              | Comments                   |                                        |
 | 30    | Feedback        | (module's)        | `feedback` (#8) | A E   |              | Boards, Roadmap, Changelog |                                        |
-| 40    | Comments        | `comments`        | core            | A E   | pending (Q3) |                            |                                        |
+| 40    | Comments        | `comments`        | core            | A E   | pending      |                            |                                        |
 | 50    | Reviews         | `reviews`         | core            | A E   |              |                            | was under People                       |
 | 60    | Reports         | `reports`         | core            | A E   | open (error) |                            |                                        |
 
@@ -681,7 +684,7 @@ family head is one nav link; its children are tabs (§9).
 | Order | Label            | Slug                              | Owner                | Roles | Pill                              | Children (tabs)                       | Was                                |
 | ----- | ---------------- | --------------------------------- | -------------------- | ----- | --------------------------------- | ------------------------------------- | ---------------------------------- |
 | 10    | Plans            | `plans`                           | `billing`            | A     |                                   | Subscriptions, Stripe (connector tab) | Billing Plans, `mod-billing-plans` |
-| 20    | Coupons          | `coupons`                         | `billing`            | A     |                                   | Redemptions (Q5)                      | Billing Coupons                    |
+| 20    | Coupons          | `coupons`                         | `billing`            | A     |                                   | Redemptions                           | Billing Coupons                    |
 | 30    | Subscriptions    | `subscriptions`                   | `billing`            | A     | past due (warning)                |                                       | hidden today                       |
 | 40    | Module Catalog   | `module-catalog`                  | meet-dream `modules` | A     |                                   | Releases                              | Modules (Commerce)                 |
 | 990   | Billing Settings | `/admin/modules/billing/settings` | `billing`            | A     | error when Stripe isn't connected |                                       | Modules › Billing row              |
@@ -690,7 +693,7 @@ family head is one nav link; its children are tabs (§9).
 
 | Order | Label              | Slug                 | Owner        | Roles | Pill                 | Children (tabs) | Was           |
 | ----- | ------------------ | -------------------- | ------------ | ----- | -------------------- | --------------- | ------------- |
-| 10    | Push Notifications | `push-notifications` | core         | A E   | failed sends (error) | Deliveries (Q5) | Notifications |
+| 10    | Push Notifications | `push-notifications` | core         | A E   | failed sends (error) | —               | Notifications |
 | 20    | Banners            | `banners`            | core         | A E   |                      |                 |               |
 | 30    | Forms              | `forms`              | form-builder | A E   |                      | Submissions     |               |
 
@@ -711,6 +714,14 @@ family head is one nav link; its children are tabs (§9).
 | ------------------ | ---------------------------- | ------------------------- | --------------- |
 | AI Chat            | Overview · Skills · Settings | `chat`                    | A (Skills: A E) |
 | Developer Accounts | Overview · Settings          | meet-dream `dev-accounts` | A               |
+
+**Pinning (decision Q7).** Each staff member can pin module groups: **Pin to
+Sidebar** / **Unpin** in the module overview's ⋯ menu and in a small
+`Popup` on the group label (keyboard and touch reachable, not hover-only).
+Pinned groups show first in the Modules zone in the order pinned, under a
+"Pinned" label; the rest follow A–Z. Pins are per user, stored in Payload
+preferences (`nav-pins`). An uninstalled or disabled module's pin is
+ignored.
 
 ### 8.10 Settings (1000) — admins
 
@@ -930,15 +941,15 @@ existing `composeCollectionTabs` seam (today used for adapter tabs), so core
 
 **Actions**
 
-| Action              | Where                                 | Overlay                                  | Notes                                                                                                                                                                                                                  |
-| ------------------- | ------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Change Password** | `beforeDocumentControls`, admins      | **Modal**                                | New password + confirm, rules from Authentication (min length), Show toggle; secondary button **Send Reset Email Instead**. Submits to `/api/cms/user-password`; success toast. Replaces the side-panel password field |
-| Resend Invite       | `beforeDocumentControls` when Invited | none → toast                             |                                                                                                                                                                                                                        |
-| Copy User ID        | ⋯ menu                                | toast                                    |                                                                                                                                                                                                                        |
-| View Public Profile | ⋯ menu                                | new tab                                  | when profile visibility allows                                                                                                                                                                                         |
-| Sign Out Everywhere | ⋯ menu                                | Confirmation modal                       | revokes Supabase sessions                                                                                                                                                                                              |
-| View as User (Q11)  | ⋯ menu, admins                        | Confirmation modal → banner while active | impersonation, audited; catalogue note on Admin Dashboard                                                                                                                                                              |
-| Move to Trash       | ⋯ menu (Payload)                      | Payload confirmation                     | admins cannot trash themselves                                                                                                                                                                                         |
+| Action              | Where                                 | Overlay                                                      | Notes                                                                                                                                                                                                                  |
+| ------------------- | ------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Change Password** | `beforeDocumentControls`, admins      | **Modal**                                                    | New password + confirm, rules from Authentication (min length), Show toggle; secondary button **Send Reset Email Instead**. Submits to `/api/cms/user-password`; success toast. Replaces the side-panel password field |
+| Resend Invite       | `beforeDocumentControls` when Invited | none → toast                                                 |                                                                                                                                                                                                                        |
+| Copy User ID        | ⋯ menu                                | toast                                                        |                                                                                                                                                                                                                        |
+| View Public Profile | ⋯ menu                                | new tab                                                      | when profile visibility allows                                                                                                                                                                                         |
+| Sign Out Everywhere | ⋯ menu                                | Confirmation modal                                           | revokes Supabase sessions                                                                                                                                                                                              |
+| **View as User**    | ⋯ menu, admins                        | Confirmation modal (with a reason) → app opens with a banner | Decision Q11: in v1, spec in §11.27                                                                                                                                                                                    |
+| Move to Trash       | ⋯ menu (Payload)                      | Payload confirmation                                         | admins cannot trash themselves                                                                                                                                                                                         |
 
 ### 11.3 Workspaces (People › Workspaces) — new, phase 3
 
@@ -1013,8 +1024,17 @@ Family tabs **Space Groups · Spaces**. Space Group edit: Overview · Spaces
 - Report edit: buttons **Resolve** and **Dismiss** (`beforeDocumentControls`);
   ⋯ **Remove Content**, **Suspend User** (confirmation modals naming the
   target). Status becomes read-only in the side panel; actions set it.
+- **Comments get moderation** (decision Q3): a `status` field (Pending ·
+  Approved · Hidden) and a Site Settings › Community option **Comments Need
+  Approval** (off by default: new comments are Approved; on: they start
+  Pending). The app shows Approved comments, plus a member's own Pending
+  ones marked "Awaiting approval". Migration: existing comments become
+  Approved (expand first; the app reads the status in the same release).
 - Comments list: Comment (truncated) · On · Author · Status · Created.
-  Bulk Hide / Approve when moderation status exists (Q3).
+  Default saved view **Pending**; nav pill = pending count; bulk
+  **Approve** and **Hide** from Payload's selection bar (no modal for
+  Approve; a confirmation modal for Hide). Edit: buttons Approve / Hide.
+  Attention item `core:comments-pending` (warning, editors and admins).
 - Reviews: Rating · Target · Author · Created; Owner Response field tab.
 
 ### 11.12 Plans, Coupons, Subscriptions
@@ -1027,9 +1047,19 @@ Family tabs **Space Groups · Spaces**. Space Group edit: Overview · Spaces
   price." (custom `SaveButton`).
 - Coupons list: Code (with `CopyToClipboard`) · Discount · Duration · Used ·
   Active. Shopify shows "Copy discount code" on hover; ours is a visible copy
-  button (touch-friendly).
-- Subscriptions: read-only list (§29 Q4) with a stats row (Active · Trialing
-  · Canceling · Past Due), saved views per status, Group By Plan.
+  button (touch-friendly). Edit tabs: Details · Discount · Stripe ·
+  **Redemptions (n)** (decision Q5): who redeemed it, when, on which plan and
+  order, from billing's ledger (billing records each redemption; a new
+  `mod_billing_coupon_redemptions` table under RLS, mirrored or read
+  server-side for the tab).
+- Subscriptions: read-only list (decision Q4) with a stats row (Active ·
+  Trialing · Canceling · Past Due), saved views per status, Group By Plan.
+  Each subscription has a **Manage in Billing** button
+  (`beforeDocumentControls`) that deep-links to the exact support view in
+  the app: `/billing?account=user:<id>` (or `org:<id>` for a workspace),
+  where staff grant, extend or revoke no-charge plans; and ⋯ **Open in
+  Stripe** (from the Stripe Connector) for paid changes. The same button
+  appears on Users › Subscriptions and Workspaces › Subscriptions rows.
 
 ### 11.13 Push Notifications
 
@@ -1133,6 +1163,31 @@ URL with `CopyToClipboard`, a table of connected clients (Name · Connected By
 Add the user's own Change Password (same modal), theme choice (Payload's),
 and a link to the app profile. `admin.avatar` shows the profile avatar.
 
+### 11.27 View as User (decision Q11, v1)
+
+Lets an admin see the app exactly as a member sees it, for support.
+
+- **Who:** admins only, on member accounts only (never another staff
+  account). Off by default: Site Settings › Support › **Allow View as User**.
+- **Start:** Users › ⋯ **View as User** → confirmation modal with a required
+  **Reason** field and the line "You'll see the app as Jane Doe for 30
+  minutes. Everything you do is logged." → opens the app in a new tab.
+- **Session:** a server route (admin-checked) creates a short-lived
+  impersonation session for the member with the service-role client
+  (server-only, golden rule 2) and stores it in a **separate cookie**, so
+  the admin's own session is untouched. The app's Supabase client uses the
+  impersonation cookie when present. Lifetime 30 minutes, no refresh.
+- **While active:** a fixed banner on every app screen: "Viewing as Jane
+  Doe · Exit". Sensitive actions are blocked server-side when the session
+  is an impersonation (checkout and payments, password and email changes,
+  account deletion, sending messages as the member); the banner says why.
+- **Audit:** start, end and every write are recorded with the admin, the
+  member, the reason and the time (kit audit events; the Audit Log module
+  shows them). The member's Activity tab lists sessions too.
+- **Build note:** start with a design spike on the separate-cookie session
+  (web) and decide whether native gets it later; RLS tests must prove the
+  impersonation session can read only what the member can.
+
 ---
 
 ## 12. Overlays: popup, modal, drawer, side panel
@@ -1171,37 +1226,39 @@ present; Esc and a backdrop click cancel (except during a request).
 
 ### 12.2 Inventory
 
-| Interaction                                       | Overlay                              | Page               |
-| ------------------------------------------------- | ------------------------------------ | ------------------ |
-| Change Password                                   | Modal                                | Users, Account     |
-| Send Reset Email (from the Change Password modal) | Confirmation modal → toast           | Users              |
-| Resend Invite                                     | Toast                                | Users              |
-| Bulk Resend Invites                               | Confirmation modal → toast           | Users list         |
-| Add Tag (bulk)                                    | Drawer                               | Users list         |
-| Sign Out Everywhere, View as User                 | Confirmation modal                   | Users              |
-| Create / edit a child (lesson, enrollment, space) | Document drawer (join)               | Parents            |
-| Pick related records                              | List drawer (`appearance: 'drawer'`) | Content            |
-| Save / update a saved view                        | Payload's preset modal               | Lists              |
-| Export                                            | Plugin drawer → toast                | Lists              |
-| Regenerate All Images                             | Confirmation modal → toast           | Media              |
-| Resync with Stripe                                | Toast                                | Plans              |
-| Price or interval change on save                  | Confirmation modal                   | Plans              |
-| Resolve / Dismiss report                          | Toast                                | Reports            |
-| Remove Content / Suspend User                     | Confirmation modal                   | Reports            |
-| Send Test to Me                                   | Toast                                | Push Notifications |
-| Install Module                                    | Drawer → confirmation modal          | Modules            |
-| Disable / Uninstall Module                        | Confirmation modal                   | Module page        |
-| Update All                                        | Confirmation modal                   | Updates            |
-| Retry Job                                         | Toast                                | Background Jobs    |
-| Revoke MCP client                                 | Confirmation modal                   | AI Agents          |
-| Alerts list                                       | Popup                                | Header             |
-| Snooze an alert                                   | Popup                                | Home, Alerts       |
-| Search                                            | Drawer                               | Header             |
-| Add widget, edit layout                           | Payload's dashboard drawer           | Home               |
-| Restore a version                                 | Payload's confirmation               | Versions tab       |
-| Copy ID / URL / code                              | Toast                                | Everywhere         |
-| Bulk upload, Edit many                            | Payload fullscreen modal             | Lists              |
-| Import plan markdown (meet-dream Ideas)           | Drawer                               | Ideas              |
+| Interaction                                       | Overlay                                                     | Page               |
+| ------------------------------------------------- | ----------------------------------------------------------- | ------------------ |
+| Change Password                                   | Modal                                                       | Users, Account     |
+| Send Reset Email (from the Change Password modal) | Confirmation modal → toast                                  | Users              |
+| Resend Invite                                     | Toast                                                       | Users              |
+| Bulk Resend Invites                               | Confirmation modal → toast                                  | Users list         |
+| Add Tag (bulk)                                    | Drawer                                                      | Users list         |
+| Sign Out Everywhere                               | Confirmation modal                                          | Users              |
+| View as User (with a required reason)             | Modal                                                       | Users              |
+| AI Assistant write or delete                      | Confirmation card in the chat; modal for deletes and pushes | Home               |
+| Create / edit a child (lesson, enrollment, space) | Document drawer (join)                                      | Parents            |
+| Pick related records                              | List drawer (`appearance: 'drawer'`)                        | Content            |
+| Save / update a saved view                        | Payload's preset modal                                      | Lists              |
+| Export                                            | Plugin drawer → toast                                       | Lists              |
+| Regenerate All Images                             | Confirmation modal → toast                                  | Media              |
+| Resync with Stripe                                | Toast                                                       | Plans              |
+| Price or interval change on save                  | Confirmation modal                                          | Plans              |
+| Resolve / Dismiss report                          | Toast                                                       | Reports            |
+| Remove Content / Suspend User                     | Confirmation modal                                          | Reports            |
+| Send Test to Me                                   | Toast                                                       | Push Notifications |
+| Install Module                                    | Drawer → confirmation modal                                 | Modules            |
+| Disable / Uninstall Module                        | Confirmation modal                                          | Module page        |
+| Update All                                        | Confirmation modal                                          | Updates            |
+| Retry Job                                         | Toast                                                       | Background Jobs    |
+| Revoke MCP client                                 | Confirmation modal                                          | AI Agents          |
+| Alerts list                                       | Popup                                                       | Header             |
+| Snooze an alert                                   | Popup                                                       | Home, Alerts       |
+| Search                                            | Drawer                                                      | Header             |
+| Add widget, edit layout                           | Payload's dashboard drawer                                  | Home               |
+| Restore a version                                 | Payload's confirmation                                      | Versions tab       |
+| Copy ID / URL / code                              | Toast                                                       | Everywhere         |
+| Bulk upload, Edit many                            | Payload fullscreen modal                                    | Lists              |
+| Import plan markdown (meet-dream Ideas)           | Drawer                                                      | Ideas              |
 
 ---
 
@@ -1239,14 +1296,12 @@ theme" rule in `CLAUDE.md` (update that section).
 | `--style-radius-s`, `-m`, `-l`                                    | `--radius` − 4px, − 2px, as is (min 2px)                                   |                                                                                                              |
 | `--base`, `--base-body-size`, `--nav-width`, breakpoints          | **unchanged**                                                              | Payload's density and layout stay Payload's                                                                  |
 
-**Brand accent.** Payload's primary button and active states are built from
-the elevation scale, not a "primary" variable. One small, versioned stylesheet
-(`payload/styles/brand-accent.scss`, inside `@layer payload` so Payload
-ordering is kept) applies `--primary` / `--primary-foreground` to: primary
-buttons, the active nav indicator, checked checkboxes and toggles, and links
-in descriptions. Nothing else is overridden. A Playwright visual test covers
-those four elements in both modes so a Payload upgrade can't silently break
-them.
+**No class overrides (decision Q12).** Payload's primary button, active nav
+item, checkboxes and links are built from its elevation scale, not a
+"primary" variable, so they keep Payload's neutral style. The brand shows
+through what variables reach: backgrounds and surfaces (elevation scale),
+text, borders, the error scale, focus rings (`--accessibility-outline` from
+`--ring`), fonts and corner radius. No stylesheet targets Payload classes.
 
 ### 13.3 Where it's injected
 
@@ -1263,7 +1318,8 @@ them.
 ### 13.4 Safety
 
 - **Contrast guard**: before injecting, check WCAG contrast for text on
-  elevation 0, 50 and 100 and for the accent button text. If a mode fails
+  elevation 0, 50 and 100 and for primary-button text on elevation 800. If a
+  mode fails
   (below 4.5:1 for text), inject Payload's defaults for that mode and raise an
   info alert "Your theme's dark colors are too low-contrast for the admin;
   using Payload's defaults." with a link to Theme Settings.
@@ -1572,6 +1628,7 @@ admin: z.object({
     presets: z.boolean().optional(),          // §23.1
     groupBy: z.boolean().optional(),          // §23.2
     export: z.object({ permission: z.string() }).optional(), // §23.5
+    import: z.boolean().optional(),                          // §23.5, content only
   })).default({}),
 
   /** Tabs this module adds to other collections' edit views (field tabs). */
@@ -1634,8 +1691,9 @@ reviewable: z.array(z.string()).default([]),
 4. add section-owner settings links (ownsSection, admins): "<Module> Settings", order 990
 5. add "Settings" (order 999) to each module group with settings (admins)
 6. group by custom.navSection or module group name
-7. sort groups by zone (main → modules → settings), section order, then
-   module name A–Z; sort links by navOrder, then label
+7. sort groups by zone (main → modules → settings), section order; in the
+   Modules zone, the user's pinned groups first (nav-pins preference, in pin
+   order), then module name A–Z; sort links by navOrder, then label
 8. drop empty groups
 9. fetch badges for visible links (cached, §17.5)
 10. active link = current entity, or its custom.navParent
@@ -1703,6 +1761,7 @@ alerts (`defaultLayout({ req })` branches on permissions).
 | `recent-drafts`     | Recent Drafts                                                                  | core                                                  | medium         | all staff            |
 | `recent-comments`   | Latest Comments                                                                | core                                                  | medium         | A E                  |
 | `module-<slug>`     | module card                                                                    | each module                                           | small–medium   | per permission       |
+| `ai-assistant`      | AI Assistant                                                                   | chat                                                  | full           | all staff            |
 | `collections`       | All Collections                                                                | Payload built-in                                      | full           | all staff            |
 | future              | Analytics KPIs, report tiles, open tickets, today's bookings, overdue invoices | Analytics, Reports, Client Portal, Booking, Invoicing | x-small–medium | per permission       |
 
@@ -1752,9 +1811,40 @@ Alerts page. Dismissals are per user in Payload preferences
 `core:theme-contrast` (info, §13.4) · `billing:stripe-disconnected`
 (critical) · `billing:webhooks-failing` (critical) · `billing:past-due`
 (warning) · `billing:catalog-unsynced` (warning) · `chat:gateway-missing`
-(critical) · `dev-accounts:stuck` (info, meet-dream).
+(critical) · `core:comments-pending` (warning, editors and admins) ·
+`core:uninstalled-content` (warning, §22.4) · `dev-accounts:stuck` (info,
+meet-dream).
 
-### 18.4 Setup steps
+### 18.4 AI Assistant widget (decision Q6)
+
+Shopify's Sidekick, built from the kit's parts. Provided by the **AI Chat**
+module as the `ai-assistant` widget (full width, near the top of Home).
+
+- **Connected to `/mcp` automatically, as the signed-in staff member.** The
+  widget's server route mints a short-lived MCP access token for the current
+  user (the same HS256 tokens the OAuth flow issues, signed with
+  `MCP_JWT_SECRET`, 10-minute lifetime, never sent to the browser) and
+  calls the kit's MCP tools through the AI SDK's MCP client. Every tool
+  runs through the Payload Local API as that user with
+  `overrideAccess: false`, so the assistant can do exactly what the user
+  can do in `/admin`, no more.
+- **Golden rules 5 and 6 hold:** model from `DEFAULT_AI_MODEL`; the route is
+  authed (staff only), rate-limited and token-capped like `/api/chat`.
+- **Writes need a click.** Read tools (search, read, list) run directly.
+  Any create, update, delete or notify tool shows a confirmation card in the
+  chat (what will change, on which record) with Confirm / Cancel; deletes
+  and pushes open a `ConfirmationModal`. Every tool call is logged with the
+  user (audit).
+- **UI:** a Payload `card` with a prompt box, suggestion chips ("Draft a post
+  about…", "Schedule a push to…", "Which subscriptions are past due?"),
+  the answer, and links to records it touched. **Expand** opens the same
+  conversation in a drawer; history is the user's own AI Chat threads.
+- **Shown only when** AI Chat is installed and enabled, a Gateway key is
+  set, and MCP is configured; otherwise the widget renders nothing and the
+  setup guide lists the missing step.
+- Mobile: full width; Expand opens a full-screen drawer.
+
+### 18.5 Setup steps
 
 `SetupStep = { id, title, description?, done, href, actionLabel, order? }`
 from core and modules: account created · connect GitHub · set brand · review
@@ -1762,10 +1852,11 @@ sign-in methods · connect Stripe · create a plan · add an AI Gateway key. The
 widget hides when all are done or dismissed. Replaces `FinishSetupRow`.
 `SeedGate` and `DreamSiteSync` stay in `beforeDashboard`.
 
-### 18.5 Fallback
+### 18.6 Fallback
 
 Widget content lives in plain server components (`payload/components/home/*`).
-If the experimental dashboard API changes, the kit switches to a custom
+If the experimental dashboard API changes (decision Q10: build on it), the
+kit switches to a custom
 `views.dashboard` (`DefaultTemplate` + `Gutter`, fixed layout) without
 changing module exports. Pin Payload's minor version and keep an E2E on Home.
 
@@ -1888,9 +1979,9 @@ conditional groups. Proposed, keeping the same storage:
 `series` stays core because podcast shows, video seasons and courses all use
 it until Courses ships.
 
-Modules ship **preinstalled** in the kit release that extracts them, so
-existing apps see no change. A founder removes what they don't use
-(`pnpm mod remove events`).
+**None of these modules is preinstalled** (decision Q1), in new apps or in
+meet-dream. A founder adds what they need (`pnpm mod add events`, or
+Install Module in System › Modules).
 
 ### 22.2 References that must tolerate missing types
 
@@ -1915,9 +2006,29 @@ Lessons sit in Series (§11.6) and Enrollments in Users.
 
 ### 22.4 Existing installs
 
-Module Payload migrations **adopt** existing tables (`IF NOT EXISTS`); core
-never drops them; `pnpm mod remove` runs `drop.sql` after a confirmation that
-names row counts. The extraction ships as its own release with its own E2E.
+The kit release that extracts these modules **doesn't install them** on
+existing apps either (decision Q1). Instead:
+
+1. Core keeps every table: no migration drops `videos`, `audio`, `photos`,
+   `events`, `locations`, `space-groups`, `spaces`, `community-posts` or
+   `private-feeds`. The data stays in the database, untouched.
+2. After the upgrade, a core check counts rows in those tables. For each
+   one with content, an attention item `core:uninstalled-content`
+   (warning, admins) says: "Videos has 42 items but the Media & Podcasts
+   module isn't installed. They're hidden in the admin, site and app until
+   you install it." with an **Install** button (the Install Module flow).
+3. Until installed, that content is hidden everywhere: no admin pages, no
+   public pages (their routes return 404), no app screens, no MCP tools.
+   Release notes and the kit-update PR body list this clearly, because
+   public URLs go away until the module is installed.
+4. Installing the module **adopts** the existing tables (its first Payload
+   migration creates them only `IF NOT EXISTS`), so content reappears as it
+   was.
+5. `pnpm mod remove` runs `drop.sql` only after a confirmation that names
+   row counts; nothing is dropped by an upgrade.
+
+The extraction ships as its own release with its own E2E (upgrade an app
+with content, check the alert, install, check the content is back).
 
 ---
 
@@ -2009,8 +2120,16 @@ existing row, or they disappear from public reads. Read access becomes
 - v1 collections: Users, Subscriptions, Coupons (admins); Form Submissions,
   Reports (admins, editors). Modules opt in with
   `admin.collections[slug].export`.
-- Files expire after 7 days (`purge-exports` task). Import stays off (it would
-  skip the invite and Supabase sync hooks on Users).
+- Files expire after 7 days (`purge-exports` task).
+- **Import (decision Q13): content collections only**: Posts, Pages, Legal
+  Pages, Series, Categories, Tag Groups, Redirects, Coupons, and module
+  content types that opt in (`admin.collections[slug].import: true`).
+  **Never Users**, Workspaces, Subscriptions, Plans or settings. Admins
+  only. Imports run through the Local API with hooks (so slugs, redirects
+  and Stripe sync behave as in the admin), create drafts for versioned
+  collections, and show a preview (first 10 rows, matched columns, errors)
+  in the import drawer before anything is written. A finished import
+  reports created / updated / failed counts (toast + the imports list).
 
 ### 23.6 Redirects (core)
 
@@ -2105,24 +2224,27 @@ installed, modules declare **permission keys** (`crm:read`,
 `billing:admin`); the kit maps the three built-in roles to defaults, and nav
 links, views, widgets and attention items check keys instead of roles.
 
-| Area                                                     | Admin                 | Editor                                 | Author                        |
-| -------------------------------------------------------- | --------------------- | -------------------------------------- | ----------------------------- |
-| Home                                                     | full                  | editor layout                          | editor layout                 |
-| Content                                                  | ✓                     | ✓                                      | own items (collection access) |
-| Community                                                | ✓                     | ✓                                      | —                             |
-| People                                                   | ✓                     | read-only if access allows (Q9)        | —                             |
-| Sales, Support, Operations, Insights                     | per module permission | per module permission                  | —                             |
-| Commerce                                                 | ✓                     | —                                      | —                             |
-| Marketing                                                | ✓                     | ✓                                      | —                             |
-| Channels › Pages, Legal Pages, Redirects, App Onboarding | ✓                     | ✓                                      | —                             |
-| Channels › Navigation, AI Agents                         | ✓                     | —                                      | —                             |
-| Modules zone                                             | ✓                     | per view permission (AI Chat › Skills) | —                             |
-| Settings, System, gear admin items                       | ✓                     | —                                      | —                             |
-| Search                                                   | ✓                     | results they can read                  | results they can read         |
-| Export                                                   | ✓                     | Form Submissions, Reports              | —                             |
-| Versions tab                                             | ✓                     | on content they can edit               | on their own content          |
-| Change Password (others)                                 | ✓                     | —                                      | —                             |
-| Alerts                                                   | all                   | items allowing editors                 | items allowing authors        |
+| Area                                                     | Admin                          | Editor                                 | Author                        |
+| -------------------------------------------------------- | ------------------------------ | -------------------------------------- | ----------------------------- |
+| Home                                                     | full                           | editor layout                          | editor layout                 |
+| Content                                                  | ✓                              | ✓                                      | own items (collection access) |
+| Community                                                | ✓                              | ✓                                      | —                             |
+| People                                                   | ✓                              | —                                      | —                             |
+| Sales, Support, Operations, Insights                     | per module permission          | per module permission                  | —                             |
+| Commerce                                                 | ✓                              | —                                      | —                             |
+| Marketing                                                | ✓                              | ✓                                      | —                             |
+| Channels › Pages, Legal Pages, Redirects, App Onboarding | ✓                              | ✓                                      | —                             |
+| Channels › Navigation, AI Agents                         | ✓                              | —                                      | —                             |
+| Modules zone                                             | ✓                              | per view permission (AI Chat › Skills) | —                             |
+| Settings, System, gear admin items                       | ✓                              | —                                      | —                             |
+| Search                                                   | ✓                              | results they can read                  | results they can read         |
+| Export                                                   | ✓                              | Form Submissions, Reports              | —                             |
+| Import (content collections)                             | ✓                              | —                                      | —                             |
+| Versions tab                                             | ✓                              | on content they can edit               | on their own content          |
+| Change Password (others)                                 | ✓                              | —                                      | —                             |
+| View as User                                             | ✓ (members only, when allowed) | —                                      | —                             |
+| AI Assistant                                             | ✓                              | ✓ (its own access)                     | ✓ (its own access)            |
+| Alerts                                                   | all                            | items allowing editors                 | items allowing authors        |
 
 No greyed-out links.
 
@@ -2148,7 +2270,7 @@ No greyed-out links.
 | Slug changed on a published document        | Redirect created; chains collapsed                                                                                              |
 | Premium content in search                   | Title only in the public index                                                                                                  |
 | Module with rich-text blocks removed        | Blocks leave the editor; existing content renders without them                                                                  |
-| Many module groups (> 15)                   | Revisit pinning (Q7)                                                                                                            |
+| Many module groups                          | Pinned groups first, the rest A–Z; accordion keeps it short                                                                     |
 | Phone                                       | §15                                                                                                                             |
 | Translations                                | Labels accept Payload label objects; `translateLabel` stays                                                                     |
 
@@ -2189,7 +2311,7 @@ module-provided (module slug), and section order numbers.
 | W22   | Module settings (Billing)                 | §21.2: tabs General · Pricing Page · Tags · Stripe Connector · Advanced; side panel Enabled; Test Connection button; disable confirmation                                                                                                                                                                                                                                                  |
 | W23   | All Settings                              | §20.1                                                                                                                                                                                                                                                                                                                                                                                      |
 | W24   | Connections                               | Connector cards with status pills                                                                                                                                                                                                                                                                                                                                                          |
-| W25   | Theme Settings › Admin tab                | Admin Colors select; Preview in Admin on, with the preview banner; the admin re-colored                                                                                                                                                                                                                                                                                                    |
+| W25   | Theme Settings › Admin tab                | Admin Colors select; Preview in Admin on, with the preview banner; the admin re-colored (surfaces, text, borders, fonts, radius; buttons stay Payload's)                                                                                                                                                                                                                                   |
 | W26   | Search drawer                             | Query "launch"; scope pills; results grouped Posts (2), Videos (1), Docs (1) with status pills                                                                                                                                                                                                                                                                                             |
 | W27   | Saved views + Group By                    | Subscriptions with stats row (Active 312 · Trialing 14 · Canceling 9 · Past Due 2), preset Past Due, grouped by Plan                                                                                                                                                                                                                                                                       |
 | W28   | Export                                    | List ⋯ → Export drawer (CSV, current columns, "Export 2 rows") → System › Exports list (Ready pill, Download, "Deleted in 7 days")                                                                                                                                                                                                                                                         |
@@ -2198,6 +2320,12 @@ module-provided (module slug), and section order numbers.
 | W31   | Rich text with blocks                     | Slash menu: Callout, Call to Action, Image with Caption, Video (Media & Podcasts), Event Card (Events)                                                                                                                                                                                                                                                                                     |
 | W32   | AI Agents                                 | Status, MCP URL with copy, clients table, Revoke confirmation                                                                                                                                                                                                                                                                                                                              |
 | W33   | Background Jobs                           | Failed preset; Retry on a failed job                                                                                                                                                                                                                                                                                                                                                       |
+| W34   | Home with AI Assistant widget             | Prompt "Which subscriptions are past due?" answered with 2 linked records; second state: "Schedule a push to all members tomorrow 9am" showing a confirmation card (audience, time, message) with Confirm / Cancel                                                                                                                                                                         |
+| W35   | View as User                              | Users ⋯ → confirmation modal with Reason field; then the app with the "Viewing as Jane Doe · Exit" banner and a blocked checkout message                                                                                                                                                                                                                                                   |
+| W36   | Uninstalled content alert                 | Home attention: "Videos has 42 items but Media & Podcasts isn't installed…" [Install]; System › Modules install drawer open on Media & Podcasts                                                                                                                                                                                                                                            |
+| W37   | Comments moderation                       | Comments list, Pending preset, two selected, selection bar with Approve / Hide; nav pill on Comments                                                                                                                                                                                                                                                                                       |
+| W38   | Coupon Redemptions tab                    | Coupon edit, Redemptions (14) join table: Member · Plan · Redeemed · Order                                                                                                                                                                                                                                                                                                                 |
+| W39   | Pinned modules                            | Sidebar Modules zone with "Pinned" label (Automations, AI Chat), then A–Z; the pin popup on a group label                                                                                                                                                                                                                                                                                  |
 | M1    | Phone: nav open                           | 390×844, W1 structure in Payload's mobile menu                                                                                                                                                                                                                                                                                                                                             |
 | M2    | Phone: Home                               | Widgets full width, KPI tiles two per row, Search and Alerts icon buttons                                                                                                                                                                                                                                                                                                                  |
 | M3    | Phone: Users list                         | Four columns, horizontal scroll hint, Presets                                                                                                                                                                                                                                                                                                                                              |
@@ -2215,18 +2343,18 @@ typecheck && pnpm lint && pnpm test` and the relevant `pnpm test:e2e`.
 meet-dream follows through the kit update, then a small PR for its local
 modules (placements, `ideas` module, renames of its `modules` collections).
 
-| Phase | Scope                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Key files                                                                                                                                                                                                                              |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0 ✓   | Mislabeled field labels and descriptions (Users, Events, Media, Onboarding, Series, Authentication)                                                                                                                                                                                                                                                                                                                                                    | done in this branch                                                                                                                                                                                                                    |
-| 1     | Sections, `inSection`/`childOf`, manifest placements, nav build, Home link, Modules label, Settings/System split; families (`group: false`, family tabs, join tabs on Users, Series, Locations, Events, Space Groups, Plans); Users page (§11.2) incl. **Change Password modal** and moving Private Feeds and Enrollments into tabs; overlay components; consistency test; query presets; groupBy; Background Jobs; admin meta/dates/time zones/avatar | `packages/mod-kit/src/{admin-sections,manifest}.ts`, `tooling/mod/src/generate.ts`, `payload/components/AdminNav*.tsx`, `payload/components/{FamilyTabs,ChangePasswordButton}.tsx`, `payload/collections/*`, `payload.config.ts`, docs |
-| 1b    | Payload features, one PR each: History · Publish flow (with the `_status` backfill) · GraphQL off · Redirects · Data Export module · Live Preview breakpoints                                                                                                                                                                                                                                                                                          | §23                                                                                                                                                                                                                                    |
-| 2     | Home, attention, setup, badges, Alerts bell and page; remove `FinishSetupRow`                                                                                                                                                                                                                                                                                                                                                                          | `packages/mod-kit/src/admin.ts`, `payload/components/home/*`, `payload/views/AlertsView.tsx`                                                                                                                                           |
-| 2b    | One theme: `themeToPayloadCss`, brand accent stylesheet, contrast guard, Admin Colors, Preview in Admin; shrink `custom.css`; rebuild Tailwind admin components with Payload components; mobile rules and the three Playwright device projects                                                                                                                                                                                                         | `lib/theme/payload-theme.ts`, `payload/components/ThemeStyleProvider.tsx`, `app/(payload)/custom.css`, `tooling/web-e2e`                                                                                                               |
-| 3     | Module overview and settings pages, All Settings, Connections view, AI Agents, Workspaces mirror, page-by-page items in §11 not done in phase 1                                                                                                                                                                                                                                                                                                        | `payload/views/*`, `payload/collections/Workspaces.ts`                                                                                                                                                                                 |
-| 3b    | Slug alignment release (§16), with redirects, REST aliases and the stored-slug migration                                                                                                                                                                                                                                                                                                                                                               | collections/globals, `proxy.ts`, `next.config`, migrations, `@acme/cms`, MCP registry                                                                                                                                                  |
-| 4     | Extract `media-podcasts`, `events`, `maps`, `community` (preinstalled); polymorphic field builders; adopting migrations                                                                                                                                                                                                                                                                                                                                | `modules/*`                                                                                                                                                                                                                            |
-| 5     | Search module, rich-text blocks and module editor features                                                                                                                                                                                                                                                                                                                                                                                             | `modules/search`, `payload/blocks/*`                                                                                                                                                                                                   |
-| later | Catalogue modules adopt the manifest placements as they're built; Courses extraction (§22.3)                                                                                                                                                                                                                                                                                                                                                           | —                                                                                                                                                                                                                                      |
+| Phase | Scope                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Key files                                                                                                                                                                                                                              |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0 ✓   | Mislabeled field labels and descriptions (Users, Events, Media, Onboarding, Series, Authentication)                                                                                                                                                                                                                                                                                                                                                                                                                                              | done in this branch                                                                                                                                                                                                                    |
+| 1     | Sections, `inSection`/`childOf`, manifest placements, nav build, Home link, Modules label, Settings/System split; families (`group: false`, family tabs, join tabs on Users, Series, Locations, Events, Space Groups, Plans); Users page (§11.2) incl. **Change Password modal**, moving Private Feeds and Enrollments into tabs, and **View as User** (§11.27, after its spike); comment moderation (§11.11); module pinning; overlay components; consistency test; query presets; groupBy; Background Jobs; admin meta/dates/time zones/avatar | `packages/mod-kit/src/{admin-sections,manifest}.ts`, `tooling/mod/src/generate.ts`, `payload/components/AdminNav*.tsx`, `payload/components/{FamilyTabs,ChangePasswordButton}.tsx`, `payload/collections/*`, `payload.config.ts`, docs |
+| 1b    | Payload features, one PR each: History · Publish flow (with the `_status` backfill) · GraphQL off · Redirects · Data Export module · Live Preview breakpoints                                                                                                                                                                                                                                                                                                                                                                                    | §23                                                                                                                                                                                                                                    |
+| 2     | Home, attention, setup, badges, Alerts bell and page, **AI Assistant widget** (§18.4); remove `FinishSetupRow`                                                                                                                                                                                                                                                                                                                                                                                                                                   | `packages/mod-kit/src/admin.ts`, `payload/components/home/*`, `payload/views/AlertsView.tsx`                                                                                                                                           |
+| 2b    | One theme: `themeToPayloadCss` (variables only), contrast guard, Admin Colors, Preview in Admin; shrink `custom.css`; rebuild Tailwind admin components with Payload components; mobile rules and the three Playwright device projects                                                                                                                                                                                                                                                                                                           | `lib/theme/payload-theme.ts`, `payload/components/ThemeStyleProvider.tsx`, `app/(payload)/custom.css`, `tooling/web-e2e`                                                                                                               |
+| 3     | Module overview and settings pages, All Settings, Connections view, AI Agents, Workspaces mirror, page-by-page items in §11 not done in phase 1                                                                                                                                                                                                                                                                                                                                                                                                  | `payload/views/*`, `payload/collections/Workspaces.ts`                                                                                                                                                                                 |
+| 3b    | Slug alignment release (§16), with redirects, REST aliases and the stored-slug migration                                                                                                                                                                                                                                                                                                                                                                                                                                                         | collections/globals, `proxy.ts`, `next.config`, migrations, `@acme/cms`, MCP registry                                                                                                                                                  |
+| 4     | Extract `media-podcasts`, `events`, `maps`, `community` (not preinstalled; uninstalled-content alert, §22.4); polymorphic field builders; adopting migrations                                                                                                                                                                                                                                                                                                                                                                                    | `modules/*`                                                                                                                                                                                                                            |
+| 5     | Search module, rich-text blocks and module editor features                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `modules/search`, `payload/blocks/*`                                                                                                                                                                                                   |
+| later | Catalogue modules adopt the manifest placements as they're built; Courses extraction (§22.3)                                                                                                                                                                                                                                                                                                                                                                                                                                                     | —                                                                                                                                                                                                                                      |
 
 Docs to update along the way: `docs/CMS.md` (sections, families, slugs),
 `docs/MODULES.md` (new `admin` and `cms` manifest fields, slug claims),
@@ -2236,22 +2364,32 @@ admin theme rule), `docs/BRAND.md` (theme drives the admin).
 
 ---
 
-## 29. Open questions
+## 29. Decisions
 
-| #   | Question                                                                              | Default if no answer                                          |
-| --- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Q1  | Which media modules does meet-dream keep after phase 4?                               | Keep all installed                                            |
-| Q2  | Slug renames (§16.2): ship them, given the REST alias period for old app builds?      | Yes, in phase 3b                                              |
-| Q3  | Give Comments a moderation status (for a pending count and bulk approve)?             | Not in v1                                                     |
-| Q4  | Subscriptions read-only in Commerce, or keep support in `/billing`'s Find an Account? | Both: read-only list for overview, changes through `/billing` |
-| Q5  | Coupon redemptions and push deliveries as child tabs (need new data)?                 | Later                                                         |
-| Q6  | Home AI prompt box using AI Chat?                                                     | Not in v1                                                     |
-| Q7  | Pin module groups when there are many?                                                | A–Z until more than 15                                        |
-| Q8  | Public search in the website and app too?                                             | Yes, published only, premium title-only                       |
-| Q9  | Editors' access to Users (read-only)?                                                 | Keep today's access                                           |
-| Q10 | Depend on Payload's experimental dashboard with the §18.5 fallback?                   | Yes, Payload minor pinned                                     |
-| Q11 | "View as User" (impersonation) for admins?                                            | Later, audited, behind a setting                              |
-| Q12 | Brand accent overrides (§13.2) beyond Payload's variables: acceptable?                | Yes, limited to the four listed elements, with visual tests   |
-| Q13 | CSV import for any collection?                                                        | Off; never for Users                                          |
-| Q14 | Workspaces mirror collection in Payload (phase 3)?                                    | Yes, read-mostly                                              |
-| Q15 | Labels in Title Case kit-wide (§14.1), matching Payload's built-ins?                  | Yes                                                           |
+Answered by Vincent on Nov 28, 2026. The sections above already reflect them.
+
+| #   | Question                                            | Decision                                                                                                                                               | Where        |
+| --- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ |
+| Q1  | Which extracted content modules are preinstalled?   | **None**, in new apps and meet-dream. Existing apps aren't auto-installed either: content stays in the DB, hidden, with an alert and an Install button | §22.1, §22.4 |
+| Q2  | Rename slugs to match names?                        | **Yes**, in their own release with redirects, API aliases and a stored-slug migration; `theme-settings` keeps its slug                                 | §16          |
+| Q3  | Comment moderation?                                 | **Yes**: Pending / Approved / Hidden, optional approval, pending pill, bulk Approve / Hide                                                             | §11.11       |
+| Q4  | Subscriptions in Commerce?                          | **Read-only list** plus a Manage in Billing deep link to the exact `/billing` support page                                                             | §11.12       |
+| Q5  | Coupon Redemptions and Push Deliveries tabs?        | **Coupon Redemptions: yes.** Push Deliveries: no                                                                                                       | §11.12       |
+| Q6  | AI prompt on Home?                                  | **Yes**: an AI Chat widget connected automatically to `/mcp` with the user's own access                                                                | §18.4        |
+| Q7  | Pin module groups?                                  | **Yes, in v1**, per user                                                                                                                               | §8.9, §17.4  |
+| Q8  | Public search too?                                  | **Yes**: admin and public; published only; premium title-only                                                                                          | §23.7        |
+| Q9  | Editors see Users?                                  | **No**, admins only                                                                                                                                    | §25          |
+| Q10 | Build Home on Payload's experimental dashboard?     | **Yes**, version pinned, with the fallback                                                                                                             | §18.6        |
+| Q11 | View as User?                                       | **Yes, in v1**: audited, time-limited, off by default, sensitive actions blocked                                                                       | §11.27       |
+| Q12 | Brand accent stylesheet beyond Payload's variables? | **No**: variables only                                                                                                                                 | §13.2        |
+| Q13 | CSV import?                                         | **Content collections only**; never Users                                                                                                              | §23.5        |
+| Q14 | Workspaces in Payload?                              | **Yes**, a read-mostly mirror collection                                                                                                               | §11.3        |
+| Q15 | Title Case labels?                                  | **Yes**; sentence case for descriptions and messages                                                                                                   | §14.1        |
+
+### Still open
+
+| #   | Question                                                                                    | Proposed default                        |
+| --- | ------------------------------------------------------------------------------------------- | --------------------------------------- |
+| Q16 | View as User on the native app, or web only in v1?                                          | Web only in v1, after the session spike |
+| Q17 | AI Assistant write confirmations: confirm every write, or let admins turn confirmation off? | Confirm every write                     |
+| Q18 | Comments Need Approval: default off for new apps?                                           | Off                                     |
