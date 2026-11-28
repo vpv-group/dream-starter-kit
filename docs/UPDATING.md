@@ -62,6 +62,14 @@ squash**.
   the **Updates available** bar at the top of /admin, which shows whenever the
   kit or a module is behind.
 
+**New in 2.7.0 — modules install with their dependencies.** Installing a
+module that `requires` another (e.g. Projects · GitHub needs Projects) now
+adds both in one pull request, and /admin's Install drawer shows each
+install's progress (Starting → Preparing → Running checks → Deploying →
+Installed), lets you start several at once and won't request one twice
+(MODULES.md → Lifecycle, Admin panel). The release changes
+`.github/workflows/module-ops.yml`, so its update PR waits for your review.
+
 **New in 2.6.1 — "Updates available" in /admin.** A bar above every admin
 page lists the starter kit and modules that are behind their newest release,
 with **Update** / **Update all** (MODULES.md → Admin panel + automatic
