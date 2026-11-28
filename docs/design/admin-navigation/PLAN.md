@@ -1184,8 +1184,8 @@ Lets an admin see the app exactly as a member sees it, for support.
 - **Audit:** start, end and every write are recorded with the admin, the
   member, the reason and the time (kit audit events; the Audit Log module
   shows them). The member's Activity tab lists sessions too.
-- **Build note:** start with a design spike on the separate-cookie session
-  (web) and decide whether native gets it later; RLS tests must prove the
+- **Web only in v1** (decision Q16). **Build note:** start with a design
+  spike on the separate-cookie session; native is decided later; RLS tests must prove the
   impersonation session can read only what the member can.
 
 ---
@@ -2386,10 +2386,10 @@ Answered by Vincent on Nov 28, 2026. The sections above already reflect them.
 | Q14 | Workspaces in Payload?                              | **Yes**, a read-mostly mirror collection                                                                                                               | §11.3        |
 | Q15 | Title Case labels?                                  | **Yes**; sentence case for descriptions and messages                                                                                                   | §14.1        |
 
-### Still open
+### Follow-ups, also decided
 
-| #   | Question                                                                                    | Proposed default                        |
-| --- | ------------------------------------------------------------------------------------------- | --------------------------------------- |
-| Q16 | View as User on the native app, or web only in v1?                                          | Web only in v1, after the session spike |
-| Q17 | AI Assistant write confirmations: confirm every write, or let admins turn confirmation off? | Confirm every write                     |
-| Q18 | Comments Need Approval: default off for new apps?                                           | Off                                     |
+| #   | Question                                     | Decision                                                                       | Where  |
+| --- | -------------------------------------------- | ------------------------------------------------------------------------------ | ------ |
+| Q16 | View as User on native too?                  | **Web only in v1**, after the session spike; native decided later              | §11.27 |
+| Q17 | AI Assistant write confirmations?            | **Confirm every write**; deletes and pushes open a confirmation modal          | §18.4  |
+| Q18 | Comments Need Approval default for new apps? | **Off**: comments appear immediately; staff hide them; Reports stays the queue | §11.11 |
