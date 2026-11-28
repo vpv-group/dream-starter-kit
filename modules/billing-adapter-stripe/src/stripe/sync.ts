@@ -147,14 +147,27 @@ export function introAmountOff(plan: PlanSyncInput): number | null {
 
 // --- Plan sync ------------------------------------------------------------
 
+/** Stripe's "No such …" error: the id doesn't exist in this account. */
+function isMissingResource(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    (err as { code?: unknown }).code === "resource_missing"
+  );
+}
+
 export async function syncPlanToStripe(
   stripe: Stripe,
   plan: PlanSyncInput,
 ): Promise<PlanSyncResult> {
   const metadata = { payloadId: String(plan.id), payloadCollection: "plans" };
 
-  // 1. Product — created if missing, otherwise updated in place.
+  // 1. Product — created if missing, otherwise updated in place. A stored id
+  // that no longer resolves (the site moved to another Stripe account, or the
+  // product was deleted in the Dashboard) gets a new product, and its price
+  // goes with it: a price can't move to another product.
   let productId = plan.stripeProductId ?? "";
+  let productRecreated = false;
   const productData: Stripe.ProductUpdateParams = {
     name: plan.name,
     description: plan.description?.trim() ? plan.description : undefined,
@@ -162,19 +175,26 @@ export async function syncPlanToStripe(
     metadata,
   };
   if (productId) {
-    await stripe.products.update(productId, productData);
-  } else {
+    try {
+      await stripe.products.update(productId, productData);
+    } catch (err) {
+      if (!isMissingResource(err)) throw err;
+      productId = "";
+    }
+  }
+  if (!productId) {
     const product = await stripe.products.create({
       ...(productData as Stripe.ProductCreateParams),
       name: plan.name,
     });
     productId = product.id;
+    productRecreated = Boolean(plan.stripeProductId);
   }
 
   // 2. Price — immutable, so create a new one + archive the old when it diverges.
   let priceId = plan.stripePriceId ?? "";
-  let recreate = !priceId;
-  if (priceId) {
+  let recreate = !priceId || productRecreated;
+  if (priceId && !recreate) {
     try {
       const live = await stripe.prices.retrieve(priceId);
       recreate = priceNeedsRecreate(live, plan);
@@ -197,7 +217,7 @@ export async function syncPlanToStripe(
       metadata,
     });
     await stripe.products.update(productId, { default_price: newPrice.id });
-    if (priceId) {
+    if (priceId && !productRecreated) {
       await stripe.prices.update(priceId, { active: false }).catch(() => {
         // Old price may already be archived/missing — ignore.
       });

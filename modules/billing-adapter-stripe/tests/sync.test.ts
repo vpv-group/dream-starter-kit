@@ -155,6 +155,49 @@ describe("syncPlanToStripe", () => {
     expect(res.stripePriceId).toBe("price_new");
   });
 
+  it("recreates product + price when the stored product isn't in this account", async () => {
+    const stripe = mockStripe();
+    stripe.products.update.mockRejectedValueOnce(
+      Object.assign(new Error("No such product: 'prod_old'"), {
+        code: "resource_missing",
+      }),
+    );
+    const res = await syncPlanToStripe(stripe as never, {
+      ...basePlan,
+      stripeProductId: "prod_old",
+      stripePriceId: "price_old",
+    });
+    expect(stripe.products.create).toHaveBeenCalledOnce();
+    // The old price belongs to the old product/account: neither read nor archived.
+    expect(stripe.prices.retrieve).not.toHaveBeenCalled();
+    expect(stripe.prices.update).not.toHaveBeenCalled();
+    expect(stripe.prices.create).toHaveBeenCalledWith(
+      expect.objectContaining({ product: "prod_new" }),
+    );
+    expect(res).toEqual({
+      stripeProductId: "prod_new",
+      stripePriceId: "price_new",
+      stripeIntroCouponId: null,
+    });
+  });
+
+  it("still fails on other product errors", async () => {
+    const stripe = mockStripe();
+    stripe.products.update.mockRejectedValueOnce(
+      Object.assign(new Error("Permission denied"), {
+        code: "permission_denied",
+      }),
+    );
+    await expect(
+      syncPlanToStripe(stripe as never, {
+        ...basePlan,
+        stripeProductId: "prod_1",
+        stripePriceId: "price_1",
+      }),
+    ).rejects.toThrow("Permission denied");
+    expect(stripe.products.create).not.toHaveBeenCalled();
+  });
+
   it("creates a duration:once intro coupon", async () => {
     const stripe = mockStripe();
     await syncPlanToStripe(stripe as never, {
