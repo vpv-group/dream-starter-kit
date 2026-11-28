@@ -20,7 +20,7 @@ import { defineModule } from "@acme/mod-kit";
 export default defineModule({
   slug: "billing",
   name: "Billing",
-  version: "2.3.0",
+  version: "2.4.0",
   kitCompat: ">=2.6.0 <3",
   description:
     "Plans, purchases and entitlements, with pluggable payment providers.",
@@ -74,6 +74,9 @@ export default defineModule({
     routes: true,
     publicRoutes: true,
     services: true,
+    // billing_* tools on the remote MCP server (/mcp): read, create, edit,
+    // delete and re-sync plans and coupons (src/server/mcp.ts).
+    mcp: true,
   },
   admin: {
     // Warns on Modules → Billing when no payment provider is installed or
