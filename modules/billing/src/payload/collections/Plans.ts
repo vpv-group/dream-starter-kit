@@ -3,7 +3,10 @@ import type { CollectionConfig } from "payload";
 import { anyone, isAdmin } from "@acme/mod-kit/payload";
 
 import { slugField } from "../fields/slug";
-import { syncPlanWithProviders } from "../hooks/sync-with-providers";
+import {
+  retirePlanWithProviders,
+  syncPlanWithProviders,
+} from "../hooks/sync-with-providers";
 
 /**
  * Billing plans — the source of truth for the product catalog. Authored here
@@ -12,6 +15,9 @@ import { syncPlanWithProviders } from "../hooks/sync-with-providers";
  * `syncPlan`; e.g. billing-adapter-stripe creates the Stripe product/price
  * and adds a read-only "Stripe" tab with the ids). Providers mirror the
  * resulting catalog back into mod_billing_products/prices for RLS clients.
+ * Deleting a plan retires it at each provider (`afterDelete` → the adapter's
+ * `deletePlan`: Stripe archives the product and price), so it can't be bought
+ * any more while existing subscriptions keep renewing.
  *
  * Pricing is NOT editorial, so there is no draft/publish workflow — `active`
  * gates visibility instead. Read is public (the pricing page is anonymous);
@@ -44,7 +50,10 @@ export const Plans: CollectionConfig = {
     update: isAdmin,
     delete: isAdmin,
   },
-  hooks: { afterChange: [syncPlanWithProviders] },
+  hooks: {
+    afterChange: [syncPlanWithProviders],
+    afterDelete: [retirePlanWithProviders],
+  },
   fields: [
     {
       name: "entitlement",

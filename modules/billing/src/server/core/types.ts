@@ -2,7 +2,11 @@ import type {
   SupabaseClient as BaseSupabaseClient,
   User,
 } from "@supabase/supabase-js";
-import type { BasePayload, CollectionAfterChangeHook } from "payload";
+import type {
+  BasePayload,
+  CollectionAfterChangeHook,
+  CollectionAfterDeleteHook,
+} from "payload";
 
 import type { Database } from "@acme/api";
 import type { ModBillingCoupon, ModBillingPlan } from "@acme/cms";
@@ -120,6 +124,13 @@ export type ClaimResult = "claimed" | "duplicate" | "busy";
 /** Payload `afterChange` args for a plan or coupon save. */
 export type CatalogSyncArgs = Parameters<CollectionAfterChangeHook>[0];
 
+/**
+ * Payload `afterDelete` args for a plan or coupon delete. `doc` is the deleted
+ * document (with the provider ids it carried), and the row is already gone —
+ * there is nothing to write `syncStatus` back to.
+ */
+export type CatalogDeleteArgs = Parameters<CollectionAfterDeleteHook>[0];
+
 export interface CheckoutInput {
   plan: ModBillingPlan;
   /** The signed-in buyer, or null for a guest checkout. */
@@ -177,6 +188,19 @@ export interface BillingProvider {
   syncPlan?(args: CatalogSyncArgs): Promise<unknown>;
   /** Push a saved coupon to the provider (Payload afterChange). */
   syncCoupon?(args: CatalogSyncArgs): Promise<unknown>;
+  /**
+   * A plan was deleted (Payload afterDelete): retire it at the provider so it
+   * can't be bought any more (e.g. archive the product and price). Existing
+   * purchases must keep working. Best effort — a throw is logged, never undoes
+   * the delete.
+   */
+  deletePlan?(args: CatalogDeleteArgs): Promise<void>;
+  /**
+   * A coupon was deleted (Payload afterDelete): stop new redemptions (e.g.
+   * deactivate its promotion code, delete the coupon). Subscriptions that
+   * already carry the discount keep it. Best effort, like `deletePlan`.
+   */
+  deleteCoupon?(args: CatalogDeleteArgs): Promise<void>;
   /** Cancel what the user still pays for before their account is deleted. */
   onAccountDelete?(input: { userId: string }): Promise<void>;
   /** For the admin panel. */

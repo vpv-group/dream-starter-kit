@@ -2,7 +2,10 @@ import type { CollectionConfig } from "payload";
 
 import { anyone, isAdmin } from "@acme/mod-kit/payload";
 
-import { syncCouponWithProviders } from "../hooks/sync-with-providers";
+import {
+  retireCouponWithProviders,
+  syncCouponWithProviders,
+} from "../hooks/sync-with-providers";
 
 /**
  * Discount coupons + (optionally) a customer-facing promotion code. Authored
@@ -12,7 +15,11 @@ import { syncCouponWithProviders } from "../hooks/sync-with-providers";
  * customers type at checkout that maps to it.
  *
  * Stripe coupons are immutable for amount/duration — changing those creates a
- * NEW Stripe coupon and archives the old one (the sync handles this). Read is
+ * NEW Stripe coupon and archives the old one (the sync handles this).
+ * Unticking `active` deactivates the promotion code (ticking it reactivates
+ * it); deleting the coupon retires it at each provider (`afterDelete` → the
+ * adapter's `deleteCoupon`: Stripe deactivates the code and deletes the
+ * coupon — subscriptions that already have the discount keep it). Read is
  * public (so the app can surface available offers); writes are staff-only.
  *
  * The `isWelcomeOffer` coupon (at most one active) is what the signup flow uses
@@ -29,7 +36,8 @@ export const Coupons: CollectionConfig = {
     description:
       "Discounts synced to your payment providers on save. Changing " +
       "amount/duration creates a new Stripe coupon (they're immutable) and " +
-      "archives the old one.",
+      "archives the old one. Deleting a coupon stops new redemptions; " +
+      "existing subscriptions keep their discount.",
   },
   access: {
     read: anyone,
@@ -37,7 +45,10 @@ export const Coupons: CollectionConfig = {
     update: isAdmin,
     delete: isAdmin,
   },
-  hooks: { afterChange: [syncCouponWithProviders] },
+  hooks: {
+    afterChange: [syncCouponWithProviders],
+    afterDelete: [retireCouponWithProviders],
+  },
   fields: [
     {
       name: "timesRedeemed",
@@ -53,7 +64,12 @@ export const Coupons: CollectionConfig = {
       name: "active",
       type: "checkbox",
       defaultValue: true,
-      admin: { position: "sidebar" },
+      admin: {
+        position: "sidebar",
+        description:
+          "Off = the promotion code stops working at checkout (deactivated " +
+          "at Stripe); turn back on to reactivate it.",
+      },
     },
 
     // --- Stripe sync state (read-only; written by the afterChange sync hook) ---

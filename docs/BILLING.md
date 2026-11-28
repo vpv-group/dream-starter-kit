@@ -75,6 +75,19 @@ unnamed, so their columns don't move when a provider is added or removed. A per�
 **skipSync** opts out; failures land on **Sync status / Sync error** instead of
 failing the save.
 
+A coupon's **Active** checkbox controls its promotion code: unticking it deactivates
+the code at the provider (it can no longer be typed in at checkout, including
+Stripe's hosted Checkout with promotion codes allowed); ticking it reactivates it.
+Renaming or clearing a coupon's **code** retires the old code the same way.
+
+**Deleting** a plan or coupon runs billing's `afterDelete` hook, which hands the
+deleted doc to each provider's `deletePlan` / `deleteCoupon` so it can't be bought or
+redeemed any more. Stripe archives the plan's product and price (and deletes its
+intro coupon), and deactivates the coupon's promotion code and deletes the coupon.
+Existing subscriptions keep their price and their discount. The row is gone, so a
+failure here can't land on **Sync status**: it is logged with the provider ids, for
+cleanup in the provider's dashboard.
+
 Store products (App Store / Play) are created in the stores' consoles, not pushed
 from the kit; an in‑app provider maps them to plans in its tab instead (§7).
 
@@ -134,6 +147,11 @@ interface BillingProvider {
   customerLink?(i: { subject }): Promise<{ customerId; dashboardUrl } | null>; // staff view
   syncPlan?(args): Promise<unknown>; // Payload afterChange args
   syncCoupon?(args): Promise<unknown>;
+  // Payload afterDelete args (args.doc = the deleted doc, with your ids).
+  // Stop new purchases/redemptions; existing ones must keep working.
+  // Best effort: a throw is logged, never undoes the delete.
+  deletePlan?(args): Promise<void>;
+  deleteCoupon?(args): Promise<void>;
   onAccountDelete?(i: { userId }): Promise<void>; // cancel before deletion
   status?(): Promise<ProviderStatus>;
   legacyRoutes?: ModPublicRouteTable; // billing 1.x paths billing still forwards
