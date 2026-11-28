@@ -112,9 +112,12 @@ test("founder sign-up seeds the CMS before /admin", async ({ page }) => {
 
   // The shadcn progress screen, then hand-off to /admin once seeding completes.
   // Seeding + the Payload admin bundle can be slow on a cold CI runner.
+  // The progress screen itself can take well past the 5s default: Continue
+  // saves the account model and re-renders /cms-setup while the dev server is
+  // still compiling (an app with more modules installed compiles longer).
   await expect(
     page.getByRole("heading", { name: /setting up your cms/i }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 60_000 });
   await page.waitForURL(/\/admin/, { timeout: 90_000 });
 
   // The founder can actually VIEW /admin — the Payload dashboard must render

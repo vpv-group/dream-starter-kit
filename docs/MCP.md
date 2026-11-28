@@ -230,6 +230,33 @@ The paid Feedback module (`pnpm mod add dream:feedback`) is a full example:
 its `src/server/mcp.ts` adds eleven `feedback_*` tools plus its changelog
 collection.
 
+### Billing tools (plans and coupons)
+
+The preinstalled **billing** module contributes the Commerce catalog tools
+(`modules/billing/src/server/mcp.ts`; docs/BILLING.md §3.1). Plans and coupons
+aren't on the generic content allowlist: use these typed tools, which validate
+the input, re‑read each write and report the payment‑provider sync outcome.
+Amounts are in **cents**. Reads work for any staff role; writes need `admin`
+(the collections' own Payload access).
+
+| Tool                    | Input                                                  | Does                                                                                                |
+| ----------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `billing_list_plans`    | `active?`, `pricingType?`, `query?`, `limit?`, `page?` | Plans by display order, with a readable price, intro offer, entitlement and sync status.            |
+| `billing_get_plan`      | `id` or `slug`                                         | One plan: all fields, provider ids, coupons limited to it, subscriber counts (live / total).        |
+| `billing_create_plan`   | `name`, `unitAmount`, + any plan field                 | Create a plan (monthly recurring by default) and push it to the providers.                          |
+| `billing_update_plan`   | `id` + fields to change (`null` clears)                | Edit a plan; a price change creates a new provider price (existing subscribers keep theirs).        |
+| `billing_delete_plan`   | `id`                                                   | Delete a plan with no purchases (deactivates it first); otherwise refused — set `active: false`.    |
+| `billing_list_coupons`  | `active?`, `planId?`, `query?`, `limit?`, `page?`      | Coupons with a readable discount, code, limits, redemptions and sync status.                        |
+| `billing_get_coupon`    | `id` or `code`                                         | One coupon: all fields and provider ids.                                                            |
+| `billing_create_coupon` | `name`, `value`, + any coupon field                    | Create a coupon (percent off, once by default), optionally with a promotion `code`.                 |
+| `billing_update_coupon` | `id` + fields to change (`null` clears)                | Edit a coupon; changing its terms makes the provider replace the coupon and promotion code.         |
+| `billing_delete_coupon` | `id`                                                   | Delete a coupon: the provider turns its code off and deletes it (retire with `active: false`).      |
+| `billing_resync`        | `target` (`plans`/`coupons`), `id?`                    | Push one doc, or every one not yet `synced`, to the providers again (e.g. after connecting Stripe). |
+
+Subscriptions stay read‑only (written by the providers' webhooks); `billing_get_plan`
+reports counts only, not who subscribed. Staff no‑charge grants stay on `/billing`
+(docs/BILLING.md §10).
+
 ---
 
 ## Notifications & delivery
