@@ -43,6 +43,7 @@ export const Onboarding: CollectionConfig = {
     },
     {
       name: "secondaryCta",
+      label: "Secondary CTA",
       type: "group",
       admin: { description: "Optional “Skip”/secondary action." },
       fields: [{ name: "label", type: "text" }, destinationField()],

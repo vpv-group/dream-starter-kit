@@ -70,10 +70,10 @@ export const Users: CollectionConfig = {
     defaultColumns: ["displayName", "email", "roles", "memberStatus"],
     listSearchableFields: ["email", "displayName", "username"],
     description:
-      "All app users — members and staff. Creating a NEW email emails a " +
-      "Supabase invite. The role decides staff access: admin, editor and " +
-      "author can sign in to /admin; member is an app user only. User tags " +
-      "(incl. the plan-name tag) are managed below.",
+      "Every app user: members and staff. Adding a user with a new email " +
+      "sends them an invite. Roles decide staff access: Admin, Editor and " +
+      "Author can sign in to /admin; Member is an app user only. Open a " +
+      "user to manage their user tags (including the plan-name tag).",
   },
   hooks: {
     beforeChange: [inviteUserOnCreate, syncUserToSupabase],
@@ -104,7 +104,7 @@ export const Users: CollectionConfig = {
           "(no confirmation email) — members change their own on /profile.",
       },
     },
-    { name: "name", type: "text" },
+    { name: "name", label: "Account Name", type: "text" },
     {
       name: "displayName",
       type: "text",
@@ -126,13 +126,14 @@ export const Users: CollectionConfig = {
     },
     {
       name: "supabaseUserId",
+      label: "Supabase User ID",
       type: "text",
       unique: true,
       index: true,
       admin: {
         readOnly: true,
         description:
-          "Linked Supabase auth user id (managed by the SSO bridge).",
+          "Linked Supabase auth user ID (managed by the SSO bridge).",
       },
     },
     {
@@ -154,12 +155,13 @@ export const Users: CollectionConfig = {
       admin: {
         position: "sidebar",
         description:
-          "admin/editor/author can sign in to /admin; member is an app user " +
-          "only. Saving updates their staff access.",
+          "Admin, Editor and Author can sign in to /admin; Member is an app " +
+          "user only. Saving updates their staff access.",
       },
     },
     {
       name: "memberStatus",
+      label: "Account Status",
       type: "select",
       defaultValue: "active",
       options: [
@@ -227,13 +229,13 @@ export const Users: CollectionConfig = {
               name: "socialLinks",
               type: "group",
               fields: [
-                { name: "twitter", type: "text" },
+                { name: "twitter", label: "X (Twitter)", type: "text" },
                 { name: "instagram", type: "text" },
-                { name: "linkedin", type: "text" },
+                { name: "linkedin", label: "LinkedIn", type: "text" },
                 { name: "facebook", type: "text" },
-                { name: "youtube", type: "text" },
-                { name: "tiktok", type: "text" },
-                { name: "github", type: "text" },
+                { name: "youtube", label: "YouTube", type: "text" },
+                { name: "tiktok", label: "TikTok", type: "text" },
+                { name: "github", label: "GitHub", type: "text" },
               ],
             },
             {
@@ -267,7 +269,7 @@ export const Users: CollectionConfig = {
               admin: {
                 description:
                   "Admin segmentation via CMS tags — distinct from the " +
-                  "Supabase plan-name user tags managed below.",
+                  "Supabase plan-name user tags in the User Tags panel below.",
               },
             },
             {
@@ -294,7 +296,7 @@ export const Users: CollectionConfig = {
                   "Synced with the member's profile on save.",
               },
             },
-            { name: "dateOfBirth", type: "date" },
+            { name: "dateOfBirth", label: "Date of Birth", type: "date" },
             {
               name: "timezone",
               type: "select",
@@ -350,6 +352,7 @@ export const Users: CollectionConfig = {
             { name: "pushEnabled", type: "checkbox", defaultValue: false },
             {
               name: "smsOptIn",
+              label: "SMS Opt-In",
               type: "checkbox",
               defaultValue: false,
               admin: {
@@ -358,7 +361,12 @@ export const Users: CollectionConfig = {
                   "phone must be present.",
               },
             },
-            { name: "marketingOptIn", type: "checkbox", defaultValue: false },
+            {
+              name: "marketingOptIn",
+              label: "Marketing Opt-In",
+              type: "checkbox",
+              defaultValue: false,
+            },
             {
               name: "notificationPreferences",
               type: "group",
@@ -398,6 +406,7 @@ export const Users: CollectionConfig = {
             },
             {
               name: "lastActiveAt",
+              label: "Last Active",
               type: "date",
               admin: {
                 readOnly: true,
@@ -411,6 +420,7 @@ export const Users: CollectionConfig = {
           fields: [
             {
               name: "stripeCustomerID",
+              label: "Stripe Customer ID",
               type: "text",
               // Looked up by the Stripe webhook.
               index: true,

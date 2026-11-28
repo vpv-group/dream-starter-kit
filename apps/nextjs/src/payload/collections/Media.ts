@@ -71,6 +71,7 @@ export const Media: CollectionConfig = {
     { name: "credit", type: "text" },
     {
       name: "blurDataURL",
+      label: "Blur Data URL",
       type: "text",
       admin: {
         readOnly: true,

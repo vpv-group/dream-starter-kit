@@ -184,7 +184,7 @@ export const Series: CollectionConfig = {
           ],
         },
         { name: "complete", type: "checkbox", defaultValue: false },
-        { name: "newFeedUrl", type: "text" },
+        { name: "newFeedUrl", label: "New Feed URL", type: "text" },
         {
           name: "isPrivate",
           type: "checkbox",

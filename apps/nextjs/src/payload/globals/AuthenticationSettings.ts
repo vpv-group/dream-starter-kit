@@ -125,6 +125,7 @@ export const AuthenticationSettings: GlobalConfig = {
                 },
                 {
                   name: "workspaceUrlPrefix",
+                  label: "Workspace URL Prefix",
                   type: "text",
                   admin: {
                     width: "50%",
@@ -324,6 +325,7 @@ export const AuthenticationSettings: GlobalConfig = {
               fields: [
                 {
                   name: "termsUrl",
+                  label: "Terms URL",
                   type: "text",
                   defaultValue: "/legal/terms-of-service",
                   admin: {
@@ -333,6 +335,7 @@ export const AuthenticationSettings: GlobalConfig = {
                 },
                 {
                   name: "privacyUrl",
+                  label: "Privacy URL",
                   type: "text",
                   defaultValue: "/legal/privacy-policy",
                   admin: {
@@ -472,6 +475,7 @@ export const AuthenticationSettings: GlobalConfig = {
                     },
                     {
                       name: "providerId",
+                      label: "Provider ID",
                       type: "text",
                       admin: {
                         width: "50%",

@@ -120,6 +120,7 @@ export const Events: CollectionConfig = {
     },
     {
       name: "virtualUrl",
+      label: "Virtual URL",
       type: "text",
       admin: { condition: (data) => Boolean(data.isVirtual) },
     },
@@ -148,7 +149,7 @@ export const Events: CollectionConfig = {
         },
       ],
     },
-    { name: "ticketUrl", type: "text" },
+    { name: "ticketUrl", label: "Ticket URL", type: "text" },
     { name: "capacity", type: "number", min: 0 },
     {
       name: "registrationRequired",
