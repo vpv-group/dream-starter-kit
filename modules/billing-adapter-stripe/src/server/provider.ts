@@ -27,7 +27,7 @@ import { legacyRoutes } from "./legacy";
 /**
  * Stripe as billing's web payment provider — the `adapter` billing calls out
  * to (`getModAdapters("billing")`): hosted Checkout, the customer portal,
- * invoices, catalog sync (and retiring deleted plans/coupons), cleanup before account deletion, and the admin
+ * invoices, catalog sync, cleanup before account deletion, and the admin
  * status line.
  */
 

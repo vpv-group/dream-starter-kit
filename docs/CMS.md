@@ -115,17 +115,17 @@ caller's Supabase session and JIT-provisions a `cms.users` row (linked by
 
 ## Shared collection hooks (`payload/hooks/`)
 
-| Hook                            | Effect                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `assignOwner(field)`            | Forces the owner field to the requesting user on create (staff/Local API may override)                                                                                                                                                                                                                                                                                                                                  |
-| `requireCommentsEnabled`        | Rejects comments whose target has `commentsEnabled: false`                                                                                                                                                                                                                                                                                                                                                              |
-| `uniquePolymorphic(...)`        | One row per owner + polymorphic target (open reports)                                                                                                                                                                                                                                                                                                                                                                   |
-| `incrementReportCount`          | Denormalizes `reportCount` onto the reported doc                                                                                                                                                                                                                                                                                                                                                                        |
-| `invite-user`                   | On staff-created Users rows: Supabase invite email + `is_staff` from the chosen roles                                                                                                                                                                                                                                                                                                                                   |
-| `sync-user-to-supabase`         | On admin Users updates: write email / display name / phone / job title through to Supabase Auth + `profiles`                                                                                                                                                                                                                                                                                                            |
-| `notify-contact-change`         | On Users updates (member sync or admin edit): email the member a masked "phone number changed" security notice (best-effort)                                                                                                                                                                                                                                                                                            |
-| `sync-with-providers` (billing) | afterChange on plans/coupons → each payment provider's `syncPlan`/`syncCoupon` (Stripe: create/update product, **recreate + archive** immutable prices/coupons, coupon `active` → promotion code on/off); status lands on `syncStatus`/`syncError`. afterDelete → `deletePlan`/`deleteCoupon` (Stripe: archive product + price / turn the code off + delete the coupon); failures are logged, the delete still succeeds |
-| `validate-custom-fields`        | Validates `users.customFields` against the `profile-fields` global                                                                                                                                                                                                                                                                                                                                                      |
+| Hook                            | Effect                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `assignOwner(field)`            | Forces the owner field to the requesting user on create (staff/Local API may override)                                                                                                                                                                                                                                                                                                    |
+| `requireCommentsEnabled`        | Rejects comments whose target has `commentsEnabled: false`                                                                                                                                                                                                                                                                                                                                |
+| `uniquePolymorphic(...)`        | One row per owner + polymorphic target (open reports)                                                                                                                                                                                                                                                                                                                                     |
+| `incrementReportCount`          | Denormalizes `reportCount` onto the reported doc                                                                                                                                                                                                                                                                                                                                          |
+| `invite-user`                   | On staff-created Users rows: Supabase invite email + `is_staff` from the chosen roles                                                                                                                                                                                                                                                                                                     |
+| `sync-user-to-supabase`         | On admin Users updates: write email / display name / phone / job title through to Supabase Auth + `profiles`                                                                                                                                                                                                                                                                              |
+| `notify-contact-change`         | On Users updates (member sync or admin edit): email the member a masked "phone number changed" security notice (best-effort)                                                                                                                                                                                                                                                              |
+| `sync-with-providers` (billing) | afterChange on plans/coupons → each payment provider's `syncPlan`/`syncCoupon` (Stripe: create/update product, **recreate + archive** immutable prices/coupons, coupon `active` ↔ promotion code active); status lands on `syncStatus`/`syncError`. afterDelete → `deletePlan`/`deleteCoupon` (Stripe: archive product/price; deactivate promotion code + delete coupon), failures logged |
+| `validate-custom-fields`        | Validates `users.customFields` against the `profile-fields` global                                                                                                                                                                                                                                                                                                                        |
 
 ---
 
@@ -367,9 +367,9 @@ introInterval, introPeriods — an auto-applied coupon at web checkout),
 `coupons`. The **Stripe** tab (billing-adapter-stripe) holds the read-only
 `stripeProductId`, `stripePriceId`, `stripeIntroCouponId`. **Access:** read
 `anyone`; write `isAdmin`. Hook `syncPlanWithProviders` (Stripe prices are
-immutable — a changed amount/interval recreates + archives); on delete
-`retirePlanWithProviders` (Stripe archives the product + price and deletes the
-intro coupon; existing subscriptions continue).
+immutable — a changed amount/interval recreates + archives); deleting runs
+`retirePlanWithProviders` (Stripe archives the product + price; existing
+subscriptions keep renewing).
 
 ### `coupons` — discounts & promotion codes
 
@@ -380,10 +380,10 @@ read-only `timesRedeemed`, `active`, `appliesTo` (plans), customer-facing
 `code`, `isWelcomeOffer` (at most one active); sidebar sync state; the
 **Stripe** tab holds the read-only `stripeCouponId`, `stripePromotionCodeId`.
 **Access:** read `anyone`; write `isAdmin`. Hook `syncCouponWithProviders`
-(recreate-on-change, like prices; `active` off turns the promotion code off, on
-turns it back on; a changed or cleared `code` retires the old one); on delete
-`retireCouponWithProviders` (Stripe turns the code off and deletes the coupon).
-Applied discounts are never touched.
+(recreate-on-change, like prices; `active` off deactivates the promotion code,
+on reactivates it; a renamed/cleared `code` retires the old one); deleting runs
+`retireCouponWithProviders` (Stripe deactivates the code and deletes the coupon —
+existing subscriptions keep the discount).
 
 ### `subscriptions` — read-only copy of purchases
 

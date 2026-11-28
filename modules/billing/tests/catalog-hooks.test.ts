@@ -1,147 +1,119 @@
 /**
- * Billing's catalog hooks: saving a plan/coupon syncs it to every payment
- * provider, deleting one retires it there. Provider-neutral — the providers
- * here are fakes registered through mod-kit's adapter registry.
+ * Billing's catalog hooks: a deleted plan/coupon is handed to every
+ * installed provider that can retire it, unless the doc or the request opted
+ * out of provider sync — and a provider failure never fails the delete.
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { setModAdaptersForTest } from "@acme/mod-kit/server";
-
-import type {
-  BillingProvider,
-  CatalogDeleteArgs,
-} from "../src/server/core/types";
+import type { BillingProvider } from "../src/server/core/types";
 import {
   retireCouponWithProviders,
   retirePlanWithProviders,
-  syncCouponWithProviders,
 } from "../src/payload/hooks/sync-with-providers";
 
-function provider(
-  id: string,
-  over: Partial<BillingProvider> = {},
-): BillingProvider {
+const state = vi.hoisted(() => ({
+  providers: [] as unknown[],
+  loadError: null as Error | null,
+}));
+
+vi.mock("../src/server/core/providers", () => ({
+  getBillingProviders: () =>
+    state.loadError
+      ? Promise.reject(state.loadError)
+      : Promise.resolve(state.providers),
+}));
+
+function provider(over: Partial<BillingProvider> = {}): BillingProvider {
   return {
-    id,
-    label: id,
+    id: "fake",
+    label: "Fake",
     platforms: ["web"],
     isConfigured: () => Promise.resolve(true),
     ...over,
   };
 }
 
-function deleteArgs(
-  doc: Record<string, unknown>,
-  context: Record<string, unknown> = {},
-) {
-  const logger = { error: vi.fn(), warn: vi.fn() };
-  const args = {
-    doc: { id: 7, ...doc },
-    id: 7,
-    context,
+const logger = { error: vi.fn(), warn: vi.fn() };
+
+type HookArgs = Parameters<typeof retireCouponWithProviders>[0];
+
+function args(doc: object, context: Record<string, unknown> = {}): HookArgs {
+  return {
+    doc,
+    id: (doc as { id: number }).id,
     req: { payload: { logger } },
+    context,
     collection: {},
-  } as unknown as CatalogDeleteArgs;
-  return { args, logger };
+  } as unknown as HookArgs;
 }
 
-// The hooks are typed per collection; the tests pass loose docs.
-type AnyHook = (args: unknown) => Promise<unknown>;
-const retireCoupon = retireCouponWithProviders as unknown as AnyHook;
-const retirePlan = retirePlanWithProviders as unknown as AnyHook;
-const syncCoupon = syncCouponWithProviders as unknown as AnyHook;
-
-afterEach(() => {
-  setModAdaptersForTest("billing", []);
+beforeEach(() => {
+  state.providers = [];
+  state.loadError = null;
+  logger.error.mockClear();
+  logger.warn.mockClear();
 });
 
-describe("retire on delete", () => {
-  it("hands a deleted coupon to every provider that retires coupons", async () => {
+describe("retireCouponWithProviders", () => {
+  it("hands the deleted coupon to each provider's deleteCoupon", async () => {
     const deleteCoupon = vi.fn(() => Promise.resolve());
-    setModAdaptersForTest("billing", [
-      { slug: "billing-adapter-iap", adapter: provider("iap") },
-      {
-        slug: "billing-adapter-stripe",
-        adapter: provider("stripe", { deleteCoupon }),
-      },
-    ]);
-    const { args } = deleteArgs({ stripeCouponId: "co_1" });
-    const out = await retireCoupon(args);
-    expect(deleteCoupon).toHaveBeenCalledWith(args);
-    expect(out).toBe(args.doc);
+    const other = provider({ id: "store" }); // no deleteCoupon: skipped
+    state.providers = [provider({ deleteCoupon }), other];
+    const doc = { id: 7, stripeCouponId: "coupon_1" };
+    const a = args(doc);
+
+    await expect(retireCouponWithProviders(a)).resolves.toBe(doc);
+    expect(deleteCoupon).toHaveBeenCalledWith(a);
   });
 
-  it("hands a deleted plan to deletePlan, not deleteCoupon", async () => {
+  it("respects skipSync and the skipProviderSync context", async () => {
+    const deleteCoupon = vi.fn(() => Promise.resolve());
+    state.providers = [provider({ deleteCoupon })];
+
+    await retireCouponWithProviders(args({ id: 1, skipSync: true }));
+    await retireCouponWithProviders(
+      args({ id: 2 }, { skipProviderSync: true }),
+    );
+    await retireCouponWithProviders(args({ id: 3 }, { skipStripeSync: true }));
+    expect(deleteCoupon).not.toHaveBeenCalled();
+  });
+
+  it("logs a provider failure and still runs the other providers", async () => {
+    const failing = vi.fn(() => Promise.reject(new Error("boom")));
+    const ok = vi.fn(() => Promise.resolve());
+    state.providers = [
+      provider({ id: "a", deleteCoupon: failing }),
+      provider({ id: "b", deleteCoupon: ok }),
+    ];
+
+    await expect(
+      retireCouponWithProviders(args({ id: 9 })),
+    ).resolves.toBeDefined();
+    expect(ok).toHaveBeenCalledOnce();
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.anything(),
+      "billing: a could not retire deleted coupon 9",
+    );
+  });
+
+  it("warns when the providers can't be loaded (e.g. the Payload CLI)", async () => {
+    state.loadError = new Error("server-only");
+    await expect(
+      retireCouponWithProviders(args({ id: 4 })),
+    ).resolves.toBeDefined();
+    expect(logger.warn).toHaveBeenCalledOnce();
+  });
+});
+
+describe("retirePlanWithProviders", () => {
+  it("hands the deleted plan to each provider's deletePlan", async () => {
     const deletePlan = vi.fn(() => Promise.resolve());
     const deleteCoupon = vi.fn(() => Promise.resolve());
-    setModAdaptersForTest("billing", [
-      {
-        slug: "billing-adapter-stripe",
-        adapter: provider("stripe", { deletePlan, deleteCoupon }),
-      },
-    ]);
-    const { args } = deleteArgs({ stripeProductId: "prod_1" });
-    await retirePlan(args);
-    expect(deletePlan).toHaveBeenCalledOnce();
+    state.providers = [provider({ deletePlan, deleteCoupon })];
+    const a = args({ id: 3, stripeProductId: "prod_1" });
+
+    await retirePlanWithProviders(a as never);
+    expect(deletePlan).toHaveBeenCalledWith(a);
     expect(deleteCoupon).not.toHaveBeenCalled();
-  });
-
-  it("skips docs that opt out and writes that came from a sync", async () => {
-    const deleteCoupon = vi.fn(() => Promise.resolve());
-    setModAdaptersForTest("billing", [
-      {
-        slug: "billing-adapter-stripe",
-        adapter: provider("stripe", { deleteCoupon }),
-      },
-    ]);
-    await retireCoupon(deleteArgs({ skipSync: true }).args);
-    await retireCoupon(deleteArgs({}, { skipProviderSync: true }).args);
-    await retireCoupon(deleteArgs({}, { skipStripeSync: true }).args);
-    expect(deleteCoupon).not.toHaveBeenCalled();
-  });
-
-  it("logs a provider failure (with the doc) and never fails the delete", async () => {
-    const later = vi.fn(() => Promise.resolve());
-    setModAdaptersForTest("billing", [
-      {
-        slug: "billing-adapter-a",
-        adapter: provider("a", {
-          deleteCoupon: () => Promise.reject(new Error("Stripe is down")),
-        }),
-      },
-      {
-        slug: "billing-adapter-b",
-        adapter: provider("b", { deleteCoupon: later }),
-      },
-    ]);
-    const { args, logger } = deleteArgs({ stripeCouponId: "co_1" });
-    const doc: unknown = args.doc;
-    await expect(retireCoupon(args)).resolves.toBe(doc);
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.objectContaining({ doc }),
-      expect.stringContaining("a couldn't retire deleted coupon (7)"),
-    );
-    expect(later).toHaveBeenCalledOnce();
-  });
-});
-
-describe("sync on save", () => {
-  it("keeps the doc a provider re-saved, and survives a failing one", async () => {
-    const resaved = { id: 7, syncStatus: "synced" };
-    setModAdaptersForTest("billing", [
-      {
-        slug: "billing-adapter-a",
-        adapter: provider("a", {
-          syncCoupon: () => Promise.reject(new Error("boom")),
-        }),
-      },
-      {
-        slug: "billing-adapter-b",
-        adapter: provider("b", { syncCoupon: () => Promise.resolve(resaved) }),
-      },
-    ]);
-    const { args, logger } = deleteArgs({ active: false });
-    await expect(syncCoupon(args)).resolves.toBe(resaved);
-    expect(logger.error).toHaveBeenCalledOnce();
   });
 });

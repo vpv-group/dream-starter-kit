@@ -15,8 +15,9 @@ import {
  * `syncPlan`; e.g. billing-adapter-stripe creates the Stripe product/price
  * and adds a read-only "Stripe" tab with the ids). Providers mirror the
  * resulting catalog back into mod_billing_products/prices for RLS clients.
- * Deleting a plan retires it at each provider (`deletePlan`; Stripe archives
- * the product + price): no new purchases, existing subscriptions continue.
+ * Deleting a plan retires it at each provider (`afterDelete` → the adapter's
+ * `deletePlan`: Stripe archives the product and price), so it can't be bought
+ * any more while existing subscriptions keep renewing.
  *
  * Pricing is NOT editorial, so there is no draft/publish workflow — `active`
  * gates visibility instead. Read is public (the pricing page is anonymous);

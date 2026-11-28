@@ -15,21 +15,20 @@ import { getBillingProviders } from "../../server/core/providers";
 
 /**
  * Catalog push: saving a plan or coupon hands it to every installed payment
- * provider that syncs a catalog (e.g. Stripe creates the product/price, and
- * turns a switched-off coupon's promotion code off). Each adapter writes its
- * own ids + `syncStatus` back with `context.skipProviderSync`, so its write
- * doesn't re-enter this hook.
+ * provider that syncs a catalog (e.g. Stripe creates the product/price). Each
+ * adapter writes its own ids + `syncStatus` back with
+ * `context.skipProviderSync`, so its write doesn't re-enter this hook.
  *
- * Deleting a plan or coupon tells the same providers to retire it
- * (`deletePlan`/`deleteCoupon`: e.g. Stripe archives the product + price, or
- * turns the promotion code off and deletes the coupon). The doc is gone by
- * then, so a provider failure can't land on `syncStatus`: it is logged (with
- * the doc's provider ids) and the delete still succeeds.
+ * Deleting one hands the deleted doc to each provider's `deletePlan` /
+ * `deleteCoupon` so it can't be bought or redeemed any more (Stripe archives
+ * the product/price, deactivates the promotion code and deletes the coupon);
+ * existing purchases keep their price and discount.
  *
  * Skipped when the doc opts out (`skipSync`) or the write came from a sync /
  * the seed (`skipProviderSync`; `skipStripeSync` is the 1.x name). A failure
  * is the adapter's to record on `syncStatus`/`syncError`; one that escapes is
- * logged, never fails the save or delete.
+ * logged, never fails the save. A delete has no row left to record on, so a
+ * failed retire is only logged (with the provider ids, for manual cleanup).
  */
 function skipped(
   context: RequestContext,
@@ -42,27 +41,22 @@ function skipped(
   );
 }
 
-type CatalogArgs = CatalogSyncArgs | CatalogDeleteArgs;
-
-/** The installed providers, or null (logged) when they can't be loaded. */
+/** The installed providers, or null when they can't be loaded here. */
 async function loadProviders(
-  args: CatalogArgs,
+  args: CatalogSyncArgs | CatalogDeleteArgs,
   what: string,
 ): Promise<BillingProvider[] | null> {
   try {
     return await getBillingProviders();
   } catch (err) {
     // E.g. the Payload CLI (plain Node) can't load server-only adapters.
+    const id = String((args.doc as { id?: unknown }).id);
     args.req.payload.logger.warn(
       { err },
-      `billing: payment providers unavailable — ${what}`,
+      `billing: payment providers unavailable — ${what} ${id} not synced`,
     );
     return null;
   }
-}
-
-function docId(args: CatalogArgs): string {
-  return String((args.doc as { id?: unknown }).id);
 }
 
 async function runSync(
@@ -70,8 +64,8 @@ async function runSync(
   method: "syncPlan" | "syncCoupon",
   what: string,
 ): Promise<unknown> {
-  const id = docId(args);
-  const providers = await loadProviders(args, `${what} ${id} not synced`);
+  const id = String((args.doc as { id?: unknown }).id);
+  const providers = await loadProviders(args, what);
   if (!providers) return args.doc;
   let latest: unknown = args.doc;
   for (const provider of providers) {
@@ -89,32 +83,6 @@ async function runSync(
   return latest;
 }
 
-async function runDelete(
-  args: CatalogDeleteArgs,
-  method: "deletePlan" | "deleteCoupon",
-  what: string,
-): Promise<void> {
-  const id = docId(args);
-  const providers = await loadProviders(
-    args,
-    `deleted ${what} ${id} not retired`,
-  );
-  if (!providers) return;
-  for (const provider of providers) {
-    if (!provider[method]) continue;
-    try {
-      await provider[method](args);
-    } catch (err) {
-      // Nowhere to record it: the doc is deleted. Log the doc (it carries the
-      // provider ids) so the leftover can be retired by hand or by a resync.
-      args.req.payload.logger.error(
-        { err, doc: args.doc },
-        `billing: ${provider.id} couldn't retire deleted ${what} (${id})`,
-      );
-    }
-  }
-}
-
 export const syncPlanWithProviders: CollectionAfterChangeHook<
   ModBillingPlan
 > = async (args) => {
@@ -129,18 +97,41 @@ export const syncCouponWithProviders: CollectionAfterChangeHook<
   return (await runSync(args, "syncCoupon", "coupon")) as ModBillingCoupon;
 };
 
+async function runDelete(
+  args: CatalogDeleteArgs,
+  method: "deletePlan" | "deleteCoupon",
+  what: string,
+): Promise<void> {
+  const id = String((args.doc as { id?: unknown }).id);
+  const providers = await loadProviders(args, what);
+  if (!providers) return;
+  for (const provider of providers) {
+    if (!provider[method]) continue;
+    try {
+      await provider[method](args);
+    } catch (err) {
+      args.req.payload.logger.error(
+        { err },
+        `billing: ${provider.id} could not retire deleted ${what} ${id}`,
+      );
+    }
+  }
+}
+
 export const retirePlanWithProviders: CollectionAfterDeleteHook<
   ModBillingPlan
 > = async (args) => {
-  if (skipped(args.context, args.doc)) return args.doc;
-  await runDelete(args, "deletePlan", "plan");
+  if (!skipped(args.context, args.doc)) {
+    await runDelete(args, "deletePlan", "plan");
+  }
   return args.doc;
 };
 
 export const retireCouponWithProviders: CollectionAfterDeleteHook<
   ModBillingCoupon
 > = async (args) => {
-  if (skipped(args.context, args.doc)) return args.doc;
-  await runDelete(args, "deleteCoupon", "coupon");
+  if (!skipped(args.context, args.doc)) {
+    await runDelete(args, "deleteCoupon", "coupon");
+  }
   return args.doc;
 };

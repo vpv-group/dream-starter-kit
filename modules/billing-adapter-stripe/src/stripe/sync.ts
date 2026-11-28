@@ -43,8 +43,9 @@ export interface PlanSyncInput {
   stripePriceId?: string | null;
   stripeIntroCouponId?: string | null;
   /**
-   * This site's tag (its host), stored as `metadata.payloadSite` so a resync
-   * can tell this site's leftovers from another site's on a shared account.
+   * This site's tag (its Supabase project host), stored as
+   * `metadata.payloadSite` so a resync can tell this site's leftovers from
+   * another site's on a shared Stripe account.
    */
   site?: string | null;
 }
@@ -69,15 +70,15 @@ export interface CouponSyncInput {
   redeemBy?: string | null;
   /** Optional customer-facing promotion code (e.g. LAUNCH20). */
   code?: string | null;
+  /**
+   * Whether the promotion code can be redeemed. Off deactivates it at Stripe;
+   * back on reactivates it (Stripe allows that while the coupon is valid).
+   */
+  active: boolean;
   /** Resolved Stripe product ids this coupon is restricted to (empty = all). */
   appliesToProductIds?: string[];
   stripeCouponId?: string | null;
   stripePromotionCodeId?: string | null;
-  /**
-   * Whether the coupon is on (default true). Off turns its promotion code off
-   * at checkout; discounts already applied keep applying.
-   */
-  active?: boolean | null;
   /** This site's tag — see PlanSyncInput.site. */
   site?: string | null;
 }
@@ -85,6 +86,19 @@ export interface CouponSyncInput {
 export interface CouponSyncResult {
   stripeCouponId: string;
   stripePromotionCodeId: string | null;
+}
+
+/** The Stripe ids a deleted plan carried (see retirePlanInStripe). */
+export interface PlanRetireInput {
+  stripeProductId?: string | null;
+  stripePriceId?: string | null;
+  stripeIntroCouponId?: string | null;
+}
+
+/** The Stripe ids a deleted coupon carried (see retireCouponInStripe). */
+export interface CouponRetireInput {
+  stripeCouponId?: string | null;
+  stripePromotionCodeId?: string | null;
 }
 
 // --- Pure helpers (exported for unit tests) -------------------------------
@@ -166,15 +180,6 @@ function isMissingResource(err: unknown): boolean {
     err !== null &&
     (err as { code?: unknown }).code === "resource_missing"
   );
-}
-
-/** Await a Stripe call, treating "No such …" as already done. */
-async function ignoreMissing(call: Promise<unknown>): Promise<void> {
-  try {
-    await call;
-  } catch (err) {
-    if (!isMissingResource(err)) throw err;
-  }
 }
 
 /** The `metadata` every synced Stripe object carries. */
@@ -306,12 +311,23 @@ export async function syncPlanToStripe(
   };
 }
 
-// --- Coupon sync ----------------------------------------------------------
-
-/** Promotion codes are case-insensitive at checkout. */
-function sameCode(a: string, b: string): boolean {
-  return a.trim().toUpperCase() === b.trim().toUpperCase();
+/** Run a Stripe call, treating "No such …" (already gone) as done. */
+async function unlessMissing(call: () => Promise<unknown>): Promise<void> {
+  try {
+    await call();
+  } catch (err) {
+    if (!isMissingResource(err)) throw err;
+  }
 }
+
+/** The coupon id a promotion code redeems (expanded or not). */
+function promotionCouponId(promo: Stripe.PromotionCode): string | null {
+  const c = promo.promotion.coupon;
+  if (!c) return null;
+  return typeof c === "string" ? c : c.id;
+}
+
+// --- Coupon sync ----------------------------------------------------------
 
 export async function syncCouponToStripe(
   stripe: Stripe,
@@ -321,8 +337,6 @@ export async function syncCouponToStripe(
   const months = durationInMonths(coupon);
   const productIds = coupon.appliesToProductIds ?? [];
   const redeemBy = toUnixSeconds(coupon.redeemBy);
-  const active = coupon.active ?? true;
-  const code = coupon.code?.trim() ?? "";
 
   const desired: Stripe.CouponCreateParams = {
     name: coupon.name,
@@ -356,132 +370,145 @@ export async function syncCouponToStripe(
           ? live.percent_off === coupon.value
           : live.amount_off === coupon.value &&
             live.currency === (coupon.currency ?? "usd").toLowerCase());
+      if (reuse)
+        await stripe.coupons.update(couponId, { name: coupon.name, metadata });
     } catch {
       reuse = false;
     }
   }
-
-  // The stored promotion code. Stripe can't change a code's text or coupon,
-  // so it's kept only while the coupon is reused and the code is unchanged;
-  // otherwise it's turned off (before a new one is created: a code must be
-  // unique among active codes) and a fresh code is minted below.
-  let livePromo: Stripe.PromotionCode | null = null;
-  if (coupon.stripePromotionCodeId) {
-    try {
-      livePromo = await stripe.promotionCodes.retrieve(
-        coupon.stripePromotionCodeId,
-      );
-    } catch (err) {
-      if (!isMissingResource(err)) throw err;
-    }
-  }
-  const keepPromo =
-    livePromo !== null &&
-    reuse &&
-    code !== "" &&
-    sameCode(livePromo.code, code);
-  if (livePromo && !keepPromo && livePromo.active) {
-    await ignoreMissing(
-      stripe.promotionCodes.update(livePromo.id, { active: false }),
-    );
-  }
-
-  if (reuse) {
-    await stripe.coupons.update(couponId, { name: coupon.name, metadata });
-  } else {
+  if (!reuse) {
     if (couponId) await stripe.coupons.del(couponId).catch(() => undefined);
     const created = await stripe.coupons.create(desired);
     couponId = created.id;
   }
 
-  // Promotion code: follow the coupon's on/off state (discounts already
-  // applied to subscriptions are unaffected either way).
-  let promoId: string | null = null;
-  if (keepPromo && livePromo) {
-    promoId = livePromo.id;
-    if (livePromo.active !== active) {
-      await stripe.promotionCodes.update(promoId, { active });
+  // Promotion code — the code customers type. Stripe won't change a code's
+  // text or coupon, so the stored code is kept only while both still match;
+  // otherwise (coupon recreated, code renamed or cleared) it is deactivated —
+  // a stale code would stay redeemable and block reusing its text — and a new
+  // one is minted. `active` maps onto the code's own active flag.
+  const code = coupon.code?.trim() ?? "";
+  let promoId = coupon.stripePromotionCodeId ?? null;
+  let live: Stripe.PromotionCode | null = null;
+  if (promoId) {
+    try {
+      live = await stripe.promotionCodes.retrieve(promoId);
+    } catch (err) {
+      if (!isMissingResource(err)) throw err;
+      promoId = null; // gone (e.g. the site moved Stripe accounts)
     }
-  } else if (code) {
-    const promo = await stripe.promotionCodes.create({
-      promotion: { type: "coupon", coupon: couponId },
-      code,
-      active,
-      ...(coupon.maxRedemptions
-        ? { max_redemptions: coupon.maxRedemptions }
-        : {}),
-      ...(redeemBy ? { expires_at: redeemBy } : {}),
-      metadata,
-    });
-    promoId = promo.id;
+  }
+  const keep =
+    live !== null &&
+    code !== "" &&
+    live.code.toLowerCase() === code.toLowerCase() &&
+    promotionCouponId(live) === couponId;
+
+  if (live && keep) {
+    if (live.active !== coupon.active) {
+      await stripe.promotionCodes.update(live.id, { active: coupon.active });
+    }
+  } else {
+    if (live?.active) {
+      const old = live.id;
+      try {
+        await stripe.promotionCodes.update(old, { active: false });
+      } catch (err) {
+        // A code whose coupon was just deleted can't be redeemed anyway.
+        if (reuse && !isMissingResource(err)) throw err;
+      }
+    }
+    promoId = null;
+    if (code) {
+      const promo = await stripe.promotionCodes.create({
+        promotion: { type: "coupon", coupon: couponId },
+        code,
+        active: coupon.active,
+        ...(coupon.maxRedemptions
+          ? { max_redemptions: coupon.maxRedemptions }
+          : {}),
+        ...(redeemBy ? { expires_at: redeemBy } : {}),
+        metadata,
+      });
+      promoId = promo.id;
+    }
   }
 
   return { stripeCouponId: couponId, stripePromotionCodeId: promoId };
 }
 
-// --- Retiring deleted plans and coupons -----------------------------------
+// --- Retire (the Payload doc was deleted) ---------------------------------
 
-export interface PlanRetireInput {
-  stripeProductId?: string | null;
-  stripePriceId?: string | null;
-  stripeIntroCouponId?: string | null;
-}
-
-export interface CouponRetireInput {
-  stripeCouponId?: string | null;
-  stripePromotionCodeId?: string | null;
+/**
+ * Run every step, then throw the first real failure: one step failing must
+ * not leave the others undone. Already-gone resources count as done.
+ */
+async function allSteps(steps: (() => Promise<unknown>)[]): Promise<void> {
+  let first: Error | null = null;
+  for (const step of steps) {
+    try {
+      await unlessMissing(step);
+    } catch (err) {
+      first ??= err instanceof Error ? err : new Error(String(err));
+    }
+  }
+  if (first) throw first;
 }
 
 /**
- * A deleted plan: archive its product and price (Stripe never deletes a
- * product that has prices) and delete its intro coupon. Subscriptions already
- * on the price keep renewing. Ids that no longer resolve count as done.
+ * A deleted plan: archive its product (an archived product can't be bought,
+ * and Stripe keeps billing existing subscriptions on its prices) and price,
+ * and delete its intro-offer coupon (subscriptions that already have the
+ * intro discount keep it). Products with prices can't be deleted, so they're
+ * archived — the webhook mirrors that into mod_billing_products/prices.
  */
 export async function retirePlanInStripe(
   stripe: Stripe,
   plan: PlanRetireInput,
 ): Promise<void> {
-  const productId = plan.stripeProductId ?? "";
-  const priceId = plan.stripePriceId ?? "";
-  if (productId) {
-    await ignoreMissing(stripe.products.update(productId, { active: false }));
-  }
-  if (priceId) {
-    try {
-      await ignoreMissing(stripe.prices.update(priceId, { active: false }));
-    } catch (err) {
-      // A product's default price must stay active: clear it, then retry.
-      if (!productId) throw err;
-      await ignoreMissing(
-        stripe.products.update(productId, { default_price: "" }),
-      );
-      await ignoreMissing(stripe.prices.update(priceId, { active: false }));
-    }
-  }
-  if (plan.stripeIntroCouponId) {
-    await ignoreMissing(stripe.coupons.del(plan.stripeIntroCouponId));
-  }
+  const { stripeProductId, stripePriceId, stripeIntroCouponId } = plan;
+  await allSteps([
+    ...(stripeProductId
+      ? [() => stripe.products.update(stripeProductId, { active: false })]
+      : []),
+    ...(stripePriceId
+      ? [
+          () =>
+            stripe.prices
+              .update(stripePriceId, { active: false })
+              // Stripe may refuse to archive a product's default price; the
+              // archived product already stops new purchases.
+              .catch(() => undefined),
+        ]
+      : []),
+    ...(stripeIntroCouponId
+      ? [() => stripe.coupons.del(stripeIntroCouponId)]
+      : []),
+  ]);
 }
 
 /**
- * A deleted coupon: turn its promotion code off, then delete the Stripe
- * coupon. Discounts already applied to subscriptions keep applying. Ids that
- * no longer resolve count as done.
+ * A deleted coupon: deactivate its promotion code (so it can't be typed in
+ * at Checkout) and delete the Stripe coupon (so it can't be applied at all).
+ * Subscriptions that already carry the discount keep it — Stripe applies a
+ * deleted coupon to existing subscriptions until its duration ends.
  */
 export async function retireCouponInStripe(
   stripe: Stripe,
   coupon: CouponRetireInput,
 ): Promise<void> {
-  if (coupon.stripePromotionCodeId) {
-    await ignoreMissing(
-      stripe.promotionCodes.update(coupon.stripePromotionCodeId, {
-        active: false,
-      }),
-    );
-  }
-  if (coupon.stripeCouponId) {
-    await ignoreMissing(stripe.coupons.del(coupon.stripeCouponId));
-  }
+  const { stripeCouponId, stripePromotionCodeId } = coupon;
+  await allSteps([
+    ...(stripePromotionCodeId
+      ? [
+          () =>
+            stripe.promotionCodes.update(stripePromotionCodeId, {
+              active: false,
+            }),
+        ]
+      : []),
+    ...(stripeCouponId ? [() => stripe.coupons.del(stripeCouponId)] : []),
+  ]);
 }
 
 // --- Resync: retire leftovers of deleted plans/coupons --------------------
@@ -521,10 +548,10 @@ async function listAll<T extends { id: string }>(
 /**
  * Retire the Stripe objects this site created for plans and coupons that no
  * longer exist in the CMS — the leftovers of a delete whose Stripe cleanup
- * failed (deletes have no `syncStatus` to show the failure on). Only objects
+ * failed (a delete has no `syncStatus` to show the failure on). Only objects
  * tagged with this site (`metadata.payloadSite`) are touched, so another site
- * sharing the Stripe account keeps its catalog; untagged objects (created
- * before the tag existed, and since deleted) are left for the Dashboard.
+ * sharing the Stripe account keeps its catalog; untagged objects (synced
+ * before the tag existed, and deleted since) are left for the Dashboard.
  */
 export async function retireStripeOrphans(
   stripe: Stripe,
@@ -561,7 +588,7 @@ export async function retireStripeOrphans(
   for (const coupon of coupons) {
     // A deleted plan's intro coupon carries the plan's metadata.
     if (orphan(coupon.metadata, "plans")) {
-      await ignoreMissing(stripe.coupons.del(coupon.id));
+      await retireCouponInStripe(stripe, { stripeCouponId: coupon.id });
       continue;
     }
     if (!orphan(coupon.metadata, "coupons")) continue;

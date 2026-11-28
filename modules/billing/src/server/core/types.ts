@@ -126,7 +126,8 @@ export type CatalogSyncArgs = Parameters<CollectionAfterChangeHook>[0];
 
 /**
  * Payload `afterDelete` args for a plan or coupon delete. `doc` is the deleted
- * document (with the provider ids it carried); it no longer exists in the CMS.
+ * document (with the provider ids it carried), and the row is already gone —
+ * there is nothing to write `syncStatus` back to.
  */
 export type CatalogDeleteArgs = Parameters<CollectionAfterDeleteHook>[0];
 
@@ -188,17 +189,16 @@ export interface BillingProvider {
   /** Push a saved coupon to the provider (Payload afterChange). */
   syncCoupon?(args: CatalogSyncArgs): Promise<unknown>;
   /**
-   * Retire a deleted plan at the provider (Payload afterDelete): stop new
-   * purchases of it (e.g. archive the product + price). Existing purchases
-   * must keep working. The doc is already gone, so there is no `syncStatus`
-   * to write: throw on failure and billing logs it; the provider should be
-   * able to retry later (e.g. a resync that retires orphans).
+   * A plan was deleted (Payload afterDelete): retire it at the provider so it
+   * can't be bought any more (e.g. archive the product and price). Existing
+   * purchases must keep working. Best effort — a throw is logged, never undoes
+   * the delete.
    */
   deletePlan?(args: CatalogDeleteArgs): Promise<void>;
   /**
-   * Retire a deleted coupon at the provider (Payload afterDelete): its codes
-   * stop working at checkout; discounts already applied keep applying. Same
-   * failure contract as `deletePlan`.
+   * A coupon was deleted (Payload afterDelete): stop new redemptions (e.g.
+   * deactivate its promotion code, delete the coupon). Subscriptions that
+   * already carry the discount keep it. Best effort, like `deletePlan`.
    */
   deleteCoupon?(args: CatalogDeleteArgs): Promise<void>;
   /** Cancel what the user still pays for before their account is deleted. */

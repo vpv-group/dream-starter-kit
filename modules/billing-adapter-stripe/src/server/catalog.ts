@@ -25,19 +25,18 @@ import {
  * hook for every installed provider. Saving a plan creates/updates the Stripe
  * product and (prices being immutable) creates a new price + archives the old
  * one when the amount/interval changes; coupons recreate + archive on change
- * and mint a promotion code. The ids are written back (shown on the plan's
- * "Stripe" tab) with `context.skipProviderSync`, so the write doesn't re-sync.
+ * and mint a promotion code, which follows the coupon's `active` flag. The
+ * ids are written back (shown on the plan's "Stripe" tab) with
+ * `context.skipProviderSync`, so the write doesn't re-sync.
  *
- * A coupon's `active` drives its promotion code (off = turned off at
- * checkout). Deleting a plan or coupon (billing's afterDelete hook) retires
- * it: the plan's product + price are archived, the coupon's promotion code is
- * turned off and the coupon deleted. Applied discounts and existing
- * subscriptions are unaffected.
+ * Deleting a plan/coupon (billing's afterDelete hook) retires it in Stripe:
+ * the product and price are archived, the promotion code deactivated and the
+ * coupon deleted — existing subscriptions keep their price and discount.
  *
- * Skipped when Stripe is switched off or not connected. A sync failure is
- * recorded on `syncStatus`/`syncError` instead of failing the save; a delete
- * failure throws (billing logs it — the doc is gone) and the connector
- * panel's resync retires the leftover later (`retireOrphans`).
+ * Skipped when Stripe is switched off or not connected. A failure is recorded
+ * on `syncStatus`/`syncError` instead of failing the save; a failed retire is
+ * logged with the Stripe ids (the doc is gone), and the connector panel's
+ * "Sync everything now" retires the leftover later (`retireOrphans`).
  */
 
 const SKIP = { skipProviderSync: true, skipStripeSync: true };
@@ -154,10 +153,10 @@ export async function syncCoupon(args: CatalogSyncArgs): Promise<unknown> {
       maxRedemptions: doc.maxRedemptions,
       redeemBy: doc.redeemBy,
       code: doc.code,
+      active: doc.active ?? true,
       appliesToProductIds: resolveProductIds(populated.appliesTo),
       stripeCouponId: doc.stripeCouponId,
       stripePromotionCodeId: doc.stripePromotionCodeId,
-      active: doc.active ?? true,
       site: catalogSiteTag(),
     });
     return await req.payload.update({
@@ -194,30 +193,53 @@ export async function syncCoupon(args: CatalogSyncArgs): Promise<unknown> {
   }
 }
 
-/** A deleted plan: archive its Stripe product + price, drop its intro coupon. */
-export async function deletePlan(args: CatalogDeleteArgs): Promise<void> {
-  const doc = args.doc as Plan;
-  if (!doc.stripeProductId && !doc.stripePriceId && !doc.stripeIntroCouponId)
-    return;
+/**
+ * Retire a deleted doc's Stripe objects. Never throws: the Payload row is
+ * already gone, so a failure is logged with the ids to clean up by hand.
+ */
+async function retire(
+  args: CatalogDeleteArgs,
+  what: "plan" | "coupon",
+  ids: Record<string, string | null | undefined>,
+  run: (
+    stripe: NonNullable<Awaited<ReturnType<typeof stripeForSync>>>,
+  ) => Promise<void>,
+): Promise<void> {
+  const { req } = args;
+  const id = String((args.doc as { id?: unknown }).id);
+  if (!Object.values(ids).some(Boolean)) return; // never synced
   const stripe = await stripeForSync(args);
   if (!stripe) return;
-  await retirePlanInStripe(stripe, {
+  try {
+    await run(stripe);
+  } catch (err) {
+    req.payload.logger.error(
+      { err, ...ids },
+      `${what}s: Stripe cleanup failed for deleted ${what} ${id} — ` +
+        `"Sync everything now" retries it, or archive it in the Stripe Dashboard`,
+    );
+  }
+}
+
+export async function deletePlan(args: CatalogDeleteArgs): Promise<void> {
+  const doc = args.doc as Plan;
+  const ids = {
     stripeProductId: doc.stripeProductId,
     stripePriceId: doc.stripePriceId,
     stripeIntroCouponId: doc.stripeIntroCouponId,
-  });
+  };
+  await retire(args, "plan", ids, (stripe) => retirePlanInStripe(stripe, ids));
 }
 
-/** A deleted coupon: turn its promotion code off, delete the Stripe coupon. */
 export async function deleteCoupon(args: CatalogDeleteArgs): Promise<void> {
   const doc = args.doc as Coupon;
-  if (!doc.stripeCouponId && !doc.stripePromotionCodeId) return;
-  const stripe = await stripeForSync(args);
-  if (!stripe) return;
-  await retireCouponInStripe(stripe, {
+  const ids = {
     stripeCouponId: doc.stripeCouponId,
     stripePromotionCodeId: doc.stripePromotionCodeId,
-  });
+  };
+  await retire(args, "coupon", ids, (stripe) =>
+    retireCouponInStripe(stripe, ids),
+  );
 }
 
 /** Ids of every doc in a catalog collection (synced or not, any state). */
