@@ -63,6 +63,17 @@ squash**.
   the **Updates available** bar at the top of /admin, which shows whenever the
   kit or a module is behind.
 
+**New in 2.7.1 — registry modules install cleanly and survive kit
+updates.** Modules now follow the app's versions of shared packages: `mod`
+rewrites a module's spec for any package the app declares (MODULES.md → One
+version of each shared package). If you update by hand, run `pnpm mod:align`
+before `pnpm install`; the automatic update PR does it for you. Modules with
+public or embeddable pages (`/feedback`, `/embed/<slug>`) now install from
+/admin, and a module with a native plugin passes `format`. Dependencies are
+updated to their latest compatible versions (Expo Router 58.0.33). The release
+changes `.github/workflows/module-ops.yml`, so its update PR waits for your
+review.
+
 **New in 2.7.0 — modules install with their dependencies.** Installing a
 module that `requires` another (e.g. Projects · GitHub needs Projects) now
 adds both in one pull request, and /admin's Install drawer shows each
