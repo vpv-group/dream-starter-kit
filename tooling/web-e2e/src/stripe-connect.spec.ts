@@ -49,6 +49,7 @@ interface Plan {
   name: string;
   unitAmount: number;
   stripePriceId?: string | null;
+  stripeProductId?: string | null;
   syncStatus?: string;
   syncError?: string | null;
 }
@@ -230,6 +231,129 @@ test.describe("as staff", () => {
     const deliveries = (await stubLog()).filter((e) => e.type === "delivery");
     expect(deliveries.length).toBeGreaterThan(0);
     for (const d of deliveries) expect(d.status, d.eventType).toBe(200);
+  });
+
+  test("a coupon switched off, recoded or deleted retires its promotion code", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    interface StubObject {
+      id: string;
+      object: string;
+      active?: boolean;
+      code?: string;
+    }
+    const objects = async () =>
+      (await stub<{ objects: StubObject[] }>("/__stripe/state")).objects;
+    const object = async (id: string) =>
+      (await objects()).find((o) => o.id === id);
+    interface CouponDoc {
+      id: number;
+      syncStatus?: string;
+      stripeCouponId?: string | null;
+      stripePromotionCodeId?: string | null;
+    }
+    const coupon = async (id: number) =>
+      (await (
+        await page.request.get(`/cms-api/mod-billing-coupons/${id}?depth=0`)
+      ).json()) as CouponDoc;
+    const patch = async (id: number, data: object) =>
+      expect(
+        (
+          await page.request.patch(`/cms-api/mod-billing-coupons/${id}`, {
+            data,
+          })
+        ).ok(),
+      ).toBe(true);
+
+    const code = `RETIRE${STAMP}`;
+    const created = await page.request.post("/cms-api/mod-billing-coupons", {
+      data: {
+        name: "E2E retire",
+        discountType: "percent_off",
+        value: 15,
+        duration: "once",
+        code,
+      },
+    });
+    expect(created.ok()).toBe(true);
+    const { doc } = (await created.json()) as { doc: { id: number } };
+    await expect
+      .poll(async () => (await coupon(doc.id)).stripePromotionCodeId ?? null)
+      .toMatch(/^promo_stub_/);
+    const first = await coupon(doc.id);
+    const promoId = first.stripePromotionCodeId ?? "";
+    expect((await object(promoId))?.active).toBe(true);
+
+    // Off turns the code off; on turns it back on.
+    await patch(doc.id, { active: false });
+    await expect.poll(async () => (await object(promoId))?.active).toBe(false);
+    await patch(doc.id, { active: true });
+    await expect.poll(async () => (await object(promoId))?.active).toBe(true);
+
+    // A changed code retires the old one (Stripe can't edit a code).
+    await patch(doc.id, { code: `${code}B` });
+    await expect
+      .poll(async () => (await coupon(doc.id)).stripePromotionCodeId)
+      .not.toBe(promoId);
+    expect((await object(promoId))?.active).toBe(false);
+    const recoded = await coupon(doc.id);
+    const newPromoId = recoded.stripePromotionCodeId ?? "";
+    expect(await object(newPromoId)).toMatchObject({
+      active: true,
+      code: `${code}B`,
+    });
+
+    // Deleting turns the code off and deletes the Stripe coupon.
+    const stripeCouponId = recoded.stripeCouponId ?? "";
+    expect(await object(stripeCouponId)).toBeTruthy();
+    expect(
+      (
+        await page.request.delete(`/cms-api/mod-billing-coupons/${doc.id}`)
+      ).ok(),
+    ).toBe(true);
+    await expect
+      .poll(async () => (await object(newPromoId))?.active)
+      .toBe(false);
+    expect(await object(stripeCouponId)).toBeUndefined();
+  });
+
+  test("deleting a plan archives its Stripe product and price", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    const created = await page.request.post("/cms-api/mod-billing-plans", {
+      data: {
+        name: "E2E retire plan",
+        slug: `e2e-retire-${STAMP}`,
+        pricingType: "recurring",
+        interval: "month",
+        unitAmount: 700,
+        currency: "usd",
+      },
+    });
+    expect(created.ok()).toBe(true);
+    const { doc } = (await created.json()) as { doc: { id: number } };
+    await expect
+      .poll(
+        async () =>
+          (await plan(page.request, `e2e-retire-${STAMP}`)).stripePriceId ??
+          null,
+      )
+      .toMatch(/^price_stub_/);
+    const synced = await plan(page.request, `e2e-retire-${STAMP}`);
+    expect(
+      (await page.request.delete(`/cms-api/mod-billing-plans/${doc.id}`)).ok(),
+    ).toBe(true);
+    const { objects } = await stub<{
+      objects: { id: string; active?: boolean }[];
+    }>("/__stripe/state");
+    expect(objects.find((o) => o.id === synced.stripeProductId)?.active).toBe(
+      false,
+    );
+    expect(objects.find((o) => o.id === synced.stripePriceId)?.active).toBe(
+      false,
+    );
   });
 });
 

@@ -2,7 +2,10 @@ import type { CollectionConfig } from "payload";
 
 import { anyone, isAdmin } from "@acme/mod-kit/payload";
 
-import { syncCouponWithProviders } from "../hooks/sync-with-providers";
+import {
+  retireCouponWithProviders,
+  syncCouponWithProviders,
+} from "../hooks/sync-with-providers";
 
 /**
  * Discount coupons + (optionally) a customer-facing promotion code. Authored
@@ -12,7 +15,11 @@ import { syncCouponWithProviders } from "../hooks/sync-with-providers";
  * customers type at checkout that maps to it.
  *
  * Stripe coupons are immutable for amount/duration — changing those creates a
- * NEW Stripe coupon and archives the old one (the sync handles this). Read is
+ * NEW Stripe coupon and archives the old one (the sync handles this).
+ * Switching `active` off turns the promotion code off at the provider (on
+ * again turns it back on); deleting the coupon retires it there
+ * (../hooks/sync-with-providers.ts → `deleteCoupon`). Discounts already
+ * applied to subscriptions keep applying either way. Read is
  * public (so the app can surface available offers); writes are staff-only.
  *
  * The `isWelcomeOffer` coupon (at most one active) is what the signup flow uses
@@ -37,7 +44,10 @@ export const Coupons: CollectionConfig = {
     update: isAdmin,
     delete: isAdmin,
   },
-  hooks: { afterChange: [syncCouponWithProviders] },
+  hooks: {
+    afterChange: [syncCouponWithProviders],
+    afterDelete: [retireCouponWithProviders],
+  },
   fields: [
     {
       name: "timesRedeemed",
@@ -53,7 +63,12 @@ export const Coupons: CollectionConfig = {
       name: "active",
       type: "checkbox",
       defaultValue: true,
-      admin: { position: "sidebar" },
+      admin: {
+        position: "sidebar",
+        description:
+          "Off retires the promotion code at checkout; discounts already " +
+          "applied keep applying.",
+      },
     },
 
     // --- Stripe sync state (read-only; written by the afterChange sync hook) ---

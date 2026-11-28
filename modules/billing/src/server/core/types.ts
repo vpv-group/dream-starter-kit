@@ -2,7 +2,11 @@ import type {
   SupabaseClient as BaseSupabaseClient,
   User,
 } from "@supabase/supabase-js";
-import type { BasePayload, CollectionAfterChangeHook } from "payload";
+import type {
+  BasePayload,
+  CollectionAfterChangeHook,
+  CollectionAfterDeleteHook,
+} from "payload";
 
 import type { Database } from "@acme/api";
 import type { ModBillingCoupon, ModBillingPlan } from "@acme/cms";
@@ -120,6 +124,12 @@ export type ClaimResult = "claimed" | "duplicate" | "busy";
 /** Payload `afterChange` args for a plan or coupon save. */
 export type CatalogSyncArgs = Parameters<CollectionAfterChangeHook>[0];
 
+/**
+ * Payload `afterDelete` args for a plan or coupon delete. `doc` is the deleted
+ * document (with the provider ids it carried); it no longer exists in the CMS.
+ */
+export type CatalogDeleteArgs = Parameters<CollectionAfterDeleteHook>[0];
+
 export interface CheckoutInput {
   plan: ModBillingPlan;
   /** The signed-in buyer, or null for a guest checkout. */
@@ -177,6 +187,20 @@ export interface BillingProvider {
   syncPlan?(args: CatalogSyncArgs): Promise<unknown>;
   /** Push a saved coupon to the provider (Payload afterChange). */
   syncCoupon?(args: CatalogSyncArgs): Promise<unknown>;
+  /**
+   * Retire a deleted plan at the provider (Payload afterDelete): stop new
+   * purchases of it (e.g. archive the product + price). Existing purchases
+   * must keep working. The doc is already gone, so there is no `syncStatus`
+   * to write: throw on failure and billing logs it; the provider should be
+   * able to retry later (e.g. a resync that retires orphans).
+   */
+  deletePlan?(args: CatalogDeleteArgs): Promise<void>;
+  /**
+   * Retire a deleted coupon at the provider (Payload afterDelete): its codes
+   * stop working at checkout; discounts already applied keep applying. Same
+   * failure contract as `deletePlan`.
+   */
+  deleteCoupon?(args: CatalogDeleteArgs): Promise<void>;
   /** Cancel what the user still pays for before their account is deleted. */
   onAccountDelete?(input: { userId: string }): Promise<void>;
   /** For the admin panel. */

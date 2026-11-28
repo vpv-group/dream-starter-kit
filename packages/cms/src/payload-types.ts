@@ -1180,6 +1180,9 @@ export interface ModBillingCoupon {
    * Mirrored from Stripe.
    */
   timesRedeemed?: number | null;
+  /**
+   * Off retires the promotion code at checkout; discounts already applied keep applying.
+   */
   active?: boolean | null;
   /**
    * Don't push this coupon to Stripe on save.

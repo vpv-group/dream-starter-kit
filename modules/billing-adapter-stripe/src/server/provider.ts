@@ -20,14 +20,14 @@ import {
   stripeCredentials,
   stripeSettings,
 } from "../stripe/client";
-import { syncCoupon, syncPlan } from "./catalog";
+import { deleteCoupon, deletePlan, syncCoupon, syncPlan } from "./catalog";
 import { resolveCustomer, resolveOrgCustomer } from "./customers";
 import { legacyRoutes } from "./legacy";
 
 /**
  * Stripe as billing's web payment provider — the `adapter` billing calls out
  * to (`getModAdapters("billing")`): hosted Checkout, the customer portal,
- * invoices, catalog sync, cleanup before account deletion, and the admin
+ * invoices, catalog sync (and retiring deleted plans/coupons), cleanup before account deletion, and the admin
  * status line.
  */
 
@@ -184,6 +184,8 @@ export const adapter: BillingProvider = {
 
   syncPlan,
   syncCoupon,
+  deletePlan,
+  deleteCoupon,
 
   /** Cancel what the user still pays for (account deletion). */
   async onAccountDelete({ userId }) {

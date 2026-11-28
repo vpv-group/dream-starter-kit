@@ -75,6 +75,17 @@ unnamed, so their columns don't move when a provider is added or removed. A per�
 **skipSync** opts out; failures land on **Sync status / Sync error** instead of
 failing the save.
 
+A coupon's **Active** checkbox reaches the provider too: off turns its promotion code
+off at checkout, on turns it back on (discounts already applied keep applying).
+Changing or clearing a coupon's code retires the old code. **Deleting** a plan or
+coupon runs billing's `afterDelete` hook, which hands it to every provider that
+retires catalog (`deletePlan` / `deleteCoupon`): Stripe archives the plan's product
+and price (existing subscriptions keep renewing) or turns the coupon's promotion code
+off and deletes the coupon. The doc is gone by then, so a failure can't land on
+**Sync status**: billing logs it (with the doc's provider ids) and the delete still
+succeeds. Stripe retries on the connector panel's **Sync everything now**, which
+also retires this site's Stripe objects whose plan/coupon no longer exists.
+
 Store products (App Store / Play) are created in the stores' consoles, not pushed
 from the kit; an in‑app provider maps them to plans in its tab instead (§7).
 
@@ -134,11 +145,24 @@ interface BillingProvider {
   customerLink?(i: { subject }): Promise<{ customerId; dashboardUrl } | null>; // staff view
   syncPlan?(args): Promise<unknown>; // Payload afterChange args
   syncCoupon?(args): Promise<unknown>;
+  deletePlan?(args): Promise<void>; // Payload afterDelete args — retire a deleted plan
+  deleteCoupon?(args): Promise<void>; // retire a deleted coupon
   onAccountDelete?(i: { userId }): Promise<void>; // cancel before deletion
   status?(): Promise<ProviderStatus>;
   legacyRoutes?: ModPublicRouteTable; // billing 1.x paths billing still forwards
 }
 ```
+
+`syncPlan` / `syncCoupon` run on every save (billing's `afterChange` hook) and record
+their own failures on the doc's `syncStatus` / `syncError`. A coupon saved with
+`active: false` must stop its codes working at checkout without touching discounts
+already applied. `deletePlan` / `deleteCoupon` run after a delete (billing's
+`afterDelete` hook, args carry the deleted `doc` with the provider ids): stop new
+purchases or redemptions, leave existing ones working, and treat ids the provider no
+longer has as done. There's no doc left to record a failure on, so throw: billing
+logs it and never fails the delete. Give staff a way to retry (Stripe's resync
+retires leftovers). All four are skipped for `skipSync` docs and for writes made with
+`context.skipProviderSync`.
 
 Billing's routes dispatch to providers: `POST /api/mod/billing/checkout`
 `{planId, provider?}` uses the first configured **web** provider (or the one asked

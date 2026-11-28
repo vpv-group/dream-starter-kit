@@ -12,7 +12,7 @@ export const modulesLock = {
   },
   "modules": {
     "billing": {
-      "version": "2.3.0",
+      "version": "2.4.0",
       "kitCompat": ">=2.6.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
@@ -31,7 +31,7 @@ export const modulesLock = {
       "edgeFunctions": []
     },
     "billing-adapter-stripe": {
-      "version": "1.2.1",
+      "version": "1.3.0",
       "kitCompat": ">=2.6.0 <3",
       "source": "local",
       "installedVia": "preinstalled",

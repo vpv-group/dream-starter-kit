@@ -22,6 +22,12 @@ The kit is **plan‑driven from the CMS**, not from the Stripe dashboard:
   or prices in the Stripe dashboard by hand.** Stripe prices are immutable, so
   changing an amount creates a new price and archives the old one. Each plan's
   **Stripe** tab shows the ids.
+- Turning a coupon **off** (its **Active** checkbox) turns its promotion code off, so
+  customers can't type it at checkout; turning it back on reactivates it. Changing
+  or clearing the code turns the old one off (Stripe can't edit a code). **Deleting**
+  a coupon turns its code off and deletes the Stripe coupon; deleting a plan archives
+  its product and price and deletes its intro coupon. Discounts and subscriptions
+  already in place are never touched.
 - Buyers pay **on your site** — the paywall on premium content and the two‑step
   `/checkout` page, with card, Link, Apple Pay and Google Pay (Stripe Elements) — or,
   if you prefer, on **Stripe's hosted Checkout page** (a setting, §4). Guests can pay
@@ -145,7 +151,16 @@ redeploy, verify, then revoke the old key.
   (Vault or `STRIPE_WEBHOOK_SECRET`), the last event received; **Register now**
   instead of waiting for the hourly check.
 - **Catalog** — how many plans/coupons are synced, failed or not yet synced;
-  **Sync everything now** (useful right after connecting).
+  **Sync everything now** (useful right after connecting). It also retires what
+  deleted plans and coupons left in Stripe (a delete whose Stripe call failed has no
+  sync status to show it): products, prices, coupons and promotion codes tagged
+  with this site (`metadata.payloadSite`, the Supabase project's host) whose plan or
+  coupon no longer exists. Another site on the same Stripe account keeps its
+  catalog. Objects synced before billing-adapter-stripe 1.3 get the tag on their
+  next sync; ones whose plan/coupon was deleted before then are left for the
+  Dashboard. Local copies sharing one test-mode account and the same local Supabase
+  URL count as one site: a resync in one can retire another's catalog, and the next
+  sync recreates it.
 
 All of it goes through admin‑only routes (`/api/mod/billing-adapter-stripe/admin/*`);
 no secret reaches the browser.

@@ -440,11 +440,26 @@ export function AdminSettings() {
                 disabled={busy !== null || !status.enabled}
                 onClick={() =>
                   void run("resync", async () => {
-                    const r = await call<{ plans: number; coupons: number }>(
-                      "/resync",
-                      {},
-                    );
-                    return `Pushed ${r.plans} plans and ${r.coupons} coupons to Stripe.`;
+                    const r = await call<{
+                      plans: number;
+                      coupons: number;
+                      retired?: { plans: number; coupons: number };
+                      retireError?: string | null;
+                    }>("/resync", {});
+                    const retired = r.retired
+                      ? r.retired.plans + r.retired.coupons
+                      : 0;
+                    return [
+                      `Pushed ${r.plans} plans and ${r.coupons} coupons to Stripe.`,
+                      retired > 0
+                        ? `Retired ${retired} left over from deleted plans or coupons.`
+                        : "",
+                      r.retireError
+                        ? `Couldn't retire deleted plans or coupons: ${r.retireError}`
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ");
                   })
                 }
               >
