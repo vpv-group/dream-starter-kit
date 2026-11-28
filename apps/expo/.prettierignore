@@ -1,4 +1,5 @@
 # Module framework outputs, regenerated wholesale by `pnpm mod sync` —
 # machine-owned, never hand-edited.
 src/mod/*.generated.ts
+src/mod/*.generated.json
 src/app/(app)/x/

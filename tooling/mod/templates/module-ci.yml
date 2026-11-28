@@ -59,4 +59,8 @@ jobs:
           pnpm install --no-frozen-lockfile
           pnpm mod sync
           pnpm typecheck
+          # The module's own lint and format, as an app's CI runs them on
+          # the install PR.
+          pnpm -F "@acme/mod-$SLUG" --if-present lint
+          pnpm -F "@acme/mod-$SLUG" --if-present format
           pnpm test
