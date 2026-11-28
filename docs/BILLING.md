@@ -206,6 +206,18 @@ the installed provider's `PaymentForm` (§5.3):
   from the `getPremiumPlan` service. Without billing the slot renders the teaser;
   Payload's `premiumFieldAccess` has withheld the premium body server-side either
   way.
+- **Custom paywalls**: a module with its own purchase flows (several plans, a
+  one-time purchase, its own copy) declares `requires: ["billing"]` and reuses
+  the modal instead of forking it. `@acme/mod-billing/web` exports `PaywallModal` (with its optional `copy`,
+  `offerTopSlot`, `createIntent`, `onAfterPaid` and `oneTime` props),
+  `PaywallOffer` (the offer card, e.g. for an on-page dock) and
+  `useWebPaymentProvider()` (for `prefetch` / `preconnect`); `@acme/mod-billing`
+  exports the pure copy helpers (`buildPlanCopy`, `buildUpsellCopy`,
+  `formatPrice`, `cadence`, `resolvePremiumPlan`, `resolveAnnualPlan`). A one-time
+  purchase passes a one-time `plan` (`pricingType: "one_time"`, `unitAmount` in
+  cents) so the provider sizes its payment form, and a `createIntent` that
+  creates the purchase on its own route. Load the modal lazily
+  (`next/dynamic`, `ssr: false`) to keep the provider's SDK off the first paint.
 - **Checkout** (`/checkout`, `/checkout/return`, rsc pages in `src/web-server/`):
   plan summary, testimonial (billing settings → featured review), and the account
   step, which embeds the host's sign-in flow through the **`auth-flow` host

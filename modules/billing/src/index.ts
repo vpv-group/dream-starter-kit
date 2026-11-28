@@ -15,3 +15,14 @@ export type {
   PaymentPlan,
   PurchaseRef,
 } from "./payment";
+// Pure paywall copy/pricing helpers (client-safe, no React) — the primitives
+// a custom paywall composes its copy from.
+export {
+  buildPlanCopy,
+  buildUpsellCopy,
+  cadence,
+  formatPrice,
+  resolveAnnualPlan,
+  resolvePremiumPlan,
+} from "./paywall-copy";
+export type { PaywallCopy, PlanLite, UpsellCopy } from "./paywall-copy";
