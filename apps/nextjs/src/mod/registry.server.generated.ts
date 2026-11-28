@@ -6,7 +6,7 @@ import "server-only";
 
 import { type ModMcpExtension, type ModPublicRouteTable, type ModRouteTable, type ModServices, registerModAdapters } from "@acme/mod-kit/server";
 
-import { routes as routes_billing, publicRoutes as publicRoutes_billing, services as services_billing } from "@acme/mod-billing/server";
+import { routes as routes_billing, publicRoutes as publicRoutes_billing, mcp as mcp_billing, services as services_billing } from "@acme/mod-billing/server";
 import { routes as routes_billing_adapter_stripe, publicRoutes as publicRoutes_billing_adapter_stripe } from "@acme/mod-billing-adapter-stripe/server";
 import { routes as routes_chat } from "@acme/mod-chat/server";
 import { publicRoutes as publicRoutes_chat_adapter_sendblue } from "@acme/mod-chat-adapter-sendblue/server";
@@ -35,7 +35,9 @@ export const modPublicRoutes: Record<string, ModPublicRouteTable> = {
 };
 
 /** slug → MCP tools/collections, added to /mcp while the module is enabled. */
-export const modMcp: Record<string, ModMcpExtension> = {};
+export const modMcp: Record<string, ModMcpExtension> = {
+  "billing": mcp_billing,
+};
 
 /**
  * slug → the module's host-facing services (manifest server.services). Host

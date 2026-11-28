@@ -91,6 +91,31 @@ cleanup in the provider's dashboard.
 Store products (App Store / Play) are created in the stores' consoles, not pushed
 from the kit; an in‑app provider maps them to plans in its tab instead (§7).
 
+### 3.1 Managing the catalog from an MCP client
+
+Billing adds `billing_*` tools to the kit's remote MCP server (`/mcp`, docs/MCP.md),
+so an admin can manage plans and coupons from Claude, ChatGPT or Cursor in plain
+language ("add a $19/month Pro plan with a $1 first month", "make LAUNCH20 expire
+on Friday"). They live in `modules/billing/src/server/mcp.ts` (manifest
+`server.mcp: true`) and are listed in docs/MCP.md → Billing tools.
+
+- **Same rules as /admin.** Every call runs through the Payload Local API as the
+  calling staff user (`overrideAccess: false`): anyone staff can read; only admins
+  can create, edit, delete or re‑sync.
+- **Same sync.** A save runs the catalog hook above, so the provider gets the
+  change (Stripe: a new price when the amount or interval changes, a new coupon and
+  promotion code when a coupon's terms change). Each write is re‑read and the result
+  reports the doc's **sync status** and the provider ids.
+- **Checked before saving.** Amounts are cents; recurring‑only fields are refused
+  on one‑time plans; an intro price must be below the plan price; percent coupons
+  are 1–100; `redeemBy` must be in the future; `appliesTo` plans must exist; at most
+  one active welcome offer; promotion codes are unique.
+- **Safe deletes.** `billing_delete_plan` refuses while any subscription or
+  purchase references the plan (deactivate it instead); otherwise it deactivates
+  the plan first so the provider archives it, then deletes it.
+- **Audited.** Creates, edits and deletes are written to the audit log
+  (`billing.plan.*` / `billing.coupon.*`, `meta.via = "mcp"`).
+
 ---
 
 ## 4. Billing tags
