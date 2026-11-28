@@ -239,6 +239,18 @@ jobs:
           # into the PR (MODULES-PLAN.md §7).
           git add -A
           BAD=$(git diff --cached --name-only | grep -vE '^(modules/|modules\.lock|pnpm-lock\.yaml|\.env\.example|supabase/(migrations|functions)/|apps/nextjs/(mod-packages\.generated\.json|src/(lib/db/supabase-migrations\.generated\.json|mod/|payload/migrations/|app/\(frontend\)/.*x/|app/\(frontend\)/\(app\)/(a|billing)/|app/\(frontend\)/\(public\)/pricing/))|apps/expo/(package\.json|src/(mod/|app/\(app\)/))|apps/nextjs/package\.json|packages/(api|cms)/src/)' || true)
+          # Route pages and layouts a module mounts (/feedback, /embed/<slug>,
+          # /a/<slug>, …) live anywhere in the web app's route groups, so
+          # they're checked by content instead: each must be exactly what the
+          # kit's generator writes for the installed modules. Any other path,
+          # tooling/ included, stays on the list above, so this can't be
+          # used to wave through anything else.
+          ROUTES=$(printf '%s\n' "$BAD" | grep -E '^apps/nextjs/src/app/\(frontend\)/\((app|public|embed)\)/' || true)
+          if [ -n "$ROUTES" ]; then
+            OTHER=$(printf '%s\n' "$BAD" | grep -vE '^apps/nextjs/src/app/\(frontend\)/\((app|public|embed)\)/' || true)
+            ROUTES=$(printf '%s\n' "$ROUTES" | pnpm -s mod ops verify-route-stubs)
+            BAD=$(printf '%s\n%s\n' "$OTHER" "$ROUTES")
+          fi
           # `mod sync` adds/removes the module's workspace dependency in both
           # apps' package.json: allowed ONLY for "@acme/mod-<slug>" lines.
           for f in apps/nextjs/package.json apps/expo/package.json; do
@@ -467,6 +479,9 @@ jobs:
         if: steps.merge.outputs.result == 'clean'
         run: |
           set -euo pipefail
+          # Installed modules onto the release's versions of shared packages
+          # first: the install's postinstall refuses mismatched versions.
+          pnpm mod:align
           pnpm install --no-frozen-lockfile
           pnpm mod sync
           pnpm db:gen-migrations
@@ -502,7 +517,7 @@ jobs:
             BODY="$BODY
 
           ⚠️ **Conflicts to resolve** (markers committed): $(echo "$CONFLICTS" | tr ' ' '\n' | head -40 | sed 's/.*/\x60&\x60/' | tr '\n' ' ')
-          Then run \`pnpm install\`, \`pnpm db:gen-types\` and \`pnpm cms:gen-types\`. It never merges itself."
+          Then run \`pnpm mod:align\`, \`pnpm install\`, \`pnpm db:gen-types\` and \`pnpm cms:gen-types\`. It never merges itself."
           fi
           gh label create dream-update --color 5319e7 --description "Automated Dream update" 2>/dev/null || true
           gh label create dream-update-conflicts --color d93f0b --description "Dream update with conflicts to resolve" 2>/dev/null || true

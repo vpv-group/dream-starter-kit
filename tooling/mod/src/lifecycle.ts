@@ -18,6 +18,12 @@ import type { ModLockEntry, ModSource } from "./lock";
 import type { CatalogModule } from "./registry";
 import type { Source, SourcePlan } from "./source-plan";
 import {
+  alignInstalledModules,
+  alignModuleDir,
+  logAlignment,
+  readHostSpecs,
+} from "./align-deps";
+import {
   assertMergeTreeSupport,
   checkoutModuleTree,
   commitModuleTree,
@@ -245,6 +251,8 @@ function readManifestBasics(dir: string): { slug: string; version: string } {
 }
 
 async function validateAndSync(repoRoot: string): Promise<void> {
+  // Before the install: its postinstall (sherif) refuses mismatched versions.
+  logAlignment(alignInstalledModules(repoRoot));
   installWorkspace(repoRoot);
   await sync(repoRoot); // loadModules inside throws on any validation error
 }
@@ -300,6 +308,17 @@ export async function add(
   });
 
   // Copy every module in (dependencies first), then ONE pnpm install + sync.
+  // On the app's versions of shared packages before the copy, so the
+  // snapshot taken below (the pristine base) already has them.
+  const host = readHostSpecs(repoRoot);
+  for (const mod of set) {
+    logAlignment([
+      {
+        slug: mod.slug,
+        changes: alignModuleDir(mod.payload.fetched.dir, host),
+      },
+    ]);
+  }
   const copied: string[] = [];
   try {
     for (const mod of set) {
@@ -487,6 +506,14 @@ export async function update(
     );
   }
 
+  // Upstream on the app's versions too, so the 3-way merge (and the new
+  // pristine base) only carry the module's real changes.
+  logAlignment([
+    {
+      slug,
+      changes: alignModuleDir(fetched.dir, readHostSpecs(repoRoot)),
+    },
+  ]);
   const merged = mergeUpstream(
     repoRoot,
     slug,

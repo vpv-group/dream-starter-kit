@@ -92,6 +92,17 @@ the module's own config plugin (`app.plugin.js`, manifest
 needs a **new native build** — sync says so. Full guide:
 [NATIVE.md](./NATIVE.md).
 
+**One version of each shared package.** The app can only have one copy of a
+package (two copies of a native one break the iOS and Android builds, and the
+`postinstall` check refuses mismatched versions). So wherever a module depends
+on a package the app itself declares, `mod add`, `mod update` and `mod sync`
+rewrite the module's spec to the app's, `catalog:` included
+(`tooling/mod/src/align-deps.ts`). Add and update do it before the pristine
+snapshot, so it never shows as a local edit or a merge conflict. After a kit
+update that bumps a shared package, run `pnpm mod:align` before
+`pnpm install` (the kit-update job does); it needs no installed
+dependencies. Packages only the module uses keep the module's own versions.
+
 ## Namespacing (collisions hard-fail `mod sync`)
 
 | Thing           | Rule                                                                            | Example                     |
@@ -730,7 +741,10 @@ failures the update caused.
 Every op runs the same CLI a developer would and enforces **path
 confinement**: an op may only write `modules/<slug>/**` plus known sync
 outputs; the apps' `package.json` only for `"@acme/mod-<slug>":
-"workspace:*"` lines. The op starts a local Supabase on the runner, so
+"workspace:*"` lines. Route pages a module mounts anywhere in the web app
+(`/feedback`, `/embed/<slug>`, `/a/<slug>`) are checked by content: each must
+be exactly the page or layout `mod sync` generates
+(`pnpm mod ops verify-route-stubs`). The op starts a local Supabase on the runner, so
 `db:gen-types` includes the module's tables. Installs started from `/admin`
 may only use Dream catalog sources (`dream:<slug>`); installing from a GitHub
 URL or a ZIP is CLI-only, for module authors.

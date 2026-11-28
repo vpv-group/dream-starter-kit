@@ -27,6 +27,7 @@
     "dev:next": "turbo watch dev -F @acme/nextjs...",
     "dev:setup": "pnpm -F @acme/setup dev:setup",
     "mod": "pnpm -F @acme/mod-tools cli",
+    "mod:align": "node tooling/mod/src/align-deps.ts",
     "mod:sync": "pnpm -F @acme/mod-tools cli sync",
     "format": "turbo run format --continue -- --cache --cache-location .cache/.prettiercache",
     "format:fix": "turbo run format --continue -- --write --cache --cache-location .cache/.prettiercache",

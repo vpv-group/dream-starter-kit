@@ -20,6 +20,7 @@ import { planKitUpdate, toGithubOutput } from "./ops/kit-update";
 import { runMerge, watchDeployment } from "./ops/merge";
 import { reporter } from "./ops/report";
 import { resolveGeneratedConflicts } from "./ops/resolve-generated";
+import { verifyRouteStubs } from "./ops/route-stubs";
 import { openSession, sessionOutputs } from "./ops/session";
 import { findRepoRoot } from "./paths";
 import { registryUrl } from "./registry";
@@ -178,6 +179,17 @@ async function main(): Promise<void> {
         process.stdout.write(
           `resolved=${resolved.join(" ")}\nremaining=${remaining.join(" ")}\n`,
         );
+        return;
+      }
+      if (args[0] === "verify-route-stubs") {
+        // stdin: changed paths, one per line → stdout: the ones that aren't
+        // route pages exactly as `mod sync` generates them.
+        const changed = readFileSync(0, "utf8")
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean);
+        const bad = await verifyRouteStubs(root, changed);
+        process.stdout.write(bad.length ? `${bad.join("\n")}\n` : "");
         return;
       }
       if (args[0] === "describe") {

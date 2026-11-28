@@ -54,9 +54,15 @@ jobs:
           SLUG=$(grep -oP 'slug:\s*"\K[a-z0-9-]+' ../module/module.config.ts | head -1)
           mkdir -p "modules/$SLUG"
           rsync -a --exclude .git ../module/ "modules/$SLUG/"
+          # As `pnpm mod add` does: the app's versions of shared packages.
+          pnpm mod:align
           # Not --frozen-lockfile: the module may bring dependencies the
           # kit's lockfile doesn't have yet.
           pnpm install --no-frozen-lockfile
           pnpm mod sync
           pnpm typecheck
+          # The module's own lint and format, as an app's CI runs them on
+          # the install PR.
+          pnpm -F "@acme/mod-$SLUG" --if-present lint
+          pnpm -F "@acme/mod-$SLUG" --if-present format
           pnpm test

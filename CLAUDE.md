@@ -387,7 +387,9 @@ Rules that keep modules modular:
 - **Native packages travel with the module:** list `expo-*` packages in the
   module's own `dependencies` (app's SDK version) and ship an `app.plugin.js`
   (`native: { plugin: true }`) for permissions; installing one needs a new
-  native build (docs/NATIVE.md).
+  native build (docs/NATIVE.md). Shared packages follow the app: `mod`
+  rewrites a module's spec for any package the app declares to the app's
+  (`pnpm mod:align`, run before `pnpm install` after a kit update).
 - **Migrations:** local sequence numbers (`001_initial.sql`) inside the
   module; `mod sync` pins versions and materializes copies — never edit a
   synced migration, add a new one. Ship a `drop.sql` for clean removal.
