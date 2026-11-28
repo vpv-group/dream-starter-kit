@@ -63,6 +63,14 @@ squash**.
   the **Updates available** bar at the top of /admin, which shows whenever the
   kit or a module is behind.
 
+**New in 2.7.2 — custom paywalls reuse billing's modal.** Billing 2.3.0
+exports its paywall building blocks (`PaywallModal`, `PaywallOffer`,
+`useWebPaymentProvider` from `@acme/mod-billing/web`, and the paywall copy
+helpers from `@acme/mod-billing`), so a module with its own purchase flows
+(several plans, a one-time purchase) reuses the modal instead of forking it
+(docs/BILLING.md §5.6). Exports only: no runtime, schema or dependency
+changes.
+
 **New in 2.7.1 — registry modules install cleanly and survive kit
 updates.** Modules now follow the app's versions of shared packages: `mod`
 rewrites a module's spec for any package the app declares (MODULES.md → One
