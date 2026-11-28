@@ -730,7 +730,10 @@ failures the update caused.
 Every op runs the same CLI a developer would and enforces **path
 confinement**: an op may only write `modules/<slug>/**` plus known sync
 outputs; the apps' `package.json` only for `"@acme/mod-<slug>":
-"workspace:*"` lines. The op starts a local Supabase on the runner, so
+"workspace:*"` lines. Route pages a module mounts anywhere in the web app
+(`/feedback`, `/embed/<slug>`, `/a/<slug>`) are checked by content: each must
+be exactly the page or layout `mod sync` generates
+(`pnpm mod ops verify-route-stubs`). The op starts a local Supabase on the runner, so
 `db:gen-types` includes the module's tables. Installs started from `/admin`
 may only use Dream catalog sources (`dream:<slug>`); installing from a GitHub
 URL or a ZIP is CLI-only, for module authors.
