@@ -592,6 +592,9 @@ ships preinstalled. Full reference: **docs/BILLING.md**; Stripe setup: docs/STRI
   pays first; the webhook (or guest-account) matches their email to an account or
   creates one + emails a Supabase invite (`/accept-invite` → `/a`). Stripe stays
   **web-only** (golden rule #4); mobile shows a read-only `/pricing` and links out.
+- **MCP:** billing adds `billing_*` tools to `/mcp` (`server/mcp.ts`) to read,
+  create, edit, delete and re-sync plans and coupons as the staff caller (writes
+  admin-only, provider sync reported, audited) — docs/MCP.md → Billing tools.
 - Self-serve billing lives at `/billing` (plan, change/cancel via the provider's
   portal, invoices from every provider). Free→paid upgrade CTA is on `/a`.
 - **Workspaces can own a plan** (`mod_billing_subscriptions.org_id`; every member

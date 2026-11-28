@@ -27,7 +27,7 @@ export interface ModNavDefault {
 
 /** Every installed module (from the vendored manifests). */
 export const modInstalled: ModInstalled[] = [
-  { slug: "billing", name: "Billing", version: "2.3.0", system: true },
+  { slug: "billing", name: "Billing", version: "2.4.0", system: true },
   { slug: "billing-adapter-stripe", name: "Stripe", version: "1.2.1", system: false },
   { slug: "chat", name: "AI Chat", version: "1.1.0", system: false },
   { slug: "chat-adapter-sendblue", name: "Sendblue Adapter", version: "1.0.0", system: false },

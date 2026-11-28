@@ -95,6 +95,8 @@ export { billingTagSettings } from "./core/settings";
 export { siteUrl } from "./core/site";
 export { createAdminClient } from "./admin-client";
 export { projectSubscriptionToCms } from "../payload/project";
+/** Remote MCP tools (manifest `server.mcp`): billing_* plan + coupon tools. */
+export { mcp } from "./mcp";
 export type { CmsSubscriptionInput } from "../payload/project";
 
 /** A failure an adapter wants answered with a specific status + message. */

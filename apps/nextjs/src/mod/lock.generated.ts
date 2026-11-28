@@ -12,7 +12,7 @@ export const modulesLock = {
   },
   "modules": {
     "billing": {
-      "version": "2.3.0",
+      "version": "2.4.0",
       "kitCompat": ">=2.6.0 <3",
       "source": "local",
       "installedVia": "preinstalled",
