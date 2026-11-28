@@ -49,8 +49,9 @@ Sources read for this plan:
 14. [Roles and visibility matrix](#14-roles-and-visibility-matrix)
 15. [States and edge cases](#15-states-and-edge-cases)
 16. [Wireframe brief for Claude Design](#16-wireframe-brief-for-claude-design)
-17. [Implementation phases and files](#17-implementation-phases-and-files)
-18. [Open questions](#18-open-questions)
+17. [Payload features to adopt](#17-payload-features-to-adopt)
+18. [Implementation phases and files](#18-implementation-phases-and-files)
+19. [Open questions](#19-open-questions)
 
 ---
 
@@ -61,24 +62,24 @@ Screenshot numbers refer to the 75 screenshots sorted by time (00–74).
 
 ### 1.1 Observed patterns
 
-| #   | Shopify pattern                                                                                                                                                                                                                                                                                                                                                       | Where (screenshot) | What we adopt                                                                                                                                                                                                                                                     |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| S1  | **Fixed, short top-level list of business objects**: Home, Orders (with count 16), Products, Customers, Growth, Discounts, Content, Markets, Finance, Analytics                                                                                                                                                                                                       | 24–31              | A fixed **section** list in a fixed order. Sections appear only when something is in them.                                                                                                                                                                        |
-| S2  | **Children show only for the active section**: Products → Collections, Inventory, Purchase orders, Transfers, Gift cards; Content → Metaobjects, Files, Menus, Blog posts; Analytics → Reports, Live View                                                                                                                                                             | 22, 24, 26, 28–31  | Payload nav **groups as an accordion**: one section open at a time, the active one. The kit's `AdminNav` already behaves this way.                                                                                                                                |
-| S3  | **Collapsed icon rail** with fly-out sub-menus when the window is narrow                                                                                                                                                                                                                                                                                              | 00–23              | **Not adopted.** Payload's nav has no icon rail. We keep Payload's open/closed nav and its mobile hamburger.                                                                                                                                                      |
-| S4  | **"Sales channels" divider**: Online Store (Pages, Preferences), Point of Sale (Devices, Register sessions, Settings), Inbox, Agentic (Knowledge base)                                                                                                                                                                                                                | 32–36, 57          | A **Channels** section: Website, App, AI agents (MCP). Each channel groups the screens that control that surface.                                                                                                                                                 |
-| S5  | **"Apps" divider**: each installed app gets its own entry. When active it expands into the app's own sub-nav (Instafeed → Settings, Custom media, Analytics, Channels, Plans, Partners)                                                                                                                                                                               | 47–49, 57–60       | A **Modules zone** below the main sections. A module with its own admin screens gets a nav group with its pages, ending in **Settings**.                                                                                                                          |
-| S6  | **App data of a core type lives in the core section**, not under the app (e.g. app-made discounts are under Discounts)                                                                                                                                                                                                                                                | 25                 | Module collections go into the **domain section** they belong to (Videos → Content, Plans → Commerce). Only module-specific tools get a Modules-zone group.                                                                                                       |
-| S7  | **Count badge on the nav item** for actionable work (Orders 16)                                                                                                                                                                                                                                                                                                       | 24–31              | Optional **count pill** per nav link. Modules provide it. Shown only for work someone must act on.                                                                                                                                                                |
-| S8  | **Home = action feed**: date range and channel filter, a KPI strip (Sessions, Total sales, Orders, Conversion rate; each expands into a chart), greeting, AI prompt box, **task pills** ("Fulfill orders 9", "Capture payments 5"), then a grid of cards (offers, setup tasks, "what's new")                                                                          | 00–09, 12–13       | Home built on **Payload's modular dashboard**: an "Attention" widget (task pills), a KPI strip, setup guide, module cards, recent activity, then Payload's built-in collection cards. **No charts** (Payload has no chart component). **No AI prompt box** in v1. |
-| S9  | **Alerts bell** in the nav footer with a popover ("Alerts about your store and account will show here")                                                                                                                                                                                                                                                               | 60                 | An **Alerts** button in Payload's header `actions` slot, with a `Popup` list and an `/admin/alerts` page.                                                                                                                                                         |
-| S10 | **In-app banners**: blue info ("v20.2.0 is available · Apply update"), yellow warning ("Action required · Enable app embed")                                                                                                                                                                                                                                          | 47                 | The `header` slot for one critical site-wide banner (today: Updates available). Module pages use Payload `Banner` for module-level notices.                                                                                                                       |
-| S11 | **Settings is a separate mode**: a gear at the bottom opens a settings sidebar (General, Plan, Billing, Users, Payments, Checkout, Customer accounts, Shipping and delivery, Taxes and duties, Locations, Apps, Sales channels, Domains, Customer events, Notifications, Metafields and metaobjects, Languages, Customer privacy, Policies). Single-column card pages | 50–56              | A **Settings** section, always last, admins only, plus an **`/admin/settings` overview page** of cards. We don't switch the whole sidebar (not a standard Payload pattern).                                                                                       |
-| S12 | **Permission states**: items without access are greyed (Customers); pages explain "You need permission…" with a Request access button                                                                                                                                                                                                                                 | 24, 34, 53, 58     | Payload already **hides** entities the user can't read (`visibleEntities`). We keep hiding. No request-access flow in v1.                                                                                                                                         |
-| S13 | **Scoped global search** (⌘K) with filters: Apps, Customers, Orders, Products, Sales channels                                                                                                                                                                                                                                                                         | 14–19              | **Later phase, optional**, via the official `@payloadcms/plugin-search`. Not in the v1 wireframes except a placeholder (§16, frame W16).                                                                                                                          |
-| S14 | **Store switcher + account menu** at the bottom (store list, Create store, profile, Help Center, Log out)                                                                                                                                                                                                                                                             | 59                 | Payload's own account view and logout stay. Workspace switching is out of scope (the kit is one site per deploy).                                                                                                                                                 |
-| S15 | **List views**: KPI strip above the table, saved filter tabs ("All"), search and filter, column picker, status pills (Paid, Unfulfilled, Draft, Active, Archived)                                                                                                                                                                                                     | 10–11, 20–25       | Payload list views already give search, filters, columns and pills. A module **may** add a small stats row with `beforeListTable` (Payload's documented slot), e.g. Subscriptions: Active · Trialing · Past due.                                                  |
-| S16 | **App-store prompts** ("Picked for you" modal, recommendation cards)                                                                                                                                                                                                                                                                                                  | 38–46              | Only **inside Settings → Modules** (the existing Install module flow). No promotions on Home in v1.                                                                                                                                                               |
+| #   | Shopify pattern                                                                                                                                                                                                                                                                                                                                                       | Where (screenshot) | What we adopt                                                                                                                                                                                                                                                                                                          |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S1  | **Fixed, short top-level list of business objects**: Home, Orders (with count 16), Products, Customers, Growth, Discounts, Content, Markets, Finance, Analytics                                                                                                                                                                                                       | 24–31              | A fixed **section** list in a fixed order. Sections appear only when something is in them.                                                                                                                                                                                                                             |
+| S2  | **Children show only for the active section**: Products → Collections, Inventory, Purchase orders, Transfers, Gift cards; Content → Metaobjects, Files, Menus, Blog posts; Analytics → Reports, Live View                                                                                                                                                             | 22, 24, 26, 28–31  | Payload nav **groups as an accordion**: one section open at a time, the active one. The kit's `AdminNav` already behaves this way.                                                                                                                                                                                     |
+| S3  | **Collapsed icon rail** with fly-out sub-menus when the window is narrow                                                                                                                                                                                                                                                                                              | 00–23              | **Not adopted.** Payload's nav has no icon rail. We keep Payload's open/closed nav and its mobile hamburger.                                                                                                                                                                                                           |
+| S4  | **"Sales channels" divider**: Online Store (Pages, Preferences), Point of Sale (Devices, Register sessions, Settings), Inbox, Agentic (Knowledge base)                                                                                                                                                                                                                | 32–36, 57          | A **Channels** section: Website, App, AI agents (MCP). Each channel groups the screens that control that surface.                                                                                                                                                                                                      |
+| S5  | **"Apps" divider**: each installed app gets its own entry. When active it expands into the app's own sub-nav (Instafeed → Settings, Custom media, Analytics, Channels, Plans, Partners)                                                                                                                                                                               | 47–49, 57–60       | A **Modules zone** below the main sections. A module with its own admin screens gets a nav group with its pages, ending in **Settings**.                                                                                                                                                                               |
+| S6  | **App data of a core type lives in the core section**, not under the app (e.g. app-made discounts are under Discounts)                                                                                                                                                                                                                                                | 25                 | Module collections go into the **domain section** they belong to (Videos → Content, Plans → Commerce). Only module-specific tools get a Modules-zone group.                                                                                                                                                            |
+| S7  | **Count badge on the nav item** for actionable work (Orders 16)                                                                                                                                                                                                                                                                                                       | 24–31              | Optional **count pill** per nav link. Modules provide it. Shown only for work someone must act on.                                                                                                                                                                                                                     |
+| S8  | **Home = action feed**: date range and channel filter, a KPI strip (Sessions, Total sales, Orders, Conversion rate; each expands into a chart), greeting, AI prompt box, **task pills** ("Fulfill orders 9", "Capture payments 5"), then a grid of cards (offers, setup tasks, "what's new")                                                                          | 00–09, 12–13       | Home built on **Payload's modular dashboard**: an "Attention" widget (task pills), a KPI strip, setup guide, module cards, recent activity, then Payload's built-in collection cards. **No charts** (Payload has no chart component). **No AI prompt box** in v1.                                                      |
+| S9  | **Alerts bell** in the nav footer with a popover ("Alerts about your store and account will show here")                                                                                                                                                                                                                                                               | 60                 | An **Alerts** button in Payload's header `actions` slot, with a `Popup` list and an `/admin/alerts` page.                                                                                                                                                                                                              |
+| S10 | **In-app banners**: blue info ("v20.2.0 is available · Apply update"), yellow warning ("Action required · Enable app embed")                                                                                                                                                                                                                                          | 47                 | The `header` slot for one critical site-wide banner (today: Updates available). Module pages use Payload `Banner` for module-level notices.                                                                                                                                                                            |
+| S11 | **Settings is a separate mode**: a gear at the bottom opens a settings sidebar (General, Plan, Billing, Users, Payments, Checkout, Customer accounts, Shipping and delivery, Taxes and duties, Locations, Apps, Sales channels, Domains, Customer events, Notifications, Metafields and metaobjects, Languages, Customer privacy, Policies). Single-column card pages | 50–56              | A **Settings** section, always last, admins only, plus an **`/admin/settings` overview page** of cards. We don't switch the whole sidebar (not a standard Payload pattern).                                                                                                                                            |
+| S12 | **Permission states**: items without access are greyed (Customers); pages explain "You need permission…" with a Request access button                                                                                                                                                                                                                                 | 24, 34, 53, 58     | Payload already **hides** entities the user can't read (`visibleEntities`). We keep hiding. No request-access flow in v1.                                                                                                                                                                                              |
+| S13 | **Scoped global search** (⌘K) with filters: Apps, Customers, Orders, Products, Sales channels                                                                                                                                                                                                                                                                         | 14–19              | **Phase 5**, via the official `@payloadcms/plugin-search`: a header Search button opening a Payload drawer with scope pills (§17.7, frame W19).                                                                                                                                                                        |
+| S14 | **Store switcher + account menu** at the bottom (store list, Create store, profile, Help Center, Log out)                                                                                                                                                                                                                                                             | 59                 | Payload's own account view and logout stay. Workspace switching is out of scope (the kit is one site per deploy).                                                                                                                                                                                                      |
+| S15 | **List views**: KPI strip above the table, saved filter tabs ("All"), search and filter, column picker, status pills (Paid, Unfulfilled, Draft, Active, Archived), Export                                                                                                                                                                                             | 10–11, 20–25       | Payload list views already give search, filters, columns and pills. Saved tabs = Payload **query presets** (§17.1); grouping = `groupBy` (§17.2); Export = the official import-export plugin (§17.5). A module **may** add a small stats row with `beforeListTable`, e.g. Subscriptions: Active · Trialing · Past due. |
+| S16 | **App-store prompts** ("Picked for you" modal, recommendation cards)                                                                                                                                                                                                                                                                                                  | 38–46              | Only **inside Settings → Modules** (the existing Install module flow). No promotions on Home in v1.                                                                                                                                                                                                                    |
 
 ### 1.2 What we deliberately did not take
 
@@ -87,7 +88,7 @@ Screenshot numbers refer to the 75 screenshots sorted by time (00–74).
 - Promotional cards on Home (Shopify Credit, cashback, shipping offers). Dream
   Home shows **work, health and setup**, never ads.
 - The AI prompt box on Home. The kit's MCP server already lets an AI client
-  act on the CMS; a Home prompt can be a later module (§18).
+  act on the CMS; a Home prompt can be a later module (§19).
 
 ---
 
@@ -206,6 +207,12 @@ These are hard rules for Claude Design and for the code that follows.
 | Above a list table             | collection `admin.components.beforeListTable` / `beforeList`                                                                         |
 | Empty list                     | Payload's `NoListResults` (default)                                                                                                  |
 | Module settings                | the existing `kit-modules` row page (Payload document view + tabs)                                                                   |
+| Saved list views               | collection `enableQueryPresets` (Payload's Presets menu on list views, §17.1)                                                        |
+| Grouped lists                  | collection `admin.groupBy` (§17.2)                                                                                                   |
+| Change history                 | `versions` + Payload's Versions tab (§17.3)                                                                                          |
+| Publish flow                   | drafts, Schedule publish, Preview, live preview (§17.4)                                                                              |
+| Export                         | `@payloadcms/plugin-import-export` list action (§17.5)                                                                               |
+| Rich-text blocks               | Lexical `BlocksFeature` (§17.8)                                                                                                      |
 
 ### 4.3 Behavior
 
@@ -337,6 +344,7 @@ Payload view · `(global)` Payload global · `#n` count pill ·
 │
 ├─ Channels
 │  ├─ Pages                               collections/pages            [core]
+│  ├─ Redirects                           collections/redirects        [core: plugin-redirects]  (§17.6)
 │  ├─ Navigation                          collections/nav-items        [core]   (web menu + app tab bar)
 │  ├─ App onboarding                      collections/onboarding       [core]
 │  └─ AI agents (MCP)                     /admin/channels/mcp (view)   [core] admin  (phase 3)
@@ -355,7 +363,9 @@ Payload view · `(global)` Payload global · `#n` count pill ·
    ├─ Profile fields                      globals/profile-fields       [core]
    ├─ Legal & policies                    collections/legal            [core]
    ├─ AI image generation                 globals/image-generation-settings [core]
+   ├─ Search index                        collections/search           [core: plugin-search]  (§17.7, phase 5)
    ├─ Modules                             collections/kit-modules      [core]
+   ├─ Exports                             (plugin's exports collection) [core: plugin-import-export]  (§17.5)
    ├─ Updates                  #available /admin/updates (view)        [core]
    └─ Site license                        globals/dream-site           [core]
 ```
@@ -363,7 +373,8 @@ Payload view · `(global)` Payload global · `#n` count pill ·
 Hidden from the nav (unchanged, reached from their parent screen): `tags`
 (inline in Tags), `community-spaces` (inline in Spaces), `form-submissions`
 (join field on Forms), `native-navigation` (edited on the Navigation screen),
-every `mod-*-settings` global (shown on the module's settings page).
+every `mod-*-settings` global (shown on the module's settings page),
+`payload-query-presets` (managed from each list's Presets menu, §17.1).
 
 ### 6.2 Kit, minimal install (no optional content modules, no billing, no chat)
 
@@ -374,10 +385,10 @@ Content     Posts · Categories · Tags · Media
 Community   Comments · Reports
 People      Users
 Marketing   Push notifications · Banners · Forms
-Channels    Pages · Navigation · App onboarding
+Channels    Pages · Redirects · Navigation · App onboarding
 Settings    All settings · General · Brand & theme · Sign-in & accounts ·
             Profile fields · Legal & policies · AI image generation ·
-            Modules · Updates · Site license
+            Search index · Modules · Exports · Updates · Site license
 ```
 
 No Commerce section, no Modules zone, Reviews hidden (no reviewable type).
@@ -389,20 +400,20 @@ Home
 Browse by Folder
 Content     Posts · Ideas · Idea categories · Docs · Categories · Tags · Media
             (+ Videos, Podcasts, Photos, Courses, Lessons, Events, Places only
-             if those modules stay installed; see §18 Q1)
+             if those modules stay installed; see §19 Q1)
 Community   Spaces · Community posts · Comments · Reviews · Reports
 People      Users · Shared ideas · Licensed sites
             (+ Enrollments, Private feeds if courses/podcast stay installed)
 Commerce    Plans · Coupons · Subscriptions · Module catalog · Module releases ·
             Billing settings
 Marketing   Push notifications · Banners · Forms
-Channels    Pages · Navigation · App onboarding · AI agents (MCP)
+Channels    Pages · Redirects · Navigation · App onboarding · AI agents (MCP)
 ── Modules ──
 AI Chat              Overview · Skills · Settings
 Developer accounts   Overview · Settings
 Settings    All settings · General · Brand & theme · Sign-in & accounts ·
             Profile fields · Legal & policies · AI image generation ·
-            Modules · Updates · Site license
+            Search index · Modules · Exports · Updates · Site license
 ```
 
 Placement of meet-dream's own entities:
@@ -483,7 +494,7 @@ Without the community module, the section is Comments · Reviews? · Reports.
 | 50    | Licensed sites | `collections/mod-modules-sites` | meet-dream `modules` | A                                 | meet-dream only; was "Kit sites"                                                                |
 
 Workspaces (B2B orgs) live in `public` under RLS, not in Payload. They are
-**not** in this nav in v1 (§18 Q5).
+**not** in this nav in v1 (§19 Q5).
 
 ### 7.5 Commerce (`commerce`, order 40) — owned by `billing`
 
@@ -493,7 +504,7 @@ The whole section exists only when `billing` is installed and enabled.
 | ----- | ---------------- | --------------------------------------- | -------------------- | ----- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | 10    | Plans            | `collections/mod-billing-plans`         | `billing`            | A     |                                                         | Was "Billing Plans". Provider tabs (Stripe) unchanged                                                        |
 | 20    | Coupons          | `collections/mod-billing-coupons`       | `billing`            | A     |                                                         | Was "Billing Coupons"                                                                                        |
-| 30    | Subscriptions    | `collections/mod-billing-subscriptions` | `billing`            | A     | past due (warning)                                      | **Unhidden**, read-only list (§18 Q4). `beforeListTable` stats row: Active · Trialing · Canceling · Past due |
+| 30    | Subscriptions    | `collections/mod-billing-subscriptions` | `billing`            | A     | past due (warning)                                      | **Unhidden**, read-only list (§19 Q4). `beforeListTable` stats row: Active · Trialing · Canceling · Past due |
 | 40    | Module catalog   | `collections/mod-modules-catalog`       | meet-dream `modules` | A     |                                                         | meet-dream only                                                                                              |
 | 41    | Module releases  | `collections/mod-modules-releases`      | meet-dream `modules` | A     |                                                         | meet-dream only                                                                                              |
 | 990   | Billing settings | `/admin/module-settings/billing`        | `billing`            | A     | error pill when Stripe isn't connected or webhooks fail | Section-owner settings link (§9.4)                                                                           |
@@ -512,12 +523,13 @@ Reaching people. Shopify: Growth.
 
 Where the product shows up. Shopify: Sales channels.
 
-| Order | Label           | Target                       | Owner | Roles | Notes                                                                                                                                                                                                                          |
-| ----- | --------------- | ---------------------------- | ----- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 10    | Pages           | `collections/pages`          | core  | A E   | Website pages (was under Marketing)                                                                                                                                                                                            |
-| 20    | Navigation      | `collections/nav-items`      | core  | A     | Web sidebar menu + app tab bar (unchanged screen, was under Modules)                                                                                                                                                           |
-| 30    | App onboarding  | `collections/onboarding`     | core  | A E   | Mobile onboarding screens (was "Onboardings" under Marketing)                                                                                                                                                                  |
-| 40    | AI agents (MCP) | `/admin/channels/mcp` (view) | core  | A     | **New, phase 3.** Shows: MCP enabled/disabled (`MCP_JWT_SECRET`, `MCP_ENABLED`), the `/mcp` URL to copy, connected clients (from `mcp_oauth_*`, server-side), and a Revoke button per client. Hidden when MCP isn't configured |
+| Order | Label           | Target                       | Owner                   | Roles | Notes                                                                                                                                                                                                                          |
+| ----- | --------------- | ---------------------------- | ----------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 10    | Pages           | `collections/pages`          | core                    | A E   | Website pages (was under Marketing)                                                                                                                                                                                            |
+| 15    | Redirects       | `collections/redirects`      | core (plugin-redirects) | A E   | Old paths → documents or URLs; created automatically when a published slug changes (§17.6)                                                                                                                                     |
+| 20    | Navigation      | `collections/nav-items`      | core                    | A     | Web sidebar menu + app tab bar (unchanged screen, was under Modules)                                                                                                                                                           |
+| 30    | App onboarding  | `collections/onboarding`     | core                    | A E   | Mobile onboarding screens (was "Onboardings" under Marketing)                                                                                                                                                                  |
+| 40    | AI agents (MCP) | `/admin/channels/mcp` (view) | core                    | A     | **New, phase 3.** Shows: MCP enabled/disabled (`MCP_JWT_SECRET`, `MCP_ENABLED`), the `/mcp` URL to copy, connected clients (from `mcp_oauth_*`, server-side), and a Revoke button per client. Hidden when MCP isn't configured |
 
 Theme stays in Settings (it also holds branding and is admin-only).
 
@@ -545,18 +557,20 @@ Commerce). Their settings are under Settings › Modules.
 
 ### 7.9 Settings (`settings`, order 1000) — admins only
 
-| Order | Label               | Target                              | Owner | Notes                                                                                             |
-| ----- | ------------------- | ----------------------------------- | ----- | ------------------------------------------------------------------------------------------------- |
-| 0     | All settings        | `/admin/settings` (view)            | core  | Overview page of cards (§12)                                                                      |
-| 10    | General             | `globals/site-settings`             | core  | Was "Site Settings"                                                                               |
-| 20    | Brand & theme       | `globals/theme-settings`            | core  | Was "Theme"                                                                                       |
-| 30    | Sign-in & accounts  | `globals/authentication-settings`   | core  | Was "Authentication"                                                                              |
-| 40    | Profile fields      | `globals/profile-fields`            | core  |                                                                                                   |
-| 50    | Legal & policies    | `collections/legal`                 | core  | Was "Legal" (System). Editors keep access through the Settings overview card and direct URL (§14) |
-| 60    | AI image generation | `globals/image-generation-settings` | core  | Was "Image Generation"                                                                            |
-| 70    | Modules             | `collections/kit-modules`           | core  | Installed modules, enable/disable, Install module. Each module's settings page is a row here      |
-| 80    | Updates             | `/admin/updates` (view)             | core  | Pill: updates available. Was a loose link (`afterNavLinks`)                                       |
-| 90    | Site license        | `globals/dream-site`                | core  |                                                                                                   |
+| Order | Label               | Target                              | Owner                       | Notes                                                                                             |
+| ----- | ------------------- | ----------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------- |
+| 0     | All settings        | `/admin/settings` (view)            | core                        | Overview page of cards (§12)                                                                      |
+| 10    | General             | `globals/site-settings`             | core                        | Was "Site Settings"                                                                               |
+| 20    | Brand & theme       | `globals/theme-settings`            | core                        | Was "Theme"                                                                                       |
+| 30    | Sign-in & accounts  | `globals/authentication-settings`   | core                        | Was "Authentication"                                                                              |
+| 40    | Profile fields      | `globals/profile-fields`            | core                        |                                                                                                   |
+| 50    | Legal & policies    | `collections/legal`                 | core                        | Was "Legal" (System). Editors keep access through the Settings overview card and direct URL (§14) |
+| 60    | AI image generation | `globals/image-generation-settings` | core                        | Was "Image Generation"                                                                            |
+| 65    | Search index        | `collections/search`                | core (plugin-search)        | Reindex; phase 5 (§17.7)                                                                          |
+| 70    | Modules             | `collections/kit-modules`           | core                        | Installed modules, enable/disable, Install module. Each module's settings page is a row here      |
+| 75    | Exports             | plugin's exports collection         | core (plugin-import-export) | Past CSV exports to download; files deleted after 7 days (§17.5)                                  |
+| 80    | Updates             | `/admin/updates` (view)             | core                        | Pill: updates available. Was a loose link (`afterNavLinks`)                                       |
+| 90    | Site license        | `globals/dream-site`                | core                        |                                                                                                   |
 
 ### 7.10 Gear menu (`settingsMenu`, nav footer)
 
@@ -604,9 +618,9 @@ from what's installed:
 
 | Field                                                             | Today                        | After                                                                                                              |
 | ----------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `comments.target` (polymorphic `relationTo`)                      | Fixed list                   | `commentableCollections()`: posts + every installed collection with `cms.commentable: true`                        |
+| `comments.target` (polymorphic `relationTo`)                      | Fixed list                   | `commentableCollections()`: posts + every collection listed in an installed module's `cms.commentable`             |
 | `reviews.target`                                                  | `["locations", "events"]`    | `reviewableCollections()`; **Reviews is hidden** when the list is empty                                            |
-| `banners` / `nav-items` destination fields (`fields/destination`) | Fixed list                   | Installed collections with `cms.linkable: true`                                                                    |
+| `banners` / `nav-items` destination fields (`fields/destination`) | Fixed list                   | Collections listed in installed modules' `cms.linkable`                                                            |
 | `public.content_favorites.collection`                             | Text value                   | No schema change. Favorites of a removed type are ignored by the readers and cleaned up by the module's `drop.sql` |
 | `enrollments.subscription` → `mod-billing-subscriptions`          | Hard relation                | Added only when billing is installed (field condition at config build)                                             |
 | `events.location` → `locations`                                   | Hard relation                | Relation when `maps` is installed, otherwise a plain venue text field                                              |
@@ -630,7 +644,7 @@ its tables (expand/contract rule):
    normal `pnpm mod remove` path), after a confirm that names the row counts.
 
 This is the riskiest part of the plan. It ships as its own release with its
-own E2E (§17, phase 4), after the menu work.
+own E2E (§18, phase 4), after the menu work.
 
 ---
 
@@ -698,6 +712,9 @@ admin: z.object({
   collections: z.record(z.object({
     section: z.union([AdminSectionKey, z.literal("module")]).optional(),
     order: z.number().int().optional(),
+    presets: z.boolean().optional(),          // §17.1 (default: on when in the nav)
+    groupBy: z.boolean().optional(),          // §17.2
+    export: z.object({ roles: z.array(Role) }).optional(), // §17.5
   })).default({}),
 
   /** This module owns its section: its Settings link is appended there (§9.4). */
@@ -720,6 +737,16 @@ admin: z.object({
     badges: z.boolean().default(false),    // exports `navBadges(ctx)`
   }).default({}),
 }).default({}),
+
+// Added to the existing `cms` block (per collection, by slug):
+cms: {
+  // …existing fields…
+  search: z.record(z.object({ priority: z.number().int() })).default({}), // §17.7
+  richTextBlocks: z.array(z.string()).default([]), // §17.8: export names from ./payload
+  linkable: z.array(z.string()).default([]),       // §8.2, §17.6
+  commentable: z.array(z.string()).default([]),    // §8.2
+  reviewable: z.array(z.string()).default([]),     // §8.2
+}
 ```
 
 Examples:
@@ -1152,20 +1179,23 @@ Roles come from `cms.users.roles`. Only staff (admin, editor, author) can enter
 `/admin`. The nav shows a link only when Payload grants read on it **and** the
 rule below allows it.
 
-| Area                             | Admin         | Editor                                                    | Author                               |
-| -------------------------------- | ------------- | --------------------------------------------------------- | ------------------------------------ |
-| Home                             | ✓ full layout | ✓ editor layout                                           | ✓ editor layout                      |
-| Content                          | ✓             | ✓                                                         | ✓ (own items, per collection access) |
-| Community                        | ✓             | ✓                                                         | —                                    |
-| People › Users                   | ✓             | read-only if access allows (today: verify)                | —                                    |
-| People › other                   | ✓             | per collection                                            | —                                    |
-| Commerce                         | ✓             | —                                                         | —                                    |
-| Marketing                        | ✓             | ✓                                                         | —                                    |
-| Channels › Pages, App onboarding | ✓             | ✓                                                         | —                                    |
-| Channels › Navigation, AI agents | ✓             | —                                                         | —                                    |
-| Modules zone                     | ✓             | per module view roles (e.g. AI Chat › Skills for editors) | —                                    |
-| Settings group + gear menu       | ✓             | — (Legal & policies via direct link if access allows)     | —                                    |
-| Alerts                           | all           | items with `roles` incl. editor                           | items with `roles` incl. author      |
+| Area                                        | Admin         | Editor                                                    | Author                               |
+| ------------------------------------------- | ------------- | --------------------------------------------------------- | ------------------------------------ |
+| Home                                        | ✓ full layout | ✓ editor layout                                           | ✓ editor layout                      |
+| Content                                     | ✓             | ✓                                                         | ✓ (own items, per collection access) |
+| Community                                   | ✓             | ✓                                                         | —                                    |
+| People › Users                              | ✓             | read-only if access allows (today: verify)                | —                                    |
+| People › other                              | ✓             | per collection                                            | —                                    |
+| Commerce                                    | ✓             | —                                                         | —                                    |
+| Marketing                                   | ✓             | ✓                                                         | —                                    |
+| Channels › Pages, Redirects, App onboarding | ✓             | ✓                                                         | —                                    |
+| Channels › Navigation, AI agents            | ✓             | —                                                         | —                                    |
+| Modules zone                                | ✓             | per module view roles (e.g. AI Chat › Skills for editors) | —                                    |
+| Settings group + gear menu                  | ✓             | — (Legal & policies via direct link if access allows)     | —                                    |
+| Alerts                                      | all           | items with `roles` incl. editor                           | items with `roles` incl. author      |
+| Search drawer (§17.7)                       | ✓             | ✓ (results they can read)                                 | ✓ (results they can read)            |
+| Export action (§17.5)                       | ✓             | form submissions, reports                                 | —                                    |
+| Versions tab (§17.3)                        | ✓             | on entities they can edit                                 | on entities they can edit            |
 
 Payload hides what a role can't read; we never show greyed-out links.
 
@@ -1173,22 +1203,28 @@ Payload hides what a role can't read; we never show greyed-out links.
 
 ## 15. States and edge cases
 
-| Case                                | Behavior                                                                                                                                                                                                                                                                                 |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Module **not installed**            | Its collections don't exist; links, widgets, alerts, MCP tools and URLs are gone (Payload 404 view)                                                                                                                                                                                      |
-| Module **installed but disabled**   | Hidden from nav, Home, Alerts and the `collections` widget. Direct URL to its collection shows the list with a `Banner type="warning"`: "<Module> is disabled. Enable it in Settings › Modules." (added by `mod sync` as `beforeList` on module collections). APIs stay blocked as today |
-| Section becomes empty               | Group not rendered                                                                                                                                                                                                                                                                       |
-| Only one link in a section          | Still a group (consistent position), e.g. Commerce with only billing                                                                                                                                                                                                                     |
-| Modules zone empty                  | Divider not rendered                                                                                                                                                                                                                                                                     |
-| Fresh install, unseeded             | `SeedGate` redirects to `/cms-setup` (unchanged). Home after seeding shows Finish setting up first                                                                                                                                                                                       |
-| Badge provider slow or failing      | No pill; log; never blocks nav render                                                                                                                                                                                                                                                    |
-| Attention provider failing          | That module's items missing; Home shows the rest                                                                                                                                                                                                                                         |
-| Many modules (10+ groups in zone C) | Accordion keeps it short; A–Z order. Revisit if > 15 (§18 Q7)                                                                                                                                                                                                                            |
-| Narrow window / phone               | Payload's hamburger nav, same structure                                                                                                                                                                                                                                                  |
-| Dark mode                           | Payload dark theme tokens (admin-theme.ts)                                                                                                                                                                                                                                               |
-| Translations                        | Labels support Payload `StaticLabel` objects; `translateLabel` stays                                                                                                                                                                                                                     |
-| Old URLs / bookmarks                | All collection and global URLs are unchanged; only labels and groups move                                                                                                                                                                                                                |
-| MCP clients                         | `list_collections` reports the new section as `group`; tool names unchanged                                                                                                                                                                                                              |
+| Case                                             | Behavior                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Module **not installed**                         | Its collections don't exist; links, widgets, alerts, MCP tools and URLs are gone (Payload 404 view)                                                                                                                                                                                      |
+| Module **installed but disabled**                | Hidden from nav, Home, Alerts and the `collections` widget. Direct URL to its collection shows the list with a `Banner type="warning"`: "<Module> is disabled. Enable it in Settings › Modules." (added by `mod sync` as `beforeList` on module collections). APIs stay blocked as today |
+| Section becomes empty                            | Group not rendered                                                                                                                                                                                                                                                                       |
+| Only one link in a section                       | Still a group (consistent position), e.g. Commerce with only billing                                                                                                                                                                                                                     |
+| Modules zone empty                               | Divider not rendered                                                                                                                                                                                                                                                                     |
+| Fresh install, unseeded                          | `SeedGate` redirects to `/cms-setup` (unchanged). Home after seeding shows Finish setting up first                                                                                                                                                                                       |
+| Badge provider slow or failing                   | No pill; log; never blocks nav render                                                                                                                                                                                                                                                    |
+| Attention provider failing                       | That module's items missing; Home shows the rest                                                                                                                                                                                                                                         |
+| Many modules (10+ groups in zone C)              | Accordion keeps it short; A–Z order. Revisit if > 15 (§19 Q7)                                                                                                                                                                                                                            |
+| Narrow window / phone                            | Payload's hamburger nav, same structure                                                                                                                                                                                                                                                  |
+| Dark mode                                        | Payload dark theme tokens (admin-theme.ts)                                                                                                                                                                                                                                               |
+| Translations                                     | Labels support Payload `StaticLabel` objects; `translateLabel` stays                                                                                                                                                                                                                     |
+| Old URLs / bookmarks                             | All collection and global URLs are unchanged; only labels and groups move                                                                                                                                                                                                                |
+| MCP clients                                      | `list_collections` reports the new section as `group`; tool names unchanged                                                                                                                                                                                                              |
+| Restoring a version (§17.3)                      | A normal save: hooks run (sign-in settings apply at once; a plan restore creates a new Stripe price). The restore confirmation says so                                                                                                                                                   |
+| Drafts turned on for an existing type (§17.4)    | Migration marks every existing row published; nothing disappears from the site or app                                                                                                                                                                                                    |
+| Slug changed on a published doc (§17.6)          | Redirect created automatically; chains collapsed; source = target rejected                                                                                                                                                                                                               |
+| Premium content in search (§17.7)                | Public index holds the title only; body text never indexed for premium items                                                                                                                                                                                                             |
+| Export of a disabled module's collection (§17.5) | Collection hidden, so no Export action; past export files stay until purged                                                                                                                                                                                                              |
+| Module with rich-text blocks removed (§17.8)     | Its blocks disappear from the editor; existing content renders without them                                                                                                                                                                                                              |
 
 ---
 
@@ -1199,28 +1235,33 @@ W3). Payload nav on the left, Payload header with breadcrumbs, `Gutter`
 content, Payload `Card`, `Banner`, `Pill`, `Button`, `Popup`. No Shopify
 visuals. Desktop 1440 × 900 unless noted. Use the sample data in each frame.
 
-| Frame          | Screen                                                      | What to show                                                                                                                                                                                                                                                                                                                                                                                |
-| -------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| W1             | Sidebar, full kit install                                   | Every group from §6.1, **Content** open with Videos active. Pills on Reports (4), Subscriptions (2), Push notifications (1), Updates (2). "Modules" divider with AI Chat. Settings collapsed. Gear + Log out footer                                                                                                                                                                         |
-| W1-dark        | Same, dark theme                                            |                                                                                                                                                                                                                                                                                                                                                                                             |
-| W2             | Sidebar, minimal install                                    | §6.2. No Commerce, no Modules zone                                                                                                                                                                                                                                                                                                                                                          |
-| W3             | Sidebar, meet-dream                                         | §6.3, Commerce open showing Module catalog and Module releases; Modules zone with AI Chat and Developer accounts                                                                                                                                                                                                                                                                            |
-| W4             | Sidebar, editor role                                        | Home, Content, Community, Marketing, Channels (Pages, App onboarding), AI Chat (Skills only). No Settings, no Commerce                                                                                                                                                                                                                                                                      |
-| W5             | Home, admin, busy day                                       | §10.1 with: critical banner "Stripe events are failing · 12 in the last hour [Fix]"; task pills Reports 4 · Past-due subscriptions 2 · Updates 2; KPIs Members 1,240 (+38 in 7 days), Active subscriptions 312 (+6), Monthly revenue $5,870, Chat conversations 88; Finish setting up with 2 of 5 done; Recent drafts; Latest comments; module cards Billing, AI Chat; All collections grid |
-| W6             | Home, fresh install (just seeded)                           | No alerts except info "Connect GitHub to get updates"; KPIs at 0; Finish setting up prominent (1 of 5 done); All collections grid                                                                                                                                                                                                                                                           |
-| W7             | Home, editor                                                | Attention: Reports 4, Push failed 1; KPI "Published this week 7"; Recent drafts; Latest comments; All collections                                                                                                                                                                                                                                                                           |
-| W8             | Home, edit-layout mode                                      | Payload modular dashboard editing state: widgets with resize handles, "Add widget" drawer listing the §10.2 catalog, Save / Cancel / Reset layout                                                                                                                                                                                                                                           |
-| W9             | Header critical bar + bell open                             | Header `Banner type="error"` "Payments are off: Stripe isn't connected [Connect]". Bell with Pill 3, `Popup` listing 3 items + "View all alerts"                                                                                                                                                                                                                                            |
-| W10            | Alerts page `/admin/alerts`                                 | Filters All · Critical · Warning · Info · Dismissed; items grouped by Core / Billing / AI Chat; dismiss/snooze popup open on one row                                                                                                                                                                                                                                                        |
-| W11            | Settings overview `/admin/settings`                         | §12.1 with Site, Sign-in and people, Modules (Billing "Stripe connected · 3 plans", AI Chat "Gateway key set", Docs, Intercom with "Disabled" pill), System (Updates "2 available", Site license "Active")                                                                                                                                                                                  |
-| W12            | Settings › Modules (`kit-modules` list)                     | Payload list view: Name, Version, Source, Enabled; "Install module" in the description; Settings group open, Modules active                                                                                                                                                                                                                                                                 |
-| W13            | Module settings page (Billing)                              | `kit-modules` row edit view: breadcrumb Settings › Modules › Billing; tabs (Settings, Stripe, Tags); Stripe connector panel rebuilt with Payload Card/Banner/Button                                                                                                                                                                                                                         |
-| W14            | Module overview (AI Chat)                                   | §13.1 with one info and one warning banner, 4 stat cards, quick links. Nav: AI Chat group open, Overview active                                                                                                                                                                                                                                                                             |
-| W15            | Collection list inside a section (Commerce › Subscriptions) | Payload list view with `beforeListTable` stats row (Active 312 · Trialing 14 · Canceling 9 · Past due 2), read-only, Past due filter applied                                                                                                                                                                                                                                                |
-| W16            | Disabled module URL                                         | Videos list with warning banner "Video library is disabled. Enable it in Settings › Modules."                                                                                                                                                                                                                                                                                               |
-| W17            | Channels › AI agents (MCP)                                  | Status Pill (Enabled), MCP URL with copy button, table of connected clients (name, connected by, last used, Revoke)                                                                                                                                                                                                                                                                         |
-| W18            | Phone width (390 × 844)                                     | Payload hamburger open with the W1 structure                                                                                                                                                                                                                                                                                                                                                |
-| W19 (optional) | Global search placeholder                                   | A search button in header `actions` opening a Payload `Popup`/`Drawer` with scope pills (Content, People, Commerce, Modules). Mark "later phase"                                                                                                                                                                                                                                            |
+| Frame   | Screen                                                      | What to show                                                                                                                                                                                                                                                                                                                                                                                |
+| ------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W1      | Sidebar, full kit install                                   | Every group from §6.1, **Content** open with Videos active. Pills on Reports (4), Subscriptions (2), Push notifications (1), Updates (2). "Modules" divider with AI Chat. Settings collapsed. Gear + Log out footer                                                                                                                                                                         |
+| W1-dark | Same, dark theme                                            |                                                                                                                                                                                                                                                                                                                                                                                             |
+| W2      | Sidebar, minimal install                                    | §6.2. No Commerce, no Modules zone                                                                                                                                                                                                                                                                                                                                                          |
+| W3      | Sidebar, meet-dream                                         | §6.3, Commerce open showing Module catalog and Module releases; Modules zone with AI Chat and Developer accounts                                                                                                                                                                                                                                                                            |
+| W4      | Sidebar, editor role                                        | Home, Content, Community, Marketing, Channels (Pages, App onboarding), AI Chat (Skills only). No Settings, no Commerce                                                                                                                                                                                                                                                                      |
+| W5      | Home, admin, busy day                                       | §10.1 with: critical banner "Stripe events are failing · 12 in the last hour [Fix]"; task pills Reports 4 · Past-due subscriptions 2 · Updates 2; KPIs Members 1,240 (+38 in 7 days), Active subscriptions 312 (+6), Monthly revenue $5,870, Chat conversations 88; Finish setting up with 2 of 5 done; Recent drafts; Latest comments; module cards Billing, AI Chat; All collections grid |
+| W6      | Home, fresh install (just seeded)                           | No alerts except info "Connect GitHub to get updates"; KPIs at 0; Finish setting up prominent (1 of 5 done); All collections grid                                                                                                                                                                                                                                                           |
+| W7      | Home, editor                                                | Attention: Reports 4, Push failed 1; KPI "Published this week 7"; Recent drafts; Latest comments; All collections                                                                                                                                                                                                                                                                           |
+| W8      | Home, edit-layout mode                                      | Payload modular dashboard editing state: widgets with resize handles, "Add widget" drawer listing the §10.2 catalog, Save / Cancel / Reset layout                                                                                                                                                                                                                                           |
+| W9      | Header critical bar + bell open                             | Header `Banner type="error"` "Payments are off: Stripe isn't connected [Connect]". Bell with Pill 3, `Popup` listing 3 items + "View all alerts"                                                                                                                                                                                                                                            |
+| W10     | Alerts page `/admin/alerts`                                 | Filters All · Critical · Warning · Info · Dismissed; items grouped by Core / Billing / AI Chat; dismiss/snooze popup open on one row                                                                                                                                                                                                                                                        |
+| W11     | Settings overview `/admin/settings`                         | §12.1 with Site, Sign-in and people, Modules (Billing "Stripe connected · 3 plans", AI Chat "Gateway key set", Docs, Intercom with "Disabled" pill), System (Updates "2 available", Site license "Active")                                                                                                                                                                                  |
+| W12     | Settings › Modules (`kit-modules` list)                     | Payload list view: Name, Version, Source, Enabled; "Install module" in the description; Settings group open, Modules active                                                                                                                                                                                                                                                                 |
+| W13     | Module settings page (Billing)                              | `kit-modules` row edit view: breadcrumb Settings › Modules › Billing; tabs (Settings, Stripe, Tags); Stripe connector panel rebuilt with Payload Card/Banner/Button                                                                                                                                                                                                                         |
+| W14     | Module overview (AI Chat)                                   | §13.1 with one info and one warning banner, 4 stat cards, quick links. Nav: AI Chat group open, Overview active                                                                                                                                                                                                                                                                             |
+| W15     | Collection list inside a section (Commerce › Subscriptions) | Payload list view with `beforeListTable` stats row (Active 312 · Trialing 14 · Canceling 9 · Past due 2), read-only, Past due filter applied                                                                                                                                                                                                                                                |
+| W16     | Disabled module URL                                         | Videos list with warning banner "Video library is disabled. Enable it in Settings › Modules."                                                                                                                                                                                                                                                                                               |
+| W17     | Channels › AI agents (MCP)                                  | Status Pill (Enabled), MCP URL with copy button, table of connected clients (name, connected by, last used, Revoke)                                                                                                                                                                                                                                                                         |
+| W18     | Phone width (390 × 844)                                     | Payload hamburger open with the W1 structure                                                                                                                                                                                                                                                                                                                                                |
+| W19     | Global search drawer (§17.7)                                | Header **Search** button; Payload `Drawer` open with the query "launch", scope pills (All, Content, Community, People, Commerce, Modules), results grouped: Posts (2: "Launch week" Published, "Launch checklist" Draft), Videos (1), Docs (1). Empty state: "No results for …"                                                                                                             |
+| W20     | Saved views + grouping (§17.1, §17.2)                       | Users list with the Presets menu open: Members, Staff (shared, "Staff" sharing pill), plus "My view" (only me); "Save preset" / "Update preset". Second state: Push notifications grouped by status (Scheduled 1 · Sent 24 · Failed 1)                                                                                                                                                      |
+| W21     | Export (§17.5)                                              | Subscriptions list, Past due preset applied, list menu open on **Export**; export drawer (format CSV, columns = current, "Export 2 rows"); then Settings › Exports list with the file, status Pill (Ready), Download, "Deleted in 7 days"                                                                                                                                                   |
+| W22     | Redirects (§17.6)                                           | Channels › Redirects list: From, To, Type (301/302), Created (Automatic / Manual pill). Edit view: From `/posts/old-slug`, To = document picker (Post: "Launch week") or URL, Type 301                                                                                                                                                                                                      |
+| W23     | Version history (§17.3)                                     | Settings › Sign-in & accounts, **Versions** tab: list of versions with date and "Saved by"; compare view of two versions showing "Magic link: on → off"; Restore button with the note "Restoring applies these sign-in settings immediately"                                                                                                                                                |
+| W24     | Rich text with blocks (§17.8)                               | Post edit view: Lexical editor with the slash menu open listing Callout, Call to action, Image + caption, Video (Video library module), Event card (Events module); one Callout and one Video block placed in the body                                                                                                                                                                      |
 
 Annotations Claude Design should include on each frame: section order
 numbers, which items are module-provided (with the module slug), and which
@@ -1228,7 +1269,303 @@ Payload component each block is.
 
 ---
 
-## 17. Implementation phases and files
+## 17. Payload features to adopt
+
+Payload features the kit doesn't use yet. Checked against every collection,
+global and `payload.config.ts` on Nov 28, 2026. All are free, built into
+Payload or official Payload plugins, and follow the Payload-only rule (§4).
+
+| §    | Feature                                  | Payload API                                                       | Where it shows in `/admin`                              | Phase |
+| ---- | ---------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------- | ----- |
+| 17.1 | Saved list views                         | collection `enableQueryPresets` + root `queryPresets`             | "Presets" menu on list views                            | 1     |
+| 17.2 | Grouped list views                       | collection `admin.groupBy`                                        | "Group by" in list controls                             | 1     |
+| 17.3 | History on settings and catalog          | `versions` (no drafts) on globals and collections                 | "Versions" tab on the document                          | 1b    |
+| 17.4 | Drafts, scheduling, live preview for all | `versions.drafts.schedulePublish`, `admin.livePreview`, `preview` | Publish / Schedule / Preview buttons, live preview pane | 1b    |
+| 17.5 | Export to CSV                            | `@payloadcms/plugin-import-export`                                | "Export" on list views; Settings › Exports              | 1b    |
+| 17.6 | Redirects                                | `@payloadcms/plugin-redirects`                                    | Channels › Redirects                                    | 1b    |
+| 17.7 | Global search                            | `@payloadcms/plugin-search`                                       | Header search button + drawer; Settings › Search index  | 5     |
+| 17.8 | Rich-text blocks                         | Lexical `BlocksFeature`                                           | "+" / slash menu in rich-text fields                    | 5     |
+| 17.9 | GraphQL off explicitly                   | `graphQL: { disable: true }`                                      | Nothing visible                                         | 1b    |
+
+Each feature below lists what it is, the exact scope, the data change it
+needs, and what to wireframe. Option names of the two newer plugins
+(import-export, search) change between Payload minors: check them against the
+plugin docs when building.
+
+### 17.1 Saved list views (query presets)
+
+**What.** Staff save a list's filters, columns and sort as a named view and
+share it with the team or keep it private. This is Shopify's saved tabs
+(S15) in Payload's own UI: a "Presets" menu above the list table.
+
+**How.**
+
+- Root config `queryPresets`: access for create/read/update/delete limited to
+  staff (admin, editor, author); a role-based sharing constraint ("Staff")
+  next to Payload's built-in "Only me" / "Everyone".
+- `enableQueryPresets: true` on: `users`, `mod-billing-subscriptions`,
+  `mod-billing-plans`, `reports`, `comments`, `notifications`, `forms`, and
+  every content collection (`posts`, `pages` and each content module's
+  collections).
+- Modules opt in per collection in the manifest:
+  `admin.collections[slug].presets: true` (default `true` for collections
+  shown in the nav).
+- Payload adds a `payload-query-presets` collection: one Payload migration
+  (`pnpm cms:migrate:create`). Kept out of the nav (managed from each list's
+  Presets menu); add it to the "Hidden from the nav" list.
+
+**Seeded shared presets** (a new idempotent step in `seedCmsContent()`, and in
+each module's seed for its collections):
+
+| Collection                    | Preset    | Filter                                       |
+| ----------------------------- | --------- | -------------------------------------------- |
+| Users                         | Members   | roles contains only `member`                 |
+| Users                         | Staff     | roles contains `admin`, `editor` or `author` |
+| Subscriptions (billing)       | Past due  | status = past_due                            |
+| Subscriptions (billing)       | Trialing  | status = trialing                            |
+| Subscriptions (billing)       | Canceling | cancel at period end = true                  |
+| Reports                       | Open      | status = open                                |
+| Push notifications            | Scheduled | status = scheduled                           |
+| Push notifications            | Failed    | status = failed                              |
+| Posts (and each content type) | Drafts    | `_status` = draft                            |
+| Posts (and each content type) | Scheduled | has a pending scheduled publish              |
+
+Field names above follow today's collections; confirm each when seeding.
+
+**Tie-in.** Nav count pills (§5.4) and attention items (§10.3) link to the
+list with the same filter as the matching preset, so the number and the list
+always agree.
+
+**Wireframe:** W20.
+
+### 17.2 Grouped list views (`groupBy`)
+
+**What.** A "Group by" control in Payload's list view that splits the table
+into sections by a field (Shopify has no direct equal; it replaces
+scanning a long flat list).
+
+**How.** `admin.groupBy: true` on:
+
+| Collection              | Useful groupings |
+| ----------------------- | ---------------- |
+| Lessons                 | Course           |
+| Push notifications      | Status           |
+| Reports                 | Status, reason   |
+| Comments                | Target type      |
+| Community posts         | Space            |
+| Events                  | Category         |
+| Subscriptions (billing) | Plan, status     |
+| Plans (billing)         | Interval         |
+
+No schema change. Modules opt in with `admin.collections[slug].groupBy: true`.
+A saved preset (17.1) can include the grouping; confirm in the Payload version
+the kit pins.
+
+**Wireframe:** W20 (same frame, grouping applied).
+
+### 17.3 History on settings and catalog (versions)
+
+**What.** Every save keeps a version. Payload's **Versions** tab lists them,
+compares any two field by field, and restores one. Today only Theme and
+Native navigation have this; a wrong change to sign-in methods or a plan
+price can't be rolled back or traced.
+
+**Targets.**
+
+| Entity                                         | Config                        |
+| ---------------------------------------------- | ----------------------------- |
+| `site-settings` (General)                      | `versions: { max: 20 }`       |
+| `authentication-settings` (Sign-in & accounts) | `versions: { max: 20 }`       |
+| `profile-fields`                               | `versions: { max: 20 }`       |
+| `image-generation-settings`                    | `versions: { max: 20 }`       |
+| `kit-modules` (every module's settings)        | `versions: { maxPerDoc: 20 }` |
+| `mod-billing-plans`                            | `versions: { maxPerDoc: 20 }` |
+| `mod-billing-coupons`                          | `versions: { maxPerDoc: 20 }` |
+
+Not versioned: `users` (Supabase is the source of truth; PII), `dream-site`
+(written by the system).
+
+**Who changed it.** Payload versions store the document, not the editor. Add a
+hidden, read-only `lastModifiedBy` relationship (to `users`) set in a
+`beforeChange` hook from `req.user` to each target. Each version then shows
+who saved it. A shared field helper in `payload/fields/` keeps this one line
+per entity.
+
+**Restoring runs hooks.** A restore is a normal save, so hooks fire: restoring
+Sign-in settings applies them at once; restoring a plan version runs the
+provider sync, which creates a new Stripe price (Stripe prices are immutable).
+The restore confirmation should say so (Payload's restore modal plus a short
+`admin.description` on these entities).
+
+**Data change.** Version tables (`_<slug>_v`) via `pnpm cms:migrate:create`
+for core; billing's through its module Payload migration.
+
+**Wireframe:** W23.
+
+### 17.4 Drafts, scheduling and live preview for every published type
+
+**What.** Every type that the public site or app shows gets the same
+publishing flow: save as draft, preview, publish now or schedule. Today
+Podcasts and Photos go live on save, and live preview exists only on Posts,
+Pages, Legal, Events and Places.
+
+| Collection                                       | Drafts + schedule today | Live preview today | Change                                                              |
+| ------------------------------------------------ | ----------------------- | ------------------ | ------------------------------------------------------------------- |
+| `audio` (Podcasts)                               | —                       | —                  | Add drafts + `schedulePublish`, `maxPerDoc: 25`; live preview       |
+| `photos`                                         | —                       | —                  | Add drafts + `schedulePublish`, `maxPerDoc: 25`; live preview       |
+| `videos`                                         | ✓                       | —                  | Add live preview                                                    |
+| `mod-docs-pages` (Docs)                          | ✓                       | —                  | Add live preview                                                    |
+| `series` (Courses), `lessons`                    | ✓                       | —                  | Add live preview once a public course page exists                   |
+| `banners`                                        | —                       | —                  | Add drafts + `schedulePublish` (a banner can go live at a set time) |
+| `onboarding` (App onboarding)                    | —                       | —                  | Add drafts + `schedulePublish`                                      |
+| `community-posts`                                | —                       | —                  | **No change**: members write them in the app; drafts don't fit      |
+| `posts`, `pages`, `legal`, `events`, `locations` | ✓                       | ✓                  | No change                                                           |
+
+**Data change (critical).** Turning on drafts adds `_status`. The same
+migration must set `_status = 'published'` on every existing row, or those
+rows disappear from public reads once access switches to
+`publishedOrStaff`. Add an E2E: an existing podcast episode stays visible
+after the migration.
+
+**Other changes.**
+
+- Read access on the newly drafted collections becomes `publishedOrStaff`.
+- Public pages and `packages/app` hooks for these types read published docs
+  only (most already go through access; check each query).
+- Live preview follows the Posts pattern (`@payloadcms/live-preview-react`,
+  `admin.livePreview.url` + `preview`).
+- Scheduling uses the Jobs Queue run that Supabase Cron already triggers every
+  minute; nothing new to set up.
+- In phase 4 these settings move with the collections into their modules.
+
+**Wireframe:** none new (Payload's standard edit view); W24 shows the editor.
+
+### 17.5 Export to CSV (`@payloadcms/plugin-import-export`)
+
+**What.** An **Export** action on list views (Shopify's Export button, S15)
+that exports the current filter, columns and sort as CSV (or JSON). Large
+exports run as a Payload job; the file lands in the plugin's exports
+collection to download.
+
+**Scope (v1).**
+
+| Collection                   | Who can export |
+| ---------------------------- | -------------- |
+| Users                        | Admin          |
+| Subscriptions (billing)      | Admin          |
+| Coupons (billing)            | Admin          |
+| Form submissions (via Forms) | Admin, editor  |
+| Reports                      | Admin, editor  |
+
+Modules opt in with `admin.collections[slug].export: { roles }`.
+
+**Rules.**
+
+- Exports contain personal data, so the export action and the exports
+  collection are limited to the roles above, and the export respects the
+  collection's read access.
+- Export files are stored through the existing storage adapter and deleted
+  after 7 days by a new `purge-exports` Payload task.
+- **Import is off in v1.** Importing users would skip the invite and Supabase
+  sync hooks; revisit per collection (§19 Q11).
+- Nav: **Settings › Exports** (order 75, admins) lists past exports.
+
+**Wireframe:** W21.
+
+### 17.6 Redirects (`@payloadcms/plugin-redirects`)
+
+**What.** A Redirects collection: an old path goes to a document or a URL,
+permanent (301) or temporary (302). Stops broken links and lost search
+rankings when a slug changes.
+
+**How.**
+
+- `redirectsPlugin({ collections })`, where `collections` (the documents a
+  redirect can point at) is `pages`, `posts` and every installed collection
+  listed in an installed module's `cms.linkable` (§8.2).
+- **Automatic redirects.** A kit hook on linkable collections: when a
+  published document's slug changes, create a redirect from the old public
+  path to the document (paths come from the same `publicPath` helpers the MCP
+  registry uses). Avoid chains: when adding A → B, repoint existing X → A to
+  X → B. Reject a redirect whose source equals its target.
+- **Front end.** Each public dynamic route, before calling `notFound()`, calls
+  `redirectIfMoved(path)`: a cached lookup (`unstable_cache`, tag
+  `redirects`, revalidated by the collection's hooks) that issues
+  `permanentRedirect()` or `redirect()`. Not in `proxy.ts`, which stays free
+  of database calls.
+- **App.** Deep links with old slugs are out of v1 (§19 Q12).
+- Nav: **Channels › Redirects** (order 15, admins and editors).
+
+**Wireframe:** W22.
+
+### 17.7 Global search (`@payloadcms/plugin-search`)
+
+**What.** One search index across content types, kept in sync by hooks.
+Powers a search drawer in `/admin` (Shopify's ⌘K search, S13) and can power
+one fast search for the website and app.
+
+**How.**
+
+- `searchPlugin({ collections, defaultPriorities, beforeSync })`.
+- Collections opt in through the manifest: `cms.search: { priority }`. Core:
+  `posts`, `pages`, `legal`; modules: Docs, Videos, Podcasts, Photos,
+  Courses, Lessons, Events, Places, Community posts.
+- `beforeSync` writes title, excerpt, collection, slug, `_status` and
+  `accessLevel` to each search record.
+
+**Admin search.** A **Search** button in the header `actions` slot opens a
+Payload `Drawer`: a search box, scope pills (All, Content, Community, People,
+Commerce, Modules), results grouped by collection with title, type `Pill`,
+status `Pill` (Draft, Published) and a link to the document. Staff results
+include drafts.
+
+**Public search.** A public endpoint reads only published records. For
+premium items (`accessLevel`), index the title only, never body text, so
+paywalled content can't leak through search.
+
+**Reindex.** Nav: **Settings › Search index** (order 65, admins), Payload's
+search collection list with the plugin's reindex action.
+
+**Wireframe:** W19.
+
+### 17.8 Rich-text blocks (Lexical `BlocksFeature`)
+
+**What.** Today rich text uses Lexical's defaults. Blocks let editors drop
+structured pieces into a post or page from the "+" / slash menu.
+
+**Core blocks (v1).**
+
+| Block           | Fields                                |
+| --------------- | ------------------------------------- |
+| Callout         | tone (info, warning, success), text   |
+| Call to action  | label, link (the `link` field helper) |
+| Image + caption | image (Media), caption, alt           |
+
+**Module blocks.** Modules contribute blocks through the manifest
+(`cms.richTextBlocks`), so a block exists only while its module does:
+Video (video module), Podcast episode (podcast), Event card (events),
+Map (maps), Course card (courses).
+
+**Renderers.** Every block needs a web renderer (the RichText converters used
+by public pages) and a native renderer (`packages/app`). An unknown block
+type (its module was removed) renders nothing. MCP: document the block shapes
+in `docs/MCP.md` so `create_content` / `update_content` can write them.
+
+**Data change.** None at the schema level (blocks live inside the Lexical
+JSON); regenerate Payload types.
+
+**Wireframe:** W24.
+
+### 17.9 Turn GraphQL off explicitly
+
+The kit serves REST only (`app/(payload)/cms-api/[...slug]`); no GraphQL route
+is mounted. Set `graphQL: { disable: true }` in `payload.config.ts` so Payload
+skips GraphQL setup and the intent is written down. Check that
+`pnpm cms:gen-types` output doesn't change.
+
+---
+
+## 18. Implementation phases and files
 
 Each phase is a separate PR into `dream-starter-kit` (kit core), green on
 `pnpm typecheck && pnpm lint && pnpm test`, plus `pnpm test:e2e` for nav and
@@ -1254,8 +1591,29 @@ for its local modules' placements.
 - Docs: `docs/CMS.md` (section headings → new sections), `docs/MODULES.md`
   (new `admin` manifest fields), `CLAUDE.md` (six groups list, the stale
   "Admin › Site Settings" theme line).
+- Query presets and `groupBy` (§17.1, §17.2): root `queryPresets` access,
+  `enableQueryPresets` / `admin.groupBy` on the listed collections, manifest
+  opt-ins `admin.collections[slug].presets` / `.groupBy`, seeded shared
+  presets, Payload migration for `payload-query-presets`.
 - Tests: nav builder unit tests (sorting, empty sections, disabled modules,
-  roles); E2E: sidebar order for admin and editor.
+  roles); E2E: sidebar order for admin and editor; a seeded preset filters
+  the Users list.
+
+### Phase 1b — Payload features (small independent PRs, any order)
+
+Can run alongside phase 1. One PR each:
+
+- **History** (§17.3): `versions` on the listed globals and collections,
+  `lastModifiedBy` field helper, version-table migrations (core + billing).
+- **Publish flow** (§17.4): drafts + schedule on Podcasts, Photos, Banners,
+  App onboarding with the `_status = 'published'` backfill; live preview on
+  Videos, Podcasts, Photos, Docs; E2E that existing items stay public.
+- **GraphQL off** (§17.9): one config line; check generated types.
+- **Export** (§17.5): plugin config, role limits, `purge-exports` task,
+  manifest opt-in `admin.collections[slug].export`, Settings › Exports link.
+- **Redirects** (§17.6): plugin config, automatic-redirect hook on linkable
+  collections, `redirectIfMoved()` in public dynamic routes, Channels ›
+  Redirects link; E2E: change a published post's slug, old URL returns 301.
 
 ### Phase 2 — Home, alerts, badges
 
@@ -1292,19 +1650,33 @@ for its local modules' placements.
   `list_collections`, and the public route.
 - meet-dream: local `ideas` module.
 
+### Phase 5 — Search and rich-text blocks
+
+- **Search** (§17.7): plugin config, manifest `cms.search`, `beforeSync`
+  (status, access level, premium title-only), header Search button +
+  drawer (`admin.components.actions`), public search endpoint, Settings ›
+  Search index; tests for the premium rule and draft visibility.
+- **Rich-text blocks** (§17.8): core blocks, manifest `cms.richTextBlocks`,
+  web and native renderers, MCP block docs; module blocks for video,
+  podcast, events, maps, courses.
+
 ---
 
-## 18. Open questions
+## 19. Open questions
 
-| #   | Question                                                                                               | Default if no answer                                        |
-| --- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
-| Q1  | Does meet-dream keep Videos, Podcasts, Photos, Courses, Events and Places installed after phase 4?     | Keep all installed; remove later per app                    |
-| Q2  | Names: "Places" vs "Locations", "Podcasts" vs "Audio", "Courses" vs "Series"                           | Use the new names; collection slugs stay                    |
-| Q3  | Should Comments get a moderation status so the nav can count pending comments?                         | No badge on Comments in v1                                  |
-| Q4  | Unhide Subscriptions (read-only) in Commerce, or keep support work in `/billing`'s "Find an account…"? | Unhide, read-only, admins only                              |
-| Q5  | Should Workspaces (B2B orgs, `public` RLS) get an admin list under People?                             | Not in v1 (would need a server-side, staff-only view)       |
-| Q6  | Home AI prompt box (Shopify Sidekick) using the kit's chat module?                                     | Not in v1; could be a `chat` dashboard widget later         |
-| Q7  | Pin modules in zone C (Shopify lets you pin apps) when there are many?                                 | A–Z, no pinning, until there are more than 15 module groups |
-| Q8  | Global search (⌘K) with `@payloadcms/plugin-search`?                                                   | Phase 5, optional                                           |
-| Q9  | Editors' access to Users (read-only)? Today's access rules need a check                                | Keep today's access as is                                   |
-| Q10 | Payload's dashboard API is experimental. OK to depend on it with the fallback in §10.6?                | Yes, with the Payload minor pinned                          |
+| #   | Question                                                                                               | Default if no answer                                                         |
+| --- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| Q1  | Does meet-dream keep Videos, Podcasts, Photos, Courses, Events and Places installed after phase 4?     | Keep all installed; remove later per app                                     |
+| Q2  | Names: "Places" vs "Locations", "Podcasts" vs "Audio", "Courses" vs "Series"                           | Use the new names; collection slugs stay                                     |
+| Q3  | Should Comments get a moderation status so the nav can count pending comments?                         | No badge on Comments in v1                                                   |
+| Q4  | Unhide Subscriptions (read-only) in Commerce, or keep support work in `/billing`'s "Find an account…"? | Unhide, read-only, admins only                                               |
+| Q5  | Should Workspaces (B2B orgs, `public` RLS) get an admin list under People?                             | Not in v1 (would need a server-side, staff-only view)                        |
+| Q6  | Home AI prompt box (Shopify Sidekick) using the kit's chat module?                                     | Not in v1; could be a `chat` dashboard widget later                          |
+| Q7  | Pin modules in zone C (Shopify lets you pin apps) when there are many?                                 | A–Z, no pinning, until there are more than 15 module groups                  |
+| Q8  | Global search scope: admin only, or also the public site and app?                                      | Both, in phase 5 (§17.7); public index excludes drafts and premium body text |
+| Q9  | Editors' access to Users (read-only)? Today's access rules need a check                                | Keep today's access as is                                                    |
+| Q10 | Payload's dashboard API is experimental. OK to depend on it with the fallback in §10.6?                | Yes, with the Payload minor pinned                                           |
+| Q11 | Turn on CSV **import** for any collection (e.g. Coupons, Redirects)?                                   | Off in v1; never for Users (it would skip the invite and Supabase sync)      |
+| Q12 | Should the app resolve old deep links through Redirects?                                               | Not in v1                                                                    |
+| Q13 | Which module blocks ship first in rich text?                                                           | Video and Event card                                                         |
+| Q14 | Keep 20 versions per settings document, or more?                                                       | 20                                                                           |
