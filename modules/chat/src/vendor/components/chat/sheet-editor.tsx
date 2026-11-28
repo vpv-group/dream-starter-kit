@@ -119,7 +119,7 @@ const PureSpreadsheetEditor = ({ content, saveContent }: SheetEditorProps) => {
       enableVirtualization
       onCellClick={(args) => {
         if (args.column.key !== "rowNumber") {
-          args.setActivePosition(true);
+          args.setActivePosition({ enableEditor: true });
         }
       }}
       onRowsChange={handleRowsChange}

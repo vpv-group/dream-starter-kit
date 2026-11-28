@@ -35,6 +35,7 @@ import * as migration_20261126_040551_nav_groups from './20261126_040551_nav_gro
 import * as migration_20261126_193316_billing_provider_adapters from './20261126_193316_billing_provider_adapters';
 import * as migration_20261127_174251_sync_snapshot_after_billing_adapters from './20261127_174251_sync_snapshot_after_billing_adapters';
 import * as migration_20261127_180845_sync_snapshot_after_feedback_removal from './20261127_180845_sync_snapshot_after_feedback_removal';
+import * as migration_20261128_010900_payload_3_94_identifier_names from './20261128_010900_payload_3_94_identifier_names';
 
 export const migrations = [
   {
@@ -221,5 +222,10 @@ export const migrations = [
     up: migration_20261127_180845_sync_snapshot_after_feedback_removal.up,
     down: migration_20261127_180845_sync_snapshot_after_feedback_removal.down,
     name: '20261127_180845_sync_snapshot_after_feedback_removal',
+  },
+  {
+    up: migration_20261128_010900_payload_3_94_identifier_names.up,
+    down: migration_20261128_010900_payload_3_94_identifier_names.down,
+    name: '20261128_010900_payload_3_94_identifier_names'
   },
 ];

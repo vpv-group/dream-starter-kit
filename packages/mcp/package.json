@@ -25,7 +25,7 @@
     "@acme/config": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "@supabase/supabase-js": "catalog:",
-    "jose": "^6.2.15",
+    "jose": "^6.2.18",
     "payload": "catalog:",
     "server-only": "^0.0.1",
     "zod": "catalog:"
