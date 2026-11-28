@@ -41,7 +41,8 @@ no license key or stored secret. The `kit-update` job:
    - Conflicts in **generated** files (lockfile, Payload and Supabase types,
      the migrations bundle, `*.generated.*`) take the release's side
      (`pnpm mod ops resolve-generated`), then everything is regenerated:
-     `pnpm install`, `pnpm mod sync`, `pnpm db:gen-migrations` and both
+     `pnpm mod:align`, `pnpm install`, `pnpm mod sync`,
+     `pnpm db:gen-migrations` and both
      gen-types against a Supabase started on the runner.
    - Conflicts in hand-written files are committed as markers, and the PR
      gets the `dream-update-conflicts` label.
@@ -275,8 +276,9 @@ git fetch upstream
 git checkout -b sync/upstream-$(date +%Y-%m-%d)   # branch off your main
 git merge upstream/main                            # real conflicts ONLY where you
                                                    #   edited the same lines the kit did
-# resolve conflicts (see hotspots below), then run the gates:
-pnpm install && pnpm typecheck && pnpm lint && pnpm test
+# resolve conflicts (see hotspots below), then run the gates
+# (mod:align first: installed modules onto the release's shared versions):
+pnpm mod:align && pnpm install && pnpm typecheck && pnpm lint && pnpm test
 # open a PR from sync/upstream-YYYY-MM-DD into your main
 ```
 
@@ -357,6 +359,7 @@ git config merge.ours.driver true
 Before you merge the sync PR, prove the combined tree actually works:
 
 ```bash
+pnpm mod:align        # installed modules onto the release's shared versions
 pnpm install          # reconcile the lockfile
 pnpm db:reset         # apply the merged migration sequence (+ cms:migrate)
 pnpm cms:gen-types    # regenerate Payload types

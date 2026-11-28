@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 
+import { alignInstalledModules, logAlignment } from "./align-deps";
 import {
   applyEnvExampleBlock,
   buildAllGeneratedFiles,
@@ -29,9 +30,12 @@ import { MOD_PATHS, toAbs } from "./paths";
  * under modules/ and commit the outputs (drift fails `pnpm test`).
  */
 export async function sync(repoRoot: string): Promise<void> {
-  // 0. The apps must depend on every installed module package (their
+  // 0. Modules use the app's versions of shared packages (align-deps.ts), and
+  //    the apps depend on every installed module package (their
   //    registries/stubs import them) — sync owns those dependency entries.
-  syncAppDependencies(repoRoot);
+  const aligned = alignInstalledModules(repoRoot);
+  logAlignment(aligned);
+  syncAppDependencies(repoRoot, aligned.length > 0);
 
   const mods = await loadModules(repoRoot);
   const lock = readLock(repoRoot);
@@ -152,7 +156,7 @@ const KEPT_MOD_PACKAGES = new Set(["@acme/mod-kit", "@acme/mod-tools"]);
  * module is gone, and `pnpm install` when anything changed so manifest
  * loading (which resolves @acme/mod-kit from each package) works.
  */
-function syncAppDependencies(repoRoot: string): void {
+function syncAppDependencies(repoRoot: string, forceInstall = false): void {
   const modDir = toAbs(repoRoot, MOD_PATHS.modulesDir);
   const slugs = existsSync(modDir)
     ? readdirSync(modDir, { withFileTypes: true })
@@ -191,7 +195,7 @@ function syncAppDependencies(repoRoot: string): void {
       writeFileSync(file, `${JSON.stringify(pkg, null, 2)}\n`);
     }
   }
-  if (changed) {
+  if (changed || forceInstall) {
     installWorkspace(repoRoot);
   }
 }

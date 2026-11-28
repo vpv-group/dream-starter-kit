@@ -92,6 +92,17 @@ the module's own config plugin (`app.plugin.js`, manifest
 needs a **new native build** — sync says so. Full guide:
 [NATIVE.md](./NATIVE.md).
 
+**One version of each shared package.** The app can only have one copy of a
+package (two copies of a native one break the iOS and Android builds, and the
+`postinstall` check refuses mismatched versions). So wherever a module depends
+on a package the app itself declares, `mod add`, `mod update` and `mod sync`
+rewrite the module's spec to the app's, `catalog:` included
+(`tooling/mod/src/align-deps.ts`). Add and update do it before the pristine
+snapshot, so it never shows as a local edit or a merge conflict. After a kit
+update that bumps a shared package, run `pnpm mod:align` before
+`pnpm install` (the kit-update job does); it needs no installed
+dependencies. Packages only the module uses keep the module's own versions.
+
 ## Namespacing (collisions hard-fail `mod sync`)
 
 | Thing           | Rule                                                                            | Example                     |

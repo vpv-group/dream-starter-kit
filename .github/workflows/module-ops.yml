@@ -479,6 +479,9 @@ jobs:
         if: steps.merge.outputs.result == 'clean'
         run: |
           set -euo pipefail
+          # Installed modules onto the release's versions of shared packages
+          # first: the install's postinstall refuses mismatched versions.
+          pnpm mod:align
           pnpm install --no-frozen-lockfile
           pnpm mod sync
           pnpm db:gen-migrations
@@ -514,7 +517,7 @@ jobs:
             BODY="$BODY
 
           ⚠️ **Conflicts to resolve** (markers committed): $(echo "$CONFLICTS" | tr ' ' '\n' | head -40 | sed 's/.*/\x60&\x60/' | tr '\n' ' ')
-          Then run \`pnpm install\`, \`pnpm db:gen-types\` and \`pnpm cms:gen-types\`. It never merges itself."
+          Then run \`pnpm mod:align\`, \`pnpm install\`, \`pnpm db:gen-types\` and \`pnpm cms:gen-types\`. It never merges itself."
           fi
           gh label create dream-update --color 5319e7 --description "Automated Dream update" 2>/dev/null || true
           gh label create dream-update-conflicts --color d93f0b --description "Dream update with conflicts to resolve" 2>/dev/null || true
